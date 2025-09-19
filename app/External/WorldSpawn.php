@@ -17,6 +17,16 @@ class WorldSpawn {
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        curl_setopt($ch, CURLOPT_ENCODING, ''); // Let curl handle decompression automatically
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language: en-US,en;q=0.5',
+            'Connection: keep-alive',
+            'Upgrade-Insecure-Requests: 1',
+        ]);
 
         $response = curl_exec($ch);
 
@@ -169,15 +179,17 @@ class WorldSpawn {
     }
 
     public function shouldGetMap($data) {
-        if (isset($data['Modification'])) {
-            $list = $this->getImageList($data['Modification']);
+        // Get all maps instead of filtering by defrag only
+        return true;
 
-            if (in_array('defrag', $list)) {
-                return true;
-            }
-        }
-
-        return $this->getGameType($data) === 'unknown';
+        // Original filtering logic (commented out):
+        // if (isset($data['Modification'])) {
+        //     $list = $this->getImageList($data['Modification']);
+        //     if (in_array('defrag', $list)) {
+        //         return true;
+        //     }
+        // }
+        // return $this->getGameType($data) === 'unknown';
     }
 
     public function getGameType($data) {
