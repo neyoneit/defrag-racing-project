@@ -71,7 +71,7 @@
 
                 <div class="py-2">
                     <div class="flex items-center mb-5 justify-center">
-                        <div class="text-white sub-header">Latest Servers</div>
+                        <div class="text-white sub-header">Popular Servers</div>
                     </div>
                     
                     <div class="grid servers-wrapper mt-4">
