@@ -33,4 +33,8 @@ class Record extends Model
     public function map () {
         return $this->belongsTo(Map::class, 'mapname', 'name');
     }
+
+    public function uploadedDemos () {
+        return $this->hasMany(UploadedDemo::class, 'record_id', 'id');
+    }
 }

@@ -89,13 +89,13 @@ class MapsController extends Controller
 
         $cpmRecords = $cpmRecords->where('gametype', $cpmGametype);
 
-        $cpmRecords = $cpmRecords->with('user')->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
+        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
         $vq3Records = Record::where('mapname', $map->name);
 
         $vq3Records = $vq3Records->where('gametype', $vq3Gametype);
 
-        $vq3Records = $vq3Records->with('user')->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+        $vq3Records = $vq3Records->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
 
 
         $showOldtop = $request->input('showOldtop', false);

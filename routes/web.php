@@ -15,6 +15,7 @@ use App\Http\Controllers\EndpointController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
+use App\Http\Controllers\DemosController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,59 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 
 Route::get('/bundles/{id?}/{slug?}', [BundlesController::class, 'index'])->name('bundles');
+
+// Demo routes
+Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
+Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
+
+// Demo upload routes (requires authentication)
+Route::middleware('auth')->group(function () {
+    Route::post('/demos/upload', [DemosController::class, 'upload'])->name('demos.upload');
+    
+    Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
+    Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
+    Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
+
+    // Manual assignment routes
+    Route::get('/demos/maps', [DemosController::class, 'getMaps'])->name('demos.maps');
+    Route::get('/demos/maps/{mapname}/records', [DemosController::class, 'getRecords'])->name('demos.records');
+    Route::post('/demos/{demo}/assign', [DemosController::class, 'assign'])->name('demos.assign');
+    Route::post('/demos/{demo}/unassign', [DemosController::class, 'unassign'])->name('demos.unassign');
+});
+
+    // Local-only debug routes (outside auth group so you can curl them easily during development)
+    if (app()->environment('local')) {
+        // Simple GET form for manual testing (safer path to avoid wildcard collisions)
+        Route::get('/demos/debug/detect', function () {
+            if (!app()->environment('local')) abort(404);
+            return <<<'HTML'
+    <html><body>
+    <h3>Debug Upload Detection</h3>
+    <form method="post" enctype="multipart/form-data" action="/demos/debug/detect">
+        <input type="file" name="file" />
+        <button type="submit">Upload</button>
+        <input type="hidden" name="_token" value="" />
+    </form>
+    <p>Use curl: curl -F "file=@/path/to/demos.zip" -X POST http://localhost/demos/debug/detect</p>
+    </body></html>
+    HTML;
+        });
+
+        // POST route for debug detection. We intentionally allow this to be hit without auth
+        // or CSRF in local environment for easy debugging via curl.
+        Route::post('/demos/debug/detect', [\App\Http\Controllers\DemosController::class, 'debugDetect'])
+            ->name('demos.debugDetect');
+    }
+
+        // Local helper to inspect session token and headers for debugging CSRF
+        Route::get('/_debug/session', function (\Illuminate\Http\Request $request) {
+            if (!app()->environment('local')) abort(404);
+            return response()->json([
+                'session_token' => $request->session()->token(),
+                'headers' => $request->headers->all(),
+                'cookies' => $request->cookies->all(),
+            ]);
+        });
 
 
 Route::post('/settings/socialmedia', [SettingsController::class, 'socialmedia'])->name('settings.socialmedia');

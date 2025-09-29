@@ -318,6 +318,10 @@
                             Records
                         </NavLink>
 
+                        <NavLink :href="route('demos.index')" :active="route().current('demos.*')">
+                            Demos
+                        </NavLink>
+
                         <NavLink :href="route('bundles')" :active="route().current('bundles')">
                             Bundles
                         </NavLink>
@@ -361,6 +365,10 @@
 
                         <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('records')" :active="route().current('records')">
                             Records
+                        </ResponsiveNavLink>
+
+                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('demos.index')" :active="route().current('demos.*')">
+                            Demos
                         </ResponsiveNavLink>
 
                         <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('bundles')" :active="route().current('bundles')">

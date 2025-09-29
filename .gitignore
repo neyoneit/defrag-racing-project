@@ -26,3 +26,5 @@ rr
 
 local_devel/*.zip
 local_devel/dummy_data/
+
+docker-compose.yml

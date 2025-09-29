@@ -12,6 +12,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Local-only: allow posting to the debug detect endpoint without CSRF so CLI tests work.
+        // The debug route itself already guards by environment and will abort(404) if not local.
+        'demos/debug/detect',
     ];
 }

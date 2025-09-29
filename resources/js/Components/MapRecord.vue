@@ -66,6 +66,14 @@
                 <div class="text-right">
                     <div class="text-lg font-bold text-gray-300" :class="{'text-orange-400': record.oldtop}">{{  formatTime(record.time) }}</div>
                     <div class="text-xs text-red-500" v-if="timeDiff">- {{  formatTime(timeDiff) }}</div>
+                    <div v-if="record.uploaded_demos && record.uploaded_demos.length > 0" class="text-xs text-green-400 mt-1">
+                        <a :href="`/demos/${record.uploaded_demos[0].id}/download`" class="flex items-center hover:text-green-300" title="Download demo">
+                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+                            </svg>
+                            Demo
+                        </a>
+                    </div>
                 </div>
 
                 <div class="ml-5">
