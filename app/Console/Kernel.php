@@ -14,8 +14,11 @@ class Kernel extends ConsoleKernel
      * Define the application's command schedule.
      */
     protected function schedule(Schedule $schedule): void {
-        // mdd scrapes...
-        $schedule->command('scrape:servers')->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
+    // mdd scrapes...
+    // scrape online servers every minute
+    $schedule->command('scrape:servers 0')->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
+    // scrape offline servers less frequently (every 5 minutes)
+    $schedule->command('scrape:servers 1')->withoutOverlapping()->evenInMaintenanceMode()->everyFiveMinutes();
         $schedule->job(new GetLastMddRecords)->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
         $schedule->command('scrape:maps')->withoutOverlapping()->evenInMaintenanceMode()->everyTwoMinutes();
 
