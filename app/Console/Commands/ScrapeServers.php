@@ -11,6 +11,7 @@ use App\Models\OnlinePlayer;
 use App\Models\Record;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ScrapeServers extends Command
 {
@@ -32,29 +33,38 @@ class ScrapeServers extends Command
      * Execute the console command.
      */
     public function handle() {
-        $online = ($this->argument('offline') == 1) ? false : true;
+        $offlineFlag = (int) $this->argument('offline');
+        $start = microtime(true);
+        Log::info('scrape:servers started', ['offline' => $offlineFlag, 'time' => date('c')]);
 
-        $servers = Server::where('visible', true)->where('online', $online)->get();
+        try {
+            $online = ($offlineFlag == 1) ? false : true;
 
-        $noDataServers = [];
+            $servers = Server::where('visible', true)->where('online', $online)->get();
 
-        foreach($servers as $server) {
-            $this->info('Scraping ' . $server->ip . ':' . $server->port);
+            $noDataServers = [];
 
-            $data = $this->getServerData($server);
+            foreach($servers as $server) {
+                $this->info('Scraping ' . $server->ip . ':' . $server->port);
 
-            if ($data == null || $data['rcon'] == false) {
-                $noDataServers[] = [
-                    'server'    =>      $server,
-                    'data'      =>      $data
-                ];
-                continue;
+                $data = $this->getServerData($server);
+
+                if ($data == null || $data['rcon'] == false) {
+                    $noDataServers[] = [
+                        'server'    =>      $server,
+                        'data'      =>      $data
+                    ];
+                    continue;
+                }
+
+                $this->updateServer($server, $data);
             }
 
-            $this->updateServer($server, $data);
+            $this->handle_failed_servers($noDataServers);
+        } finally {
+            $duration_ms = round((microtime(true) - $start) * 1000);
+            Log::info('scrape:servers finished', ['offline' => $offlineFlag, 'duration_ms' => $duration_ms]);
         }
-
-        $this->handle_failed_servers($noDataServers);
     }
 
     public function handle_failed_servers($servers) {
