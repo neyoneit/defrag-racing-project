@@ -150,8 +150,14 @@ const uploadDemos = async () => {
                 fileInput.value.value = '';
             }
 
-            // Start polling for status updates
-            startStatusPolling();
+            // If upload returned demo IDs, start targeted polling for them
+            const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
+            if (demoIds.length > 0) {
+                startStatusPolling(demoIds);
+            } else {
+                // Fallback: start global polling
+                startStatusPolling();
+            }
 
             // Immediately reload the demos list
             router.reload({ only: ['demos'] });
@@ -255,21 +261,35 @@ const groupedDemos = computed(() => {
 });
 
 // Status polling functions
-const startStatusPolling = () => {
+const startStatusPolling = (targetDemoIds = null) => {
     if (statusPolling.value) {
         clearInterval(statusPolling.value);
     }
 
     statusPolling.value = setInterval(async () => {
         try {
-            const response = await axios.get(route('demos.status'));
+            const params = {};
+            if (targetDemoIds && targetDemoIds.length > 0) {
+                params.demo_ids = targetDemoIds;
+            }
+
+            const response = await axios.get(route('demos.status'), { params });
             processingDemos.value = response.data.processing_demos;
             queueStats.value = response.data.queue_stats;
 
-            // Stop polling if no demos are processing/queued
-            if (response.data.processing_demos.length === 0) {
-                stopStatusPolling();
-                router.reload({ only: ['demos'] }); // Final reload when all done
+            // If we target specific demo ids, stop polling when none of them are queued/processing
+            if (targetDemoIds && targetDemoIds.length > 0) {
+                const stillProcessing = (response.data.processing_demos || []).filter(d => targetDemoIds.includes(d.id)).length;
+                if (stillProcessing === 0) {
+                    stopStatusPolling();
+                    router.reload({ only: ['demos'] });
+                }
+            } else {
+                // Stop polling if no demos are processing/queued (global)
+                if ((response.data.processing_demos || []).length === 0) {
+                    stopStatusPolling();
+                    router.reload({ only: ['demos'] }); // Final reload when all done
+                }
             }
         } catch (error) {
             console.error('Status polling error:', error);
@@ -422,13 +442,12 @@ watch(selectedPhysics, () => {
                 <div class="mb-8">
                     <h2 class="text-3xl font-bold text-gray-200">Demos</h2>
                     <p class="text-gray-400 mt-2">
-                        <span v-if="$page.props.auth.user">Upload and manage your demo files</span>
-                        <span v-else>Browse and download demo files. <Link :href="route('login')" class="text-blue-400 hover:underline">Login</Link> to upload your own demos.</span>
+                        <span>Upload and manage demo files. If you're not logged in, you can still upload demos from this page — they will be stored as guest uploads and cannot be deleted by you. Logging in later will not automatically link guest uploads to your account.</span>
                     </p>
                 </div>
 
-                <!-- Upload Section (only for authenticated users) -->
-                <div v-if="$page.props.auth.user" class="bg-gray-800 rounded-xl p-8 mb-8 shadow-2xl border border-gray-700">
+                <!-- Upload Section (visible to all users; guests will have restricted actions) -->
+                <div class="bg-gray-800 rounded-xl p-8 mb-8 shadow-2xl border border-gray-700">
                     <h3 class="text-2xl font-bold text-gray-100 mb-6 flex items-center">
                         <svg class="w-8 h-8 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -502,6 +521,11 @@ watch(selectedPhysics, () => {
                                 </svg>
                                 Browse files
                             </button>
+                        
+                        <!-- Guest notice -->
+                        <div v-if="!$page.props.auth.user" class="mt-4 text-sm text-yellow-300">
+                            You are not logged in. Uploaded demos will be public and you will not be able to delete them from the UI.
+                        </div>
                         </div>
                     </div>
 
@@ -752,7 +776,7 @@ watch(selectedPhysics, () => {
                                                 Download
                                             </a>
                                             <button
-                                                v-if="$page.props.auth.user && demo.user_id === $page.props.auth.user.id"
+                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin)"
                                                 @click="reprocessDemo(demo.id)"
                                                 class="inline-flex items-center px-3 py-1.5 bg-yellow-600/20 text-yellow-300 text-xs font-medium rounded-md hover:bg-yellow-600/30 transition-colors duration-200"
                                             >
@@ -762,7 +786,7 @@ watch(selectedPhysics, () => {
                                                 Reprocess
                                             </button>
                                             <button
-                                                v-if="$page.props.auth.user && demo.user_id === $page.props.auth.user.id && demo.status === 'processed' && !demo.record_id"
+                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && demo.status === 'processed' && !demo.record_id"
                                                 @click="openAssignModal(demo)"
                                                 class="inline-flex items-center px-3 py-1.5 bg-green-600/20 text-green-300 text-xs font-medium rounded-md hover:bg-green-600/30 transition-colors duration-200"
                                             >
@@ -772,7 +796,7 @@ watch(selectedPhysics, () => {
                                                 Assign
                                             </button>
                                             <button
-                                                v-if="$page.props.auth.user && demo.user_id === $page.props.auth.user.id && demo.record_id"
+                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && demo.record_id"
                                                 @click="unassignDemo(demo)"
                                                 class="inline-flex items-center px-3 py-1.5 bg-orange-600/20 text-orange-300 text-xs font-medium rounded-md hover:bg-orange-600/30 transition-colors duration-200"
                                             >
@@ -782,7 +806,7 @@ watch(selectedPhysics, () => {
                                                 Unassign
                                             </button>
                                             <button
-                                                v-if="$page.props.auth.user && demo.user_id === $page.props.auth.user.id && !demo.record_id"
+                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && !demo.record_id"
                                                 @click="deleteDemo(demo.id)"
                                                 class="inline-flex items-center px-3 py-1.5 bg-red-600/20 text-red-300 text-xs font-medium rounded-md hover:bg-red-600/30 transition-colors duration-200"
                                             >

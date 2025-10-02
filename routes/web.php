@@ -54,7 +54,9 @@ Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name
 
 // Demo upload routes (requires authentication)
 Route::middleware('auth')->group(function () {
-    Route::post('/demos/upload', [DemosController::class, 'upload'])->name('demos.upload');
+    Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
+    Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
+    Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
     
     Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
@@ -66,6 +68,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/demos/{demo}/assign', [DemosController::class, 'assign'])->name('demos.assign');
     Route::post('/demos/{demo}/unassign', [DemosController::class, 'unassign'])->name('demos.unassign');
 });
+
+// Make the main upload endpoint publicly reachable so the demos page can accept
+// anonymous uploads directly. The front-end posts to route('demos.upload') so
+// keeping the same route name preserves UI behavior.
+Route::post('/demos/upload', [DemosController::class, 'upload'])->name('demos.upload');
 
     // Local-only debug routes (outside auth group so you can curl them easily during development)
     if (app()->environment('local')) {
@@ -89,6 +96,10 @@ Route::middleware('auth')->group(function () {
         // or CSRF in local environment for easy debugging via curl.
         Route::post('/demos/debug/detect', [\App\Http\Controllers\DemosController::class, 'debugDetect'])
             ->name('demos.debugDetect');
+
+        // POST route for debug upload. Allows easy CURL testing of archives in local env.
+        Route::post('/demos/debug/upload', [\App\Http\Controllers\DemosController::class, 'debugUpload'])
+            ->name('demos.debugUpload');
     }
 
         // Local helper to inspect session token and headers for debugging CSRF

@@ -18,7 +18,14 @@ class DemosController extends Controller
 
     public function __construct(DemoProcessorService $demoProcessor)
     {
-        $this->middleware('auth')->except(['index', 'download']);
+        // Default: protect most actions with auth. Exempt index and download.
+        // Also exempt the main upload action so the demos page can accept
+        // anonymous uploads directly.
+        $except = ['index', 'download', 'upload'];
+        if (app()->environment('local')) {
+            $except = array_merge($except, ['debugDetect', 'debugUpload']);
+        }
+        $this->middleware('auth')->except($except);
         $this->demoProcessor = $demoProcessor;
     }
 
@@ -52,14 +59,28 @@ class DemosController extends Controller
     {
         // If user is authenticated, show their demos grouped by status
         if (Auth::check()) {
-            $userDemos = UploadedDemo::where('user_id', Auth::id())
-                ->with(['record.user'])
-                ->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')")
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+            $currentUser = Auth::user();
+            $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+
+            if ($isAdmin) {
+                // Admin sees all uploads (including guest uploads)
+                $userDemos = UploadedDemo::with(['record.user', 'user'])
+                    ->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')")
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(30);
+            } else {
+                $userDemos = UploadedDemo::where('user_id', $currentUser->id)
+                    ->with(['record.user'])
+                    ->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')")
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(20);
+            }
         } else {
-            // For guests, show recent assigned demos
-            $userDemos = UploadedDemo::whereNotNull('record_id')
+            // For guests, show demos assigned to records AND publicly uploaded demos (user_id IS NULL)
+            $userDemos = UploadedDemo::where(function ($q) {
+                    $q->whereNotNull('record_id')
+                      ->orWhereNull('user_id');
+                })
                 ->with(['record.user', 'user'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(20);
@@ -78,7 +99,7 @@ class DemosController extends Controller
         // Rate limiting: allow a larger cap to support archive imports
         // Max demos allowed to be uploaded/processed per user per 5 minutes
         $RATE_LIMIT_MAX = 500;
-        $userId = Auth::id();
+    $userId = Auth::id();
         $rateLimitKey = "demo_upload_rate_limit_{$userId}";
         $currentUploads = Cache::get($rateLimitKey, 0);
 
@@ -133,43 +154,7 @@ class DemosController extends Controller
                         Log::warning('Archive content detection failed', ['file' => $originalName, 'error' => $t->getMessage()]);
                     }
 
-                    // If magic-bytes didn't detect archive but extension/name suggest ZIP,
-                    // try opening with ZipArchive as a more robust check (some zips may have different headers).
-                        // If it's reported as zip or ZipArchive can open it, prefer ZipArchive extraction
-                        if (class_exists('\ZipArchive')) {
-                            $zip = new \ZipArchive();
-                            $canOpenZip = false;
-                            if ($zip->open($demoFile->getPathname()) === true) {
-                                $canOpenZip = true;
-                            }
-
-                            if ($canOpenZip) {
-                                // create a temp dir for extraction in this scope
-                                $tmpDir = sys_get_temp_dir() . '/demos_extract_' . uniqid();
-                                if (!@mkdir($tmpDir, 0775, true)) {
-                                    // If mkdir fails, fall back to use system temp dir itself
-                                    $tmpDir = sys_get_temp_dir();
-                                }
-
-                                // extract selectively: only files with .dm_\d+ extension
-                                $extractedFiles = [];
-                                for ($i = 0; $i < $zip->numFiles; $i++) {
-                                    $stat = $zip->statIndex($i);
-                                    $name = $stat['name'];
-                                    if (preg_match('/\.dm_\\d+$/i', $name)) {
-                                        $target = $tmpDir . '/' . basename($name);
-                                        // copy via zip stream wrapper to the temp target
-                                        copy('zip://' . $demoFile->getPathname() . '#' . $name, $target);
-                                        $extractedFiles[] = $target;
-                                    }
-                                }
-                                $zip->close();
-
-                                // return list of extracted files (caller expects array)
-                                return $extractedFiles;
-                            }
-                        }
-
+                    // Aggregate archive detection flags
                     $isArchive = $isArchiveExt || $isArchiveName || $isArchiveContent;
 
                     // Always log archive detection results for visibility
@@ -217,12 +202,12 @@ class DemosController extends Controller
                                 // Store the extracted file into the canonical storage location
                                 $storedPath = Storage::putFileAs($this->storageDirForToday(), new \Illuminate\Http\UploadedFile($extractedPath, $originalName, null, null, true), $originalName);
 
-                                $demo = UploadedDemo::create([
+                                            $demo = UploadedDemo::create([
                                     'original_filename' => $originalName,
                                     'file_path' => $storedPath,
                                     'file_size' => filesize($extractedPath),
                                     'file_hash' => $fileHash,
-                                    'user_id' => $userId,
+                                                'user_id' => $userId,
                                     'status' => 'queued',
                                 ]);
 
@@ -347,14 +332,42 @@ class DemosController extends Controller
      */
     public function download(UploadedDemo $demo)
     {
-        // Check if user owns the demo or if it's assigned to a public record
-        if ($demo->user_id !== Auth::id() && !$demo->record) {
+        // Allow download for owner, admins, or if the demo is assigned to a public record
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+
+        if ($demo->user_id !== optional($currentUser)->id && !$demo->record && !$isAdmin) {
             abort(403, 'Unauthorized');
         }
 
         $filename = $demo->processed_filename ?: $demo->original_filename;
 
-        return Storage::download($demo->file_path, $filename);
+        try {
+            // Primary path: use the Storage facade which will stream from configured disk
+            return Storage::download($demo->file_path, $filename);
+        } catch (\League\Flysystem\UnableToRetrieveMetadata $e) {
+            // Some filesystem adapters (local) can intermittently fail to report metadata
+            // for files with special characters in their names. Fall back to direct file
+            // access using the storage path and PHP's response()->download which relies
+            // on native file functions.
+            Log::warning('Storage metadata retrieval failed during download, falling back to direct download', [
+                'demo_id' => $demo->id,
+                'file_path' => $demo->file_path,
+                'error' => $e->getMessage(),
+            ]);
+
+            $fullPath = Storage::path($demo->file_path);
+            if (file_exists($fullPath)) {
+                return response()->download($fullPath, $filename);
+            }
+
+            // If the file does not exist on disk, return 404
+            abort(404, 'File not found');
+        } catch (\Exception $e) {
+            // Generic fallback for other unexpected errors during download
+            Log::error('Demo download failed', ['demo_id' => $demo->id, 'error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Failed to download file: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -362,7 +375,9 @@ class DemosController extends Controller
      */
     public function reprocess(UploadedDemo $demo)
     {
-        if ($demo->user_id !== Auth::id()) {
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+        if ($demo->user_id !== optional($currentUser)->id && !$isAdmin) {
             abort(403, 'Unauthorized');
         }
 
@@ -400,24 +415,43 @@ class DemosController extends Controller
      */
     public function status(Request $request)
     {
+        $demoIds = $request->get('demo_ids');
+
+        // If demo_ids provided, allow public polling for those specific demos (guest uploads)
+        if ($demoIds && is_array($demoIds)) {
+            $demos = UploadedDemo::whereIn('id', $demoIds)->with(['record.user'])->get();
+            return response()->json([
+                'processing_demos' => $demos->filter(function ($d) { return in_array($d->status, ['queued', 'processing']); })->values(),
+                'queue_stats' => [
+                    'total_queued' => UploadedDemo::where('status', 'queued')->count(),
+                    'total_processing' => UploadedDemo::where('status', 'processing')->count(),
+                ],
+                'timestamp' => now()->toISOString(),
+            ]);
+        }
+
         if (!Auth::check()) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $userId = Auth::id();
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
-        // Get processing/queued demos for real-time updates
-        $processingDemos = UploadedDemo::where('user_id', $userId)
-            ->whereIn('status', ['queued', 'processing'])
-            ->with(['record.user'])
-            ->get();
+        $userId = $currentUser->id;
+
+        // Get processing/queued demos for real-time updates. Admins see all queued demos.
+        $processingQuery = UploadedDemo::whereIn('status', ['queued', 'processing'])->with(['record.user']);
+        if (!$isAdmin) {
+            $processingQuery->where('user_id', $userId);
+        }
+        $processingDemos = $processingQuery->get();
 
         // Get queue statistics
         $queueStats = [
             'total_queued' => UploadedDemo::where('status', 'queued')->count(),
             'total_processing' => UploadedDemo::where('status', 'processing')->count(),
-            'user_queued' => UploadedDemo::where('user_id', $userId)->where('status', 'queued')->count(),
-            'user_processing' => UploadedDemo::where('user_id', $userId)->where('status', 'processing')->count(),
+            'user_queued' => $isAdmin ? UploadedDemo::where('status', 'queued')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'queued')->count(),
+            'user_processing' => $isAdmin ? UploadedDemo::where('status', 'processing')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'processing')->count(),
         ];
 
         return response()->json([
@@ -466,11 +500,60 @@ class DemosController extends Controller
     }
 
     /**
+     * Local-only debug upload endpoint to exercise archive extraction/upload logic without authentication.
+     * Wraps a single 'file' input into 'demos' array and calls the normal upload flow.
+     */
+    public function debugUpload(Request $request)
+    {
+        if (!app()->environment('local')) {
+            abort(404);
+        }
+
+        $request->validate([
+            'file' => 'required|file',
+        ]);
+
+        // Create a new request instance that mimics the authenticated upload route
+        $files = [$request->file('file')];
+
+        // Use a new Request instance so we can set 'demos' as expected by upload()
+        $newRequest = new Request();
+        $newRequest->files->set('demos', $files);
+        // Copy some headers that may be used by validation
+        $newRequest->headers->add($request->headers->all());
+
+        // If no user is authenticated, temporarily impersonate the first user for testing
+        if (!Auth::check()) {
+            $firstUser = \App\Models\User::first();
+            if ($firstUser) {
+                Auth::login($firstUser);
+            }
+        }
+
+        // Call the existing upload flow
+        return $this->upload($newRequest);
+    }
+
+    /**
+     * Public upload endpoint for anonymous users.
+     * Stores demos with user_id = null. Rate-limited by IP to avoid abuse.
+     */
+    public function uploadPublic(Request $request)
+    {
+        abort(404);
+    }
+
+    /**
      * Delete a demo (only if user owns it and it's not assigned)
      */
     public function destroy(UploadedDemo $demo)
     {
-        if ($demo->user_id !== Auth::id()) {
+        // Allow deletion by owner or admins
+        $currentUser = Auth::user();
+        $isOwner = $currentUser && $demo->user_id === $currentUser->id;
+        $isAdmin = $currentUser && isset($currentUser->admin) && $currentUser->admin;
+
+        if (!($isOwner || $isAdmin)) {
             abort(403, 'Unauthorized');
         }
 
@@ -545,7 +628,9 @@ class DemosController extends Controller
      */
     public function assign(Request $request, UploadedDemo $demo)
     {
-        if ($demo->user_id !== Auth::id()) {
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
             abort(403, 'Unauthorized');
         }
 
@@ -572,20 +657,35 @@ class DemosController extends Controller
      */
     public function unassign(UploadedDemo $demo)
     {
-        if ($demo->user_id !== Auth::id()) {
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+        Log::info('Unassign attempt', ['demo_id' => $demo->id, 'current_user_id' => optional($currentUser)->id, 'is_admin' => $isAdmin]);
+
+        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
+            Log::warning('Unassign unauthorized', ['demo_id' => $demo->id, 'current_user_id' => optional($currentUser)->id]);
             abort(403, 'Unauthorized');
         }
 
-        $demo->update([
-            'record_id' => null,
-            'status' => 'processed',
-        ]);
+        try {
+            $demo->update([
+                'record_id' => null,
+                'status' => 'processed',
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Demo assignment removed',
-            'demo' => $demo->fresh(),
-        ]);
+            Log::info('Unassign successful', ['demo_id' => $demo->id, 'by_user' => optional($currentUser)->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Demo assignment removed',
+                'demo' => $demo->fresh(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Unassign failed', ['demo_id' => $demo->id, 'error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove assignment: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

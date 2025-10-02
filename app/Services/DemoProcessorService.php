@@ -80,6 +80,8 @@ class DemoProcessorService
             rmdir($tempDir);
 
             // Try to auto-assign to record
+            // Ensure we have the latest attributes from DB after the update call
+            $demo = $demo->fresh();
             $this->autoAssignToRecord($demo);
 
             return $demo;
@@ -229,11 +231,24 @@ class DemoProcessorService
         // Clean up temporary zip file
         unlink($tempZipPath);
 
+        // Attempt to get compressed size via Storage; some filesystem adapters may
+        // intermittently throw when retrieving metadata for files with special
+        // characters. Guard that call and fall back to null on failure.
+        $compressedSize = null;
+        try {
+            $compressedSize = Storage::size($compressedPath);
+        } catch (\Throwable $e) {
+            Log::warning('Unable to retrieve compressed file size via Storage::size(), falling back', [
+                'compressed_path' => $compressedPath,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         Log::info('Demo compressed successfully', [
             'original_file' => $processedFilename,
             'compressed_file' => $compressedFilename,
             'original_size' => filesize($tempFile),
-            'compressed_size' => Storage::size($compressedPath)
+            'compressed_size' => $compressedSize,
         ]);
 
         return $compressedPath;
@@ -272,11 +287,24 @@ class DemoProcessorService
         $gametype = 'run_' . strtolower($demo->physics);
 
         // Find matching record
-        $record = Record::where('mapname', $demo->map_name)
+        $query = Record::where('mapname', $demo->map_name)
             ->where('gametype', $gametype)
-            ->where('time', $demo->time_ms)
-            ->where('user_id', $demo->user_id)
-            ->first();
+            ->where('time', $demo->time_ms);
+
+        // If the demo was uploaded by a logged-in user, prefer records for that user.
+        // For guest uploads (user_id == null) allow matching records regardless of owner so
+        // community-submitted demos can be auto-assigned to existing public records.
+        if (!is_null($demo->user_id)) {
+            $query->where('user_id', $demo->user_id);
+        } else {
+            Log::info('Auto-assign: demo uploaded by guest, searching records without user constraint', [
+                'demo_id' => $demo->id,
+                'map' => $demo->map_name,
+                'time_ms' => $demo->time_ms,
+            ]);
+        }
+
+        $record = $query->first();
 
         if ($record) {
             $demo->update([
