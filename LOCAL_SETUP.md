@@ -1,5 +1,25 @@
 # Local Development Setup for Defrag Racing
 
+## New Features
+
+### 7z Compression for Demos
+- Demos are now compressed using **7z format** instead of zip (10-20% better compression)
+- Configured via `.env`: `DEMO_COMPRESSION_FORMAT=7z`
+- Can be switched back to `zip` if needed
+- Package `p7zip-full` installed in Docker container
+
+### Backblaze B2 Cloud Storage
+- Demo files stored on Backblaze B2 (S3-compatible storage)
+- Cost: ~$2.50/month for 500GB storage
+- See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for credentials
+
+### Redis Queue System
+- Queue jobs now use Redis instead of database
+- Much faster for processing demos at scale
+- Worker service automatically processes uploads
+
+---
+
 ## What Files Were Modified During Setup
 
 **Total files changed: 21**

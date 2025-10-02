@@ -199,41 +199,58 @@ class DemoProcessorService
 
     /**
      * Compress demo file to save storage space
+     * Supports: zip (PHP ZipArchive), 7z (p7zip command)
      */
     protected function compressDemo($tempFile, $processedFilename)
     {
-        $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.zip';
+        $format = config('app.demo_compression_format', '7z');
+        $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.' . $format;
 
         // Create hierarchical directory structure for better performance
         $compressedPath = $this->generateStoragePath($compressedFilename, 'processed');
 
-        // Ensure directory exists using Laravel Storage facade
+        // Ensure directory exists with proper permissions (0755 for readable by www-data)
         $directory = dirname($compressedPath);
         if (!Storage::exists($directory)) {
-            Storage::makeDirectory($directory);
+            Storage::makeDirectory($directory, 0755, true);
         }
 
-        // Create a temporary zip file
-        $tempZipPath = storage_path('app/temp_' . uniqid() . '.zip');
+        // Create temporary compressed file
+        $tempCompressedPath = storage_path('app/temp_' . uniqid() . '.' . $format);
 
-        $zip = new \ZipArchive();
-        if ($zip->open($tempZipPath, \ZipArchive::CREATE) !== TRUE) {
-            throw new \Exception('Cannot create zip file for demo compression');
+        if ($format === '7z') {
+            // Use 7z command for better compression ratio
+            // -mx=5 = normal compression (good balance of speed/ratio)
+            // -mmt=2 = use 2 threads for compression
+            $escapedTemp = escapeshellarg($tempFile);
+            $escapedOutput = escapeshellarg($tempCompressedPath);
+            $escapedFilename = escapeshellarg($processedFilename);
+
+            exec("7z a -t7z -mx=5 -mmt=2 $escapedOutput $escapedTemp 2>&1", $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                throw new \Exception('Failed to create 7z archive: ' . implode("\n", $output));
+            }
+
+            // Rename the file inside the archive to match processed filename
+            exec("7z rn $escapedOutput " . escapeshellarg(basename($tempFile)) . " $escapedFilename 2>&1");
+        } else {
+            // Fallback to ZIP using PHP's ZipArchive
+            $zip = new \ZipArchive();
+            if ($zip->open($tempCompressedPath, \ZipArchive::CREATE) !== TRUE) {
+                throw new \Exception('Cannot create zip file for demo compression');
+            }
+            $zip->addFile($tempFile, $processedFilename);
+            $zip->close();
         }
-
-        // Add the demo file to the zip
-        $zip->addFile($tempFile, $processedFilename);
-        $zip->close();
 
         // Store the compressed file
-        Storage::put($compressedPath, file_get_contents($tempZipPath));
+        Storage::put($compressedPath, file_get_contents($tempCompressedPath));
 
-        // Clean up temporary zip file
-        unlink($tempZipPath);
+        // Clean up temporary file
+        unlink($tempCompressedPath);
 
-        // Attempt to get compressed size via Storage; some filesystem adapters may
-        // intermittently throw when retrieving metadata for files with special
-        // characters. Guard that call and fall back to null on failure.
+        // Attempt to get compressed size via Storage
         $compressedSize = null;
         try {
             $compressedSize = Storage::size($compressedPath);
@@ -245,6 +262,7 @@ class DemoProcessorService
         }
 
         Log::info('Demo compressed successfully', [
+            'format' => $format,
             'original_file' => $processedFilename,
             'compressed_file' => $compressedFilename,
             'original_size' => filesize($tempFile),

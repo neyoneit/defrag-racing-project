@@ -20,6 +20,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Demo Compression Format
+    |--------------------------------------------------------------------------
+    |
+    | Compression format for demo files. Supported: 'zip', '7z'
+    | 7z offers better compression ratio (10-20% smaller than zip)
+    |
+    */
+
+    'demo_compression_format' => env('DEMO_COMPRESSION_FORMAT', '7z'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

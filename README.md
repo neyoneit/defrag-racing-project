@@ -29,6 +29,16 @@ The goal of [defrag.racing](https://defrag.racing) is to refresh the game by add
 
 ## :hammer_and_wrench: Getting Started
 
+> :information_source: **For Developers**: See [LOCAL_SETUP.md](LOCAL_SETUP.md) for detailed local development setup instructions.
+
+> :information_source: **For Production**:
+> - **Quick Start**: Copy `.env.example` to `.env` and fill in credentials from `PRODUCTION_CREDENTIALS.md`
+> - **Deployment Guide**: See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for complete setup
+> - **Credentials**: See `PRODUCTION_CREDENTIALS.md` (local file, not in git) for Backblaze B2 keys, DB passwords
+> - **Storage Options**: [PRODUCTION_STORAGE.md](PRODUCTION_STORAGE.md) | [PRODUCTION_STORAGE_CONTABO.md](PRODUCTION_STORAGE_CONTABO.md)
+
+> :warning: **SECURITY**: `.env` and `PRODUCTION_CREDENTIALS.md` contain secrets and are in `.gitignore`. Never commit them to GitHub!
+
 > :warning: **Important Notice**: The installation steps provided in this guide have only been tested on a Linux machine. They are not thoroughly tested and are primarily intended as a kickstart for development. If you encounter any issues or if you have a better solution, we warmly invite you to contribute to this repository. Your contributions are highly appreciated!
 
 > :warning: **Important Notice**: The following steps are designed to work with Docker, utilizing a Laravel tool called Sail. However, it's important to be aware that the production server operates on a **non-containerized** approach at the moment.

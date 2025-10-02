@@ -28,3 +28,9 @@ local_devel/*.zip
 local_devel/dummy_data/
 
 docker-compose.yml
+
+# Production credentials (local only - template version is for GitHub)
+PRODUCTION_DEPLOYMENT.md
+
+# Production credentials (keep local only)
+PRODUCTION_CREDENTIALS.md

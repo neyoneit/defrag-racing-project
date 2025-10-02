@@ -110,22 +110,18 @@ class ProfileController extends Controller {
     }
 
     public function recentlyBeaten($mddId) {
-        $records =  Record::selectRaw("
-            a.*,
-                (SELECT COUNT(id) FROM records WHERE mapname=a.mapname AND gametype=a.gametype AND time < a.time ORDER BY time) AS rank_num,
-                (SELECT COUNT(id) FROM records WHERE mapname=a.mapname AND gametype=a.gametype) AS rank_total,
-                b.time AS my_time
-        ")
-        ->from('records as a')
-        ->leftJoin('records as b', 'a.mapname', '=', 'b.mapname')
-        ->whereRaw('a.time < b.time')
-        ->whereRaw('NOT a.mdd_id = b.mdd_id')
-        ->whereRaw('a.gametype = b.gametype')
-        ->whereRaw('b.mdd_id = ?', [$mddId])
-        ->whereRaw('a.deleted_at IS NULL')
-        ->withTrashed()
-        ->orderByRaw('a.date_set DESC');
-        
+        // Optimized query: get records that beat the user's times
+        $records = Record::select('a.*', 'b.time as my_time', 'a.rank as rank_num')
+            ->from('records as a')
+            ->join('records as b', function($join) use ($mddId) {
+                $join->on('a.mapname', '=', 'b.mapname')
+                     ->on('a.gametype', '=', 'b.gametype')
+                     ->where('a.time', '<', DB::raw('b.time'))
+                     ->where('b.mdd_id', '=', $mddId)
+                     ->where('a.mdd_id', '!=', $mddId);
+            })
+            ->whereNull('a.deleted_at')
+            ->orderBy('a.date_set', 'DESC');
 
         return $records;
     }
