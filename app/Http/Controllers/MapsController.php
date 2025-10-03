@@ -62,7 +62,22 @@ class MapsController extends Controller
     public function map(Request $request, $mapname) {
         $column = $request->input('sort', 'time');
         $order = $request->input('order', 'ASC');
-        $gametype = $request->input('gametype', 'run');
+
+        $map = Map::where('name', $mapname)->firstOrFail();
+
+        // Auto-detect most populated gametype if not specified
+        $gametype = $request->input('gametype');
+        if (!$gametype) {
+            // Get record counts per gametype
+            $gametypeCounts = Record::where('mapname', $map->name)
+                ->selectRaw('SUBSTRING_INDEX(gametype, "_", 1) as base_gametype, COUNT(*) as count')
+                ->groupBy('base_gametype')
+                ->orderBy('count', 'DESC')
+                ->first();
+
+            $gametype = $gametypeCounts ? $gametypeCounts->base_gametype : 'run';
+        }
+
         $cpmGametype = $gametype . '_cpm';
         $vq3Gametype = $gametype . '_vq3';
 
@@ -83,7 +98,14 @@ class MapsController extends Controller
             $order = 'DESC';
         }
 
-        $map = Map::where('name', $mapname)->firstOrFail();
+        // Get record counts per gametype for UI display
+        $gametypeStats = Record::where('mapname', $map->name)
+            ->selectRaw('SUBSTRING_INDEX(gametype, "_", 1) as base_gametype, COUNT(*) as total')
+            ->groupBy('base_gametype')
+            ->get()
+            ->keyBy('base_gametype')
+            ->map(fn($item) => $item->total)
+            ->toArray();
 
         $cpmRecords = Record::where('mapname', $map->name);
 
@@ -139,6 +161,7 @@ class MapsController extends Controller
             ->with('my_vq3_record', $my_vq3_record)
             ->with('cpmOldRecords', $cpmOldRecords)
             ->with('vq3OldRecords', $vq3OldRecords)
+            ->with('gametypeStats', $gametypeStats)
             ->with('showOldtop', ($showOldtop === 'true'));
 
     }

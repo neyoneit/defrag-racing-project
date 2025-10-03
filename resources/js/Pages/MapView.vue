@@ -17,6 +17,7 @@
         vq3OldRecords: Object,
         my_cpm_record: Object,
         my_vq3_record: Object,
+        gametypeStats: Object,
         showOldtop: {
             type: Boolean,
             default: false
@@ -168,99 +169,41 @@
         <Head :title="map.name" />
 
         <div class="max-w-8xl mx-auto pt-6 px-4 md:px-6 lg:px-8">
-            <div class="flex justify-between items-center flex-wrap">
+            <div class="flex justify-between items-center flex-wrap mb-4">
                 <h2 class="font-semibold text-xl text-gray-200 leading-tight">
                     Map details
                 </h2>
 
-
-                <div class="flex flex-wrap">
-                    <Dropdown align="right" width="48" class="mt-2 sm:mt-0">
-                        <template #trigger>
-                            <button class="flex items-center text-white bg-grayop-700 py-2 px-4 rounded-md font-bold cursor-pointer bg-grayop-700 hover:bg-gray-600 mr-3">
-                                <div class="w-8 h-8 mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-                                    </svg>
-                                </div>
-
-                                <div>
-                                    <div class="text-left">
-                                        Filters
-                                    </div>
-
-                                    <div class="text-xs text-gray-500 text-center flex">
-                                        <span>Currently:</span>
-                                        <span class="text-gray-400 capitalize ml-1"> {{ column.split('_')[0] }} </span>
-
-                                        <span class="ml-0.5">
-                                            <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
-
-                                            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                            </svg>
-                                        </span>
-                                    </div>
-                                </div>
-                            </button>
-                        </template>
-
-                        <template #content>
-                            <div @click="sortByDate" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span>Date Set</span>
-                                <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>
-                            </div>
-
-                            <div @click="sortByTime" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span>Time</span>
-                                <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>
-                            </div>
-                        </template>
-                    </Dropdown>
-
-                    <Dropdown align="right" width="48" class="mt-2 sm:mt-0">
-                        <template #trigger>
-                            <button class="flex items-center text-white bg-grayop-700 py-2 px-4 rounded-md font-bold cursor-pointer bg-grayop-700 hover:bg-gray-600 mr-3">
-                                <div class="w-8 h-8 mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                                    </svg>
-                                </div>
-
-                                <div>
-                                    <div class="text-left">
-                                        Gametype
-                                    </div>
-
-                                    <div class="text-xs text-gray-500 text-center flex">
-                                        <span>Currently:</span>
-                                        <span class="text-gray-400 capitalize ml-1"> {{ gametype }} </span>
-                                    </div>
-                                </div>
-                            </button>
-                        </template>
-
-                        <template #content>
-                            <div v-for="gt in gametypes" @click="sortByGametype(gt)" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span class="uppercase"> {{ gt }} </span>
-                            </div>
-                        </template>
-                    </Dropdown>
+                <div class="flex items-center gap-2 mt-2 sm:mt-0">
+                    <button @click="sortByTime" class="flex items-center text-white bg-grayop-700 py-2 px-4 rounded-md font-bold cursor-pointer hover:bg-gray-600">
+                        <span class="text-sm">Sort: {{ column === 'time' ? 'Time' : 'Date' }}</span>
+                        <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 ml-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                        </svg>
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 ml-2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                        </svg>
+                    </button>
                 </div>
+            </div>
+
+            <!-- Gametype Tabs -->
+            <div class="flex gap-1 flex-wrap mb-4">
+                <button
+                    v-for="gt in gametypes"
+                    :key="gt"
+                    v-show="gametypeStats[gt] && gametypeStats[gt] > 0"
+                    @click="sortByGametype(gt)"
+                    :class="[
+                        'px-4 py-2 rounded-md font-bold text-sm transition-all',
+                        gametype === gt
+                            ? 'bg-blue-600 text-white shadow-lg'
+                            : 'bg-grayop-700 text-gray-300 hover:bg-gray-600'
+                    ]"
+                >
+                    <span class="uppercase">{{ gt }}</span>
+                    <span class="ml-2 text-xs opacity-75">({{ gametypeStats[gt] }})</span>
+                </button>
             </div>
 
 
