@@ -113,11 +113,23 @@ class MapsController extends Controller
 
         $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
+        // Recalculate ranks for CPM based on current sort and pagination
+        $cpmRecords->getCollection()->transform(function ($record, $index) use ($cpmRecords) {
+            $record->rank = ($cpmRecords->currentPage() - 1) * $cpmRecords->perPage() + $index + 1;
+            return $record;
+        });
+
         $vq3Records = Record::where('mapname', $map->name);
 
         $vq3Records = $vq3Records->where('gametype', $vq3Gametype);
 
         $vq3Records = $vq3Records->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+
+        // Recalculate ranks for VQ3 based on current sort and pagination
+        $vq3Records->getCollection()->transform(function ($record, $index) use ($vq3Records) {
+            $record->rank = ($vq3Records->currentPage() - 1) * $vq3Records->perPage() + $index + 1;
+            return $record;
+        });
 
 
         $showOldtop = $request->input('showOldtop', false);

@@ -1,5 +1,5 @@
 <script setup>
-    import { Link } from '@inertiajs/vue3';
+    import { Link, usePage } from '@inertiajs/vue3';
     import { computed } from 'vue';
 
     const props = defineProps({
@@ -11,6 +11,14 @@
             type: Boolean,
             default: false
         }
+    });
+
+    const page = usePage();
+
+    const isMyRecord = computed(() => {
+        const userId = page.props.auth?.user?.id;
+        if (!userId) return false;
+        return props.record.user?.id === userId;
     });
 
     const bestrecordCountry = computed(() => {
@@ -42,52 +50,106 @@
 </script>
 
 <template>
-    <div>
-        <div class="flex justify-between rounded-md px-2 py-1 items-center" :class="{'bg-blackop-30 opacity-70': record.oldtop}" :title="record.oldtop ? 'Old Top Record' : ''">
-            <div class="mr-4 flex items-center">
-                <div class="font-bold mr-3 text-white text-lg w-11" :class="{'text-orange-400': record.oldtop}">{{ record.rank }}</div>
-                <img class="h-10 w-10 rounded-full object-cover" :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'" :alt="record.user?.name ?? record.name">
-                
-                <div class="ml-4">
-                    <Link class="flex rounded-md" :href="getRoute">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-5 inline mr-2" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
-                                <Link class="font-bold text-white" :href="getRoute" v-html="q3tohtml(record.user?.name ?? record.name)"></Link>
-                            </div>
-                        </div>
-                    </Link>
-    
-                    <div class="text-gray-400 text-xs mt-2" :title="record.date_set" :class="{'text-orange-400': record.oldtop}"> {{ timeSince(record.date_set) }} ago</div>
-                </div>
+    <div
+        class="group relative flex justify-between items-center px-3 py-2 rounded-lg transition-all duration-200"
+        :class="{
+            'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-l-2 border-amber-400': record.oldtop,
+            'bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent border-l-2 border-emerald-400 ring-1 ring-emerald-500/30': isMyRecord && !record.oldtop,
+            'hover:bg-white/5': !isMyRecord && !record.oldtop
+        }"
+        :title="record.oldtop ? '👑 Old Top Record' : (isMyRecord ? '⭐ Your Record' : '')"
+    >
+        <!-- Rank & Player Info -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+            <!-- Rank -->
+            <div
+                class="font-bold text-base w-8 flex-shrink-0 text-center"
+                :class="{
+                    'text-amber-400': record.oldtop,
+                    'text-emerald-400': isMyRecord && !record.oldtop,
+                    'text-gray-400': !isMyRecord && !record.oldtop
+                }"
+            >
+                {{ record.rank }}
             </div>
 
-            <div class="flex items-center">
-                <div class="text-right">
-                    <div class="text-lg font-bold text-gray-300" :class="{'text-orange-400': record.oldtop}">{{  formatTime(record.time) }}</div>
-                    <div class="text-xs text-red-500" v-if="timeDiff">- {{  formatTime(timeDiff) }}</div>
-                    <div v-if="record.uploaded_demos && record.uploaded_demos.length > 0" class="text-xs text-green-400 mt-1">
-                        <a :href="`/demos/${record.uploaded_demos[0].id}/download`" class="flex items-center hover:text-green-300" title="Download demo">
-                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
-                            </svg>
-                            Demo
-                        </a>
-                    </div>
-                </div>
+            <!-- Avatar -->
+            <img
+                class="h-8 w-8 rounded-full object-cover flex-shrink-0 ring-2"
+                :class="{
+                    'ring-amber-400/50': record.oldtop,
+                    'ring-emerald-400/50': isMyRecord && !record.oldtop,
+                    'ring-gray-700': !isMyRecord && !record.oldtop
+                }"
+                :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
+                :alt="record.user?.name ?? record.name"
+            >
 
-                <div class="ml-5">
-                    <div class="text-white rounded-full text-xs px-2 py-0.5 uppercase font-bold" :class="{'bg-green-700': record.gametype.includes('cpm'), 'bg-blue-600': !record.gametype.includes('cpm')}">
-                        <div>{{ physics }}</div>
-                    </div>
-
-                    <!-- <div class="rounded-full text-xs px-2 py-0.5 uppercase font-bold border-2 border-gray-500 text-gray-500 mt-1">
-                        <div>{{ record.mode }}</div>
-                    </div> -->
+            <!-- Name & Date -->
+            <div class="min-w-0 flex-1">
+                <Link class="flex items-center gap-2" :href="getRoute">
+                    <img
+                        :src="`/images/flags/${bestrecordCountry}.png`"
+                        class="w-4 h-3 flex-shrink-0"
+                        onerror="this.src='/images/flags/_404.png'"
+                        :title="bestrecordCountry"
+                    >
+                    <span
+                        class="font-semibold text-sm truncate hover:text-blue-400 transition-colors"
+                        :class="{
+                            'text-amber-300': record.oldtop,
+                            'text-emerald-300': isMyRecord && !record.oldtop,
+                            'text-white': !isMyRecord && !record.oldtop
+                        }"
+                        v-html="q3tohtml(record.user?.name ?? record.name)"
+                    ></span>
+                </Link>
+                <div
+                    class="text-xs mt-0.5"
+                    :class="{
+                        'text-amber-400/70': record.oldtop,
+                        'text-emerald-400/70': isMyRecord && !record.oldtop,
+                        'text-gray-500': !isMyRecord && !record.oldtop
+                    }"
+                    :title="record.date_set"
+                >
+                    {{ timeSince(record.date_set) }}
                 </div>
             </div>
         </div>
-    
-        <hr class="my-1 text-gray-700 border-gray-700 bg-gray-700">
+
+        <!-- Time & Demo -->
+        <div class="flex items-center gap-3">
+            <div class="text-right">
+                <div
+                    class="text-base font-bold tabular-nums"
+                    :class="{
+                        'text-amber-300': record.oldtop,
+                        'text-emerald-300': isMyRecord && !record.oldtop,
+                        'text-gray-300': !isMyRecord && !record.oldtop
+                    }"
+                >
+                    {{ formatTime(record.time) }}
+                </div>
+                <div class="text-xs text-red-400 tabular-nums" v-if="timeDiff">-{{ formatTime(timeDiff) }}</div>
+            </div>
+
+            <!-- Demo Download Icon -->
+            <a
+                v-if="record.uploaded_demos && record.uploaded_demos.length > 0"
+                :href="`/demos/${record.uploaded_demos[0].id}/download`"
+                class="p-1.5 rounded-md transition-all hover:scale-110"
+                :class="{
+                    'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30': record.oldtop,
+                    'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30': isMyRecord && !record.oldtop,
+                    'bg-gray-700 text-gray-400 hover:bg-gray-600': !isMyRecord && !record.oldtop
+                }"
+                title="Download demo"
+            >
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+                </svg>
+            </a>
+        </div>
     </div>
 </template>
