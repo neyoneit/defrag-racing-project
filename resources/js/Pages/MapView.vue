@@ -7,7 +7,7 @@
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
-    import { watchEffect, ref, onMounted, onUnmounted, computed } from 'vue';
+    import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
 
     const props = defineProps({
         map: Object,
@@ -42,6 +42,9 @@
     ];
 
     const screenWidth = ref(window.innerWidth);
+
+    // Initialize oldtop state from props (server/URL state is source of truth)
+    const showOldtopLocal = ref(props.showOldtop);
 
     const sortByDate = () => {
         if (column.value === 'date_set') {
@@ -96,11 +99,19 @@
         gametype.value = route().params['gametype'] ?? 'run';
     });
 
+    // Watch for changes to showOldtop prop and sync with local state
+    watch(() => props.showOldtop, (newValue) => {
+        showOldtopLocal.value = newValue;
+        localStorage.setItem('mapview_show_oldtop', newValue ? '1' : '0');
+    }, { immediate: true });
+
     const resizeScreen = () => {
         screenWidth.value = window.innerWidth
     };
 
     const onChangeOldtop = (value) => {
+        showOldtopLocal.value = value;
+        localStorage.setItem('mapview_show_oldtop', value ? '1' : '0');
         router.reload({
             data: {
                 showOldtop: value
@@ -160,6 +171,12 @@
 
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);
+
+        // Initialize toggle state - always trust the server/URL state
+        showOldtopLocal.value = props.showOldtop;
+
+        // Sync localStorage with the current state from URL/server
+        localStorage.setItem('mapview_show_oldtop', props.showOldtop ? '1' : '0');
     });
 
     onUnmounted(() => {
@@ -242,7 +259,7 @@
                         </button>
                         <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
                             <span class="text-gray-300">Old Top:</span>
-                            <ToggleButton :isActive="showOldtop" @setIsActive="onChangeOldtop" />
+                            <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
                         </div>
                     </div>
                 </div>
@@ -254,20 +271,20 @@
                     <!-- VQ3 Leaderboard -->
                     <div class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50">
                     <!-- VQ3 Header -->
-                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/20 border-b border-blue-500/30 p-4">
+                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/20 border-b border-blue-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
                                 ⚡ VQ3
-                                <span class="text-sm text-gray-400 font-normal">({{ vq3Records.total }} records)</span>
+                                <span class="text-xs text-gray-400 font-normal">({{ vq3Records.total }})</span>
                             </h3>
                             <div v-if="my_vq3_record" class="text-right">
-                                <div class="text-xs text-gray-400">Your Best</div>
-                                <div class="text-lg font-bold text-blue-400">
+                                <div class="text-[10px] text-gray-400">Your Best</div>
+                                <div class="text-sm font-bold text-blue-400 tabular-nums">
                                     {{ (my_vq3_record.time / 1000).toFixed(3) }}s
-                                    <span class="text-sm text-gray-500">#{{ my_vq3_record.rank }}</span>
+                                    <span class="text-xs text-gray-500">#{{ my_vq3_record.rank }}</span>
                                 </div>
                             </div>
-                            <div v-else class="text-sm text-gray-500">No record</div>
+                            <div v-else class="text-xs text-gray-500">No record</div>
                         </div>
                     </div>
 
@@ -303,20 +320,20 @@
                 <!-- CPM Leaderboard -->
                 <div class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50 mt-5 md:mt-0">
                     <!-- CPM Header -->
-                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/20 border-b border-purple-500/30 p-4">
+                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/20 border-b border-purple-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <h3 class="text-base font-bold text-white flex items-center gap-2">
                                 🚀 CPM
-                                <span class="text-sm text-gray-400 font-normal">({{ cpmRecords.total }} records)</span>
+                                <span class="text-xs text-gray-400 font-normal">({{ cpmRecords.total }})</span>
                             </h3>
                             <div v-if="my_cpm_record" class="text-right">
-                                <div class="text-xs text-gray-400">Your Best</div>
-                                <div class="text-lg font-bold text-purple-400">
+                                <div class="text-[10px] text-gray-400">Your Best</div>
+                                <div class="text-sm font-bold text-purple-400 tabular-nums">
                                     {{ (my_cpm_record.time / 1000).toFixed(3) }}s
-                                    <span class="text-sm text-gray-500">#{{ my_cpm_record.rank }}</span>
+                                    <span class="text-xs text-gray-500">#{{ my_cpm_record.rank }}</span>
                                 </div>
                             </div>
-                            <div v-else class="text-sm text-gray-500">No record</div>
+                            <div v-else class="text-xs text-gray-500">No record</div>
                         </div>
                     </div>
 
