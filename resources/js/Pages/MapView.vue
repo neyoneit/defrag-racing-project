@@ -1,5 +1,5 @@
 <script setup>
-    import { Head, router, usePage } from '@inertiajs/vue3';
+    import { Head, Link, router, usePage } from '@inertiajs/vue3';
     import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
     import MapRecordSmall from '@/Components/MapRecordSmall.vue';
@@ -18,6 +18,7 @@
         my_cpm_record: Object,
         my_vq3_record: Object,
         gametypeStats: Object,
+        servers: Array,
         showOldtop: {
             type: Boolean,
             default: false
@@ -45,6 +46,9 @@
 
     // Initialize oldtop state from props (server/URL state is source of truth)
     const showOldtopLocal = ref(props.showOldtop);
+
+    // Mobile physics toggle - 'both', 'VQ3', or 'CPM'
+    const mobilePhysics = ref('both');
 
     const sortByDate = () => {
         if (column.value === 'date_set') {
@@ -210,13 +214,46 @@
                 <div class="w-full max-w-4xl mx-auto backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl">
                     <!-- Map Title -->
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">{{ map.name }}</h1>
-                    <p class="text-gray-300 text-center mb-6">
-                        <span v-if="map.author">{{ map.author }}</span>
-                        <span v-if="map.date_added"> • {{ new Date(map.date_added).getFullYear() }}</span>
+                    <p class="text-gray-300 text-center mb-4">
+                        <Link v-if="map.author" :href="`/maps?author=${encodeURIComponent(map.author)}`" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
+                        <span v-if="map.date_added" class="text-gray-400"> • {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                     </p>
 
-                    <!-- Gametype Tabs -->
-                    <div class="flex gap-2 flex-wrap justify-center mb-4">
+                    <!-- Download & Servers -->
+                    <div class="flex flex-wrap gap-2 justify-center mb-4">
+                        <!-- Download Button -->
+                        <a
+                            :href="`/maps/${map.name}/download`"
+                            class="flex items-center gap-1.5 bg-gray-600/80 hover:bg-gray-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                        >
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+                            </svg>
+                            Download Map
+                        </a>
+
+                        <!-- Active Servers -->
+                        <div v-if="servers && servers.length > 0" class="flex flex-wrap gap-2">
+                            <a
+                                v-for="server in servers"
+                                :key="server.id"
+                                v-show="server.online_players && server.online_players.length > 0"
+                                :href="`defrag://${server.ip}:${server.port}`"
+                                class="flex items-center gap-1.5 bg-orange-500/80 hover:bg-orange-500 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                                :title="`Connect to ${server.plain_name || server.name}`"
+                            >
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="whitespace-nowrap">Join</span>
+                                <span class="truncate max-w-[100px]">{{ server.plain_name || server.name }}</span>
+                                <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ server.online_players.length }} playing</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Gametype Tabs (only show if more than one gametype has records) -->
+                    <div v-if="Object.values(gametypeStats).filter(count => count > 0).length > 1" class="flex gap-2 flex-wrap justify-center mb-4">
                         <button
                             v-for="gt in gametypes"
                             :key="gt"
@@ -237,11 +274,13 @@
                     <!-- Physics & Controls -->
                     <div class="flex flex-wrap gap-4 justify-center items-center text-sm">
                         <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <span class="text-gray-300">⚡ VQ3:</span>
+                            <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                            <span class="text-gray-300">VQ3:</span>
                             <span class="text-blue-400 font-bold">{{ vq3Records.total }}</span>
                         </div>
                         <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <span class="text-gray-300">🚀 CPM:</span>
+                            <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                            <span class="text-gray-300">CPM:</span>
                             <span class="text-blue-400 font-bold">{{ cpmRecords.total }}</span>
                         </div>
                         <button
@@ -249,7 +288,9 @@
                             class="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
                             :title="column === 'time' ? 'Currently sorting by fastest time' : 'Currently sorting by date set'"
                         >
-                            <span>{{ column === 'time' ? '⚡ Fastest' : '📅 Newest' }}</span>
+                            <img v-if="column === 'time'" src="/images/haste.svg" class="w-5 h-5" alt="Fastest" />
+                            <span v-if="column === 'time'">Fastest</span>
+                            <span v-else>📅 Newest</span>
                             <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                             </svg>
@@ -267,24 +308,53 @@
 
             <!-- Leaderboards Section (on top of background) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+                <!-- Mobile Physics Toggle (only on small screens) -->
+                <div class="md:hidden flex gap-2 justify-center mb-4">
+                    <button
+                        @click="mobilePhysics = mobilePhysics === 'VQ3' ? 'both' : 'VQ3'"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            mobilePhysics === 'VQ3'
+                                ? 'bg-blue-500/80 text-white shadow-lg ring-2 ring-blue-400'
+                                : 'bg-white/10 text-gray-300'
+                        ]"
+                    >
+                        <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                        <span>VQ3</span>
+                    </button>
+                    <button
+                        @click="mobilePhysics = mobilePhysics === 'CPM' ? 'both' : 'CPM'"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            mobilePhysics === 'CPM'
+                                ? 'bg-purple-500/80 text-white shadow-lg ring-2 ring-purple-400'
+                                : 'bg-white/10 text-gray-300'
+                        ]"
+                    >
+                        <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                        <span>CPM</span>
+                    </button>
+                </div>
+
                 <div class="md:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/20 border-b border-blue-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                ⚡ VQ3
+                                <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                <span>VQ3</span>
                                 <span class="text-xs text-gray-400 font-normal">({{ vq3Records.total }})</span>
                             </h3>
-                            <div v-if="my_vq3_record" class="text-right">
+                            <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
-                                <div class="text-sm font-bold text-blue-400 tabular-nums">
+                                <div v-if="my_vq3_record" class="text-sm font-bold text-blue-400 tabular-nums">
                                     {{ (my_vq3_record.time / 1000).toFixed(3) }}s
                                     <span class="text-xs text-gray-500">#{{ my_vq3_record.rank }}</span>
                                 </div>
+                                <div v-else class="text-sm text-gray-500">-</div>
                             </div>
-                            <div v-else class="text-xs text-gray-500">No record</div>
                         </div>
                     </div>
 
@@ -296,7 +366,7 @@
                         </div>
 
                         <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getVq3Records.data" :key="record.id" :record="record" />
+                            <MapRecordSmall v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
                         </div>
                     </div>
 
@@ -318,22 +388,23 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50 mt-5 md:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/20 border-b border-purple-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                🚀 CPM
+                                <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                <span>CPM</span>
                                 <span class="text-xs text-gray-400 font-normal">({{ cpmRecords.total }})</span>
                             </h3>
-                            <div v-if="my_cpm_record" class="text-right">
+                            <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
-                                <div class="text-sm font-bold text-purple-400 tabular-nums">
+                                <div v-if="my_cpm_record" class="text-sm font-bold text-purple-400 tabular-nums">
                                     {{ (my_cpm_record.time / 1000).toFixed(3) }}s
                                     <span class="text-xs text-gray-500">#{{ my_cpm_record.rank }}</span>
                                 </div>
+                                <div v-else class="text-sm text-gray-500">-</div>
                             </div>
-                            <div v-else class="text-xs text-gray-500">No record</div>
                         </div>
                     </div>
 
@@ -345,7 +416,7 @@
                         </div>
 
                         <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getCpmRecords.data" :key="record.id" :record="record" />
+                            <MapRecordSmall v-for="record in getCpmRecords.data" physics="CPM" :oldtop="record.oldtop" :key="record.id" :record="record" />
                         </div>
                     </div>
 

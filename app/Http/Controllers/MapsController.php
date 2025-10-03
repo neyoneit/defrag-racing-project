@@ -111,11 +111,19 @@ class MapsController extends Controller
 
         $cpmRecords = $cpmRecords->where('gametype', $cpmGametype);
 
+        // Get all CPM records sorted by time to calculate proper time-based ranks
+        $allCpmRecordsByTime = Record::where('mapname', $map->name)
+            ->where('gametype', $cpmGametype)
+            ->orderBy('time', 'ASC')
+            ->orderBy('date_set', 'ASC')
+            ->pluck('id')
+            ->toArray();
+
         $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
-        // Recalculate ranks for CPM based on current sort and pagination
-        $cpmRecords->getCollection()->transform(function ($record, $index) use ($cpmRecords) {
-            $record->rank = ($cpmRecords->currentPage() - 1) * $cpmRecords->perPage() + $index + 1;
+        // Assign time-based ranks (always based on fastest time, not current sort)
+        $cpmRecords->getCollection()->transform(function ($record) use ($allCpmRecordsByTime) {
+            $record->rank = array_search($record->id, $allCpmRecordsByTime) + 1;
             return $record;
         });
 
@@ -123,11 +131,19 @@ class MapsController extends Controller
 
         $vq3Records = $vq3Records->where('gametype', $vq3Gametype);
 
+        // Get all VQ3 records sorted by time to calculate proper time-based ranks
+        $allVq3RecordsByTime = Record::where('mapname', $map->name)
+            ->where('gametype', $vq3Gametype)
+            ->orderBy('time', 'ASC')
+            ->orderBy('date_set', 'ASC')
+            ->pluck('id')
+            ->toArray();
+
         $vq3Records = $vq3Records->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
 
-        // Recalculate ranks for VQ3 based on current sort and pagination
-        $vq3Records->getCollection()->transform(function ($record, $index) use ($vq3Records) {
-            $record->rank = ($vq3Records->currentPage() - 1) * $vq3Records->perPage() + $index + 1;
+        // Assign time-based ranks (always based on fastest time, not current sort)
+        $vq3Records->getCollection()->transform(function ($record) use ($allVq3RecordsByTime) {
+            $record->rank = array_search($record->id, $allVq3RecordsByTime) + 1;
             return $record;
         });
 
@@ -165,6 +181,13 @@ class MapsController extends Controller
             return redirect()->route('maps.map', ['cpmPage' => $cpmRecords->lastPage(), 'mapname' => $mapname, 'vq3Page' => $vq3Page]);
         }
 
+        // Get servers currently playing this map
+        $servers = \App\Models\Server::where('map', $map->name)
+            ->where('online', true)
+            ->where('visible', true)
+            ->with('onlinePlayers')
+            ->get();
+
         return Inertia::render('MapView')
             ->with('map', $map)
             ->with('cpmRecords', $cpmRecords)
@@ -174,7 +197,8 @@ class MapsController extends Controller
             ->with('cpmOldRecords', $cpmOldRecords)
             ->with('vq3OldRecords', $vq3OldRecords)
             ->with('gametypeStats', $gametypeStats)
-            ->with('showOldtop', ($showOldtop === 'true'));
+            ->with('showOldtop', ($showOldtop === 'true'))
+            ->with('servers', $servers);
 
     }
 }

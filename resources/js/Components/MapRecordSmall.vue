@@ -1,58 +1,78 @@
 <script setup>
     import { Link } from '@inertiajs/vue3';
     import { computed } from 'vue';
+    import { usePage } from '@inertiajs/vue3';
 
     const props = defineProps({
         record: Object,
-        cpmrecord: Object,
-        vq3record: Object
+        physics: String,
+        oldtop: Boolean
     });
+
+    const page = usePage();
 
     const bestrecordCountry = computed(() => {
         let country = props.record.user?.country ?? props.record.country;
-
         return (country == 'XX') ? '_404' : country;
     });
 
-    const timeDiff =  computed(() => {
-        if (! props.record.besttime === -1) {
-            return null;
-        }
-
-        return Math.abs(props.record.besttime - props.record.time)
+    const isMyRecord = computed(() => {
+        return page.props.auth.user?.id === props.record.user?.id;
     });
 
+    const getRoute = computed(() => {
+        return route(props.record.user ? 'profile.index' : 'profile.mdd', props.record.user ? props.record.user.id : props.record.mdd_id);
+    });
 </script>
 
 <template>
-    <div>
-        <div class="flex items-center justify-between">
-            <div class="font-bold mr-5 text-white text-lg">#{{ record.rank }}</div>
-            <Link class="flex rounded-md" :href="route(record.user ? 'profile.index' : 'profile.mdd', record.user ? record.user.id : record.mdd_id)">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-5 inline mr-2" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
-                        <Link class="font-bold text-white" :href="route(record.user ? 'profile.index' : 'profile.mdd', record.user ? record.user.id : record.mdd_id)" v-html="q3tohtml(record.user?.name ?? record.name)"></Link>
-                    </div>
-                </div>
-            </Link>
-            <div class="text-lg font-bold text-gray-300">{{  formatTime(record.time) }}</div>
+    <div class="group relative flex items-center gap-2 px-2 py-2 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg">
+        <!-- Rank Number - LARGE with pop animation -->
+        <div class="font-black text-lg w-7 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-125 group-hover:translate-x-1 group-hover:mr-1"
+             :class="{
+                 'text-yellow-400': record.rank === 1 && !record.oldtop,
+                 'text-gray-300': record.rank === 2 && !record.oldtop,
+                 'text-orange-400': record.rank === 3 && !record.oldtop,
+                 'text-gray-400': record.rank > 3 || record.oldtop
+             }">
+            {{ record.rank }}
         </div>
 
-        <div class="flex justify-between items-center mt-1">
-            <div>
-                <div class="text-white rounded-full text-xs px-2 py-0.5 uppercase font-bold" :class="{'bg-green-700': record.physics.includes('cpm'), 'bg-blue-600': !record.physics.includes('cpm')}">
-                    <div>{{ record.physics }}</div>
-                </div>
-            </div>
+        <!-- Player Info - Compact but visible -->
+        <Link :href="getRoute" class="flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1">
+            <img
+                v-if="record.user?.profile_photo_path"
+                :src="`/storage/${record.user.profile_photo_path}`"
+                class="h-7 w-7 rounded-full object-cover"
+            />
+            <img
+                v-else
+                :src="`https://www.gravatar.com/avatar/${record.user?.id || record.mdd_id}?s=200&d=mp`"
+                class="h-7 w-7 rounded-full"
+            />
+            <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-5 h-4" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
+            <span class="text-sm font-semibold text-gray-200 truncate group-hover/player:text-blue-400 transition-colors" v-html="q3tohtml(record.user?.name ?? record.name)">
+            </span>
+        </Link>
 
-            <div class="text-gray-400 text-xs mt-2" :title="record.date_set"> {{ timeSince(record.date_set) }} ago</div>
+        <!-- Time - MASSIVE -->
+        <div class="text-right">
+            <div class="font-black text-base tabular-nums text-gray-100">{{ formatTime(record.time) }}</div>
+        </div>
 
-            <div class="flex justify-between items-center text-right mt-3">
-                <div class="text-xs text-red-500" v-if="timeDiff !== null">- {{  formatTime(timeDiff) }}</div>
+        <!-- Date & Demo - Subtle by default, visible on hover -->
+        <div class="flex items-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+            <div class="text-[11px] text-gray-400 whitespace-nowrap font-mono">
+                {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}
             </div>
         </div>
-    
-        <hr class="my-2 text-gray-700 border-gray-700 bg-gray-700">
+
+        <!-- Left side badges -->
+        <div class="absolute -left-1 top-1/2 -translate-y-1/2 text-lg transition-all duration-200 group-hover:scale-110 group-hover:translate-x-0.5">
+            <span v-if="record.oldtop && record.rank <= 3">👑</span>
+            <span v-else-if="record.rank === 1 && !record.oldtop">🥇</span>
+            <span v-else-if="record.rank === 2 && !record.oldtop">🥈</span>
+            <span v-else-if="record.rank === 3 && !record.oldtop">🥉</span>
+        </div>
     </div>
 </template>

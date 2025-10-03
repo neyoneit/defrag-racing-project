@@ -149,13 +149,10 @@
         <div class="absolute -left-1 top-1/2 -translate-y-1/2 text-lg transition-all duration-200 group-hover:scale-110 group-hover:translate-x-0.5">
             <!-- Old Top Crown (only for top 3) -->
             <span v-if="record.oldtop && record.rank <= 3">👑</span>
-            <!-- Top 3 Medals (only if not old top and not your record) -->
-            <span v-else-if="record.rank === 1 && !isMyRecord && !record.oldtop">🥇</span>
-            <span v-else-if="record.rank === 2 && !isMyRecord && !record.oldtop">🥈</span>
-            <span v-else-if="record.rank === 3 && !isMyRecord && !record.oldtop">🥉</span>
+            <!-- Top 3 Medals (for all top 3, including your records) -->
+            <span v-else-if="record.rank === 1 && !record.oldtop">🥇</span>
+            <span v-else-if="record.rank === 2 && !record.oldtop">🥈</span>
+            <span v-else-if="record.rank === 3 && !record.oldtop">🥉</span>
         </div>
-
-        <!-- Your Record Star (top right) -->
-        <div v-if="isMyRecord && !record.oldtop" class="absolute -right-1 -top-1 text-sm transition-all duration-200 group-hover:scale-125 group-hover:rotate-12">⭐</div>
     </div>
 </template>
