@@ -1,9 +1,5 @@
 <script setup>
     import { useForm } from '@inertiajs/vue3';
-    import ActionMessage from '@/Components/Laravel/ActionMessage.vue';
-    import FormSection from '@/Components/Laravel/FormSection.vue';
-    import InputError from '@/Components/Laravel/InputError.vue';
-    import InputLabel from '@/Components/Laravel/InputLabel.vue';
     import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
     import Checkbox from '@/Components/Laravel/Checkbox.vue';
 
@@ -28,90 +24,93 @@
 </script>
 
 <template>
-    <FormSection @submitted="updateSocialMediaInformation">
-        <template #title>
-            <div id="notifications-settings">
-                Notification Settings
+    <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                    </svg>
+                </div>
+                <h2 class="text-sm font-bold text-white" id="notifications-settings">Notification Settings</h2>
             </div>
-        </template>
+            <div v-if="form.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="text-xs font-medium text-green-400">Saved</span>
+            </div>
+        </div>
 
-        <template #description>
-            Control your notification settings
-        </template>
+        <form @submit.prevent="updateSocialMediaInformation" class="space-y-3">
+            <div>
+                <div class="text-sm text-white font-bold">System Notifications</div>
+                <div class="text-xs text-gray-400">When do you want to recieve system notifications</div>
 
-        <template #form>
-            <div class="col-span-6">
-                <div class="text-lg text-white font-bold">System Notifications</div>
-                <div class="text-sm text-gray-400">When do you want to recieve system notifications</div>
-
-                <div class="mt-4">
-                    <label class="flex items-center cursor-pointer mb-3">
+                <div class="mt-2 space-y-2">
+                    <label class="flex items-center cursor-pointer">
                         <Checkbox v-model:checked="form.defrag_news" name="defrag_news" />
-                        <span class="ms-2 text-sm text-gray-400">
+                        <span class="ms-2 text-xs text-gray-400">
                             Defrag News (Announcements, Changelog, game updates, etc...)
                         </span>
                     </label>
 
-                    <label class="flex items-center cursor-pointer mb-3">
+                    <label class="flex items-center cursor-pointer">
                         <Checkbox v-model:checked="form.tournament_news" name="tournament_news" />
-                        <span class="ms-2 text-sm text-gray-400">
+                        <span class="ms-2 text-xs text-gray-400">
                             Tournament News (Round starts, Results, updates, etc...)
                         </span>
                     </label>
 
-                    <label class="flex items-center cursor-pointer mb-3">
+                    <label class="flex items-center cursor-pointer">
                         <Checkbox :checked="true" name="invitations" disabled class="text-gray-500" />
-                        <span class="ms-2 text-sm text-gray-400">
+                        <span class="ms-2 text-xs text-gray-400">
                             Invitations (Clan invites, Team invites, etc...) [Mandatory]
                         </span>
                     </label>
                 </div>
             </div>
 
-            <div class="col-span-6 mt-5">
-                <div class="text-lg text-white font-bold">Records Notifications</div>
-                <div class="text-sm text-gray-400">When do you want to recieve records notifications</div>
+            <div>
+                <div class="text-sm text-white font-bold">Records Notifications</div>
+                <div class="text-xs text-gray-400">When do you want to recieve records notifications</div>
 
-                <div class="mt-4 w-full flex justify-between">
+                <div class="mt-2 w-full flex gap-4">
                     <div class="flex-1">
-                        <div class="text-blue-400 font-bold text-lg mb-3">VQ3</div>
+                        <div class="text-blue-400 font-bold text-sm mb-2">VQ3</div>
 
-                        <div class="flex items-center mb-4">
+                        <div class="flex items-center mb-2">
                             <input id="recordsall_vq3" type="radio" v-model="form.records_vq3" value="all" name="recordsall_vq3" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
-                            <label for="recordsall_vq3" class="ms-2 text-sm font-medium text-gray-300">All</label>
+                            <label for="recordsall_vq3" class="ms-2 text-xs font-medium text-gray-300">All</label>
                         </div>
-    
-                        <div class="flex items-center mb-4">
+
+                        <div class="flex items-center mb-2">
                             <input id="recordswr_vq3" type="radio" v-model="form.records_vq3" value="wr" name="recordswr_vq3" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
-                            <label for="recordswr_vq3" class="ms-2 text-sm font-medium text-gray-300">World Records Only</label>
+                            <label for="recordswr_vq3" class="ms-2 text-xs font-medium text-gray-300">World Records Only</label>
                         </div>
                     </div>
 
                     <div class="flex-1">
-                        <div class="text-green-400 font-bold text-lg mb-3">CPM</div>
-    
-                        <div class="flex items-center mb-4">
+                        <div class="text-green-400 font-bold text-sm mb-2">CPM</div>
+
+                        <div class="flex items-center mb-2">
                             <input id="recordsall_cpm" type="radio" v-model="form.records_cpm" value="all" name="recordsall_cpm" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
-                            <label for="recordsall_cpm" class="ms-2 text-sm font-medium text-gray-300">All</label>
+                            <label for="recordsall_cpm" class="ms-2 text-xs font-medium text-gray-300">All</label>
                         </div>
-    
-                        <div class="flex items-center mb-4">
+
+                        <div class="flex items-center mb-2">
                             <input id="recordswr_cpm" type="radio" v-model="form.records_cpm" value="wr" name="recordswr_cpm" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
-                            <label for="recordswr_cpm" class="ms-2 text-sm font-medium text-gray-300">World Records Only</label>
+                            <label for="recordswr_cpm" class="ms-2 text-xs font-medium text-gray-300">World Records Only</label>
                         </div>
                     </div>
                 </div>
             </div>
-        </template>
 
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
-
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
-        </template>
-    </FormSection>
+            <div class="flex justify-end pt-1">
+                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    Save
+                </PrimaryButton>
+            </div>
+        </form>
+    </div>
 </template>

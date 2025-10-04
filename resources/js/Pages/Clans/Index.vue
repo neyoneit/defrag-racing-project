@@ -182,8 +182,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         tag: props.myClan?.tag || '',
         image: null,
         background: null,
-        name_effect: props.myClan?.name_effect || 'particles',
-        effect_color: props.myClan?.effect_color || '#60a5fa'
+        name_effect: props.myClan?.name_effect || 'none',
+        avatar_effect: props.myClan?.avatar_effect || 'none',
+        effect_color: props.myClan?.effect_color || '#60a5fa',
+        avatar_effect_color: props.myClan?.avatar_effect_color || '#60a5fa',
+        featured_stat: props.myClan?.featured_stat || null
     });
 
     const hexToRgba = (hex, alpha = 1) => {
@@ -194,6 +197,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     };
 
     const previewEffectColor = computed(() => form.effect_color || '#60a5fa');
+    const previewAvatarEffectColor = computed(() => form.avatar_effect_color || '#60a5fa');
 
     const submitForm = () => {
         form.post(route('clans.manage.update', props.myClan.id), {
@@ -446,6 +450,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     v-model="form.name_effect"
                                                     class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                                 >
+                                                    <option value="none">None</option>
                                                     <option value="particles">Particles</option>
                                                     <option value="orbs">Orbs</option>
                                                     <option value="lines">Lines</option>
@@ -456,7 +461,6 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     <option value="rgb">RGB Split</option>
                                                     <option value="flicker">Flicker</option>
                                                     <option value="hologram">Hologram</option>
-                                                    <option value="none">None</option>
                                                 </select>
 
                                                 <div class="flex items-center gap-3">
@@ -605,6 +609,90 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         <InputError :message="form.errors.image" class="mt-2" />
                                     </div>
 
+                                    <!-- Avatar Effect -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Avatar Effect & Color</label>
+                                        <div class="text-xs text-gray-400 mb-3">
+                                            Visual effect and color applied to your clan avatar
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <!-- Effect Selector & Color Picker -->
+                                            <div class="space-y-3">
+                                                <select
+                                                    v-model="form.avatar_effect"
+                                                    class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                >
+                                                    <option value="none">None</option>
+                                                    <option value="glow">Glow</option>
+                                                    <option value="pulse">Pulse</option>
+                                                    <option value="ring">Rotating Ring</option>
+                                                    <option value="shine">Shine</option>
+                                                    <option value="border">Animated Border</option>
+                                                    <option value="particles">Particle Orbit</option>
+                                                    <option value="spin">Spin</option>
+                                                </select>
+
+                                                <div class="flex items-center gap-3">
+                                                    <input
+                                                        type="color"
+                                                        v-model="form.avatar_effect_color"
+                                                        class="h-10 w-16 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-900 cursor-pointer"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        v-model="form.avatar_effect_color"
+                                                        placeholder="#60a5fa"
+                                                        maxlength="7"
+                                                        class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <!-- Avatar Preview -->
+                                            <div class="bg-black/40 rounded-lg p-6 flex items-center justify-center border border-white/10">
+                                                <div class="relative">
+                                                    <!-- Glow Effect -->
+                                                    <div v-if="form.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75" :style="`background-color: ${previewAvatarEffectColor};`"></div>
+
+                                                    <!-- Pulse Effect -->
+                                                    <div v-if="form.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${previewAvatarEffectColor};`"></div>
+
+                                                    <!-- Ring Effect -->
+                                                    <div v-if="form.avatar_effect === 'ring'" class="absolute -inset-2">
+                                                        <div class="w-full h-full rounded-full border-4 border-t-transparent animate-spin" :style="`border-color: ${previewAvatarEffectColor}; border-top-color: transparent;`"></div>
+                                                    </div>
+
+                                                    <!-- Shine Effect -->
+                                                    <div v-if="form.avatar_effect === 'shine'" class="absolute inset-0 rounded-full overflow-hidden">
+                                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-shine"></div>
+                                                    </div>
+
+                                                    <!-- Animated Border -->
+                                                    <div v-if="form.avatar_effect === 'border'" class="absolute -inset-1 rounded-full opacity-75 animate-pulse" :style="`background: linear-gradient(45deg, ${previewAvatarEffectColor}, transparent, ${previewAvatarEffectColor}); background-size: 200% 200%; animation: gradient-shift 3s ease infinite;`"></div>
+
+                                                    <!-- Particle Orbit -->
+                                                    <div v-if="form.avatar_effect === 'particles'" class="absolute -inset-4">
+                                                        <div class="absolute top-0 left-1/2 w-2 h-2 rounded-full animate-orbit-1" :style="`background-color: ${previewAvatarEffectColor}; box-shadow: 0 0 10px ${previewAvatarEffectColor};`"></div>
+                                                        <div class="absolute top-0 left-1/2 w-2 h-2 rounded-full animate-orbit-2" :style="`background-color: ${previewAvatarEffectColor}; box-shadow: 0 0 10px ${previewAvatarEffectColor};`"></div>
+                                                        <div class="absolute top-0 left-1/2 w-2 h-2 rounded-full animate-orbit-3" :style="`background-color: ${previewAvatarEffectColor}; box-shadow: 0 0 10px ${previewAvatarEffectColor};`"></div>
+                                                    </div>
+
+                                                    <!-- Spin Effect -->
+                                                    <div v-if="form.avatar_effect === 'spin'" class="absolute inset-0 animate-spin-slow"></div>
+
+                                                    <img
+                                                        :src="imagePreview || (myClan.image ? '/storage/' + myClan.image : '/images/null.jpg')"
+                                                        class="relative h-20 w-20 rounded-full object-cover ring-2 ring-white/20"
+                                                        :class="{'animate-spin-slow': form.avatar_effect === 'spin'}"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <InputError :message="form.errors.avatar_effect" class="mt-2" />
+                                    </div>
+
                                     <!-- Clan Background -->
                                     <div>
                                         <input
@@ -675,6 +763,29 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         </div>
 
                                         <InputError :message="form.errors.background" class="mt-2" />
+                                    </div>
+
+                                    <!-- Featured Stat Box -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Featured Stat Box</label>
+                                        <div class="text-xs text-gray-400 mb-3">
+                                            Choose a stat box from your clan detail page to display prominently in the clan list.
+                                        </div>
+
+                                        <select
+                                            v-model="form.featured_stat"
+                                            class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                        >
+                                            <option :value="null">None - No Featured Stat</option>
+                                            <option value="total_records">Total Records</option>
+                                            <option value="world_records">World Records (#1 Positions)</option>
+                                            <option value="podium_finishes">Podium Finishes (Top 3)</option>
+                                            <option value="top10_positions">Top 10 Positions</option>
+                                            <option value="avg_wr_age">Average WR Age</option>
+                                            <option value="map_coverage">Map Coverage</option>
+                                        </select>
+
+                                        <InputError :message="form.errors.featured_stat" class="mt-2" />
                                     </div>
 
                                     <div class="pt-4">
@@ -973,5 +1084,80 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 .animate-slideInUp {
     animation: slideInUp 0.5s ease-out forwards;
     opacity: 0;
+}
+
+/* Avatar Effect Animations */
+@keyframes shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+.animate-shine {
+    animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+@keyframes orbit-1 {
+    0% {
+        transform: rotate(0deg) translateX(2.5rem) rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg) translateX(2.5rem) rotate(-360deg);
+    }
+}
+
+@keyframes orbit-2 {
+    0% {
+        transform: rotate(120deg) translateX(2.5rem) rotate(-120deg);
+    }
+    100% {
+        transform: rotate(480deg) translateX(2.5rem) rotate(-480deg);
+    }
+}
+
+@keyframes orbit-3 {
+    0% {
+        transform: rotate(240deg) translateX(2.5rem) rotate(-240deg);
+    }
+    100% {
+        transform: rotate(600deg) translateX(2.5rem) rotate(-600deg);
+    }
+}
+
+.animate-orbit-1 {
+    animation: orbit-1 4s linear infinite;
+}
+
+.animate-orbit-2 {
+    animation: orbit-2 4s linear infinite;
+}
+
+.animate-orbit-3 {
+    animation: orbit-3 4s linear infinite;
+}
+
+@keyframes gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
 }
 </style>

@@ -108,6 +108,28 @@ To clone and run this application, you'll need:
     ./vendor/bin/sail stop
     ```
 
+### Database Migrations
+
+When working with database schema changes, **always use Laravel migrations** instead of manual SQL:
+
+1. **Creating a new migration**:
+    ```bash
+    docker compose exec laravel.test php artisan make:migration migration_name
+    ```
+
+2. **Running migrations**:
+    ```bash
+    docker compose exec laravel.test php artisan migrate
+    ```
+
+3. **After pulling new migrations from git**:
+    ```bash
+    docker compose exec laravel.test php artisan migrate
+    ./rebuild-frontend.sh
+    ```
+
+> :warning: **IMPORTANT**: Never alter database tables directly using SQL commands. Always create proper migration files using `php artisan make:migration` to ensure consistency between development and production environments.
+
 ## :heart: Support Us
 
 We hope you've enjoyed using using defrag.racing.

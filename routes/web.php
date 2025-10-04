@@ -118,6 +118,8 @@ Route::post('/settings/preferences', [SettingsController::class, 'preferences'])
 Route::post('/settings/mdd/generate', [SettingsController::class, 'generate'])->name('settings.mdd.generate');
 Route::post('/settings/mdd/verify', [SettingsController::class, 'verify'])->name('settings.mdd.verify');
 Route::post('/settings/notifications', [SettingsController::class, 'notifications'])->name('settings.notifications');
+Route::post('/settings/background', [SettingsController::class, 'background'])->name('settings.background');
+Route::delete('/settings/background', [SettingsController::class, 'deleteBackground'])->name('settings.background.destroy');
 
 
 Route::get('/notifications/records', [NotificationsController::class, 'records'])->middleware('auth')->name('notifications.index');

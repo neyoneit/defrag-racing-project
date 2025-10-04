@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('clans', function (Blueprint $table) {
-            $table->string('name_effect')->default('none')->after('background');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('profile_background_path')->nullable();
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('clans', function (Blueprint $table) {
-            $table->dropColumn('name_effect');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('profile_background_path');
         });
     }
 };

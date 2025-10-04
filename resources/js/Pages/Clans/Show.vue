@@ -17,6 +17,7 @@
     };
 
     const effectColor = computed(() => props.clan.effect_color || '#60a5fa');
+    const avatarEffectColor = computed(() => props.clan.avatar_effect_color || '#60a5fa');
 </script>
 
 <template>
@@ -74,11 +75,40 @@
 
             <!-- Clan Info -->
             <div class="relative h-full flex flex-col items-center justify-center px-4">
-                <!-- Clan Logo with glow effect -->
+                <!-- Clan Logo with effects -->
                 <div class="relative group mb-6">
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 rounded-full"></div>
+                    <!-- Default glow (when no effect) -->
+                    <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 rounded-full"></div>
+
+                    <!-- Glow Effect -->
+                    <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-2xl opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+
+                    <!-- Pulse Effect -->
+                    <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+
+                    <!-- Ring Effect -->
+                    <div v-if="clan.avatar_effect === 'ring'" class="absolute -inset-4">
+                        <div class="w-full h-full rounded-full border-[6px] border-t-transparent animate-spin" :style="`border-color: ${avatarEffectColor}; border-top-color: transparent;`"></div>
+                    </div>
+
+                    <!-- Shine Effect -->
+                    <div v-if="clan.avatar_effect === 'shine'" class="absolute inset-0 rounded-full overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-50 animate-shine"></div>
+                    </div>
+
+                    <!-- Animated Border -->
+                    <div v-if="clan.avatar_effect === 'border'" class="absolute -inset-2 rounded-full opacity-75 animate-pulse" :style="`background: linear-gradient(45deg, ${avatarEffectColor}, transparent, ${avatarEffectColor}); background-size: 200% 200%; animation: gradient-shift 3s ease infinite;`"></div>
+
+                    <!-- Particle Orbit -->
+                    <div v-if="clan.avatar_effect === 'particles'" class="absolute -inset-8">
+                        <div class="absolute top-0 left-1/2 w-3 h-3 rounded-full animate-orbit-1" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 15px ${avatarEffectColor};`"></div>
+                        <div class="absolute top-0 left-1/2 w-3 h-3 rounded-full animate-orbit-2" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 15px ${avatarEffectColor};`"></div>
+                        <div class="absolute top-0 left-1/2 w-3 h-3 rounded-full animate-orbit-3" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 15px ${avatarEffectColor};`"></div>
+                    </div>
+
                     <img
                         class="relative h-32 w-32 rounded-full object-cover border-4 border-white/20 shadow-2xl transition-transform duration-500 group-hover:scale-110 z-10"
+                        :class="{'animate-spin-slow': clan.avatar_effect === 'spin'}"
                         :src="`/storage/${clan.image}`"
                         :alt="clan.plain_name"
                     />
@@ -261,3 +291,80 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+/* Avatar Effect Animations */
+@keyframes shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+.animate-shine {
+    animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+@keyframes orbit-1 {
+    0% {
+        transform: rotate(0deg) translateX(4rem) rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg) translateX(4rem) rotate(-360deg);
+    }
+}
+
+@keyframes orbit-2 {
+    0% {
+        transform: rotate(120deg) translateX(4rem) rotate(-120deg);
+    }
+    100% {
+        transform: rotate(480deg) translateX(4rem) rotate(-480deg);
+    }
+}
+
+@keyframes orbit-3 {
+    0% {
+        transform: rotate(240deg) translateX(4rem) rotate(-240deg);
+    }
+    100% {
+        transform: rotate(600deg) translateX(4rem) rotate(-600deg);
+    }
+}
+
+.animate-orbit-1 {
+    animation: orbit-1 4s linear infinite;
+}
+
+.animate-orbit-2 {
+    animation: orbit-2 4s linear infinite;
+}
+
+.animate-orbit-3 {
+    animation: orbit-3 4s linear infinite;
+}
+
+@keyframes gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+</style>

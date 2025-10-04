@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clans', function (Blueprint $table) {
-            $table->string('name_effect')->default('none')->after('background');
+            $table->string('avatar_effect_color')->default('#60a5fa')->after('avatar_effect');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('clans', function (Blueprint $table) {
-            $table->dropColumn('name_effect');
+            $table->dropColumn('avatar_effect_color');
         });
     }
 };

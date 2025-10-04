@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clans', function (Blueprint $table) {
-            $table->string('name_effect')->default('none')->after('background');
+            $table->dropForeign(['featured_player_id']);
+            $table->dropColumn('featured_player_id');
+            $table->string('featured_stat')->nullable()->after('avatar_effect_color');
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('clans', function (Blueprint $table) {
-            $table->dropColumn('name_effect');
+            $table->dropColumn('featured_stat');
+            $table->unsignedBigInteger('featured_player_id')->nullable()->after('avatar_effect_color');
+            $table->foreign('featured_player_id')->references('id')->on('users')->onDelete('set null');
         });
     }
 };

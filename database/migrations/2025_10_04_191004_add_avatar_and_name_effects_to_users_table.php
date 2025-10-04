@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('clans', function (Blueprint $table) {
-            $table->string('name_effect')->default('none')->after('background');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('avatar_effect')->default('none')->after('color');
+            $table->string('name_effect')->default('none')->after('avatar_effect');
         });
     }
 
@@ -21,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('clans', function (Blueprint $table) {
-            $table->dropColumn('name_effect');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn(['avatar_effect', 'name_effect']);
         });
     }
 };

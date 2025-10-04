@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
 
 use App\Rules\MddProfile;
 use App\Models\User;
@@ -62,6 +63,21 @@ class SettingsController extends Controller
                 return;
             }
             $user->color = $request->color;
+        }
+
+        if ($request->has('avatar_effect')) {
+            $user->avatar_effect = $request->avatar_effect;
+        }
+
+        if ($request->has('name_effect')) {
+            $user->name_effect = $request->name_effect;
+        }
+
+        if ($request->has('avatar_border_color')) {
+            if (! preg_match('/^#[a-fA-F0-9]{6}$/', $request->avatar_border_color)) {
+                return;
+            }
+            $user->avatar_border_color = $request->avatar_border_color;
         }
 
         $user->save();
@@ -183,5 +199,33 @@ class SettingsController extends Controller
             'success'   =>      true,
             'mdd_id'    =>      $id
         ];
+    }
+
+    public function background(Request $request) {
+        $request->validate([
+            'background' => ['required', 'image', 'max:10240'] // Max 10MB
+        ]);
+
+        $user = $request->user();
+
+        // Delete old background if exists
+        if ($user->profile_background_path) {
+            Storage::disk('public')->delete($user->profile_background_path);
+        }
+
+        // Store new background
+        $path = $request->file('background')->store('profile-backgrounds', 'public');
+        $user->profile_background_path = $path;
+        $user->save();
+    }
+
+    public function deleteBackground(Request $request) {
+        $user = $request->user();
+
+        if ($user->profile_background_path) {
+            Storage::disk('public')->delete($user->profile_background_path);
+            $user->profile_background_path = null;
+            $user->save();
+        }
     }
 }

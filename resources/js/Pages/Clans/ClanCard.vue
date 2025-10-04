@@ -30,6 +30,21 @@
     };
 
     const effectColor = computed(() => props.clan.effect_color || '#60a5fa');
+    const avatarEffectColor = computed(() => props.clan.avatar_effect_color || '#60a5fa');
+
+    const formatNumber = (num) => {
+        if (!num) return '0';
+        return new Intl.NumberFormat().format(num);
+    };
+
+    const getStatTitle = (stat) => {
+        const titles = {
+            'total_records': 'Total number of records held by clan members across all maps and modes',
+            'world_records': 'Total number of #1 world record positions held by clan members',
+            'podium_finishes': 'Total number of top 3 podium finishes (1st, 2nd, or 3rd place) held by clan members'
+        };
+        return titles[stat] || '';
+    };
 </script>
 
 <template>
@@ -50,11 +65,40 @@
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <!-- Clan Info -->
                 <Link :href="route('clans.show', clan.id)" class="flex items-center gap-4 min-w-0 flex-1 group/link">
-                    <!-- Clan Avatar with Glow -->
+                    <!-- Clan Avatar with Effects -->
                     <div class="relative flex-shrink-0">
-                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-lg opacity-0 group-hover/link:opacity-40 transition-opacity duration-500 rounded-full"></div>
+                        <!-- Default hover glow (when no effect) -->
+                        <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-lg opacity-0 group-hover/link:opacity-40 transition-opacity duration-500 rounded-full"></div>
+
+                        <!-- Glow Effect -->
+                        <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+
+                        <!-- Pulse Effect -->
+                        <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+
+                        <!-- Ring Effect -->
+                        <div v-if="clan.avatar_effect === 'ring'" class="absolute -inset-2">
+                            <div class="w-full h-full rounded-full border-4 border-t-transparent animate-spin" :style="`border-color: ${avatarEffectColor}; border-top-color: transparent;`"></div>
+                        </div>
+
+                        <!-- Shine Effect -->
+                        <div v-if="clan.avatar_effect === 'shine'" class="absolute inset-0 rounded-full overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-shine"></div>
+                        </div>
+
+                        <!-- Animated Border -->
+                        <div v-if="clan.avatar_effect === 'border'" class="absolute -inset-1 rounded-full opacity-75 animate-pulse" :style="`background: linear-gradient(45deg, ${avatarEffectColor}, transparent, ${avatarEffectColor}); background-size: 200% 200%; animation: gradient-shift 3s ease infinite;`"></div>
+
+                        <!-- Particle Orbit -->
+                        <div v-if="clan.avatar_effect === 'particles'" class="absolute -inset-4">
+                            <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-1" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
+                            <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-2" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
+                            <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-3" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
+                        </div>
+
                         <img
                             class="relative h-16 w-16 rounded-full object-cover ring-2 ring-white/20 group-hover/link:ring-blue-500/60 transition-all duration-300"
+                            :class="{'animate-spin-slow': clan.avatar_effect === 'spin'}"
                             :src="`/storage/${clan.image}`"
                         />
                     </div>
@@ -135,23 +179,57 @@
                     </div>
                 </Link>
 
-                <!-- Stats, Members & Management -->
+                <!-- Featured Stat Box -->
+                <div v-if="!manage && clan.featured_stat" class="group relative overflow-hidden rounded-xl p-3 hover:scale-105 transition-transform duration-300"
+                    :class="{
+                        'bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30': clan.featured_stat === 'total_records',
+                        'bg-gradient-to-br from-yellow-600/20 to-orange-800/20 border border-yellow-500/30': clan.featured_stat === 'world_records',
+                        'bg-gradient-to-br from-purple-600/20 to-pink-800/20 border border-purple-500/30': clan.featured_stat === 'podium_finishes'
+                    }"
+                    :title="getStatTitle(clan.featured_stat)"
+                >
+                    <Link
+                        :href="route('clans.show', clan.id)"
+                        class="relative flex items-center gap-2"
+                        @click.stop
+                    >
+                        <!-- Total Records -->
+                        <template v-if="clan.featured_stat === 'total_records'">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400 flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                            </svg>
+                            <div>
+                                <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_records || 0) }}</div>
+                                <div class="text-xs font-medium text-blue-300">Total Records</div>
+                            </div>
+                        </template>
+
+                        <!-- World Records -->
+                        <template v-else-if="clan.featured_stat === 'world_records'">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
+                            </svg>
+                            <div>
+                                <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_wrs || 0) }}</div>
+                                <div class="text-xs font-medium text-yellow-300">World Records</div>
+                            </div>
+                        </template>
+
+                        <!-- Podium Finishes -->
+                        <template v-else-if="clan.featured_stat === 'podium_finishes'">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-purple-400 flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                            </svg>
+                            <div>
+                                <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_top3 || 0) }}</div>
+                                <div class="text-xs font-medium text-purple-300">Podium Finishes</div>
+                            </div>
+                        </template>
+                    </Link>
+                </div>
+
+                <!-- Members & Stats -->
                 <div class="flex items-center gap-4">
-                    <!-- Achievement Stats -->
-                    <div class="flex items-center gap-2">
-                        <!-- World Records Badge -->
-                        <div v-if="clan.total_wrs > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-600/20 to-amber-600/20 border border-yellow-500/30 rounded-lg" title="Total World Records">
-                            <img src="/images/powerups/quad.svg" class="w-5 h-5" alt="WRs" />
-                            <span class="text-yellow-400 text-sm font-bold">{{ clan.total_wrs }}</span>
-                        </div>
-
-                        <!-- Top 3 Positions Badge -->
-                        <div v-if="clan.total_top3 > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-lg" title="Total Top 3 Positions">
-                            <img src="/images/powerups/haste.svg" class="w-5 h-5" alt="Top 3" />
-                            <span class="text-blue-400 text-sm font-bold">{{ clan.total_top3 }}</span>
-                        </div>
-                    </div>
-
                     <!-- Member Avatars - Show All (hidden in manage mode) -->
                     <div v-if="!manage" class="flex items-center">
                         <div class="flex -space-x-3">
@@ -174,6 +252,21 @@
                                     </template>
                                 </Popper>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Achievement Stats -->
+                    <div class="flex items-center gap-2">
+                        <!-- World Records Badge -->
+                        <div v-if="clan.total_wrs > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-600/20 to-amber-600/20 border border-yellow-500/30 rounded-lg" title="Total World Records">
+                            <img src="/images/powerups/quad.svg" class="w-5 h-5" alt="WRs" />
+                            <span class="text-yellow-400 text-sm font-bold">{{ clan.total_wrs }}</span>
+                        </div>
+
+                        <!-- Top 3 Positions Badge -->
+                        <div v-if="clan.total_top3 > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-lg" title="Total Top 3 Positions">
+                            <img src="/images/powerups/haste.svg" class="w-5 h-5" alt="Top 3" />
+                            <span class="text-blue-400 text-sm font-bold">{{ clan.total_top3 }}</span>
                         </div>
                     </div>
 
@@ -261,3 +354,80 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+/* Avatar Effect Animations */
+@keyframes shine {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+.animate-shine {
+    animation: shine 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+@keyframes orbit-1 {
+    0% {
+        transform: rotate(0deg) translateX(2rem) rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg) translateX(2rem) rotate(-360deg);
+    }
+}
+
+@keyframes orbit-2 {
+    0% {
+        transform: rotate(120deg) translateX(2rem) rotate(-120deg);
+    }
+    100% {
+        transform: rotate(480deg) translateX(2rem) rotate(-480deg);
+    }
+}
+
+@keyframes orbit-3 {
+    0% {
+        transform: rotate(240deg) translateX(2rem) rotate(-240deg);
+    }
+    100% {
+        transform: rotate(600deg) translateX(2rem) rotate(-600deg);
+    }
+}
+
+.animate-orbit-1 {
+    animation: orbit-1 4s linear infinite;
+}
+
+.animate-orbit-2 {
+    animation: orbit-2 4s linear infinite;
+}
+
+.animate-orbit-3 {
+    animation: orbit-3 4s linear infinite;
+}
+
+@keyframes gradient-shift {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+</style>

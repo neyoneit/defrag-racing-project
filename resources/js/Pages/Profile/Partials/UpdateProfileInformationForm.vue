@@ -1,8 +1,6 @@
 <script setup>
 import { ref } from 'vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import ActionMessage from '@/Components/Laravel/ActionMessage.vue';
-import FormSection from '@/Components/Laravel/FormSection.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
@@ -84,18 +82,27 @@ const setCountry = (country) => {
 </script>
 
 <template>
-    <FormSection @submitted="updateProfileInformation">
-        <template #title>
-            Profile Information
-        </template>
+    <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-indigo-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                </div>
+                <h2 class="text-sm font-bold text-white">Profile Information</h2>
+            </div>
+            <div v-if="form.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span class="text-xs font-medium text-green-400">Saved</span>
+            </div>
+        </div>
 
-        <template #description>
-            Update your account's profile information and email address.
-        </template>
-
-        <template #form>
+        <form @submit.prevent="updateProfileInformation" class="space-y-3">
             <!-- Profile Photo -->
-            <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
+            <div v-if="$page.props.jetstream.managesProfilePhotos">
                 <!-- Profile Photo File Input -->
                 <input
                     id="photo"
@@ -133,11 +140,11 @@ const setCountry = (country) => {
                     Remove Photo
                 </SecondaryButton>
 
-                <InputError :message="form.errors.photo" class="mt-2" />
+                <InputError :message="form.errors.photo" class="mt-1" />
             </div>
 
             <!-- Username -->
-            <div class="col-span-6 sm:col-span-4">
+            <div>
                 <InputLabel for="username" value="Username" />
                 <TextInput
                     id="username"
@@ -149,7 +156,7 @@ const setCountry = (country) => {
             </div>
 
             <!-- Name -->
-            <div class="col-span-6 sm:col-span-4">
+            <div>
                 <InputLabel for="name" v-html="'Name: ' + q3tohtml(form.name)" />
                 <TextInput
                     id="name"
@@ -159,28 +166,28 @@ const setCountry = (country) => {
                     required
                     autocomplete="name"
                 />
-                <InputError :message="form.errors.name" class="mt-2" />
-                <div class="text-sm text-gray-400">
+                <InputError :message="form.errors.name" class="mt-1" />
+                <div class="text-xs text-gray-400 mt-1">
                     You can use Quake3 color codes, such as: ^1Red^2Green
                 </div>
             </div>
 
             <!-- Country -->
-            <div class="col-span-6 sm:col-span-4">
-                <div class="flex justify-between items-center mb-2">
+            <div>
+                <div class="flex justify-between items-center mb-1">
                     <InputLabel for="name" value="Country" />
 
-                    <div class="flex items-center text-gray-400">
+                    <div class="flex items-center text-xs text-gray-400">
                         {{ countries[user.country] }}
                         <img :src="`/images/flags/${user.country}.png`" class="w-6 ml-3">
                     </div>
                 </div>
                 <CountrySelect :setCountry="setCountry" />
-                <InputError :message="form.errors.country" class="mt-2" />
+                <InputError :message="form.errors.country" class="mt-1" />
             </div>
 
             <!-- Email -->
-            <div class="col-span-6 sm:col-span-4">
+            <div>
                 <InputLabel for="email" value="Email" />
                 <TextInput
                     id="email"
@@ -190,38 +197,34 @@ const setCountry = (country) => {
                     required
                     autocomplete="username"
                 />
-                <InputError :message="form.errors.email" class="mt-2" />
+                <InputError :message="form.errors.email" class="mt-1" />
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
-                    <p class="text-sm mt-2 text-white">
+                    <p class="text-xs mt-1 text-white">
                         Your email address is unverified.
 
                         <Link
                             :href="route('verification.send')"
                             method="post"
                             as="button"
-                            class="underline text-sm text-gray-400 hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800"
+                            class="underline text-xs text-gray-400 hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800"
                             @click.prevent="sendEmailVerification"
                         >
                             Click here to re-send the verification email.
                         </Link>
                     </p>
 
-                    <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-green-400">
+                    <div v-show="verificationLinkSent" class="mt-1 font-medium text-xs text-green-400">
                         A new verification link has been sent to your email address.
                     </div>
                 </div>
             </div>
-        </template>
 
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
-
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
-        </template>
-    </FormSection>
+            <div class="flex justify-end pt-1">
+                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    Save
+                </PrimaryButton>
+            </div>
+        </form>
+    </div>
 </template>

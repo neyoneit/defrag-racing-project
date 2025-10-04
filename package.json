@@ -27,6 +27,7 @@
         "moment": "^2.30.1",
         "moment-timezone": "^0.5.44",
         "vue-advanced-cropper": "^2.8.9",
+        "vue-cropperjs": "^5.0.0",
         "vue3-popper": "^1.5.0",
         "vuetify": "^3.5.3"
     }

@@ -26,6 +26,10 @@ class ClansController extends Controller {
 
         // Add calculated stats using subqueries
         $query->selectRaw('clans.*,
+            (SELECT COUNT(DISTINCT records.id)
+             FROM clan_players
+             JOIN records ON clan_players.user_id = records.user_id
+             WHERE clan_players.clan_id = clans.id) as total_records,
             (SELECT COALESCE(SUM(users.cached_wr_count), 0)
              FROM clan_players
              JOIN users ON clan_players.user_id = users.id
