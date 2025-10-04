@@ -3,7 +3,7 @@
     import { Link } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ClanCard from './ClanCard.vue';
-    import { ref } from 'vue';
+    import { ref, computed } from 'vue';
     import InvitePlayerModal from './InvitePlayerModal.vue';
     import KickPlayerModal from './KickPlayerModal.vue';
     import LeaveClanModal from './LeaveClanModal.vue';
@@ -30,8 +30,18 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         clans: Object,
         myClan: Object,
         users: Array,
-        invitations: Array
+        invitations: Array,
+        currentSort: String,
+        currentDir: String
     });
+
+    const sortClans = (field) => {
+        const newDir = props.currentSort === field && props.currentDir === 'desc' ? 'asc' : 'desc';
+        router.get(route('clans.index'), { sort: field, dir: newDir }, {
+            preserveState: true,
+            preserveScroll: true
+        });
+    };
 
     const showInvitiationsModal = ref(false);
 
@@ -169,16 +179,29 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     const form = useForm({
         _method: 'POST',
         name: props.myClan?.name || '',
+        tag: props.myClan?.tag || '',
         image: null,
-        background: null
+        background: null,
+        name_effect: props.myClan?.name_effect || 'particles',
+        effect_color: props.myClan?.effect_color || '#60a5fa'
     });
+
+    const hexToRgba = (hex, alpha = 1) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    const previewEffectColor = computed(() => form.effect_color || '#60a5fa');
 
     const submitForm = () => {
         form.post(route('clans.manage.update', props.myClan.id), {
             errorBag: 'submitForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
-                showEditClan.value = false;
+                // Don't close the modal, just reset the file inputs
                 imagePreview.value = null;
                 backgroundPreview.value = null;
                 form.reset('image', 'background');
@@ -373,23 +396,156 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 </div>
 
                                 <form @submit.prevent="submitForm" class="p-6 space-y-6">
-                                    <!-- Clan Name -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">
-                                            Clan Name: <span v-html="q3tohtml(form.name)"></span>
-                                        </label>
-                                        <TextInput
-                                            id="name"
-                                            v-model="form.name"
-                                            type="text"
-                                            class="w-full"
-                                            required
-                                            autocomplete="name"
-                                        />
-                                        <div class="text-xs text-gray-400 mt-2">
-                                            You can use Quake3 color codes, such as: ^1Red^2Green
+                                    <!-- Clan Name and Tag -->
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                                Clan Name: <span v-html="q3tohtml(form.name)"></span>
+                                            </label>
+                                            <TextInput
+                                                id="name"
+                                                v-model="form.name"
+                                                type="text"
+                                                class="w-full"
+                                                required
+                                                autocomplete="name"
+                                            />
+                                            <div class="text-xs text-gray-400 mt-2">
+                                                Quake3 color codes: ^1Red^2Green
+                                            </div>
+                                            <InputError class="mt-2" :message="form.errors.name" />
                                         </div>
-                                        <InputError class="mt-2" :message="form.errors.name" />
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">Clan Tag</label>
+                                            <TextInput
+                                                id="tag"
+                                                v-model="form.tag"
+                                                type="text"
+                                                class="w-full"
+                                                placeholder="e.g. TRY"
+                                                maxlength="10"
+                                            />
+                                            <div class="text-xs text-gray-400 mt-2">
+                                                Short tag (optional, 2-10 chars)
+                                            </div>
+                                            <InputError class="mt-2" :message="form.errors.tag" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Clan Name Effect & Color -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-300 mb-2">Clan Name Effect & Color</label>
+                                        <div class="text-xs text-gray-400 mb-3">
+                                            Animated effect to highlight your clan name on the detail page
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <!-- Effect & Color Picker Column -->
+                                            <div class="space-y-3">
+                                                <select
+                                                    v-model="form.name_effect"
+                                                    class="w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                >
+                                                    <option value="particles">Particles</option>
+                                                    <option value="orbs">Orbs</option>
+                                                    <option value="lines">Lines</option>
+                                                    <option value="matrix">Matrix</option>
+                                                    <option value="glitch">Glitch</option>
+                                                    <option value="wave">Wave</option>
+                                                    <option value="neon">Neon Pulse</option>
+                                                    <option value="rgb">RGB Split</option>
+                                                    <option value="flicker">Flicker</option>
+                                                    <option value="hologram">Hologram</option>
+                                                    <option value="none">None</option>
+                                                </select>
+
+                                                <div class="flex items-center gap-3">
+                                                    <input
+                                                        type="color"
+                                                        v-model="form.effect_color"
+                                                        class="h-10 w-16 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-900 cursor-pointer"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        v-model="form.effect_color"
+                                                        placeholder="#60a5fa"
+                                                        maxlength="7"
+                                                        class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <!-- Effect Preview Column -->
+                                            <div class="bg-black/40 rounded-lg py-8 px-4 relative overflow-hidden border border-white/10">
+                                                <div class="relative py-6 px-8">
+                                                    <!-- Particles Effect Preview -->
+                                                    <div v-if="form.name_effect === 'particles'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none">
+                                                        <div class="absolute top-[20%] left-[15%] w-3 h-3 rounded-full" :style="`background-color: ${previewEffectColor}; box-shadow: 0 0 20px ${hexToRgba(previewEffectColor, 0.8)}; animation: particle-float 3s ease-in-out infinite;`"></div>
+                                                        <div class="absolute top-[70%] left-[25%] w-2 h-2 rounded-full" :style="`background-color: ${previewEffectColor}; box-shadow: 0 0 15px ${hexToRgba(previewEffectColor, 0.8)}; animation: particle-float 2.5s ease-in-out infinite; animation-delay: 0.5s;`"></div>
+                                                        <div class="absolute top-[40%] left-[80%] w-3 h-3 rounded-full" :style="`background-color: ${previewEffectColor}; box-shadow: 0 0 20px ${hexToRgba(previewEffectColor, 0.8)}; animation: particle-float 2.8s ease-in-out infinite; animation-delay: 1s;`"></div>
+                                                    </div>
+
+                                                    <!-- Orbs Effect Preview -->
+                                                    <div v-if="form.name_effect === 'orbs'" class="absolute inset-0 -inset-x-32 -inset-y-16 pointer-events-none overflow-hidden">
+                                                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; background: radial-gradient(circle, ${hexToRgba(previewEffectColor, 0.4)} 0%, ${hexToRgba(previewEffectColor, 0.3)} 50%, transparent 100%);`"></div>
+                                                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; background: radial-gradient(circle, ${hexToRgba(previewEffectColor, 0.4)} 0%, ${hexToRgba(previewEffectColor, 0.3)} 50%, transparent 100%);`"></div>
+                                                    </div>
+
+                                                    <!-- Lines Effect Preview -->
+                                                    <div v-if="form.name_effect === 'lines'" class="absolute inset-0 -inset-x-24 -inset-y-4 pointer-events-none">
+                                                        <div class="absolute top-0 left-0 right-0 h-[2px]" :style="`background: linear-gradient(to right, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 15px ${hexToRgba(previewEffectColor, 0.5)}; animation: line-scan 3s linear infinite;`"></div>
+                                                        <div class="absolute bottom-0 left-0 right-0 h-[2px]" :style="`background: linear-gradient(to right, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 15px ${hexToRgba(previewEffectColor, 0.5)}; animation: line-scan 3s linear infinite; animation-delay: 1.5s;`"></div>
+                                                    </div>
+
+                                                    <!-- Matrix Effect Preview -->
+                                                    <div v-if="form.name_effect === 'matrix'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none overflow-hidden">
+                                                        <div class="absolute top-0 left-[20%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(previewEffectColor, 0.6)}; animation: matrix-fall 2.5s linear infinite;`"></div>
+                                                        <div class="absolute top-0 left-[40%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(previewEffectColor, 0.6)}; animation: matrix-fall 2s linear infinite; animation-delay: 0.5s;`"></div>
+                                                        <div class="absolute top-0 left-[60%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(previewEffectColor, 0.6)}; animation: matrix-fall 2.8s linear infinite; animation-delay: 1s;`"></div>
+                                                        <div class="absolute top-0 left-[80%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(previewEffectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(previewEffectColor, 0.6)}; animation: matrix-fall 2.3s linear infinite; animation-delay: 1.5s;`"></div>
+                                                    </div>
+
+                                                    <!-- Glitch Effect Preview -->
+                                                    <div v-if="form.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black blur-[1px]" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(form.name)"></h1>
+                                                        <h1 class="absolute text-4xl font-black blur-[1px]" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(form.name)"></h1>
+                                                    </div>
+
+                                                    <!-- Wave Effect Preview -->
+                                                    <div v-if="form.name_effect === 'wave'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${hexToRgba(previewEffectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite;`" v-html="q3tohtml(form.name)"></h1>
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${hexToRgba(previewEffectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite; animation-delay: 0.1s;`" v-html="q3tohtml(form.name)"></h1>
+                                                    </div>
+
+                                                    <!-- Neon Pulse Effect Preview -->
+                                                    <div v-if="form.name_effect === 'neon'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${previewEffectColor}; text-shadow: 0 0 20px ${previewEffectColor}, 0 0 40px ${previewEffectColor}; animation: neon-pulse 1.5s ease-in-out infinite;`" v-html="q3tohtml(form.name)"></h1>
+                                                    </div>
+
+                                                    <!-- RGB Split Effect Preview -->
+                                                    <div v-if="form.name_effect === 'rgb'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${previewEffectColor}; animation: rgb-split 0.8s ease-in-out infinite;`" v-html="q3tohtml(form.name)"></h1>
+                                                    </div>
+
+                                                    <!-- Flicker Effect Preview -->
+                                                    <div v-if="form.name_effect === 'flicker'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${previewEffectColor}; text-shadow: 0 0 10px ${previewEffectColor}; animation: flicker 3s linear infinite;`" v-html="q3tohtml(form.name)"></h1>
+                                                    </div>
+
+                                                    <!-- Hologram Effect Preview -->
+                                                    <div v-if="form.name_effect === 'hologram'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${hexToRgba(previewEffectColor, 0.85)}; text-shadow: 0 0 15px ${previewEffectColor}; animation: hologram 2s ease-in-out infinite;`" v-html="q3tohtml(form.name)"></h1>
+                                                        <div class="absolute inset-0 pointer-events-none" :style="`background: repeating-linear-gradient(0deg, transparent, transparent 2px, ${hexToRgba(previewEffectColor, 0.05)} 2px, ${hexToRgba(previewEffectColor, 0.05)} 4px);`"></div>
+                                                    </div>
+
+                                                    <!-- Clan name preview -->
+                                                    <h1 class="relative text-4xl font-black text-white text-center drop-shadow-2xl flex items-center justify-center" style="text-shadow: 0 0 40px rgba(59,130,246,0.3);" v-html="q3tohtml(form.name)"></h1>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <InputError :message="form.errors.name_effect" class="mt-2" />
+                                        <InputError :message="form.errors.effect_color" class="mt-2" />
                                     </div>
 
                                     <!-- Clan Avatar -->
@@ -466,10 +622,24 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         </div>
 
                                         <div v-if="backgroundPreview || myClan.background" class="mb-3">
-                                            <img
-                                                :src="backgroundPreview || '/storage/' + myClan.background"
-                                                class="rounded-lg w-full h-32 object-cover border border-white/20"
-                                            >
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <!-- Detail Page Preview -->
+                                                <div>
+                                                    <div class="text-xs text-gray-400 mb-2">Detail page preview:</div>
+                                                    <img
+                                                        :src="backgroundPreview || '/storage/' + myClan.background"
+                                                        class="rounded-lg w-full h-40 object-cover border border-white/20"
+                                                    >
+                                                </div>
+                                                <!-- List Card Preview -->
+                                                <div>
+                                                    <div class="text-xs text-gray-400 mb-2">Card preview:</div>
+                                                    <img
+                                                        :src="backgroundPreview || '/storage/' + myClan.background"
+                                                        class="rounded-lg w-full h-24 object-cover border border-white/20"
+                                                    >
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <SecondaryButton v-if="!showBackgroundCropper" type="button" @click.prevent="selectNewBackground">
@@ -535,14 +705,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         </div>
 
                         <!-- Invite Player Panel -->
-                        <div v-if="showInvitePlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
+                        <div v-if="showInvitePlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Invite Player</h3>
                                 </div>
 
                                 <form @submit.prevent="submitInviteForm" class="p-6 space-y-4">
-                                    <div>
+                                    <div class="relative z-50">
                                         <label class="block text-sm font-medium text-gray-300 mb-2">Select Player</label>
                                         <PlayerSelectDefrag
                                             id="invite_player_id"
@@ -565,14 +735,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         </div>
 
                         <!-- Kick Player Panel -->
-                        <div v-if="showKickPlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
+                        <div v-if="showKickPlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Kick Player</h3>
                                 </div>
 
                                 <form @submit.prevent="submitKickForm" class="p-6 space-y-4">
-                                    <div>
+                                    <div class="relative z-50">
                                         <label class="block text-sm font-medium text-gray-300 mb-2">Select Player</label>
                                         <PlayerSelectDefrag
                                             id="kick_player_id"
@@ -595,14 +765,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         </div>
 
                         <!-- Transfer Ownership Panel -->
-                        <div v-if="showTransferOwnership && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
+                        <div v-if="showTransferOwnership && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
                             <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Transfer Ownership</h3>
                                 </div>
 
                                 <form @submit.prevent="submitTransferForm" class="p-6 space-y-4">
-                                    <div>
+                                    <div class="relative z-50">
                                         <label class="block text-sm font-medium text-gray-300 mb-2">Select New Owner</label>
                                         <PlayerSelectDefrag
                                             id="transfer_player_id"
@@ -675,10 +845,77 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
             <!-- All Clans Section -->
             <div>
-                <h2 class="text-2xl font-bold text-white mb-6">All Clans</h2>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <h2 class="text-2xl font-bold text-white">All Clans</h2>
 
-                <div class="space-y-4">
-                    <ClanCard v-for="clan in clans.data" :key="clan.id" :clan="clan" />
+                    <!-- Sorting Controls -->
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            @click="sortClans('name')"
+                            :class="[
+                                'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300',
+                                currentSort === 'name'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            ]"
+                        >
+                            Name
+                            <span v-if="currentSort === 'name'" class="ml-1">
+                                {{ currentDir === 'asc' ? '↑' : '↓' }}
+                            </span>
+                        </button>
+
+                        <button
+                            @click="sortClans('members')"
+                            :class="[
+                                'px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300',
+                                currentSort === 'members'
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-500/30'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            ]"
+                        >
+                            Members
+                            <span v-if="currentSort === 'members'" class="ml-1">
+                                {{ currentDir === 'asc' ? '↑' : '↓' }}
+                            </span>
+                        </button>
+
+                        <button
+                            @click="sortClans('wrs')"
+                            :class="[
+                                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300',
+                                currentSort === 'wrs'
+                                    ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-500/30'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            ]"
+                        >
+                            <img src="/images/powerups/quad.svg" class="w-5 h-5" alt="WRs" />
+                            World Records
+                            <span v-if="currentSort === 'wrs'" class="ml-1">
+                                {{ currentDir === 'asc' ? '↑' : '↓' }}
+                            </span>
+                        </button>
+
+                        <button
+                            @click="sortClans('top3')"
+                            :class="[
+                                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300',
+                                currentSort === 'top3'
+                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                            ]"
+                        >
+                            <img src="/images/powerups/haste.svg" class="w-5 h-5" alt="Top 3" />
+                            Top 3 Positions
+                            <span v-if="currentSort === 'top3'" class="ml-1">
+                                {{ currentDir === 'asc' ? '↑' : '↓' }}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <ClanCard v-for="(clan, index) in clans.data" :key="clan.id" :clan="clan" :style="{ animationDelay: `${index * 50}ms` }" class="animate-slideInUp" />
 
                     <div v-if="clans.total === 0" class="text-center py-20">
                         <div class="inline-flex items-center justify-center w-20 h-20 bg-white/5 rounded-full mb-4">
@@ -720,5 +957,21 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 .cropper {
     height: 400px;
     width: 100%;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slideInUp {
+    animation: slideInUp 0.5s ease-out forwards;
+    opacity: 0;
 }
 </style>

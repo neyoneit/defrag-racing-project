@@ -116,7 +116,7 @@
                                         ? 'bg-blue-600/80 text-white shadow-lg'
                                         : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 ]">
-                                <img src="/images/vq3-icon.svg" class="w-4 h-4" alt="VQ3" />
+                                <img src="/images/modes/vq3-icon.svg" class="w-4 h-4" alt="VQ3" />
                                 VQ3
                             </button>
                             <button
@@ -127,7 +127,7 @@
                                         ? 'bg-purple-600/80 text-white shadow-lg'
                                         : 'text-gray-400 hover:text-white hover:bg-white/10'
                                 ]">
-                                <img src="/images/cpm-icon.svg" class="w-4 h-4" alt="CPM" />
+                                <img src="/images/modes/cpm-icon.svg" class="w-4 h-4" alt="CPM" />
                                 CPM
                             </button>
                         </div>

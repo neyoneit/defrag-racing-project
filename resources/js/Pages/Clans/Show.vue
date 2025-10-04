@@ -1,10 +1,22 @@
 <script setup>
     import { Head, Link } from '@inertiajs/vue3';
+    import ClanAchievements from './ClanAchievements.vue';
+    import { computed } from 'vue';
 
     const props = defineProps({
         clan: Object,
         players: Array,
+        statistics: Object,
     });
+
+    const hexToRgba = (hex, alpha = 1) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    const effectColor = computed(() => props.clan.effect_color || '#60a5fa');
 </script>
 
 <template>
@@ -30,20 +42,120 @@
                 <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
             </div>
 
+            <!-- Member avatars scattered across hero (avoiding center) -->
+            <div class="absolute inset-0 top-16 bottom-0 pointer-events-none px-8">
+                <Link
+                    v-for="(player, index) in players"
+                    :key="player.id"
+                    :href="route('profile.index', player.id)"
+                    class="absolute group/avatar transition-all duration-300 hover:scale-125 hover:z-50 pointer-events-auto opacity-50 hover:opacity-100"
+                    :style="{
+                        left: (() => {
+                            const positions = [8, 12, 18, 82, 88, 92, 15, 78, 10, 85, 20, 75, 14, 80, 22, 72, 16, 76, 24, 70];
+                            return (positions[index % positions.length]) + '%';
+                        })(),
+                        top: (() => {
+                            const positions = [8, 15, 22, 12, 18, 25, 70, 75, 82, 78, 72, 85, 30, 65, 35, 60, 40, 55, 45, 50];
+                            return (positions[index % positions.length]) + '%';
+                        })()
+                    }"
+                >
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-blue-500 blur-md opacity-0 group-hover/avatar:opacity-60 transition-opacity duration-300 rounded-full"></div>
+                        <img
+                            class="relative h-11 w-11 rounded-full object-cover border-2 border-white/40 group-hover/avatar:border-blue-400 shadow-xl transition-all duration-300"
+                            :src="player.profile_photo_path ? `/storage/${player.profile_photo_path}` : '/images/null.jpg'"
+                            :alt="player.name"
+                            :title="player.plain_name"
+                        />
+                    </div>
+                </Link>
+            </div>
+
             <!-- Clan Info -->
             <div class="relative h-full flex flex-col items-center justify-center px-4">
                 <!-- Clan Logo with glow effect -->
                 <div class="relative group mb-6">
                     <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 rounded-full"></div>
                     <img
-                        class="relative h-32 w-32 rounded-full object-cover border-4 border-white/20 shadow-2xl transition-transform duration-500 group-hover:scale-110"
+                        class="relative h-32 w-32 rounded-full object-cover border-4 border-white/20 shadow-2xl transition-transform duration-500 group-hover:scale-110 z-10"
                         :src="`/storage/${clan.image}`"
                         :alt="clan.plain_name"
                     />
                 </div>
 
-                <!-- Clan Name -->
-                <h1 class="text-6xl font-black text-white mb-4 drop-shadow-2xl" v-html="q3tohtml(clan.name)"></h1>
+                <!-- Clan Name with animated effects -->
+                <div class="relative mb-4 py-6">
+                    <!-- Particles Effect -->
+                    <div v-if="clan.name_effect === 'particles'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none">
+                        <div class="absolute top-[20%] left-[15%] w-3 h-3 rounded-full" :style="`background-color: ${effectColor}; box-shadow: 0 0 20px ${hexToRgba(effectColor, 0.8)}; animation: particle-float 3s ease-in-out infinite;`"></div>
+                        <div class="absolute top-[70%] left-[25%] w-2 h-2 rounded-full" :style="`background-color: ${effectColor}; box-shadow: 0 0 15px ${hexToRgba(effectColor, 0.8)}; animation: particle-float 2.5s ease-in-out infinite; animation-delay: 0.5s;`"></div>
+                        <div class="absolute top-[40%] left-[80%] w-3 h-3 rounded-full" :style="`background-color: ${effectColor}; box-shadow: 0 0 20px ${hexToRgba(effectColor, 0.8)}; animation: particle-float 2.8s ease-in-out infinite; animation-delay: 1s;`"></div>
+                        <div class="absolute top-[60%] left-[85%] w-2 h-2 rounded-full" :style="`background-color: ${effectColor}; box-shadow: 0 0 15px ${hexToRgba(effectColor, 0.8)}; animation: particle-float 3.2s ease-in-out infinite; animation-delay: 1.5s;`"></div>
+                        <div class="absolute top-[30%] left-[10%] w-2 h-2 rounded-full" :style="`background-color: ${effectColor}; box-shadow: 0 0 15px ${hexToRgba(effectColor, 0.8)}; animation: particle-float 2.7s ease-in-out infinite; animation-delay: 0.8s;`"></div>
+                    </div>
+
+                    <!-- Orbs Effect -->
+                    <div v-if="clan.name_effect === 'orbs'" class="absolute inset-0 -inset-x-32 -inset-y-16 pointer-events-none overflow-hidden">
+                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; background: radial-gradient(circle, ${hexToRgba(effectColor, 0.4)} 0%, ${hexToRgba(effectColor, 0.3)} 50%, transparent 100%);`"></div>
+                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; background: radial-gradient(circle, ${hexToRgba(effectColor, 0.4)} 0%, ${hexToRgba(effectColor, 0.3)} 50%, transparent 100%);`"></div>
+                    </div>
+
+                    <!-- Lines Effect -->
+                    <div v-if="clan.name_effect === 'lines'" class="absolute inset-0 -inset-x-24 -inset-y-4 pointer-events-none">
+                        <div class="absolute top-0 left-0 right-0 h-[2px]" :style="`background: linear-gradient(to right, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 15px ${hexToRgba(effectColor, 0.5)}; animation: line-scan 3s linear infinite;`"></div>
+                        <div class="absolute bottom-0 left-0 right-0 h-[2px]" :style="`background: linear-gradient(to right, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 15px ${hexToRgba(effectColor, 0.5)}; animation: line-scan 3s linear infinite; animation-delay: 1.5s;`"></div>
+                    </div>
+
+                    <!-- Matrix Effect -->
+                    <div v-if="clan.name_effect === 'matrix'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none overflow-hidden">
+                        <div class="absolute top-0 left-[20%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(effectColor, 0.6)}; animation: matrix-fall 2.5s linear infinite;`"></div>
+                        <div class="absolute top-0 left-[40%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(effectColor, 0.6)}; animation: matrix-fall 2s linear infinite; animation-delay: 0.5s;`"></div>
+                        <div class="absolute top-0 left-[60%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(effectColor, 0.6)}; animation: matrix-fall 2.8s linear infinite; animation-delay: 1s;`"></div>
+                        <div class="absolute top-0 left-[80%] w-[2px] h-full" :style="`background: linear-gradient(to bottom, transparent, ${hexToRgba(effectColor, 0.6)}, transparent); box-shadow: 0 0 8px ${hexToRgba(effectColor, 0.6)}; animation: matrix-fall 2.3s linear infinite; animation-delay: 1.5s;`"></div>
+                    </div>
+
+                    <!-- Glitch Effect -->
+                    <div v-if="clan.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h1>
+                        <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h1>
+                    </div>
+
+                    <!-- Wave Effect -->
+                    <div v-if="clan.name_effect === 'wave'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite; animation-delay: 0.1s;`" v-html="q3tohtml(clan.name)"></h1>
+                    </div>
+
+                    <!-- Neon Pulse Effect -->
+                    <div v-if="clan.name_effect === 'neon'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; text-shadow: 0 0 20px ${effectColor}, 0 0 40px ${effectColor}; animation: neon-pulse 1.5s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
+                    </div>
+
+                    <!-- RGB Split Effect -->
+                    <div v-if="clan.name_effect === 'rgb'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; animation: rgb-split 0.8s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
+                    </div>
+
+                    <!-- Flicker Effect -->
+                    <div v-if="clan.name_effect === 'flicker'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; text-shadow: 0 0 10px ${effectColor}; animation: flicker 3s linear infinite;`" v-html="q3tohtml(clan.name)"></h1>
+                    </div>
+
+                    <!-- Hologram Effect -->
+                    <div v-if="clan.name_effect === 'hologram'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.85)}; text-shadow: 0 0 15px ${effectColor}; animation: hologram 2s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
+                        <div class="absolute inset-0 pointer-events-none" :style="`background: repeating-linear-gradient(0deg, transparent, transparent 2px, ${hexToRgba(effectColor, 0.05)} 2px, ${hexToRgba(effectColor, 0.05)} 4px);`"></div>
+                    </div>
+
+                    <!-- None / Minimal -->
+                    <div v-if="clan.name_effect === 'none'" class="absolute inset-0 -inset-x-20 -inset-y-8 pointer-events-none">
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+                    </div>
+
+                    <!-- Clan name text -->
+                    <h1 class="relative text-6xl font-black text-white drop-shadow-2xl" style="text-shadow: 0 0 40px rgba(59,130,246,0.3);" v-html="q3tohtml(clan.name)"></h1>
+                </div>
 
                 <!-- Stats Bar -->
                 <div class="flex items-center gap-6 bg-white/10 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20 shadow-2xl">
@@ -58,8 +170,13 @@
             </div>
         </div>
 
+        <!-- Achievements & Statistics Section -->
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-12 relative z-10">
+            <ClanAchievements :statistics="statistics" />
+        </div>
+
         <!-- Members Section -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-8 relative z-10 pb-20">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-12 relative z-10 pb-20">
             <div class="backdrop-blur-xl bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <!-- Section Header -->
                 <div class="bg-gradient-to-r from-blue-600/20 to-blue-800/20 border-b border-white/10 px-8 py-6">

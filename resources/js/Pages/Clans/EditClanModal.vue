@@ -24,7 +24,8 @@
         _method: 'POST',
         name: props.clan?.name || '',
         image: null,
-        background: null
+        background: null,
+        name_effect: props.clan?.name_effect || 'particles'
     });
 
     const submitForm = () => {
@@ -188,6 +189,29 @@
                         </div>
 
                         <InputError :message="form.errors.background" class="mt-2" />
+                    </div>
+
+                    <div class="mb-3">
+                        <InputLabel for="name_effect" value="Clan Name Effect" />
+
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
+                            Choose an animated effect to highlight your clan name
+                        </div>
+
+                        <select
+                            id="name_effect"
+                            v-model="form.name_effect"
+                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                        >
+                            <option value="particles">Particles (Blue dots)</option>
+                            <option value="orbs">Orbs (Floating blobs)</option>
+                            <option value="lines">Lines (Horizontal pulses)</option>
+                            <option value="matrix">Matrix (Green code rain)</option>
+                            <option value="glitch">Glitch (Cyberpunk effect)</option>
+                            <option value="none">None (Minimal)</option>
+                        </select>
+
+                        <InputError :message="form.errors.name_effect" class="mt-2" />
                     </div>
 
                     <div class="flex justify-center">

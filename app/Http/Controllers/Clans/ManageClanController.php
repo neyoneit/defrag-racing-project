@@ -248,9 +248,24 @@ class ManageClanController extends Controller {
 
         $request->validate([
             'name' => 'required',
+            'tag' => 'nullable|string|min:2|max:10',
+            'name_effect' => 'nullable|in:particles,orbs,lines,matrix,glitch,wave,neon,rgb,flicker,hologram,none',
+            'effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
         ]);
 
         $clan->name = $request->name;
+
+        if ($request->has('tag')) {
+            $clan->tag = $request->tag;
+        }
+
+        if ($request->has('name_effect')) {
+            $clan->name_effect = $request->name_effect;
+        }
+
+        if ($request->has('effect_color')) {
+            $clan->effect_color = $request->effect_color;
+        }
 
         if ($request->file('image')) {
             $image = $request->file('image');

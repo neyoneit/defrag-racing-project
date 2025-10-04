@@ -278,7 +278,7 @@
                             class="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
                             :title="column === 'time' ? 'Currently sorting by fastest time' : 'Currently sorting by date set'"
                         >
-                            <img v-if="column === 'time'" src="/images/haste.svg" class="w-5 h-5" alt="Fastest" />
+                            <img v-if="column === 'time'" src="/images/powerups/haste.svg" class="w-5 h-5" alt="Fastest" />
                             <span v-if="column === 'time'">Fastest</span>
                             <span v-else>📅 Newest</span>
                             <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -309,7 +309,7 @@
                                 : 'bg-white/10 text-gray-300'
                         ]"
                     >
-                        <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                        <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
                         <span>VQ3</span>
                     </button>
                     <button
@@ -321,7 +321,7 @@
                                 : 'bg-white/10 text-gray-300'
                         ]"
                     >
-                        <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                        <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
                         <span>CPM</span>
                     </button>
                 </div>
@@ -333,7 +333,7 @@
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/20 border-b border-blue-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
                                 <span>VQ3</span>
                                 <span class="text-xs text-gray-400 font-normal">({{ vq3Records.total }})</span>
                             </h3>
@@ -384,7 +384,7 @@
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/20 border-b border-purple-500/30 px-3 py-2">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-bold text-white flex items-center gap-2">
-                                <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
                                 <span>CPM</span>
                                 <span class="text-xs text-gray-400 font-normal">({{ cpmRecords.total }})</span>
                             </h3>
