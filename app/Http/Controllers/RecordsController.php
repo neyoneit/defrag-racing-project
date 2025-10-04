@@ -12,6 +12,7 @@ class RecordsController extends Controller
 {
     public function index(Request $request) {
         $physics = $request->input('physics', 'all');
+        $mode = $request->input('mode', 'all');
 
         $records = Record::query();
 
@@ -19,7 +20,13 @@ class RecordsController extends Controller
             $records = $records->where('physics', $physics);
         }
 
-        $records = $records->with('user')->with('map')->orderBy('date_set', 'DESC')->paginate(30)->withQueryString();
+        if ($mode == 'run') {
+            $records = $records->where('mode', 'run');
+        } elseif ($mode == 'ctf') {
+            $records = $records->where('mode', 'LIKE', 'ctf%');
+        }
+
+        $records = $records->with('user')->with('map')->orderBy('date_set', 'DESC')->paginate(50)->withQueryString();
 
         return Inertia::render('RecordsView')
             ->with('records', $records);

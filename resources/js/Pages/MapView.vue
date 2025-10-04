@@ -273,16 +273,6 @@
 
                     <!-- Physics & Controls -->
                     <div class="flex flex-wrap gap-4 justify-center items-center text-sm">
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <img src="/images/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                            <span class="text-gray-300">VQ3:</span>
-                            <span class="text-blue-400 font-bold">{{ vq3Records.total }}</span>
-                        </div>
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <img src="/images/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                            <span class="text-gray-300">CPM:</span>
-                            <span class="text-blue-400 font-bold">{{ cpmRecords.total }}</span>
-                        </div>
                         <button
                             @click="sortByTime"
                             class="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
@@ -350,7 +340,7 @@
                             <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
                                 <div v-if="my_vq3_record" class="text-sm font-bold text-blue-400 tabular-nums">
-                                    {{ (my_vq3_record.time / 1000).toFixed(3) }}s
+                                    {{ formatTime(my_vq3_record.time) }}
                                     <span class="text-xs text-gray-500">#{{ my_vq3_record.rank }}</span>
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
@@ -360,30 +350,31 @@
 
                     <!-- VQ3 Records List -->
                     <div class="p-3">
-                    <div v-if="getVq3Records.total > 0">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                        </div>
-
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                        </div>
-                    </div>
-
-                    <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
-                        <div>
-                            <div class="flex items-center justify-center mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
+                        <div v-if="getVq3Records.total > 0">
+                            <div class="flex-grow" v-if="screenWidth > 640">
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
                             </div>
-                            <div>There are no VQ3 Records</div>
+
+                            <div class="flex-grow" v-else>
+                                <MapRecordSmall v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
+                            </div>
+                        </div>
+
+                        <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
+                            <div>
+                                <div class="flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                </div>
+                                <div>There are no VQ3 Records</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-center mt-4" v-if="getVq3Records.total > getVq3Records.per_page">
+                    <!-- VQ3 Pagination -->
+                    <div class="border-t border-white/5 bg-transparent p-3" v-if="getVq3Records.total > getVq3Records.per_page">
                         <Pagination pageName="vq3Page" :last_page="getVq3Records.last_page" :current_page="getVq3Records.current_page" :link="getVq3Records.first_page_url" />
-                    </div>
                     </div>
                 </div>
 
@@ -400,7 +391,7 @@
                             <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
                                 <div v-if="my_cpm_record" class="text-sm font-bold text-purple-400 tabular-nums">
-                                    {{ (my_cpm_record.time / 1000).toFixed(3) }}s
+                                    {{ formatTime(my_cpm_record.time) }}
                                     <span class="text-xs text-gray-500">#{{ my_cpm_record.rank }}</span>
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
@@ -410,30 +401,31 @@
 
                     <!-- CPM Records List -->
                     <div class="p-3">
-                    <div v-if="getCpmRecords.total > 0">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.id" :record="record" />
-                        </div>
-
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getCpmRecords.data" physics="CPM" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                        </div>
-                    </div>
-
-                    <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
-                        <div>
-                            <div class="flex items-center justify-center mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
+                        <div v-if="getCpmRecords.total > 0">
+                            <div class="flex-grow" v-if="screenWidth > 640">
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.id" :record="record" />
                             </div>
-                            <div>There are no CPM Records</div>
+
+                            <div class="flex-grow" v-else>
+                                <MapRecordSmall v-for="record in getCpmRecords.data" physics="CPM" :oldtop="record.oldtop" :key="record.id" :record="record" />
+                            </div>
+                        </div>
+
+                        <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
+                            <div>
+                                <div class="flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                </div>
+                                <div>There are no CPM Records</div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-center mt-4" v-if="getCpmRecords.total > getCpmRecords.per_page">
+                    <!-- CPM Pagination -->
+                    <div class="border-t border-white/5 bg-transparent p-3" v-if="getCpmRecords.total > getCpmRecords.per_page">
                         <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" />
-                    </div>
                     </div>
                 </div>
                 </div>

@@ -20,4 +20,7 @@ Route::prefix('manage')->middleware('auth')->group(function () {
     Route::post('/leave', [ManageClanController::class, 'leave'])->name('clans.manage.leave');
     Route::post('/transfer', [ManageClanController::class, 'transfer'])->name('clans.manage.transfer');
     Route::post('/dismantle', [ManageClanController::class, 'dismantle'])->name('clans.manage.dismantle');
+
+    Route::post('/{clan}/member/{user}/note', [ManageClanController::class, 'updateMemberNote'])->name('clans.manage.member.note');
+    Route::delete('/{clan}/member/{user}/config', [ManageClanController::class, 'deleteMemberConfig'])->name('clans.manage.member.config.delete');
 });

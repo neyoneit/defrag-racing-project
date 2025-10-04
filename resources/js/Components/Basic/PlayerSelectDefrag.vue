@@ -104,43 +104,73 @@
 
 <template>
     <div class="relative">
-        <input ref="searchInput" @focus="isOpen = true" @blur="onBlur" class="w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm" v-model="search" @input="filterOptions" placeholder="Select Player" autocomplete="off" />
+        <input
+            ref="searchInput"
+            @focus="isOpen = true"
+            @blur="onBlur"
+            class="w-full bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-lg px-4 py-2.5 transition-all"
+            v-model="search"
+            @input="filterOptions"
+            placeholder="Search player..."
+            autocomplete="off"
+        />
 
-        <div class="options p-2 m-1 rounded-md" v-show="isOpen">
-            <div class="flex justify-between items-center text-sm text-blue-400 mb-2">
+        <div class="options" v-show="isOpen">
+            <div class="flex justify-between items-center text-sm text-gray-400 mb-3 pb-2 border-b border-white/10">
                 <div>{{ selectedOptions.length }} Selected</div>
-                <div class="hover:text-blue-300 cursor-pointer" @click="clearOptions">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <button type="button" class="hover:text-white transition-colors" @click="clearOptions">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                     </svg>
-                </div>
+                </button>
             </div>
-            <div :class="{'option': !selectedOptions.includes(user.id), 'bg-blue-600 hover:bg-blue-700': selectedOptions.includes(user.id)}" class="p-2 cursor-pointer rounded-md mb-2 text-white flex items-center" v-for="(user, index) in filteredOptions" :key="index" @click="selectOption(user.id)">
-                <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-8 pt-1 mr-5">
+            <div
+                :class="{'bg-white/5 hover:bg-white/10': !selectedOptions.includes(user.id), 'bg-blue-600/80 hover:bg-blue-600': selectedOptions.includes(user.id)}"
+                class="p-3 cursor-pointer rounded-lg mb-2 text-white flex items-center gap-3 transition-all"
+                v-for="(user, index) in filteredOptions"
+                :key="index"
+                @click="selectOption(user.id)"
+            >
+                <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-6 h-4 object-cover">
                 <span v-html="q3tohtml(getName(user))"></span>
             </div>
         </div>
     </div>
 </template>
-  
+
 <style scoped>
     .options {
-        background-color: #272e3b;
+        background: linear-gradient(to bottom, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95));
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
         position: absolute;
         top: 100%;
         left: 0;
         width: 100%;
-        height: 200px;
+        max-height: 280px;
         overflow-y: auto;
         z-index: 100;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
 
-    .option {
-        background-color: #2b323f;
+    .options::-webkit-scrollbar {
+        width: 8px;
     }
 
-    .option:hover {
-        background-color: #343b49;
+    .options::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+    }
+
+    .options::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+    }
+
+    .options::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
     }
 </style>
-  

@@ -17,11 +17,14 @@
 
     const imagePreview = ref(null);
     const imageInput = ref(null);
+    const backgroundPreview = ref(null);
+    const backgroundInput = ref(null);
 
     const form = useForm({
         _method: 'POST',
         name: props.clan?.name || '',
-        image: null
+        image: null,
+        background: null
     });
 
     const submitForm = () => {
@@ -62,6 +65,35 @@
         reader.readAsDataURL(image);
 
         form.image = image;
+    };
+
+    const selectNewBackground = () => {
+        backgroundInput.value.click();
+    };
+
+    const updateBackgroundPreview = () => {
+        const background = backgroundInput.value.files[0];
+
+        if (! background) {
+            return;
+        };
+
+        if (! background.type.startsWith('image/')) {
+            form.errors.background = 'The file must be an Image.';
+            backgroundInput.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        form.errors.background = '';
+
+        reader.onload = (e) => {
+            backgroundPreview.value = e.target.result;
+        };
+
+        reader.readAsDataURL(background);
+
+        form.background = background;
     };
 </script>
 
@@ -109,9 +141,9 @@
                             accept="image/*"
                             @change="updateimagePreview"
                         >
-        
+
                         <InputLabel for="image" value="Clan Avatar" />
-        
+
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewImage">
                             Select an Image
                         </SecondaryButton>
@@ -125,6 +157,37 @@
                         </div>
 
                         <InputError :message="form.errors.image" class="mt-2" />
+                    </div>
+
+                    <div class="mb-3">
+                        <input
+                            id="background"
+                            ref="backgroundInput"
+                            type="file"
+                            class="hidden"
+                            accept="image/*"
+                            @change="updateBackgroundPreview"
+                        >
+
+                        <InputLabel for="background" value="Clan Background Image" />
+
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
+                            Recommended size: 1920x400px (wide banner format)
+                        </div>
+
+                        <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewBackground">
+                            Select Background Image
+                        </SecondaryButton>
+
+                        <div v-if="backgroundPreview" class="mt-2">
+                            <img :src="backgroundPreview" class="mt-2 rounded-lg w-full h-32 object-cover">
+                        </div>
+
+                        <div v-else-if="clan.background" class="mt-2">
+                            <img :src="'/storage/' + clan.background" class="mt-2 rounded-lg w-full h-32 object-cover">
+                        </div>
+
+                        <InputError :message="form.errors.background" class="mt-2" />
                     </div>
 
                     <div class="flex justify-center">

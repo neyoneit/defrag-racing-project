@@ -56,9 +56,19 @@ class ClansController extends Controller {
     }
 
     public function show(Clan $clan, Request $request) {
-        $players = User::whereHas('clan', function ($query) use ($clan) {
-            $query->where('clan_id', $clan->id);
-        })->get(['id', 'name', 'profile_photo_path', 'country', 'plain_name']);
+        $clan->load(['players.user' => function ($query) {
+            $query->select('id', 'name', 'profile_photo_path', 'country', 'plain_name');
+        }]);
+
+        // Transform the data to match the expected structure
+        $players = $clan->players->map(function ($clanPlayer) {
+            $user = $clanPlayer->user;
+            $user->pivot = (object)[
+                'note' => $clanPlayer->note,
+                'config_file' => $clanPlayer->config_file
+            ];
+            return $user;
+        });
 
         return Inertia::render('Clans/Show')
             ->with('clan', $clan)

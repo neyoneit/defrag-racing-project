@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# NOTE: If you've pulled database migrations, run them first:
+# docker compose exec laravel.test php artisan migrate
+
 echo "🔨 Building frontend assets..."
 docker exec defrag-racing-project-laravel.test-1 bash -c "cd /var/www/html && npm run build"
 

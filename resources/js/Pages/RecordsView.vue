@@ -1,10 +1,9 @@
 <script setup>
     import { Head, router } from '@inertiajs/vue3';
     import Record from '@/Components/Record.vue';
-    import RecordSmallScreen from '@/Components/RecordSmallScreen.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
-    import { watchEffect, ref, onMounted, onUnmounted } from 'vue';
+    import { watchEffect, ref } from 'vue';
 
     const props = defineProps({
         records: Object
@@ -12,7 +11,6 @@
 
     const physics = ref('all');
     const mode = ref('all');
-    const screenWidth = ref(window.innerWidth);
 
     const sortByPhysics = (newPhysics) => {
         physics.value = newPhysics
@@ -20,8 +18,7 @@
         router.reload({
             data: {
                 physics: physics.value,
-                mode: mode.value,
-                page: 1
+                mode: mode.value
             }
         })
     }
@@ -32,27 +29,15 @@
         router.reload({
             data: {
                 physics: physics.value,
-                mode: mode.value,
-                page: 1
+                mode: mode.value
             }
         })
     }
 
-    const resizeScreen = () => {
-        screenWidth.value = window.innerWidth
-    }
-
     watchEffect(() => {
-        physics.value = route().params['physics'] ?? 'all';
-        mode.value = route().params['mode'] ?? 'all';
-    });
-
-    onMounted(() => {
-        window.addEventListener("resize", resizeScreen);
-    });
-
-    onUnmounted(() => {
-        window.removeEventListener("resize", resizeScreen);
+        const url = new URL(window.location.href);
+        physics.value = url.searchParams.get('physics') ?? 'all';
+        mode.value = url.searchParams.get('mode') ?? 'all';
     });
 </script>
 
@@ -61,7 +46,7 @@
         <Head title="Records" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-gray-900 via-gray-800 to-transparent pt-6 pb-20">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-20">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
@@ -78,7 +63,7 @@
                     <!-- Controls -->
                     <div class="flex flex-wrap gap-3">
                         <!-- Gamemode Filter -->
-                        <div class="flex gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-1">
+                        <div class="flex gap-2 bg-black/20 backdrop-blur-sm rounded-lg p-1 border border-white/5">
                             <button
                                 @click="sortByMode('all')"
                                 :class="[
@@ -112,7 +97,7 @@
                         </div>
 
                         <!-- Physics Filter -->
-                        <div class="flex gap-2 bg-white/10 backdrop-blur-sm rounded-lg p-1">
+                        <div class="flex gap-2 bg-black/20 backdrop-blur-sm rounded-lg p-1 border border-white/5">
                             <button
                                 @click="sortByPhysics('all')"
                                 :class="[
@@ -154,18 +139,12 @@
         <!-- Records List -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-10">
             <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
-                <!-- Desktop View -->
-                <div v-if="screenWidth > 640" class="px-4 py-2">
+                <div class="px-4 py-2">
                     <Record v-for="record in records.data" :key="record.id" :record="record" />
                 </div>
 
-                <!-- Mobile View -->
-                <div v-else class="divide-y divide-gray-800/50">
-                    <RecordSmallScreen v-for="record in records.data" :key="record.id" :record="record" />
-                </div>
-
                 <!-- Pagination -->
-                <div v-if="records.total > records.per_page" class="border-t border-white/5 bg-black/20 p-6">
+                <div v-if="records.total > records.per_page" class="border-t border-white/5 bg-transparent p-6">
                     <Pagination :last_page="records.last_page" :current_page="records.current_page" :link="records.first_page_url" />
                 </div>
             </div>
