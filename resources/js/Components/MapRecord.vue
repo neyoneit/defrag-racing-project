@@ -47,6 +47,28 @@
         return '#'
     })
 
+    const rankColorClass = computed(() => {
+        if (props.record.oldtop) {
+            return 'text-amber-400 group-hover:text-amber-300';
+        }
+        if (isMyRecord.value && !props.record.oldtop) {
+            return 'text-emerald-400 group-hover:text-emerald-300';
+        }
+        if (!isMyRecord.value && !props.record.oldtop) {
+            if (props.record.rank === 1) {
+                return 'text-yellow-500 group-hover:text-yellow-400';
+            }
+            if (props.record.rank === 2) {
+                return 'text-gray-300 group-hover:text-gray-200';
+            }
+            if (props.record.rank === 3) {
+                return 'text-orange-600 group-hover:text-orange-500';
+            }
+            return 'text-gray-600 group-hover:text-white';
+        }
+        return 'text-gray-600 group-hover:text-white';
+    });
+
 </script>
 
 <template>
@@ -61,14 +83,7 @@
         <!-- Rank Number - LARGE and prominent with pop animation -->
         <div
             class="font-black text-lg w-7 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-125 group-hover:translate-x-1 group-hover:mr-1"
-            :class="{
-                'text-amber-400 group-hover:text-amber-300': record.oldtop,
-                'text-emerald-400 group-hover:text-emerald-300': isMyRecord && !record.oldtop,
-                'text-gray-600 group-hover:text-white': !isMyRecord && !record.oldtop,
-                'text-yellow-500 group-hover:text-yellow-400': record.rank === 1 && !record.oldtop && !isMyRecord,
-                'text-gray-400 group-hover:text-gray-300': record.rank === 2 && !record.oldtop && !isMyRecord,
-                'text-orange-600 group-hover:text-orange-500': record.rank === 3 && !record.oldtop && !isMyRecord
-            }"
+            :class="rankColorClass"
         >
             {{ record.rank }}
         </div>

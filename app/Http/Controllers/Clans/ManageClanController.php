@@ -250,6 +250,8 @@ class ManageClanController extends Controller {
             'name' => 'required',
             'tag' => 'nullable|string|min:2|max:10',
             'name_effect' => 'nullable|in:particles,orbs,lines,matrix,glitch,wave,neon,rgb,flicker,hologram,none',
+            'name_shadow_enabled' => 'nullable|boolean',
+            'name_shadow_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
             'avatar_effect' => 'nullable|in:glow,pulse,ring,shine,border,particles,spin,none',
             'effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
             'avatar_effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -264,6 +266,13 @@ class ManageClanController extends Controller {
 
         if ($request->has('name_effect')) {
             $clan->name_effect = $request->name_effect;
+        }
+
+        // Always update shadow enabled (checkbox sends true/false or nothing)
+        $clan->name_shadow_enabled = $request->input('name_shadow_enabled', false);
+
+        if ($request->has('name_shadow_color')) {
+            $clan->name_shadow_color = $request->name_shadow_color;
         }
 
         if ($request->has('avatar_effect')) {
@@ -327,6 +336,7 @@ class ManageClanController extends Controller {
 
         $request->validate([
             'note' => 'nullable|string|max:1000',
+            'position' => 'nullable|string|max:50',
             'config_file' => [
                 'nullable',
                 'file',
@@ -343,6 +353,7 @@ class ManageClanController extends Controller {
         ]);
 
         $clanPlayer->note = $request->note;
+        $clanPlayer->position = $request->position;
 
         // Handle config file upload
         if ($request->hasFile('config_file')) {

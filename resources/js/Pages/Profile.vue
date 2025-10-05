@@ -165,8 +165,7 @@
             <!-- Background Image -->
             <div v-if="user?.profile_background_path" class="absolute inset-0">
                 <div class="absolute inset-0 flex justify-center">
-                    <div class="relative w-full max-w-[1920px] h-full">
-                        <img :src="'/storage/' + user.profile_background_path" class="w-full h-full object-cover object-top" />
+                    <div class="relative w-full max-w-[1920px] h-full bg-top bg-no-repeat" :style="`background-image: url('/storage/${user.profile_background_path}'); background-size: 1920px auto;`">
                         <!-- Fade left edge of image -->
                         <div class="absolute left-0 top-0 bottom-0 w-80 bg-gradient-to-r from-gray-900 to-transparent"></div>
                         <!-- Fade right edge of image -->

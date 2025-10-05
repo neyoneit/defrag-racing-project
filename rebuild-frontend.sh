@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # NOTE: If you've pulled new database migrations, run them first:
-# docker compose exec laravel.test php artisan migrate
+# ./vendor/bin/sail artisan migrate
 # Always use migrations for database changes, never alter tables directly!
 
 echo "🔨 Building frontend assets..."

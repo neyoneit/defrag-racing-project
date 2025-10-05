@@ -50,7 +50,16 @@ const updatePhotoPreview = () => {
 
     if (! photo) return;
 
+    // 1MB size limit for profile photo
+    const maxSize = 1 * 1024 * 1024; // 1MB in bytes
+    if (photo.size > maxSize) {
+        form.errors.photo = 'The profile photo must be smaller than 1MB.';
+        photoInput.value.value = '';
+        return;
+    }
+
     const reader = new FileReader();
+    form.errors.photo = '';
 
     reader.onload = (e) => {
         photoPreview.value = e.target.result;
@@ -102,7 +111,7 @@ const setCountry = (country) => {
 
         <form @submit.prevent="updateProfileInformation" class="space-y-3">
             <!-- Profile Photo -->
-            <div v-if="$page.props.jetstream.managesProfilePhotos">
+            <div>
                 <!-- Profile Photo File Input -->
                 <input
                     id="photo"
@@ -113,6 +122,9 @@ const setCountry = (country) => {
                 >
 
                 <InputLabel for="photo" value="Photo" />
+                <div class="text-xs text-gray-400 mt-1 mb-2">
+                    Max 1MB. GIF supported (no compression).
+                </div>
 
                 <!-- Current Profile Photo -->
                 <div v-show="! photoPreview" class="mt-2">

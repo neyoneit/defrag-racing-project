@@ -183,6 +183,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         image: null,
         background: null,
         name_effect: props.myClan?.name_effect || 'none',
+        name_shadow_enabled: Boolean(props.myClan?.name_shadow_enabled),
+        name_shadow_color: props.myClan?.name_shadow_color || '#3b82f6',
         avatar_effect: props.myClan?.avatar_effect || 'none',
         effect_color: props.myClan?.effect_color || '#60a5fa',
         avatar_effect_color: props.myClan?.avatar_effect_color || '#60a5fa',
@@ -198,14 +200,33 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
     const previewEffectColor = computed(() => form.effect_color || '#60a5fa');
     const previewAvatarEffectColor = computed(() => form.avatar_effect_color || '#60a5fa');
+    const previewShadowStyle = computed(() => {
+        // Only show shadow if explicitly enabled
+        if (form.name_shadow_enabled === true || form.name_shadow_enabled === 1) {
+            const color = form.name_shadow_color || '#3b82f6';
+            return `text-shadow: 0 0 40px ${hexToRgba(color, 0.5)}, 0 0 80px ${hexToRgba(color, 0.3)};`;
+        }
+        return 'text-shadow: none;';
+    });
 
     const submitForm = () => {
         form.post(route('clans.manage.update', props.myClan.id), {
             errorBag: 'submitForm',
             preserveScroll: true,
-            preserveState: true,
-            onSuccess: () => {
-                // Don't close the modal, just reset the file inputs
+            onSuccess: (page) => {
+                // Update form with fresh data from server
+                const updatedClan = page.props.myClan;
+                form.name = updatedClan.name;
+                form.tag = updatedClan.tag;
+                form.name_effect = updatedClan.name_effect || 'none';
+                form.name_shadow_enabled = Boolean(updatedClan.name_shadow_enabled);
+                form.name_shadow_color = updatedClan.name_shadow_color || '#3b82f6';
+                form.avatar_effect = updatedClan.avatar_effect || 'none';
+                form.effect_color = updatedClan.effect_color || '#60a5fa';
+                form.avatar_effect_color = updatedClan.avatar_effect_color || '#60a5fa';
+                form.featured_stat = updatedClan.featured_stat || null;
+
+                // Reset file inputs
                 imagePreview.value = null;
                 backgroundPreview.value = null;
                 form.reset('image', 'background');
@@ -227,6 +248,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         if (! image.type.startsWith('image/')) {
             form.errors.image = 'The file must be an Image.';
             imageInput.value = '';
+            return;
+        }
+
+        // 1MB size limit for avatar
+        const maxSize = 1 * 1024 * 1024; // 1MB in bytes
+        if (image.size > maxSize) {
+            form.errors.image = 'The avatar image must be smaller than 1MB.';
+            imageInput.value.value = '';
             return;
         }
 
@@ -281,6 +310,14 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         if (! background.type.startsWith('image/')) {
             form.errors.background = 'The file must be an Image.';
             backgroundInput.value = '';
+            return;
+        }
+
+        // 5MB size limit
+        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        if (background.size > maxSize) {
+            form.errors.background = 'The image must be smaller than 5MB.';
+            backgroundInput.value.value = '';
             return;
         }
 
@@ -395,13 +432,18 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <!-- Edit Clan Section -->
                         <div v-if="showEditClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
                             <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-                                <div class="px-6 py-4 bg-white/5">
+                                <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
                                     <h3 class="text-lg font-medium text-white">Edit Clan</h3>
+                                    <PrimaryButton @click="submitForm" type="button">
+                                        Save Changes
+                                    </PrimaryButton>
                                 </div>
 
-                                <form @submit.prevent="submitForm" class="p-6 space-y-6">
-                                    <!-- Clan Name and Tag -->
-                                    <div class="grid grid-cols-2 gap-4">
+                                <form @submit.prevent="submitForm" class="p-6 space-y-8">
+                                    <!-- Basic Information Section -->
+                                    <div class="space-y-4">
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Basic Information</h4>
+                                        <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label class="block text-sm font-medium text-gray-300 mb-2">
                                                 Clan Name: <span v-html="q3tohtml(form.name)"></span>
@@ -420,7 +462,9 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             <InputError class="mt-2" :message="form.errors.name" />
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-300 mb-2">Clan Tag</label>
+                                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                                Clan Tag: <span v-if="form.tag" v-html="q3tohtml(form.tag)"></span>
+                                            </label>
                                             <TextInput
                                                 id="tag"
                                                 v-model="form.tag"
@@ -430,17 +474,20 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                 maxlength="10"
                                             />
                                             <div class="text-xs text-gray-400 mt-2">
-                                                Short tag (optional, 2-10 chars)
+                                                Short tag (optional, 2-10 chars). Quake3 color codes: ^1Red^2Green
                                             </div>
                                             <InputError class="mt-2" :message="form.errors.tag" />
                                         </div>
+                                        </div>
                                     </div>
 
-                                    <!-- Clan Name Effect & Color -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-300 mb-2">Clan Name Effect & Color</label>
+                                    <!-- Visual Effects Section -->
+                                    <div class="space-y-4">
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Visual Effects</h4>
+                                        <div>
+                                        <label class="block text-sm font-semibold text-gray-200 mb-2">Clan Name Effect, Color & Shadow</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Animated effect to highlight your clan name on the detail page
+                                            Animated effect and shadow to highlight your clan name on the detail page
                                         </div>
 
                                         <div class="grid grid-cols-2 gap-4">
@@ -463,24 +510,57 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     <option value="hologram">Hologram</option>
                                                 </select>
 
-                                                <div class="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        v-model="form.effect_color"
-                                                        class="h-10 w-16 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-900 cursor-pointer"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        v-model="form.effect_color"
-                                                        placeholder="#60a5fa"
-                                                        maxlength="7"
-                                                        class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                                                    />
+                                                <div>
+                                                    <label class="block text-xs text-gray-400 mb-1">Effect Color</label>
+                                                    <div class="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            v-model="form.effect_color"
+                                                            class="h-10 w-16 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-900 cursor-pointer"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            v-model="form.effect_color"
+                                                            placeholder="#60a5fa"
+                                                            maxlength="7"
+                                                            class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <label class="block text-xs text-gray-400">Shadow Color</label>
+                                                        <label class="flex items-center gap-2 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                v-model="form.name_shadow_enabled"
+                                                                class="w-4 h-4 rounded border-gray-300 dark:border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500 dark:focus:ring-blue-600 cursor-pointer"
+                                                            />
+                                                            <span class="text-xs text-gray-400">Enable</span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="flex items-center gap-3" :class="{ 'opacity-50 pointer-events-none': !form.name_shadow_enabled }">
+                                                        <input
+                                                            type="color"
+                                                            v-model="form.name_shadow_color"
+                                                            :disabled="!form.name_shadow_enabled"
+                                                            class="h-10 w-16 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-900 cursor-pointer"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            v-model="form.name_shadow_color"
+                                                            :disabled="!form.name_shadow_enabled"
+                                                            placeholder="#3b82f6"
+                                                            maxlength="7"
+                                                            class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             <!-- Effect Preview Column -->
-                                            <div class="bg-black/40 rounded-lg py-8 px-4 relative overflow-hidden border border-white/10">
+                                            <div class="bg-black/40 rounded-lg py-12 px-4 relative overflow-hidden border border-white/10">
                                                 <div class="relative py-6 px-8">
                                                     <!-- Particles Effect Preview -->
                                                     <div v-if="form.name_effect === 'particles'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none">
@@ -543,14 +623,20 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                                     </div>
 
                                                     <!-- Clan name preview -->
-                                                    <h1 class="relative text-4xl font-black text-white text-center drop-shadow-2xl flex items-center justify-center" style="text-shadow: 0 0 40px rgba(59,130,246,0.3);" v-html="q3tohtml(form.name)"></h1>
+                                                    <h1 class="relative text-4xl font-black text-white text-center drop-shadow-2xl" :style="previewShadowStyle" v-html="q3tohtml(form.name)"></h1>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <InputError :message="form.errors.name_effect" class="mt-2" />
                                         <InputError :message="form.errors.effect_color" class="mt-2" />
+                                        <InputError :message="form.errors.name_shadow_color" class="mt-2" />
+                                        </div>
                                     </div>
+
+                                    <!-- Images Section -->
+                                    <div class="space-y-4">
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Images</h4>
 
                                     <!-- Clan Avatar -->
                                     <div>
@@ -564,6 +650,9 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                         >
 
                                         <label class="block text-sm font-medium text-gray-300 mb-2">Clan Avatar</label>
+                                        <div class="text-xs text-gray-400 mb-3">
+                                            Max 1MB. GIF supported (no compression).
+                                        </div>
 
                                         <div class="flex items-center gap-4">
                                             <div v-if="imagePreview" class="shrink-0">
@@ -706,7 +795,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                         <label class="block text-sm font-medium text-gray-300 mb-2">Clan Background</label>
                                         <div class="text-xs text-gray-400 mb-3">
-                                            Recommended size: 1920x400px (wide banner format)
+                                            Recommended size: 1920x400px (wide banner format). Max 5MB. GIF supported (no compression).
                                         </div>
 
                                         <div v-if="backgroundPreview || myClan.background" class="mb-3">
@@ -764,6 +853,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                         <InputError :message="form.errors.background" class="mt-2" />
                                     </div>
+                                    </div>
+
+                                    <!-- Other Settings Section -->
+                                    <div class="space-y-4">
+                                        <h4 class="text-base font-bold text-white uppercase tracking-wide border-b border-white/20 pb-2">Other Settings</h4>
 
                                     <!-- Featured Stat Box -->
                                     <div>
@@ -787,11 +881,6 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                         <InputError :message="form.errors.featured_stat" class="mt-2" />
                                     </div>
-
-                                    <div class="pt-4">
-                                        <PrimaryButton type="submit" class="w-full justify-center">
-                                            Save Changes
-                                        </PrimaryButton>
                                     </div>
                                 </form>
                             </div>

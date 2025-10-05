@@ -193,18 +193,13 @@
         <Head :title="map.name" />
 
         <!-- Extended Background with Map Image -->
-        <div class="relative pb-10">
+        <div class="relative pb-10 min-h-[1200px]">
             <!-- Map thumbnail background - responsive height -->
-            <div class="absolute top-0 left-0 right-0 h-[100vh] max-h-[1200px] pointer-events-none overflow-hidden">
-                <img
-                    v-if="map.thumbnail"
-                    :src="`/storage/${map.thumbnail}`"
-                    :alt="map.name"
-                    class="w-full h-full object-cover object-top blur-sm"
-                    @error="$event.target.style.display='none'"
-                />
-                <!-- Fade effect: gradient that fades the image to page background -->
-                <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0) 70%, rgba(17, 24, 39, 0.7) 90%, rgba(17, 24, 39, 1) 100%);"></div>
+            <div class="absolute top-0 left-0 right-0 bottom-0 max-h-[1200px] pointer-events-none overflow-hidden flex justify-center">
+                <div v-if="map.thumbnail" class="relative w-full max-w-[1920px] h-full bg-top bg-no-repeat blur-sm" :style="`background-image: url('/storage/${map.thumbnail}'); background-size: 1920px auto;`">
+                    <!-- Fade effect on the actual image edges -->
+                    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0) 92%, rgba(17, 24, 39, 0.5) 97%, rgba(17, 24, 39, 1) 100%), linear-gradient(to right, rgba(17, 24, 39, 1) 0%, rgba(17, 24, 39, 0) 10%, rgba(17, 24, 39, 0) 90%, rgba(17, 24, 39, 1) 100%);"></div>
+                </div>
             </div>
             <!-- Dark overlay for readability on top portion only -->
             <div class="absolute top-0 left-0 right-0 h-[600px] bg-gradient-to-b from-black/50 via-black/60 via-40% to-transparent pointer-events-none"></div>

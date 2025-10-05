@@ -49,11 +49,11 @@
 
 <template>
     <div
-        class="group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-[1.01]"
+        class="group relative overflow-visible rounded-xl transition-all duration-300 hover:scale-[1.01]"
         :class="highlighted ? 'bg-gradient-to-br from-blue-600/10 to-blue-800/10 border-2 border-blue-500/30' : 'bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-blue-500/30'"
     >
         <!-- Background Image -->
-        <div v-if="clan.background" class="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity duration-500">
+        <div v-if="clan.background" class="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity duration-500 overflow-hidden rounded-xl">
             <img :src="`/storage/${clan.background}`" class="w-full h-full object-cover" alt="Clan Background" />
         </div>
 
@@ -168,7 +168,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 text-sm">
-                            <span class="text-gray-500">Admin:</span>
+                            <span class="text-gray-500">Founder:</span>
                             <Link
                                 :href="route('profile.index', clan.admin.id)"
                                 class="text-gray-300 hover:text-blue-400 transition-colors"
@@ -233,12 +233,12 @@
                     <!-- Member Avatars - Show All (hidden in manage mode) -->
                     <div v-if="!manage" class="flex items-center">
                         <div class="flex -space-x-3">
-                            <div v-for="(player, index) in clan.players" :key="player.id" class="relative">
-                                <Popper placement="bottom" arrow hover :offsetDistance="12" appendTo="body">
+                            <div v-for="(player, index) in clan.players" :key="player.id" class="relative z-50">
+                                <Popper placement="bottom" arrow hover :offsetDistance="12" :zIndex="9999">
                                     <Link
                                         :href="route('profile.index', player.user_id)"
                                         @click.stop
-                                        class="block transition-transform hover:scale-110 relative z-10 hover:z-50"
+                                        class="block transition-transform hover:scale-110"
                                     >
                                         <img
                                             class="h-10 w-10 rounded-full object-cover ring-2 ring-gray-800 hover:ring-blue-500 transition-all"
@@ -429,5 +429,10 @@
     50% {
         background-position: 100% 50%;
     }
+}
+
+/* Force popper tooltips to appear on top */
+:deep(.popper) {
+    z-index: 9999 !important;
 }
 </style>

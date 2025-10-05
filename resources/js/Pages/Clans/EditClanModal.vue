@@ -25,7 +25,8 @@
         name: props.clan?.name || '',
         image: null,
         background: null,
-        name_effect: props.clan?.name_effect || 'particles'
+        name_effect: props.clan?.name_effect || 'particles',
+        name_shadow_color: props.clan?.name_shadow_color || '#3b82f6'
     });
 
     const submitForm = () => {
@@ -212,6 +213,31 @@
                         </select>
 
                         <InputError :message="form.errors.name_effect" class="mt-2" />
+                    </div>
+
+                    <div class="mb-3">
+                        <InputLabel for="name_shadow_color" value="Clan Name Shadow Color" />
+
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 mb-2">
+                            Choose the color for your clan name's text shadow
+                        </div>
+
+                        <div class="flex items-center gap-3 mt-2">
+                            <input
+                                id="name_shadow_color"
+                                v-model="form.name_shadow_color"
+                                type="color"
+                                class="h-10 w-20 rounded cursor-pointer border-gray-300 dark:border-gray-700"
+                            />
+                            <input
+                                v-model="form.name_shadow_color"
+                                type="text"
+                                class="flex-1 border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
+                                placeholder="#3b82f6"
+                            />
+                        </div>
+
+                        <InputError :message="form.errors.name_shadow_color" class="mt-2" />
                     </div>
 
                     <div class="flex justify-center">

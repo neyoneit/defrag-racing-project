@@ -288,6 +288,112 @@ class ClanStatisticsController extends Controller
             LIMIT 1
         ")[0] ?? null;
 
+        // VQ3 Master - Most VQ3 records
+        $vq3Master = DB::select("
+            SELECT user_id, COUNT(*) as vq3_count
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND physics LIKE '%vq3%'
+            GROUP BY user_id
+            ORDER BY vq3_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // CPM Master - Most CPM records
+        $cpmMaster = DB::select("
+            SELECT user_id, COUNT(*) as cpm_count
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND physics LIKE '%cpm%'
+            GROUP BY user_id
+            ORDER BY cpm_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Rocket Master - Most records on maps with rocket
+        $rocketMaster = DB::select("
+            SELECT user_id, COUNT(*) as rocket_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.weapons LIKE '%RL%'
+            GROUP BY user_id
+            ORDER BY rocket_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Plasma Master - Most records on maps with plasma
+        $plasmaMaster = DB::select("
+            SELECT user_id, COUNT(*) as plasma_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.weapons LIKE '%PG%'
+            GROUP BY user_id
+            ORDER BY plasma_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Slick Master - Most records on maps with slick
+        $slickMaster = DB::select("
+            SELECT user_id, COUNT(*) as slick_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.functions LIKE '%slick%'
+            GROUP BY user_id
+            ORDER BY slick_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Grenade Master - Most records on maps with grenade launcher
+        $grenadeMaster = DB::select("
+            SELECT user_id, COUNT(*) as grenade_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.weapons LIKE '%GL%'
+            GROUP BY user_id
+            ORDER BY grenade_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // BFG Master - Most records on maps with BFG
+        $bfgMaster = DB::select("
+            SELECT user_id, COUNT(*) as bfg_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.weapons LIKE '%BFG%'
+            GROUP BY user_id
+            ORDER BY bfg_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Teleporter Master - Most records on maps with teleporters
+        $teleporterMaster = DB::select("
+            SELECT user_id, COUNT(*) as teleporter_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.functions LIKE '%teleport%'
+            GROUP BY user_id
+            ORDER BY teleporter_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
+        // Jumppad Master - Most records on maps with jumppads
+        $jumppadMaster = DB::select("
+            SELECT user_id, COUNT(*) as jumppad_count
+            FROM records r
+            JOIN maps m ON r.mapname = m.name
+            WHERE r.user_id IN ($memberIdsStr)
+            AND m.functions LIKE '%jumppad%'
+            GROUP BY user_id
+            ORDER BY jumppad_count DESC
+            LIMIT 1
+        ")[0] ?? null;
+
         return [
             'record_king' => $this->enrichWithUserData($recordKing, 'total'),
             'speed_demon' => $this->enrichWithUserData($speedDemon, 'top1_count'),
@@ -295,6 +401,15 @@ class ClanStatisticsController extends Controller
             'sharpshooter' => $this->enrichWithUserData($sharpshooter, 'top3_count'),
             'most_active' => $this->enrichWithUserData($mostActive, 'recent_count'),
             'map_explorer' => $this->enrichWithUserData($mapExplorer, 'map_count'),
+            'vq3_master' => $this->enrichWithUserData($vq3Master, 'vq3_count'),
+            'cpm_master' => $this->enrichWithUserData($cpmMaster, 'cpm_count'),
+            'rocket_master' => $this->enrichWithUserData($rocketMaster, 'rocket_count'),
+            'plasma_master' => $this->enrichWithUserData($plasmaMaster, 'plasma_count'),
+            'slick_master' => $this->enrichWithUserData($slickMaster, 'slick_count'),
+            'grenade_master' => $this->enrichWithUserData($grenadeMaster, 'grenade_count'),
+            'bfg_master' => $this->enrichWithUserData($bfgMaster, 'bfg_count'),
+            'teleporter_master' => $this->enrichWithUserData($teleporterMaster, 'teleporter_count'),
+            'jumppad_master' => $this->enrichWithUserData($jumppadMaster, 'jumppad_count'),
         ];
     }
 
@@ -525,6 +640,15 @@ class ClanStatisticsController extends Controller
                 'sharpshooter' => null,
                 'most_active' => null,
                 'map_explorer' => null,
+                'vq3_master' => null,
+                'cpm_master' => null,
+                'rocket_master' => null,
+                'plasma_master' => null,
+                'slick_master' => null,
+                'grenade_master' => null,
+                'bfg_master' => null,
+                'teleporter_master' => null,
+                'jumppad_master' => null,
             ],
             'leaderboards' => [
                 'total_records' => [],

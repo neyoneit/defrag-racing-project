@@ -18,6 +18,7 @@
 
     const effectColor = computed(() => props.clan.effect_color || '#60a5fa');
     const avatarEffectColor = computed(() => props.clan.avatar_effect_color || '#60a5fa');
+    const shadowColor = computed(() => props.clan.name_shadow_color || '#3b82f6');
 </script>
 
 <template>
@@ -28,14 +29,19 @@
         <div class="relative h-[400px] overflow-hidden">
             <!-- Background Image -->
             <div class="absolute inset-0">
-                <div class="absolute inset-0">
-                    <img
-                        v-if="clan.background"
-                        :src="`/storage/${clan.background}`"
-                        class="w-full h-full object-cover"
-                        alt="Clan Background"
-                    />
-                    <div v-else class="w-full h-full bg-gradient-to-br from-blue-900/20 via-blue-800/20 to-blue-700/20"></div>
+                <div class="absolute inset-0 flex justify-center">
+                    <div class="relative w-full max-w-[1920px] h-full">
+                        <div
+                            v-if="clan.background"
+                            class="w-full h-full bg-top bg-no-repeat"
+                            :style="`background-image: url('/storage/${clan.background}'); background-size: 1920px auto;`"
+                        ></div>
+                        <div v-else class="w-full h-full bg-gradient-to-br from-blue-900/20 via-blue-800/20 to-blue-700/20"></div>
+                        <!-- Fade left edge of image -->
+                        <div v-if="clan.background" class="absolute left-0 top-0 bottom-0 w-80 bg-gradient-to-r from-gray-900 to-transparent"></div>
+                        <!-- Fade right edge of image -->
+                        <div v-if="clan.background" class="absolute right-0 top-0 bottom-0 w-80 bg-gradient-to-l from-gray-900 to-transparent"></div>
+                    </div>
                 </div>
                 <!-- Fade image to transparent at bottom -->
                 <div v-if="clan.background" class="absolute inset-0 bg-gradient-to-b from-transparent from-0% via-transparent via-60% to-gray-900 to-100%"></div>
@@ -43,34 +49,36 @@
                 <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
             </div>
 
-            <!-- Member avatars scattered across hero (avoiding center) -->
-            <div class="absolute inset-0 top-16 bottom-0 pointer-events-none px-8">
-                <Link
-                    v-for="(player, index) in players"
-                    :key="player.id"
-                    :href="route('profile.index', player.id)"
-                    class="absolute group/avatar transition-all duration-300 hover:scale-125 hover:z-50 pointer-events-auto opacity-50 hover:opacity-100"
-                    :style="{
-                        left: (() => {
-                            const positions = [8, 12, 18, 82, 88, 92, 15, 78, 10, 85, 20, 75, 14, 80, 22, 72, 16, 76, 24, 70];
-                            return (positions[index % positions.length]) + '%';
-                        })(),
-                        top: (() => {
-                            const positions = [8, 15, 22, 12, 18, 25, 70, 75, 82, 78, 72, 85, 30, 65, 35, 60, 40, 55, 45, 50];
-                            return (positions[index % positions.length]) + '%';
-                        })()
-                    }"
-                >
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-blue-500 blur-md opacity-0 group-hover/avatar:opacity-60 transition-opacity duration-300 rounded-full"></div>
-                        <img
-                            class="relative h-11 w-11 rounded-full object-cover border-2 border-white/40 group-hover/avatar:border-blue-400 shadow-xl transition-all duration-300"
-                            :src="player.profile_photo_path ? `/storage/${player.profile_photo_path}` : '/images/null.jpg'"
-                            :alt="player.name"
-                            :title="player.plain_name"
-                        />
-                    </div>
-                </Link>
+            <!-- Member avatars scattered across hero (avoiding center) - positioned relative to 1920px background -->
+            <div class="absolute inset-0 top-16 bottom-0 pointer-events-none flex justify-center">
+                <div class="relative w-full max-w-[1920px] h-full">
+                    <Link
+                        v-for="(player, index) in players"
+                        :key="player.id"
+                        :href="route('profile.index', player.id)"
+                        class="absolute group/avatar transition-all duration-300 hover:scale-125 hover:z-50 pointer-events-auto opacity-50 hover:opacity-100"
+                        :style="{
+                            left: (() => {
+                                const positions = [8, 12, 18, 82, 88, 92, 15, 78, 10, 85, 20, 75, 14, 80, 22, 72, 16, 76, 24, 70];
+                                return (positions[index % positions.length]) + '%';
+                            })(),
+                            top: (() => {
+                                const positions = [8, 15, 22, 12, 18, 25, 70, 75, 82, 78, 72, 85, 30, 65, 35, 60, 40, 55, 45, 50];
+                                return (positions[index % positions.length]) + '%';
+                            })()
+                        }"
+                    >
+                        <div class="relative">
+                            <div class="absolute inset-0 bg-blue-500 blur-md opacity-0 group-hover/avatar:opacity-60 transition-opacity duration-300 rounded-full"></div>
+                            <img
+                                class="relative h-11 w-11 rounded-full object-cover border-2 border-white/40 group-hover/avatar:border-blue-400 shadow-xl transition-all duration-300"
+                                :src="player.profile_photo_path ? `/storage/${player.profile_photo_path}` : '/images/null.jpg'"
+                                :alt="player.name"
+                                :title="player.plain_name"
+                            />
+                        </div>
+                    </Link>
+                </div>
             </div>
 
             <!-- Clan Info -->
@@ -146,36 +154,36 @@
                     </div>
 
                     <!-- Glitch Effect -->
-                    <div v-if="clan.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h1>
                         <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- Wave Effect -->
-                    <div v-if="clan.name_effect === 'wave'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'wave'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
                         <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.4)}; animation: wave-text 1s ease-in-out infinite; animation-delay: 0.1s;`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- Neon Pulse Effect -->
-                    <div v-if="clan.name_effect === 'neon'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'neon'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; text-shadow: 0 0 20px ${effectColor}, 0 0 40px ${effectColor}; animation: neon-pulse 1.5s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- RGB Split Effect -->
-                    <div v-if="clan.name_effect === 'rgb'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'rgb'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; animation: rgb-split 0.8s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- Flicker Effect -->
-                    <div v-if="clan.name_effect === 'flicker'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'flicker'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black" :style="`color: ${effectColor}; text-shadow: 0 0 10px ${effectColor}; animation: flicker 3s linear infinite;`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- Hologram Effect -->
-                    <div v-if="clan.name_effect === 'hologram'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div v-if="clan.name_effect === 'hologram'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
                         <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.85)}; text-shadow: 0 0 15px ${effectColor}; animation: hologram 2s ease-in-out infinite;`" v-html="q3tohtml(clan.name)"></h1>
-                        <div class="absolute inset-0 pointer-events-none" :style="`background: repeating-linear-gradient(0deg, transparent, transparent 2px, ${hexToRgba(effectColor, 0.05)} 2px, ${hexToRgba(effectColor, 0.05)} 4px);`"></div>
+                        <div class="absolute top-6 left-0 right-0 h-[72px] pointer-events-none" :style="`background: repeating-linear-gradient(0deg, transparent, transparent 2px, ${hexToRgba(effectColor, 0.05)} 2px, ${hexToRgba(effectColor, 0.05)} 4px);`"></div>
                     </div>
 
                     <!-- None / Minimal -->
@@ -184,7 +192,10 @@
                     </div>
 
                     <!-- Clan name text -->
-                    <h1 class="relative text-6xl font-black text-white drop-shadow-2xl" style="text-shadow: 0 0 40px rgba(59,130,246,0.3);" v-html="q3tohtml(clan.name)"></h1>
+                    <div class="relative flex flex-col items-center gap-2">
+                        <h1 class="text-6xl font-black text-white drop-shadow-2xl" :style="clan.name_shadow_enabled === true || clan.name_shadow_enabled === 1 ? `text-shadow: 0 0 40px ${hexToRgba(shadowColor, 0.5)}, 0 0 80px ${hexToRgba(shadowColor, 0.3)};` : ''" v-html="q3tohtml(clan.name)"></h1>
+                        <div v-if="clan.tag" class="text-2xl font-bold text-blue-300/80" :style="clan.name_shadow_enabled === true || clan.name_shadow_enabled === 1 ? `text-shadow: 0 0 20px ${hexToRgba(shadowColor, 0.4)};` : ''" v-html="q3tohtml(clan.tag)"></div>
+                    </div>
                 </div>
 
                 <!-- Stats Bar -->
@@ -206,7 +217,7 @@
         </div>
 
         <!-- Members Section -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-12 relative z-10 pb-20">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-12 relative z-10">
             <div class="backdrop-blur-xl bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <!-- Section Header -->
                 <div class="bg-gradient-to-r from-blue-600/20 to-blue-800/20 border-b border-white/10 px-8 py-6">
@@ -225,10 +236,10 @@
                             v-for="player in players"
                             :key="player.id"
                             :href="route('profile.index', player.id)"
-                            class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20"
+                            class="group relative overflow-visible rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
                         >
                             <!-- Card Background Glow -->
-                            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/0 to-blue-700/0 group-hover:from-blue-600/10 group-hover:to-blue-700/10 transition-all duration-500"></div>
+                            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/0 to-blue-700/0 group-hover:from-blue-600/10 group-hover:to-blue-700/10 transition-all duration-500 rounded-xl"></div>
 
                             <!-- Content -->
                             <div class="relative p-6">
@@ -254,13 +265,17 @@
                                                 class="w-5 h-4 opacity-80"
                                                 onerror="this.src='/images/flags/_404.png'"
                                             />
+                                            <span v-if="player.pivot?.position" class="text-xs font-medium text-blue-400">
+                                                • {{ player.pivot.position }}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Member Note -->
-                                <div v-if="player.pivot?.note" class="mt-4 pt-4 border-t border-white/10">
-                                    <div class="text-sm text-gray-300 leading-relaxed prose prose-invert prose-sm max-w-none line-clamp-3" v-html="player.pivot.note"></div>
+                                <div class="mt-4 pt-4 border-t border-white/10">
+                                    <div v-if="player.pivot?.note" class="text-sm text-gray-300 leading-relaxed prose prose-invert prose-sm max-w-none max-h-[4.5rem] group-hover:max-h-[500px] overflow-hidden transition-all duration-500 ease-in-out" v-html="player.pivot.note"></div>
+                                    <div v-else class="text-sm text-gray-500 italic">Player doesn't have a public note filled in yet.</div>
                                 </div>
 
                                 <!-- Config File Download -->
@@ -281,6 +296,76 @@
                             <!-- Hover Arrow -->
                             <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+                                </svg>
+                            </div>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rival Clans Section -->
+        <div v-if="statistics.special_sections && statistics.special_sections.rival_clans && statistics.special_sections.rival_clans.length > 0" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-6 relative z-10 pb-20">
+            <div class="backdrop-blur-xl bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                <!-- Section Header -->
+                <div class="bg-gradient-to-r from-red-600/20 to-orange-800/20 border-b border-white/10 px-8 py-6">
+                    <h2 class="text-3xl font-black text-white flex items-center gap-3">
+                        <img src="/images/weapons/iconw_rocket.svg" class="w-8 h-8" alt="Rivals" />
+                        <span>Rival Clans</span>
+                    </h2>
+                    <div class="text-sm text-gray-400 mt-2">Top clans ranked by World Records and Top 3 finishes</div>
+                </div>
+
+                <!-- Rival Clans Grid -->
+                <div class="p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <Link
+                            v-for="rival in statistics.special_sections.rival_clans"
+                            :key="rival.id"
+                            :href="`/clans/${rival.id}`"
+                            class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-yellow-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-yellow-500/20"
+                        >
+                            <!-- Card Background Glow -->
+                            <div class="absolute inset-0 bg-gradient-to-br from-yellow-600/0 to-orange-700/0 group-hover:from-yellow-600/10 group-hover:to-orange-700/10 transition-all duration-500"></div>
+
+                            <!-- Content -->
+                            <div class="relative p-6">
+                                <!-- Clan Header -->
+                                <div class="flex items-center gap-4 mb-4">
+                                    <!-- Logo -->
+                                    <div class="relative">
+                                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-500 to-orange-600 blur-lg opacity-0 group-hover:opacity-50 transition-opacity duration-500 rounded-lg"></div>
+                                        <img
+                                            class="relative h-16 w-16 rounded-lg object-cover ring-2 ring-white/20 group-hover:ring-yellow-500/60 transition-all duration-300"
+                                            :src="rival.image ? `/storage/${rival.image}` : '/images/null.jpg'"
+                                            :alt="rival.plain_name"
+                                        />
+                                    </div>
+
+                                    <!-- Clan Name & Tag -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-lg font-bold text-white group-hover:text-yellow-400 transition-colors truncate mb-1" v-html="q3tohtml(rival.name)"></div>
+                                        <div v-if="rival.tag" class="text-sm text-gray-500">{{ rival.tag }}</div>
+                                    </div>
+                                </div>
+
+                                <!-- Stats -->
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                                        <span class="text-gray-400">World Records:</span>
+                                        <span class="font-bold text-yellow-400">{{ rival.total_wrs }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                                        <span class="text-gray-400">Top 3:</span>
+                                        <span class="font-bold text-purple-400">{{ rival.total_top3 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hover Arrow -->
+                            <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
                                 </svg>
                             </div>
