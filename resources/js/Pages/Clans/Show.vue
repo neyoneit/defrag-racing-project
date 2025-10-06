@@ -199,7 +199,7 @@
                 </div>
 
                 <!-- Stats Bar -->
-                <div class="flex items-center gap-6 bg-white/10 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20 shadow-2xl">
+                <div class="flex items-center gap-6 bg-black/40 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20 shadow-2xl">
                     <div class="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
@@ -236,7 +236,7 @@
                             v-for="player in players"
                             :key="player.id"
                             :href="route('profile.index', player.id)"
-                            class="group relative overflow-visible rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
+                            class="group relative overflow-visible rounded-xl bg-gradient-to-br from-black/40 to-black/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
                         >
                             <!-- Card Background Glow -->
                             <div class="absolute inset-0 bg-gradient-to-br from-blue-600/0 to-blue-700/0 group-hover:from-blue-600/10 group-hover:to-blue-700/10 transition-all duration-500 rounded-xl"></div>
@@ -324,7 +324,7 @@
                             v-for="rival in statistics.special_sections.rival_clans"
                             :key="rival.id"
                             :href="`/clans/${rival.id}`"
-                            class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-yellow-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-yellow-500/20"
+                            class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-black/40 to-black/20 border border-white/10 hover:border-yellow-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-yellow-500/20"
                         >
                             <!-- Card Background Glow -->
                             <div class="absolute inset-0 bg-gradient-to-br from-yellow-600/0 to-orange-700/0 group-hover:from-yellow-600/10 group-hover:to-orange-700/10 transition-all duration-500"></div>
@@ -352,11 +352,11 @@
 
                                 <!-- Stats -->
                                 <div class="space-y-2 text-sm">
-                                    <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                                    <div class="flex items-center justify-between p-2 bg-black/20 rounded-lg">
                                         <span class="text-gray-400">World Records:</span>
                                         <span class="font-bold text-yellow-400">{{ rival.total_wrs }}</span>
                                     </div>
-                                    <div class="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                                    <div class="flex items-center justify-between p-2 bg-black/20 rounded-lg">
                                         <span class="text-gray-400">Top 3:</span>
                                         <span class="font-bold text-purple-400">{{ rival.total_top3 }}</span>
                                     </div>

@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onUnmounted } from 'vue';
+    import { ref } from 'vue';
     import { Head, Link, router } from '@inertiajs/vue3';
     import ApplicationMark from '@/Components/Laravel/ApplicationMark.vue';
     import Banner from '@/Components/Laravel/Banner.vue';
@@ -38,8 +38,6 @@
 
     const searchCategory = ref('all');
 
-    const screenWidth = ref(window.innerWidth);
-
     let timer;
 
     const debounce = () => {
@@ -65,21 +63,6 @@
         showResultsSection.value = true;
     }
 
-    const onSearchBlur = (event) => {
-        if (! showResultsSection.value) {
-            return;
-        }
-
-        if (! searchSection.value.contains(event.target)) {
-            showResultsSection.value = false;
-        }
-
-        if (! searchSection.value.contains(event.target)) {
-            showResultsSection.value = false;
-        }
-
-    }
-
     const performSearch = () => {
         if (search.value.length == 0) {
             maps.value = [];
@@ -89,23 +72,10 @@
 
         debounce()
     }
-
-    const resizeScreen = () => {
-        screenWidth.value = window.innerWidth
-    }
-
-
-    onMounted(() => {
-        window.addEventListener("resize", resizeScreen);
-    });
-
-    onUnmounted(() => {
-        window.removeEventListener("resize", resizeScreen);
-    });
 </script>
 
 <template>
-    <div @click="onSearchBlur">
+    <div>
         <Head :title="title">
             <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
             <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -138,112 +108,201 @@
         </div>
 
         <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')]">
-            <nav class="border-b border-grayop-700">
-                <!-- Top Bar -->
-                <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                    <div class="flex justify-between h-16 items-center">
-                        <div class="flex flex-grow sm:flex-grow-0">
+            <!-- Modern Compact Header -->
+            <nav class="backdrop-blur-xl bg-black/60 border-b border-white/5 sticky top-0 z-50 shadow-2xl">
+                <div class="max-w-8xl mx-auto px-4 lg:px-8">
+                    <div class="flex items-center justify-between h-14">
+                        <!-- Left: Logo + Navigation -->
+                        <div class="flex items-center gap-6">
                             <!-- Logo -->
-                            <div class="shrink-0 flex items-center mt-2 sm:mt-0">
-                                <Link :href="route('home')">
-                                    <ApplicationMark class="block h-9 w-auto" />
-                                </Link>
-                            </div>
+                            <Link :href="route('home')" class="shrink-0 flex items-center">
+                                <ApplicationMark class="block h-7 w-auto transition-transform hover:scale-105" />
+                            </Link>
 
-                            <div class="flex flex-grow items-center justify-end">
-                                <div v-if="$page.props.auth.user && screenWidth <= 640" class="flex">
-                                    <NotificationMenu :ping="false" />
-                                    <SystemNotificationMenu :ping="false" />
-                                </div>
+                            <!-- Progressive Navigation Links (hide from RIGHT) -->
+                            <div class="flex items-center gap-1">
+                                <NavLink href="/announcements" :active="route().current('announcements.*')" class="hidden sm:block">
+                                    News
+                                </NavLink>
+                                <NavLink :href="route('servers')" :active="route().current('servers')" class="hidden md:block">
+                                    Servers
+                                </NavLink>
+                                <NavLink :href="route('maps')" :active="route().current('maps')" class="hidden md:block">
+                                    Maps
+                                </NavLink>
+                                <NavLink :href="route('ranking')" :active="route().current('ranking')" class="hidden lg:block">
+                                    Ranking
+                                </NavLink>
+                                <NavLink :href="route('records')" :active="route().current('records')" class="hidden lg:block">
+                                    Records
+                                </NavLink>
+                                <NavLink :href="route('demos.index')" :active="route().current('demos.*')" class="hidden xl:block">
+                                    Demos
+                                </NavLink>
+                                <NavLink :href="route('bundles')" :active="route().current('bundles')" class="hidden xl:block">
+                                    Bundles
+                                </NavLink>
+                                <NavLink :href="route('clans.index')" :active="route().current('clans.index')" class="hidden min-[1400px]:block">
+                                    Clans
+                                </NavLink>
+                                <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.index')" class="hidden min-[1280px]:block">
+                                    Tournaments
+                                </NavLink>
                             </div>
                         </div>
 
-                        <div ref="searchSection">
-                            <TextInput
-                                v-model="search"
-                                @focus="onSearchFocus"
-                                type="text"
-                                class="mt-1 h-10 hidden sm:block md:w-80 lg:w-100"
-                                placeholder="Search..."
-                                @input="performSearch"
-                            />
+                        <!-- Right: More Menu + Search + Notifications + Profile -->
+                        <div class="flex items-center gap-2">
+                            <!-- More Menu Dropdown (shows hidden items) -->
+                            <Dropdown align="right" width="48" class="min-[1400px]:hidden">
+                                <template #trigger>
+                                    <button class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
+                                        Menu
+                                    </div>
+                                    <!-- Show items hidden on current breakpoint -->
+                                    <DropdownLink :href="route('tournaments.index')" class="min-[1280px]:hidden">
+                                        Tournaments
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('clans.index')" class="min-[1400px]:hidden">
+                                        Clans
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('bundles')" class="xl:hidden">
+                                        Bundles
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('demos.index')" class="xl:hidden">
+                                        Demos
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('records')" class="lg:hidden">
+                                        Records
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('ranking')" class="lg:hidden">
+                                        Ranking
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('maps')" class="md:hidden">
+                                        Maps
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('servers')" class="md:hidden">
+                                        Servers
+                                    </DropdownLink>
+                                    <DropdownLink href="/announcements" class="sm:hidden">
+                                        News
+                                    </DropdownLink>
+                                </template>
+                            </Dropdown>
 
-                            <div v-if="showResultsSection" class="defrag-scrollbar search-results hidden p-3 sm:block md:w-80 lg:w-100 mt-1 absolute bg-gray-900 border-2 border-grayop-700 rounded-md text-gray-500" style="z-index: 2000;">
-                                <div v-if="search.length == 0">
-                                    Type a search query...
+                            <!-- Search Bar -->
+                            <div ref="searchSection" class="relative">
+                                <div class="relative">
+                                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    <TextInput
+                                        v-model="search"
+                                        @focus="onSearchFocus"
+                                        type="text"
+                                        class="h-9 pl-9 pr-3 w-40 sm:w-48 md:w-56 bg-white/5 border-white/10 text-sm placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20 transition-all"
+                                        placeholder="Search..."
+                                        @input="performSearch"
+                                    />
                                 </div>
 
-                                <div ref="resultsSection" v-else>
-                                    <div class="flex justify-between items-center mb-3">
-                                        <div @click="searchCategory = 'all'" class="flex-1 text-center cursor-pointer px-4 py-1 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'all', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'all'}">All</div>
-                                        <div @click="searchCategory = 'maps'" class="flex-1 text-center cursor-pointer px-4 py-1 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'maps', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'maps'}">Maps</div>
-                                        <div @click="searchCategory = 'players'" class="flex-1 text-center cursor-pointer px-4 py-1 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'players', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'players'}">Players</div>
-                                    </div>
-
-                                    <div v-if="maps.data?.length > 0 && (searchCategory == 'all' || searchCategory == 'maps')">
-                                        <div class="font-bold text-gray-400 capitalized text-sm mb-1">
+                                <!-- Search Results Dropdown -->
+                                <Teleport to="body">
+                                    <div v-if="showResultsSection" class="fixed inset-0 flex items-start justify-center pt-20" style="z-index: 2000;" @click="showResultsSection = false">
+                                        <div class="rounded-xl shadow-2xl bg-gray-900/95 backdrop-blur-xl border border-white/10" style="width: 550px; max-width: 90vw;" @click.stop>
+                                    <!-- Filter Tabs -->
+                                    <div class="flex border-b border-white/10">
+                                        <button
+                                            @click.stop="searchCategory = 'all'"
+                                            class="flex-1 px-4 py-3 text-xs font-semibold transition-all border-b-2"
+                                            :class="searchCategory == 'all' ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
+                                        >
+                                            All
+                                        </button>
+                                        <button
+                                            @click.stop="searchCategory = 'maps'"
+                                            class="flex-1 px-4 py-3 text-xs font-semibold transition-all border-b-2"
+                                            :class="searchCategory == 'maps' ? 'border-green-500 text-green-400 bg-green-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
+                                        >
                                             Maps
-                                        </div>
-                                        <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
-                                    </div>
-
-                                    <div v-if="players?.length > 0  && (searchCategory == 'all' || searchCategory == 'players')">
-                                        <div class="font-bold text-gray-400 capitalized text-sm mb-1">
+                                        </button>
+                                        <button
+                                            @click.stop="searchCategory = 'players'"
+                                            class="flex-1 px-4 py-3 text-xs font-semibold transition-all border-b-2"
+                                            :class="searchCategory == 'players' ? 'border-purple-500 text-purple-400 bg-purple-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
+                                        >
                                             Players
+                                        </button>
+                                    </div>
+
+                                    <!-- Results -->
+                                    <div class="defrag-scrollbar p-2" style="max-height: 450px; overflow-y: auto;">
+                                        <div v-if="search.length == 0" class="text-center py-16 text-gray-500 text-sm">
+                                            Start typing to search...
                                         </div>
-                                        <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
+
+                                        <div ref="resultsSection" v-else>
+                                            <!-- Maps -->
+                                            <div v-if="maps.data?.length > 0 && (searchCategory == 'all' || searchCategory == 'maps')">
+                                                <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
+                                            </div>
+
+                                            <!-- Players -->
+                                            <div v-if="players?.length > 0 && (searchCategory == 'all' || searchCategory == 'players')" :class="{'mt-2': maps.data?.length > 0 && searchCategory == 'all'}">
+                                                <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
+                                            </div>
+
+                                            <!-- No Results -->
+                                            <div v-if="players?.length == 0 && maps.data?.length == 0" class="text-center py-16">
+                                                <p class="text-sm text-gray-400 mb-1">No results found</p>
+                                                <p class="text-xs text-gray-600">Try different keywords</p>
+                                            </div>
+                                        </div>
                                     </div>
-
-                                    <div v-if="players?.length == 0 && maps.data?.length == 0">
-                                        There are no results !
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center md:ms-6 justify-end">
-                            <div class="flex justify-end flex-grow" v-if="screenWidth > 640">
-                                <div v-if="$page.props.auth.user" class="flex">
-                                    <NotificationMenu :ping="true" />
-                                    <SystemNotificationMenu :ping="true" />
-                                </div>
+                                </Teleport>
                             </div>
 
+                            <!-- Notifications (Always visible) -->
+                            <div v-if="$page.props.auth.user" class="flex items-center gap-1">
+                                <NotificationMenu :ping="true" />
+                                <SystemNotificationMenu :ping="true" />
+                            </div>
 
-                            <!-- Settings Dropdown -->
-                            <div v-if="$page.props.auth.user"  class="hidden md:block ms-3">
+                            <!-- Profile Dropdown (Avatar always visible) -->
+                            <div v-if="$page.props.auth.user">
                                 <Dropdown align="right" width="48">
                                     <template #trigger>
-                                        <button class="pr-10 pl-1 py-1 flex items-center text-sm rounded-full focus:bg-gray-50 dark:focus:bg-grayop-700 active:bg-gray-50 dark:active:bg-grayop-700 transition ease-in-out duration-150">
-                                            <img class="h-8 w-8 rounded-full object-cover mr-3" :src="$page.props.auth.user.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" :alt="$page.props.auth.user.name">
-
-                                            <div class="mr-3" v-html="q3tohtml($page.props.auth.user.name)"></div>
-
-                                            <div class="text-gray-400">
-                                                <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                                </svg>
-                                            </div>
+                                        <button class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-all group">
+                                            <!-- Avatar always visible -->
+                                            <img class="h-7 w-7 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-white/20 transition-all" :src="$page.props.auth.user.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" :alt="$page.props.auth.user.name">
+                                            <!-- Name and arrow hidden on small screens -->
+                                            <div class="hidden md:block text-sm font-medium text-gray-300 group-hover:text-white transition-colors" v-html="q3tohtml($page.props.auth.user.name)"></div>
+                                            <svg class="hidden md:block h-4 w-4 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </button>
                                     </template>
 
                                     <template #content>
-                                        <!-- Account Management -->
-                                        <div class="block px-4 py-2 text-xs text-gray-400">
+                                        <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
                                             Manage Account
                                         </div>
-
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
                                             My Profile
                                         </DropdownLink>
-
                                         <DropdownLink :href="route('profile.show')">
                                             Settings
                                         </DropdownLink>
-
-                                        <div class="border-t border-gray-200 dark:border-gray-600" />
-
-                                        <!-- Authentication -->
+                                        <div class="border-t border-white/5" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
                                                 Log Out
@@ -253,212 +312,23 @@
                                 </Dropdown>
                             </div>
 
-                            <!-- Auth Buttons -->
-                            <div v-else v-if="screenWidth > 390">
-                                <div class="flex">
-                                    <Link :href="route('login')">
-                                        <PrimaryButton type="button" class="py-1">
-                                            Login
-                                        </PrimaryButton>
-                                    </Link>
-
-                                    <Link :href="route('register')" class="ml-3">
-                                        <SecondaryButton type="button" class="py-1">
-                                            Register
-                                        </SecondaryButton>
-                                    </Link>
-                                </div>
+                            <!-- Auth Buttons (Guest) -->
+                            <div v-else class="flex items-center gap-2">
+                                <Link :href="route('login')" class="hidden sm:block">
+                                    <button class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                                        Login
+                                    </button>
+                                </Link>
+                                <Link :href="route('register')">
+                                    <button class="px-3 py-1.5 text-sm font-medium bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all">
+                                        Register
+                                    </button>
+                                </Link>
                             </div>
-
-                            <div class="md:hidden">
-                                <button class="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-400 hover:bg-grayop-900 focus:outline-none focus:bg-grayop-900 focus:text-gray-400 transition duration-150 ease-in-out" @click="showingNavigationDropdown = ! showingNavigationDropdown">
-                                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                        <path
-                                            :class="{'hidden': showingNavigationDropdown, 'inline-flex': ! showingNavigationDropdown }"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M4 6h16M4 12h16M4 18h16"
-                                        />
-                                        <path
-                                            :class="{'hidden': ! showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Primary Navigation Menu-->
-                <div class="max-w-8xl mx-auto mt-2">
-                    <!-- Navigation Links -->
-                    <div class="hidden space-x-8 md:-my-px md:ms-6 md:flex">
-                        <NavLink :href="route('home')" :active="route().current('home')">
-                            Home
-                        </NavLink>
-
-                        <NavLink :href="route('servers')" :active="route().current('servers')">
-                            Servers
-                        </NavLink>
-
-                        <NavLink :href="route('maps')" :active="route().current('maps')">
-                            Maps
-                        </NavLink>
-
-                        <NavLink :href="route('ranking')" :active="route().current('ranking')">
-                            Ranking
-                        </NavLink>
-
-                        <NavLink :href="route('records')" :active="route().current('records')">
-                            Records
-                        </NavLink>
-
-                        <NavLink :href="route('demos.index')" :active="route().current('demos.*')">
-                            Demos
-                        </NavLink>
-
-                        <NavLink :href="route('bundles')" :active="route().current('bundles')">
-                            Bundles
-                        </NavLink>
-
-                        <NavLink :href="route('clans.index')" :active="route().current('clans.index')">
-                            Clans
-                        </NavLink>
-
-                        <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.index')">
-                            Tournaments
-                        </NavLink>
-                    </div>
-                </div>
-
-                <!-- Responsive Navigation Menu -->
-                <div :class="{'block': showingNavigationDropdown, 'hidden': ! showingNavigationDropdown}" class="md:hidden">
-                    <div class="pt-2 pb-3 space-y-1">
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" v-if="! $page.props.auth?.user" :href="route('login')" :active="route().current('login')">
-                            Login
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" v-if="! $page.props.auth?.user" :href="route('register')" :active="route().current('register')">
-                            Register
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('home')" :active="route().current('home')">
-                            Home
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('servers')" :active="route().current('servers')">
-                            Servers
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('maps')" :active="route().current('maps')">
-                            Maps
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink :href="route('ranking')" :active="route().current('ranking')">
-                            Ranking
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('records')" :active="route().current('records')">
-                            Records
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('demos.index')" :active="route().current('demos.*')">
-                            Demos
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('bundles')" :active="route().current('bundles')">
-                            Bundles
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('clans.index')" :active="route().current('clans.index')">
-                            Clans
-                        </ResponsiveNavLink>
-
-                        <ResponsiveNavLink @click="showingNavigationDropdown = false" :href="route('tournaments.index')" :active="route().current('tournaments.index')">
-                            Tournaments
-                        </ResponsiveNavLink>
-                    </div>
-
-                    <!-- Responsive Settings Options -->
-                    <div v-if="$page.props.auth.user" class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
-                        <div class="flex items-center px-4">
-                            <div v-if="$page.props.jetstream.managesProfilePhotos" class="shrink-0 me-3">
-                                <img class="h-10 w-10 rounded-full object-cover" :src="$page.props.auth.user.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" :alt="$page.props.auth.user.name">
-                            </div>
-
-                            <div>
-                                <div class="font-medium text-base text-gray-800 dark:text-gray-200" v-html="q3tohtml($page.props.auth.user.name)"></div>
-                                <div class="font-medium text-sm text-gray-500">
-                                    @ {{ $page.props.auth.user.username }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
-                                Profile
-                            </ResponsiveNavLink>
-
-                            <!-- Authentication -->
-                            <form method="POST" @submit.prevent="logout">
-                                <ResponsiveNavLink as="button">
-                                    Log Out
-                                </ResponsiveNavLink>
-                            </form>
                         </div>
                     </div>
                 </div>
             </nav>
-
-            <div class="max-w-8xl mx-auto pt-2 px-4 md:px-6 lg:px-8" v-if="screenWidth <= 640">
-                <div ref="searchSection">
-                    <TextInput
-                        v-model="search"
-                        @focus="onSearchFocus"
-                        type="text"
-                        class="h-10 block sm:hidden w-full"
-                        placeholder="Search..."
-                        @input="performSearch"
-                    />
-
-                    <div v-if="showResultsSection" class="defrag-scrollbar search-results block p-3 sm:hidden mt-1 absolute z-10 bg-gray-900 border-2 border-grayop-700 rounded-md text-gray-500" style="left: 10px; right: 10px;">
-                        <div v-if="search.length == 0">
-                            Type a search query...
-                        </div>
-
-                        <div ref="resultsSection" v-else>
-                            <div class="flex justify-between items-center mb-3">
-                                <div @click="searchCategory = 'all'" class="flex-1 text-center cursor-pointer px-4 py-0.5 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'all', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'all'}">All</div>
-                                <div @click="searchCategory = 'maps'" class="flex-1 text-center cursor-pointer px-4 py-0.5 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'maps', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'maps'}">Maps</div>
-                                <div @click="searchCategory = 'players'" class="flex-1 text-center cursor-pointer px-4 py-0.5 rounded-full text-sm mx-0.5" :class="{'bg-gray-600 text-white': searchCategory == 'players', 'bg-gray-800 hover:bg-gray-800 text-gray-400 hover:text-gray-200': searchCategory != 'players'}">Players</div>
-                            </div>
-
-                            <div v-if="maps.data?.length > 0 && (searchCategory == 'all' || searchCategory == 'maps')">
-                                <div class="font-bold text-gray-400 capitalized text-sm mb-1">
-                                    Maps
-                                </div>
-                                <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
-                            </div>
-
-                            <div v-if="players?.length > 0 && (searchCategory == 'all' || searchCategory == 'players')">
-                                <div class="font-bold text-gray-400 capitalized text-sm mb-1">
-                                    Players
-                                </div>
-                                <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
-                            </div>
-
-                            <div v-if="players?.length == 0 && maps.data?.length == 0">
-                                There are no results !
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Page Heading -->
             <header v-if="$slots.header" class="shadow">

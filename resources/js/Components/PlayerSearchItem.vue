@@ -7,24 +7,16 @@
 </script>
 
 <template>
-    <div>
-        <Link class="flex rounded-md hover:bg-grayop-800 p-2" :href="route(player.mdd ? 'profile.mdd' : 'profile.index', player.id)">
-            <div class="mr-4 flex items-center">
-                <img class="h-10 w-10 rounded-full object-cover" :src="player.profile_photo_path ? '/storage/' + player.profile_photo_path : '/images/null.jpg'" :alt="player.name">
-                
-                <div class="ml-4">
-                    <div class="flex rounded-md">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <img :src="`/images/flags/${player.country}.png`" class="w-5 inline mr-2" onerror="this.src='/images/flags/_404.png'">
-                                <span class="font-bold text-white" v-html="q3tohtml(player.name)"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <Link class="group flex items-center gap-3 cursor-pointer rounded-lg hover:bg-white/5 p-2.5 transition-all border border-transparent hover:border-white/10" :href="route(player.mdd ? 'profile.mdd' : 'profile.index', player.id)">
+        <!-- Avatar -->
+        <img class="h-10 w-10 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-purple-500/40 transition-all" :src="player.profile_photo_path ? '/storage/' + player.profile_photo_path : '/images/null.jpg'" :alt="player.name">
+
+        <!-- Player Info -->
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+                <img :src="`/images/flags/${player.country}.png`" class="w-5 h-4 shrink-0" onerror="this.src='/images/flags/_404.png'">
+                <span class="text-sm font-bold text-white group-hover:text-purple-400 transition-colors truncate" v-html="q3tohtml(player.name)"></span>
             </div>
-        </Link>
-    
-        <hr class="my-1 text-gray-800 border-gray-800 bg-gray-800">
-    </div>
+        </div>
+    </Link>
 </template>

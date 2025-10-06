@@ -114,7 +114,7 @@ const formatNumber = (num) => {
         </div>
 
         <!-- Hall of Fame -->
-        <div class="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8">
+        <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl p-8">
             <h2 class="text-3xl font-black text-white mb-6 flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-yellow-400">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
@@ -122,304 +122,85 @@ const formatNumber = (num) => {
                 Hall of Fame
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                <!-- Record King -->
-                <div v-if="statistics.hall_of_fame.record_king" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-600/10 to-blue-800/10 border border-blue-500/20 p-3 hover:border-blue-500/50 transition-all duration-300" title="Most total records set - the player who dominates the leaderboards with the highest number of times across all maps">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <div class="text-3xl flex-shrink-0 w-8 h-8 flex items-center justify-center">👑</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-blue-400 mb-1">Record King</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.record_king.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.record_king.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.record_king.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-blue-500/30 group-hover/link:ring-blue-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-blue-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.record_king.user.name)"></div>
-                                </Link>
-                            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- General -->
+                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">General</h3>
+                    <div class="space-y-2">
+                        <div v-if="statistics.hall_of_fame.record_king" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Record King</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.record_king.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.record_king.user.name)"></Link>
                         </div>
-                        <div class="text-lg font-black text-blue-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.record_king.value) }} records</div>
+                        <div v-if="statistics.hall_of_fame.speed_demon" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Speed Demon</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.speed_demon.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.speed_demon.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.sharpshooter" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Podium Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.sharpshooter.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.sharpshooter.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.hot_streak" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Streak Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.hot_streak.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.hot_streak.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.most_active" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Most Active</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.most_active.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.most_active.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.map_explorer" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Map Explorer</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.map_explorer.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.map_explorer.user.name)"></Link>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Speed Demon -->
-                <div v-if="statistics.hall_of_fame.speed_demon" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-yellow-600/10 to-orange-800/10 border border-yellow-500/20 p-3 hover:border-yellow-500/50 transition-all duration-300" title="Most world records held - the player with the most #1 positions, proving they're the fastest on the most maps">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/powerups/haste.svg" class="w-8 h-8 flex-shrink-0" alt="Speed Demon" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-yellow-400 mb-1">Speed Demon</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.speed_demon.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.speed_demon.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.speed_demon.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-yellow-500/30 group-hover/link:ring-yellow-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-yellow-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.speed_demon.user.name)"></div>
-                                </Link>
-                            </div>
+                <!-- Physics & Weapons -->
+                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Physics & Weapons</h3>
+                    <div class="space-y-2">
+                        <div v-if="statistics.hall_of_fame.vq3_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">VQ3 Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.vq3_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.vq3_master.user.name)"></Link>
                         </div>
-                        <div class="text-lg font-black text-yellow-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.speed_demon.value) }} WRs</div>
+                        <div v-if="statistics.hall_of_fame.cpm_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">CPM Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.cpm_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.cpm_master.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.rocket_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Rocket Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.rocket_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.rocket_master.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.plasma_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Plasma Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.plasma_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.plasma_master.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.grenade_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Grenade Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.grenade_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.grenade_master.user.name)"></Link>
+                        </div>
+                        <div v-if="statistics.hall_of_fame.bfg_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">BFG Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.bfg_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.bfg_master.user.name)"></Link>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Streak Master -->
-                <div v-if="statistics.hall_of_fame.hot_streak" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-red-600/10 to-orange-800/10 border border-red-500/20 p-3 hover:border-red-500/50 transition-all duration-300" title="Longest consecutive days streak - the player who set records on the most consecutive days, showing incredible dedication and consistency">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <div class="text-3xl flex-shrink-0 w-8 h-8 flex items-center justify-center">🔥</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-red-400 mb-1">Streak Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.hot_streak.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.hot_streak.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.hot_streak.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-red-500/30 group-hover/link:ring-red-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-red-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.hot_streak.user.name)"></div>
-                                </Link>
-                            </div>
+                <!-- Map Features -->
+                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Map Features</h3>
+                    <div class="space-y-2">
+                        <div v-if="statistics.hall_of_fame.slick_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Slick Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.slick_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.slick_master.user.name)"></Link>
                         </div>
-                        <div class="text-lg font-black text-red-400 flex-shrink-0">{{ statistics.hall_of_fame.hot_streak.value }} days</div>
-                    </div>
-                </div>
-
-                <!-- Podium Master -->
-                <div v-if="statistics.hall_of_fame.sharpshooter" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-purple-600/10 to-pink-800/10 border border-purple-500/20 p-3 hover:border-purple-500/50 transition-all duration-300" title="Most top 3 finishes - consistently landing on the podium across multiple maps, showing elite-level skill and precision">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <div class="text-3xl flex-shrink-0 w-8 h-8 flex items-center justify-center">🏆</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-purple-400 mb-1">Podium Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.sharpshooter.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.sharpshooter.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.sharpshooter.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-purple-500/30 group-hover/link:ring-purple-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-purple-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.sharpshooter.user.name)"></div>
-                                </Link>
-                            </div>
+                        <div v-if="statistics.hall_of_fame.teleporter_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Teleporter Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.teleporter_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.teleporter_master.user.name)"></Link>
                         </div>
-                        <div class="text-lg font-black text-purple-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.sharpshooter.value) }} top3</div>
-                    </div>
-                </div>
-
-                <!-- Most Active -->
-                <div v-if="statistics.hall_of_fame.most_active" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-green-600/10 to-emerald-800/10 border border-green-500/20 p-3 hover:border-green-500/50 transition-all duration-300" title="Most records in last 30 days - the grinder who's been putting in the work recently, constantly improving and pushing for better times">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <div class="text-3xl flex-shrink-0 w-8 h-8 flex items-center justify-center">💪</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-green-400 mb-1">Most Active (30d)</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.most_active.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.most_active.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.most_active.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-green-500/30 group-hover/link:ring-green-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-green-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.most_active.user.name)"></div>
-                                </Link>
-                            </div>
+                        <div v-if="statistics.hall_of_fame.jumppad_master" class="flex justify-between items-center">
+                            <span class="text-xs text-gray-400">Jumppad Master</span>
+                            <Link :href="`/profile/${statistics.hall_of_fame.jumppad_master.user.id}`" class="text-sm font-bold text-white hover:text-blue-400 transition-colors" v-html="q3tohtml(statistics.hall_of_fame.jumppad_master.user.name)"></Link>
                         </div>
-                        <div class="text-lg font-black text-green-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.most_active.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Map Explorer -->
-                <div v-if="statistics.hall_of_fame.map_explorer" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-cyan-600/10 to-blue-800/10 border border-cyan-500/20 p-3 hover:border-cyan-500/50 transition-all duration-300" title="Most unique maps played - the adventurer who's explored the most different maps, never afraid to try new challenges and territories">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <div class="text-3xl flex-shrink-0 w-8 h-8 flex items-center justify-center">🗺️</div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-cyan-400 mb-1">Map Explorer</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.map_explorer.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.map_explorer.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.map_explorer.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-cyan-500/30 group-hover/link:ring-cyan-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-cyan-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.map_explorer.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-cyan-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.map_explorer.value) }} maps</div>
-                    </div>
-                </div>
-
-                <!-- VQ3 Master -->
-                <div v-if="statistics.hall_of_fame.vq3_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-600/10 to-blue-800/10 border border-blue-500/20 p-3 hover:border-blue-500/50 transition-all duration-300" title="Most VQ3 records held - the player with the most VQ3 records across all maps, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/modes/vq3-icon.svg" class="w-8 h-8 flex-shrink-0" alt="VQ3 Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-blue-400 mb-1">VQ3 Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.vq3_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.vq3_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.vq3_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-blue-500/30 group-hover/link:ring-blue-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-blue-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.vq3_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-blue-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.vq3_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- CPM Master -->
-                <div v-if="statistics.hall_of_fame.cpm_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-purple-600/10 to-purple-800/10 border border-purple-500/20 p-3 hover:border-purple-500/50 transition-all duration-300" title="Most CPM records held - the player with the most CPM records across all maps, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/modes/cpm-icon.svg" class="w-8 h-8 flex-shrink-0" alt="CPM Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-purple-400 mb-1">CPM Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.cpm_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.cpm_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.cpm_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-purple-500/30 group-hover/link:ring-purple-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-purple-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.cpm_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-purple-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.cpm_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- BFG Master -->
-                <div v-if="statistics.hall_of_fame.bfg_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-lime-600/10 to-lime-800/10 border border-lime-500/20 p-3 hover:border-lime-500/50 transition-all duration-300" title="Most records on BFG maps - the player with the most records on maps where BFG is available, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/weapons/iconw_bfg.svg" class="w-8 h-8 flex-shrink-0" alt="BFG Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-lime-400 mb-1">BFG Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.bfg_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.bfg_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.bfg_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-lime-500/30 group-hover/link:ring-lime-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-lime-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.bfg_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-lime-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.bfg_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Plasma Master -->
-                <div v-if="statistics.hall_of_fame.plasma_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-sky-600/10 to-sky-800/10 border border-sky-500/20 p-3 hover:border-sky-500/50 transition-all duration-300" title="Most records on plasma maps - the player with the most records on maps where plasma gun is available, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/weapons/iconw_plasma.svg" class="w-8 h-8 flex-shrink-0" alt="Plasma Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-sky-400 mb-1">Plasma Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.plasma_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.plasma_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.plasma_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-sky-500/30 group-hover/link:ring-sky-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-sky-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.plasma_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-sky-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.plasma_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Rocket Master -->
-                <div v-if="statistics.hall_of_fame.rocket_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-red-600/10 to-red-800/10 border border-red-500/20 p-3 hover:border-red-500/50 transition-all duration-300" title="Most records on rocket maps - the player with the most records on maps where rocket launcher is available, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/weapons/iconw_rocket.svg" class="w-8 h-8 flex-shrink-0" alt="Rocket Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-red-400 mb-1">Rocket Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.rocket_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.rocket_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.rocket_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-red-500/30 group-hover/link:ring-red-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-red-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.rocket_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-red-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.rocket_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Grenade Master -->
-                <div v-if="statistics.hall_of_fame.grenade_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-orange-600/10 to-orange-800/10 border border-orange-500/20 p-3 hover:border-orange-500/50 transition-all duration-300" title="Most records on grenade maps - the player with the most records on maps where grenade launcher is available, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/weapons/iconw_grenade.svg" class="w-8 h-8 flex-shrink-0" alt="Grenade Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-orange-400 mb-1">Grenade Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.grenade_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.grenade_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.grenade_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-orange-500/30 group-hover/link:ring-orange-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-orange-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.grenade_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-orange-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.grenade_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Slick Master -->
-                <div v-if="statistics.hall_of_fame.slick_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-teal-600/10 to-teal-800/10 border border-teal-500/20 p-3 hover:border-teal-500/50 transition-all duration-300" title="Most records on slick maps - the player with the most records on maps with slick surfaces, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/functions/slick.svg" class="w-8 h-8 flex-shrink-0" alt="Slick Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-teal-400 mb-1">Slick Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.slick_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.slick_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.slick_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-teal-500/30 group-hover/link:ring-teal-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-teal-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.slick_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-teal-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.slick_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Teleporter Master -->
-                <div v-if="statistics.hall_of_fame.teleporter_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-indigo-600/10 to-indigo-800/10 border border-indigo-500/20 p-3 hover:border-indigo-500/50 transition-all duration-300" title="Most records on teleporter maps - the player with the most records on maps with teleporters, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/functions/teleporter.svg" class="w-8 h-8 flex-shrink-0" alt="Teleporter Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-indigo-400 mb-1">Teleporter Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.teleporter_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.teleporter_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.teleporter_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-indigo-500/30 group-hover/link:ring-indigo-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-indigo-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.teleporter_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-indigo-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.teleporter_master.value) }} records</div>
-                    </div>
-                </div>
-
-                <!-- Jumppad Master -->
-                <div v-if="statistics.hall_of_fame.jumppad_master" class="group relative overflow-hidden rounded-lg bg-gradient-to-br from-amber-600/10 to-amber-800/10 border border-amber-500/20 p-3 hover:border-amber-500/50 transition-all duration-300" title="Most records on jumppad maps - the player with the most records on maps with jumppads, regardless of rank">
-                    <div class="flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <img src="/images/functions/push.svg" class="w-8 h-8 flex-shrink-0" alt="Jumppad Master" />
-                            <div class="flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-amber-400 mb-1">Jumppad Master</div>
-                                <Link :href="`/profile/${statistics.hall_of_fame.jumppad_master.user.id}`" class="flex items-center gap-2 group/link">
-                                    <img
-                                        :src="statistics.hall_of_fame.jumppad_master.user.profile_photo_path ? `/storage/${statistics.hall_of_fame.jumppad_master.user.profile_photo_path}` : '/images/null.jpg'"
-                                        class="w-8 h-8 rounded-full object-cover ring-2 ring-amber-500/30 group-hover/link:ring-amber-500/60 transition-all flex-shrink-0"
-                                    />
-                                    <div class="text-white text-sm font-bold group-hover/link:text-amber-400 transition-colors truncate" v-html="q3tohtml(statistics.hall_of_fame.jumppad_master.user.name)"></div>
-                                </Link>
-                            </div>
-                        </div>
-                        <div class="text-lg font-black text-amber-400 flex-shrink-0">{{ formatNumber(statistics.hall_of_fame.jumppad_master.value) }} records</div>
                     </div>
                 </div>
             </div>
@@ -428,7 +209,7 @@ const formatNumber = (num) => {
         <!-- Leaderboards - Two Column Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Left Column - Player Leaderboards -->
-            <div class="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl overflow-hidden">
                 <!-- Tabs -->
                 <div class="flex border-b border-white/10 overflow-x-auto">
                     <button
@@ -437,7 +218,7 @@ const formatNumber = (num) => {
                         class="flex-shrink-0 px-4 border-b-2 font-semibold transition-colors text-sm text-left h-[72px] flex flex-col justify-center"
                     >
                         <div>Total Records</div>
-                        <div class="text-xs text-gray-500 font-normal mt-0.5">All records held</div>
+                        <div class="text-xs text-gray-300 font-normal mt-0.5">All records held</div>
                     </button>
                     <button
                         @click="setActiveTab('world_records')"
@@ -445,7 +226,7 @@ const formatNumber = (num) => {
                         class="flex-shrink-0 px-4 border-b-2 font-semibold transition-colors text-sm text-left h-[72px] flex flex-col justify-center"
                     >
                         <div>World Records</div>
-                        <div class="text-xs text-gray-500 font-normal mt-0.5">#1 positions</div>
+                        <div class="text-xs text-gray-300 font-normal mt-0.5">#1 positions</div>
                     </button>
                     <button
                         @click="setActiveTab('top3')"
@@ -453,7 +234,7 @@ const formatNumber = (num) => {
                         class="flex-shrink-0 px-4 border-b-2 font-semibold transition-colors text-sm text-left h-[72px] flex flex-col justify-center"
                     >
                         <div>Top 3</div>
-                        <div class="text-xs text-gray-500 font-normal mt-0.5">Podium finishes</div>
+                        <div class="text-xs text-gray-300 font-normal mt-0.5">Podium finishes</div>
                     </button>
                     <button
                         @click="setActiveTab('activity')"
@@ -461,7 +242,7 @@ const formatNumber = (num) => {
                         class="flex-shrink-0 px-4 border-b-2 font-semibold transition-colors text-sm text-left h-[72px] flex flex-col justify-center"
                     >
                         <div>Activity</div>
-                        <div class="text-xs text-gray-500 font-normal mt-0.5">Last 30 days</div>
+                        <div class="text-xs text-gray-300 font-normal mt-0.5">Last 30 days</div>
                     </button>
                     <button
                         @click="setActiveTab('map_diversity')"
@@ -469,7 +250,7 @@ const formatNumber = (num) => {
                         class="flex-shrink-0 px-4 border-b-2 font-semibold transition-colors text-sm text-left h-[72px] flex flex-col justify-center"
                     >
                         <div>Map Diversity</div>
-                        <div class="text-xs text-gray-500 font-normal mt-0.5">Unique maps</div>
+                        <div class="text-xs text-gray-300 font-normal mt-0.5">Unique maps</div>
                     </button>
                 </div>
 
@@ -480,14 +261,14 @@ const formatNumber = (num) => {
                     <div
                         v-for="(player, index) in paginatedLeaderboard.data"
                         :key="player.id"
-                        class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                        class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                     >
                         <div class="flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                             :class="{
                                 'bg-yellow-500/20 text-yellow-400': (leaderboardPage - 1) * itemsPerPage + index === 0,
                                 'bg-gray-400/20 text-gray-300': (leaderboardPage - 1) * itemsPerPage + index === 1,
                                 'bg-orange-600/20 text-orange-400': (leaderboardPage - 1) * itemsPerPage + index === 2,
-                                'bg-white/5 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
+                                'bg-black/20 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
                             }"
                         >
                             {{ (leaderboardPage - 1) * itemsPerPage + index + 1 }}
@@ -513,14 +294,14 @@ const formatNumber = (num) => {
                     <div
                         v-for="(player, index) in paginatedLeaderboard.data"
                         :key="player.id"
-                        class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                        class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                     >
                         <div class="flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                             :class="{
                                 'bg-yellow-500/20 text-yellow-400': (leaderboardPage - 1) * itemsPerPage + index === 0,
                                 'bg-gray-400/20 text-gray-300': (leaderboardPage - 1) * itemsPerPage + index === 1,
                                 'bg-orange-600/20 text-orange-400': (leaderboardPage - 1) * itemsPerPage + index === 2,
-                                'bg-white/5 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
+                                'bg-black/20 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
                             }"
                         >
                             {{ (leaderboardPage - 1) * itemsPerPage + index + 1 }}
@@ -546,14 +327,14 @@ const formatNumber = (num) => {
                     <div
                         v-for="(player, index) in paginatedLeaderboard.data"
                         :key="player.id"
-                        class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                        class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                     >
                         <div class="flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                             :class="{
                                 'bg-yellow-500/20 text-yellow-400': (leaderboardPage - 1) * itemsPerPage + index === 0,
                                 'bg-gray-400/20 text-gray-300': (leaderboardPage - 1) * itemsPerPage + index === 1,
                                 'bg-orange-600/20 text-orange-400': (leaderboardPage - 1) * itemsPerPage + index === 2,
-                                'bg-white/5 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
+                                'bg-black/20 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
                             }"
                         >
                             {{ (leaderboardPage - 1) * itemsPerPage + index + 1 }}
@@ -579,14 +360,14 @@ const formatNumber = (num) => {
                     <div
                         v-for="(player, index) in paginatedLeaderboard.data"
                         :key="player.id"
-                        class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                        class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                     >
                         <div class="flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                             :class="{
                                 'bg-yellow-500/20 text-yellow-400': (leaderboardPage - 1) * itemsPerPage + index === 0,
                                 'bg-gray-400/20 text-gray-300': (leaderboardPage - 1) * itemsPerPage + index === 1,
                                 'bg-orange-600/20 text-orange-400': (leaderboardPage - 1) * itemsPerPage + index === 2,
-                                'bg-white/5 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
+                                'bg-black/20 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
                             }"
                         >
                             {{ (leaderboardPage - 1) * itemsPerPage + index + 1 }}
@@ -612,14 +393,14 @@ const formatNumber = (num) => {
                     <div
                         v-for="(player, index) in paginatedLeaderboard.data"
                         :key="player.id"
-                        class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                        class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                     >
                         <div class="flex items-center justify-center w-6 h-6 rounded-full font-bold text-sm"
                             :class="{
                                 'bg-yellow-500/20 text-yellow-400': (leaderboardPage - 1) * itemsPerPage + index === 0,
                                 'bg-gray-400/20 text-gray-300': (leaderboardPage - 1) * itemsPerPage + index === 1,
                                 'bg-orange-600/20 text-orange-400': (leaderboardPage - 1) * itemsPerPage + index === 2,
-                                'bg-white/5 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
+                                'bg-black/20 text-gray-500': (leaderboardPage - 1) * itemsPerPage + index > 2
                             }"
                         >
                             {{ (leaderboardPage - 1) * itemsPerPage + index + 1 }}
@@ -645,7 +426,7 @@ const formatNumber = (num) => {
                     <button
                         @click="leaderboardPage = Math.max(1, leaderboardPage - 1)"
                         :disabled="leaderboardPage === 1"
-                        class="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
+                        class="px-3 py-1 rounded bg-black/20 hover:bg-black/30 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
                     >
                         ← Prev
                     </button>
@@ -653,7 +434,7 @@ const formatNumber = (num) => {
                     <button
                         @click="leaderboardPage = Math.min(paginatedLeaderboard.totalPages, leaderboardPage + 1)"
                         :disabled="leaderboardPage === paginatedLeaderboard.totalPages"
-                        class="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
+                        class="px-3 py-1 rounded bg-black/20 hover:bg-black/30 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
                     >
                         Next →
                     </button>
@@ -663,7 +444,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Right Column - Untouched WRs -->
-            <div class="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl overflow-hidden">
+            <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl overflow-hidden">
                 <!-- Header -->
                 <div class="border-b border-white/10 px-4 py-3 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
@@ -679,7 +460,7 @@ const formatNumber = (num) => {
                         <div
                             v-for="record in paginatedUntouchedWrs.data"
                             :key="record.id"
-                            class="flex items-center gap-3 p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all duration-300"
+                            class="flex items-center gap-3 p-2 bg-black/20 hover:bg-black/30 rounded-lg transition-all duration-300"
                         >
                             <Link :href="`/profile/${record.user_id}`" class="flex items-center gap-2 flex-1 group">
                                 <img
@@ -709,7 +490,7 @@ const formatNumber = (num) => {
                         <button
                             @click="untouchedWrsPage = Math.max(1, untouchedWrsPage - 1)"
                             :disabled="untouchedWrsPage === 1"
-                            class="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
+                            class="px-3 py-1 rounded bg-black/20 hover:bg-black/30 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
                         >
                             ← Prev
                         </button>
@@ -717,7 +498,7 @@ const formatNumber = (num) => {
                         <button
                             @click="untouchedWrsPage = Math.min(paginatedUntouchedWrs.totalPages, untouchedWrsPage + 1)"
                             :disabled="untouchedWrsPage === paginatedUntouchedWrs.totalPages"
-                            class="px-3 py-1 rounded bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
+                            class="px-3 py-1 rounded bg-black/20 hover:bg-black/30 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-all"
                         >
                             Next →
                         </button>
@@ -786,7 +567,7 @@ const formatNumber = (num) => {
             </h2>
             <div class="text-sm text-gray-400 mb-4">Maps where multiple clan members secured top 3 positions</div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div v-for="sweep in statistics.special_sections.podium_sweeps" :key="`${sweep.mapname}-${sweep.physics}-${sweep.mode}`" class="bg-white/5 hover:bg-white/10 rounded-xl p-4 transition-all">
+                <div v-for="sweep in statistics.special_sections.podium_sweeps" :key="`${sweep.mapname}-${sweep.physics}-${sweep.mode}`" class="bg-black/20 hover:bg-black/30 rounded-xl p-4 transition-all">
                     <div class="font-bold text-white mb-1">{{ sweep.mapname }}</div>
                     <div class="flex items-center gap-2 text-sm text-gray-400">
                         <img :src="`/images/modes/${sweep.physics}-icon.svg`" class="w-4 h-4" :alt="sweep.physics" />
@@ -805,7 +586,7 @@ const formatNumber = (num) => {
             </h2>
             <div class="text-sm text-gray-400 mb-4">Closest world records - barely ahead of 2nd place</div>
             <div class="space-y-2">
-                <div v-for="record in statistics.special_sections.contested_positions" :key="record.id" class="flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-xl p-4 transition-all">
+                <div v-for="record in statistics.special_sections.contested_positions" :key="record.id" class="flex items-center justify-between bg-black/20 hover:bg-black/30 rounded-xl p-4 transition-all">
                     <div class="flex items-center gap-4 flex-1">
                         <img :src="record.profile_photo_path ? `/storage/${record.profile_photo_path}` : '/images/null.jpg'" class="w-10 h-10 rounded-full object-cover" />
                         <div class="flex-1">
