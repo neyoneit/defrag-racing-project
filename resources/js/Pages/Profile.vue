@@ -8,7 +8,8 @@
 
     const props = defineProps({
         user: Object,
-        records: Object,
+        vq3Records: Object,
+        cpmRecords: Object,
         type: String,
         profile: Object,
         cpm_world_records: {
@@ -19,7 +20,13 @@
             type: Number,
             default: 0
         },
-        hasProfile: Boolean
+        cpm_competitors: Object,
+        vq3_competitors: Object,
+        cpm_rivals: Object,
+        vq3_rivals: Object,
+        unplayed_maps: Object,
+        hasProfile: Boolean,
+        load_times: Object
     });
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
@@ -27,55 +34,52 @@
     const options = ref({
         'latest': {
             label: 'Latest Records',
-            icon: 'backintime',
-            color: 'text-gray-400'
+            icon: 'clock',
+            color: 'text-blue-400'
         },
         'recentlybeaten': {
             label: 'Recently Beaten',
-            icon: 'retweet',
-            color: 'text-gray-400'
+            icon: 'brokenheart',
+            color: 'text-red-400'
         },
         'tiedranks': {
             label: 'Tied Ranks',
             icon: 'circle-equal',
-            color: 'text-gray-400'
+            color: 'text-yellow-400'
         },
         'activityhistory': {
             label: 'Activity History',
-            icon: 'linegraph',
-            color: 'text-gray-400'
+            icon: 'activity-heartbeat',
+            color: 'text-purple-400'
+        },
+        'untouchable': {
+            label: 'Untouchable WRs',
+            icon: 'trophy',
+            color: 'text-yellow-400'
         },
         'bestranks': {
             label: 'Best Ranks',
-            icon: 'trophy',
+            icon: 'fire',
             color: 'text-green-400'
         },
         'besttimes': {
             label: 'Best Times',
-            icon: 'stopwatch',
+            icon: 'bolt',
             color: 'text-green-400'
         },
         'worstranks': {
             label: 'Worst Ranks',
-            icon: 'trash',
-            color: 'text-red-400'
+            icon: 'trending-down',
+            color: 'text-orange-400'
         },
         'worsttimes': {
             label: 'Worst Times',
             icon: 'hourglass',
-            color: 'text-red-400'
+            color: 'text-orange-400'
         },
     });
 
     const stats = [
-        {
-            label: 'World Records',
-            value: 'world_records',
-            icon: 'trophy',
-            color: 'text-yellow-500',
-            type: 'svg',
-            wr: true
-        },
         {
             label: 'Strafe Records',
             value: 'strafe_records',
@@ -84,15 +88,46 @@
             type: 'imgsvg'
         },
         {
-            label: 'Rocket Records',
-            value: 'rocket_records',
-            icon: 'rl',
+            label: 'Fastcaps Records',
+            value: 'ctf_records',
+            icon: 'flag',
+            color: 'text-cyan-500',
+            type: 'svg'
+        },
+        {
+            label: 'Machinegun Records',
+            value: 'mg_records',
+            icon: 'mg',
+            type: 'item'
+        },
+        {
+            label: 'Shotgun Records',
+            value: 'sg_records',
+            icon: 'sg',
             type: 'item'
         },
         {
             label: 'Grenade Records',
             value: 'grenade_records',
             icon: 'gl',
+            type: 'item'
+        },
+        {
+            label: 'Rocket Records',
+            value: 'rocket_records',
+            icon: 'rl',
+            type: 'item'
+        },
+        {
+            label: 'Lightning Records',
+            value: 'lg_records',
+            icon: 'lg',
+            type: 'item'
+        },
+        {
+            label: 'Railgun Records',
+            value: 'rg_records',
+            icon: 'rg',
             type: 'item'
         },
         {
@@ -107,24 +142,43 @@
             icon: 'bfg',
             type: 'item'
         },
-        {
-            label: 'Fastcaps Records',
-            value: 'ctf_records',
-            icon: 'flag',
-            color: 'text-cyan-500',
-            type: 'svg'
-        },
-        {
-            label: 'Total Records',
-            value: 'total_records',
-            icon: 'infinity',
-            color: 'text-gray-500',
-            type: 'svg'
-        },
     ];
 
     const selectedOption = ref(props.type || 'latest');
     const loading = ref('');
+    const selectedRival = ref(null);
+    const beatableRecords = ref([]);
+    const loadingBeatable = ref(false);
+
+    // Direct Competitor Comparison
+    const competitorSearch = ref('');
+    const competitorSearchResults = ref([]);
+    const showCompetitorDropdown = ref(false);
+    const selectedCompetitor = ref(null);
+    const vq3Comparison = ref([]);
+    const cpmComparison = ref([]);
+    const loadingComparison = ref(false);
+    const vq3Page = ref(1);
+    const cpmPage = ref(1);
+    const perPage = 10;
+
+    // Computed properties for pagination
+    const vq3ComparisonPaginated = computed(() => {
+        const start = (vq3Page.value - 1) * perPage;
+        const end = start + perPage;
+        return vq3Comparison.value.slice(start, end);
+    });
+
+    const cpmComparisonPaginated = computed(() => {
+        const start = (cpmPage.value - 1) * perPage;
+        const end = start + perPage;
+        return cpmComparison.value.slice(start, end);
+    });
+
+    const vq3TotalPages = computed(() => Math.ceil(vq3Comparison.value.length / perPage));
+    const cpmTotalPages = computed(() => Math.ceil(cpmComparison.value.length / perPage));
+
+    const mode = ref('all');
 
     const selectOption = (option) => {
         if (loading.value === option) {
@@ -134,7 +188,9 @@
         router.reload({
             data: {
                 type: option,
-                page: 1
+                mode: mode.value,
+                vq3_page: 1,
+                cpm_page: 1
             },
             onStart: () => {
                 loading.value = option;
@@ -144,6 +200,101 @@
             }
         })
     }
+
+    const sortByMode = (newMode) => {
+        mode.value = newMode;
+        router.reload({
+            data: {
+                type: props.type,
+                mode: newMode,
+                vq3_page: 1,
+                cpm_page: 1
+            }
+        });
+    }
+
+    const loadBeatableRecords = async (rivalMddId, rivalName) => {
+        selectedRival.value = { id: rivalMddId, name: rivalName };
+        loadingBeatable.value = true;
+
+        try {
+            const response = await fetch(`/api/profile/${props.user.id}/beatable-records/${rivalMddId}?physics=cpm`);
+            const data = await response.json();
+            beatableRecords.value = data;
+        } catch (error) {
+            console.error('Error loading beatable records:', error);
+            beatableRecords.value = [];
+        } finally {
+            loadingBeatable.value = false;
+        }
+    }
+
+    const closeBeatableRecords = () => {
+        selectedRival.value = null;
+        beatableRecords.value = [];
+    }
+
+    // Direct Competitor Comparison Methods
+    let searchTimeout = null;
+    const searchCompetitors = () => {
+        if (searchTimeout) clearTimeout(searchTimeout);
+
+        if (competitorSearch.value.length < 2) {
+            competitorSearchResults.value = [];
+            return;
+        }
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/search-players?q=${encodeURIComponent(competitorSearch.value)}`);
+                const data = await response.json();
+                competitorSearchResults.value = data;
+            } catch (error) {
+                console.error('Error searching players:', error);
+                competitorSearchResults.value = [];
+            }
+        }, 300);
+    };
+
+    const selectCompetitor = async (player) => {
+        selectedCompetitor.value = player;
+        showCompetitorDropdown.value = false;
+        competitorSearch.value = player.plain_name;
+        loadingComparison.value = true;
+
+        // Reset pagination
+        vq3Page.value = 1;
+        cpmPage.value = 1;
+
+        // Use player.user.id if user exists, otherwise use player.id directly
+        const rivalUserId = player.user?.id || player.id;
+
+        try {
+            // Fetch VQ3 comparison
+            const vq3Response = await fetch(`/api/profile/${props.user.id}/compare/${rivalUserId}?physics=vq3`);
+            vq3Comparison.value = await vq3Response.json();
+
+            // Fetch CPM comparison
+            const cpmResponse = await fetch(`/api/profile/${props.user.id}/compare/${rivalUserId}?physics=cpm`);
+            cpmComparison.value = await cpmResponse.json();
+        } catch (error) {
+            console.error('Error loading comparison:', error);
+            vq3Comparison.value = [];
+            cpmComparison.value = [];
+        } finally {
+            loadingComparison.value = false;
+        }
+    };
+
+    const clearCompetitor = () => {
+        selectedCompetitor.value = null;
+        competitorSearch.value = '';
+        competitorSearchResults.value = [];
+        vq3Comparison.value = [];
+        cpmComparison.value = [];
+        vq3Page.value = 1;
+        cpmPage.value = 1;
+    };
 
     watch(() => props.type, (newVal) => {
         if (options.value[newVal]) {
@@ -202,6 +353,12 @@
                                 <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-8 h-5">
                             </div>
                             <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
+                            <!-- LIVE Badge -->
+                            <a v-if="user?.is_live && user?.twitch_name" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg backdrop-blur-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
+                                <div class="w-2 h-2 rounded-full bg-white animate-ping absolute"></div>
+                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                                <span class="text-sm font-black text-white uppercase tracking-wider">LIVE</span>
+                            </a>
                         </div>
 
                         <!-- Clan + Stats Row -->
@@ -274,138 +431,763 @@
 
         <!-- EPIC REDESIGN - Main Content -->
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-            <!-- Stats Grid - COMPACT EPIC DESIGN -->
-            <div class="grid grid-cols-4 md:grid-cols-8 gap-2 mb-6">
-                <div v-for="stat in stats" :key="stat.value"
-                     class="group relative overflow-hidden rounded-xl backdrop-blur-2xl bg-gradient-to-br from-black/60 via-black/40 to-black/30 border border-white/10 hover:border-white/30 p-3 transition-all hover:scale-110 hover:z-10 shadow-2xl">
-                    <!-- Icon -->
-                    <div class="flex justify-center mb-2">
-                        <div class="relative">
-                            <svg v-if="stat.type == 'svg'" :class="`fill-current w-8 h-8 transition-all group-hover:scale-125 ` + stat.color" viewBox="0 0 20 20">
-                                <use :xlink:href="`/images/svg/icons.svg#icon-` + stat.icon"></use>
-                            </svg>
-                            <img v-if="stat.type == 'imgsvg'" class="w-8 h-8 transition-all group-hover:scale-125" src="/images/svg/strafe.svg">
-                            <div v-if="stat.type == 'item'" :class="`sprite-items sprite-${stat.icon} w-7 h-7 transition-all group-hover:scale-125`"></div>
-                            <!-- Glow ring -->
-                            <div class="absolute inset-0 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-blue-500 blur-lg opacity-0 group-hover:opacity-50 transition-opacity -z-10"></div>
+            <!-- Stats Grid - Clean Text Layout -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Performance Stats -->
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Performance</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Total Records</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Total number of records you have set across all maps
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_records || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_records || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">World Records</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Number of #1 ranked records you currently hold
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-yellow-400">{{ cpm_world_records }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ vq3_world_records }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Top 3 Positions</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records ranked between 1st and 3rd place
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_top3 || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_top3 || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Top 10 Positions</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records ranked between 1st and 10th place
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_top10 || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_top10 || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Average Rank</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Your average ranking position across all records (lower is better)
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_avg_rank || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_avg_rank || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Dominance</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Percentage of your records that are in top 10 positions
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_dominance || 0 }}%</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_dominance || 0 }}%</span>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- CPM/VQ3 Values -->
-                    <div class="text-center space-y-0.5">
-                        <div class="flex items-center justify-center gap-1">
-                            <img src="/images/modes/cpm-icon.svg" class="w-2.5 h-2.5 opacity-70" alt="CPM" />
-                            <span class="text-xs font-black text-green-400 tabular-nums">{{ stat.wr ? cpm_world_records : (profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0) }}</span>
+                <!-- Map Features -->
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Map Features</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Unique Maps</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Number of different maps you have set records on
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_unique_maps || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_unique_maps || 0 }}</span>
+                            </div>
                         </div>
-                        <div class="flex items-center justify-center gap-1">
-                            <img src="/images/modes/vq3-icon.svg" class="w-2.5 h-2.5 opacity-70" alt="VQ3" />
-                            <span class="text-xs font-black text-blue-400 tabular-nums">{{ stat.wr ? vq3_world_records : (profile ? profile['vq3_' + stat.value] : 0) }}</span>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Slick</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records on maps with slick (low friction) surfaces
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_slick || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_slick || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Jumppad</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records on maps featuring jump pads
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_jumppad || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_jumppad || 0 }}</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Teleporter</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records on maps featuring teleporters
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile.cpm_teleporter || 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile.vq3_teleporter || 0 }}</span>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Label -->
-                    <div class="mt-2 text-[9px] font-bold text-gray-500 text-center uppercase tracking-wider leading-tight group-hover:text-white transition-colors">{{ stat.label.replace(' Records', '') }}</div>
+                <!-- Activity & Misc -->
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Activity</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Best Streak</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Your longest consecutive days of setting records
+                            </div>
+                            <span class="text-sm font-bold text-white">{{ profile.longest_streak || 0 }} days</span>
+                        </div>
+                        <div v-if="profile.most_active_month" class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Most Active</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                The month when you set the most records
+                            </div>
+                            <span class="text-sm font-bold text-white">{{ profile.most_active_month.month }}</span>
+                        </div>
+                        <div v-if="profile.first_record_date" class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">First Record</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                When you set your very first record
+                            </div>
+                            <span class="text-sm font-bold text-white">{{ new Date(profile.first_record_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) }}</span>
+                        </div>
+                        <div v-if="profile.weapon_specialist" class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Best Weapon</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                The weapon category where you have the most world records
+                            </div>
+                            <span class="text-sm font-bold text-white capitalize">{{ profile.weapon_specialist }}</span>
+                        </div>
+                    </div>
+                </div>
 
-                    <!-- Epic hover glow -->
-                    <div class="absolute inset-0 bg-gradient-to-br from-purple-600/0 via-pink-600/0 to-blue-600/0 group-hover:from-purple-600/20 group-hover:via-pink-600/10 group-hover:to-blue-600/20 transition-all rounded-xl"></div>
+                <!-- Record Types -->
+                <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Record Types</h3>
+                    <div class="space-y-2">
+                        <div v-for="stat in stats.filter(s => s.value !== 'world_records' && ((profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0))" :key="stat.value" class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">{{ stat.label.replace(' Records', '') }}</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records set on {{ stat.label.toLowerCase() }} maps or with specific game modes
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-medium text-gray-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Records Container with Sidebar Tabs -->
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <!-- Sidebar Tabs -->
-                <div class="lg:col-span-1">
-                    <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 sticky top-4">
+            <!-- Competitors & Rivals Section -->
+            <div v-if="cpm_competitors || cpm_rivals" class="mb-6">
+                <!-- Section Headers -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                            </svg>
+                            Similar Skill Level
+                        </h3>
+                        <p class="text-xs text-gray-400">Players with similar overall skill score. Score = (WRs × 100) + (Top3 × 50) + (Top10 × 20) + (1000/avg rank) + (records × 2). The number shows their score difference from yours.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
+                            </svg>
+                            Your Rivals
+                        </h3>
+                        <p class="text-xs text-gray-400">Players you compete with head-to-head on specific maps. The number shows how many times you've beaten each other across all maps.</p>
+                    </div>
+                </div>
+
+                <!-- All 4 columns side by side -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Better Players -->
+                    <div v-if="cpm_competitors?.better?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h4 class="text-xs font-bold text-green-400 uppercase tracking-wide mb-2">Better Players</h4>
                         <div class="space-y-2">
-                            <button v-for="(data, option) in options" :key="option" @click="selectOption(option)"
-                                 :class="selectedOption === option
-                                    ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 text-white shadow-lg'
-                                    : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'"
-                                 class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-xs font-bold">
-                                <svg v-if="loading !== option" :class="selectedOption === option ? 'text-white' : data.color"
-                                     class="w-5 h-5 fill-current transition-transform" viewBox="0 0 20 20">
-                                    <use :xlink:href="`/images/svg/icons.svg#icon-` + data.icon"></use>
-                                </svg>
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                     class="w-5 h-5 animate-spin">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                </svg>
-                                <span class="text-left flex-1">{{ data.label }}</span>
+                            <button v-for="player in cpm_competitors.better" :key="player.id"
+                                  @click="loadBeatableRecords(player.id, player.plain_name)"
+                                  class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/30 transition-all group cursor-pointer">
+                                <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
+                                     class="w-8 h-8 rounded-full"
+                                     :alt="player.plain_name" />
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white group-hover:text-green-300 transition-colors" v-html="q3tohtml(player.name || player.plain_name)"></div>
+                                    <div class="text-xs text-gray-400">{{ player.wrs }} WRs • {{ player.total_records }} records</div>
+                                </div>
+                                <div class="text-xs font-bold text-green-400">+{{ Math.round(player.score - cpm_competitors.my_score) }}</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Worse Players -->
+                    <div v-if="cpm_competitors?.worse?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h4 class="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Target Practice</h4>
+                        <div class="space-y-2">
+                            <button v-for="player in cpm_competitors.worse" :key="player.id"
+                                  @click="loadBeatableRecords(player.id, player.plain_name)"
+                                  class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-orange-500/20 border border-white/10 hover:border-orange-500/30 transition-all group cursor-pointer">
+                                <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
+                                     class="w-8 h-8 rounded-full"
+                                     :alt="player.plain_name" />
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white group-hover:text-orange-300 transition-colors" v-html="q3tohtml(player.name || player.plain_name)"></div>
+                                    <div class="text-xs text-gray-400">{{ player.wrs }} WRs • {{ player.total_records }} records</div>
+                                </div>
+                                <div class="text-xs font-bold text-orange-400">-{{ Math.round(cpm_competitors.my_score - player.score) }}</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Players You Beat Most -->
+                    <div v-if="cpm_rivals?.beaten?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2">You Dominate</h4>
+                        <div class="space-y-2">
+                            <button v-for="rival in cpm_rivals.beaten" :key="rival.id"
+                                  @click="loadBeatableRecords(rival.id, rival.plain_name)"
+                                  class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/30 transition-all group cursor-pointer">
+                                <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
+                                     class="w-8 h-8 rounded-full"
+                                     :alt="rival.plain_name" />
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-xs text-gray-400">Beaten on {{ rival.maps_beaten }} maps</div>
+                                </div>
+                                <div class="text-xs font-bold text-blue-400">{{ rival.times_beaten }}×</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Players Who Beat You Most -->
+                    <div v-if="cpm_rivals?.beaten_by?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h4 class="text-xs font-bold text-red-400 uppercase tracking-wide mb-2">They Dominate You</h4>
+                        <div class="space-y-2">
+                            <button v-for="rival in cpm_rivals.beaten_by" :key="rival.id"
+                                  @click="loadBeatableRecords(rival.id, rival.plain_name)"
+                                  class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 transition-all group cursor-pointer">
+                                <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
+                                     class="w-8 h-8 rounded-full"
+                                     :alt="rival.plain_name" />
+                                <div class="flex-1">
+                                    <div class="text-sm font-bold text-white group-hover:text-red-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-xs text-gray-400">Beat you on {{ rival.maps_beaten }} maps</div>
+                                </div>
+                                <div class="text-xs font-bold text-red-400">{{ rival.times_beaten }}×</div>
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Records Table -->
-                <div class="lg:col-span-3">
-                    <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+            <!-- Map Completionist List -->
+            <div v-if="unplayed_maps && unplayed_maps.total > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                            </svg>
+                            Map Completionist
+                        </h2>
+                        <p class="text-xs text-gray-400">{{ unplayed_maps.total }} maps left to complete</p>
+                    </div>
+                </div>
 
-                <!-- Records List - Inline Record Component (copied from RecordsView) -->
-                <div v-if="hasProfile && records.total > 0" class="px-4 py-2">
-                    <Link v-for="record in records.data" :key="record.id" :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
-                        <!-- Background Map Thumbnail (always visible, blurred) - extends to edges -->
-                        <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
-                            <img
-                                :src="`/storage/${record.map.thumbnail}`"
-                                class="w-full h-full object-cover scale-110 blur-md group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
-                                :alt="record.mapname"
-                                onerror="this.src='/images/unknown.jpg'"
-                            />
-                            <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+                <!-- Maps Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                    <Link v-for="map in unplayed_maps.data" :key="map.name"
+                          :href="route('maps.map', map.name)"
+                          class="group relative backdrop-blur-xl bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
+                        <div class="relative overflow-hidden rounded-md mb-2">
+                            <img :src="`/storage/${map.thumbnail}`"
+                                 onerror="this.src='/images/unknown.jpg'"
+                                 class="w-full h-24 object-cover group-hover:scale-110 transition-transform duration-300"
+                                 :alt="map.name" />
                         </div>
-
-                        <!-- Content (relative to background) -->
-                        <div class="relative flex items-center gap-2 sm:gap-3 w-full">
-                            <!-- Rank -->
-                            <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                                <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                                <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                                <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
-                            </div>
-
-                            <!-- Map Name -->
-                            <div class="w-28 sm:w-40 flex-shrink-0">
-                                <div class="text-xs sm:text-sm font-bold text-blue-400 group-hover:text-blue-200 transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
-                            </div>
-
-                            <!-- Spacer for layout (player info removed) -->
-                            <div class="flex-1"></div>
-
-                            <!-- Time -->
-                            <div class="w-12 sm:w-20 flex-shrink-0 text-right">
-                                <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
-                            </div>
-
-                            <!-- Physics Icon -->
-                            <div class="w-5 sm:w-10 flex-shrink-0 text-center">
-                                <img v-if="record.physics.includes('cpm')" src="/images/modes/cpm-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="CPM" />
-                                <img v-else src="/images/modes/vq3-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="VQ3" />
-                            </div>
-
-                            <!-- Date -->
-                            <div class="w-8 sm:w-16 flex-shrink-0 text-right">
-                                <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                    {{ new Date(record.date_set).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) }}
-                                </div>
-                            </div>
-                        </div>
+                        <div class="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors truncate">{{ map.name }}</div>
+                        <div class="text-xs text-gray-500 truncate">by {{ map.author || 'Unknown' }}</div>
                     </Link>
                 </div>
 
-                <div v-else class="text-center py-20">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
-                        <use xlink:href="/images/svg/icons.svg#icon-trophy"></use>
-                    </svg>
-                    <div class="text-xl font-bold text-gray-600">No Records Yet</div>
-                    <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
+                <!-- Pagination -->
+                <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
+                    <!-- Previous Button -->
+                    <Link v-if="unplayed_maps.current_page > 1"
+                          :href="route('profile.index', {id: user.id, unplayed_page: unplayed_maps.current_page - 1})"
+                          preserve-scroll
+                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
+                        ‹ Prev
+                    </Link>
+
+                    <!-- Page Numbers -->
+                    <template v-for="page in unplayed_maps.last_page" :key="page">
+                        <Link v-if="page === 1 || page === unplayed_maps.last_page || (page >= unplayed_maps.current_page - 2 && page <= unplayed_maps.current_page + 2)"
+                              :href="route('profile.index', {id: user.id, unplayed_page: page})"
+                              preserve-scroll
+                              class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
+                              :class="unplayed_maps.current_page === page
+                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'">
+                            {{ page }}
+                        </Link>
+                        <span v-else-if="page === unplayed_maps.current_page - 3 || page === unplayed_maps.current_page + 3"
+                              class="px-2 text-gray-600">...</span>
+                    </template>
+
+                    <!-- Next Button -->
+                    <Link v-if="unplayed_maps.current_page < unplayed_maps.last_page"
+                          :href="route('profile.index', {id: user.id, unplayed_page: unplayed_maps.current_page + 1})"
+                          preserve-scroll
+                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
+                        Next ›
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Direct Competitor Comparison -->
+            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+                <h2 class="text-xl font-bold text-white mb-4">
+                    Direct Competitor Comparison
+                </h2>
+
+                <!-- Player Search -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-gray-400 mb-2">Select player to compare against:</label>
+                    <input
+                        v-model="competitorSearch"
+                        @input="searchCompetitors"
+                        @focus="showCompetitorDropdown = true"
+                        type="text"
+                        placeholder="Search for a player..."
+                        class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+                    />
+
+                    <!-- Search Results Dropdown -->
+                    <div v-if="showCompetitorDropdown && competitorSearchResults.length > 0" class="mt-2 bg-black/90 border border-white/20 rounded-lg max-h-60 overflow-y-auto">
+                        <button
+                            v-for="player in competitorSearchResults"
+                            :key="player.id"
+                            @click="selectCompetitor(player)"
+                            class="w-full flex items-center gap-3 p-3 hover:bg-white/10 transition-colors text-left border-b border-white/5 last:border-b-0"
+                        >
+                            <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
+                                 class="w-8 h-8 rounded-full"
+                                 :alt="player.plain_name" />
+                            <div class="flex-1">
+                                <div class="text-sm font-bold text-white" v-html="q3tohtml(player.name || player.plain_name)"></div>
+                                <div class="text-xs text-gray-400">{{ player.country }}</div>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
-                        <!-- Pagination -->
-                        <div v-if="hasProfile && records.total > records.per_page" class="border-t border-white/5 bg-transparent p-6">
-                            <Pagination :last_page="records.last_page" :current_page="records.current_page" :link="records.first_page_url" />
+                <!-- Comparison Results -->
+                <div v-if="selectedCompetitor" class="space-y-6">
+                    <!-- Selected Competitor Info -->
+                    <div class="flex items-center gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                        <img :src="selectedCompetitor.user?.profile_photo_path ? `/storage/${selectedCompetitor.user.profile_photo_path}` : '/images/null.jpg'"
+                             class="w-12 h-12 rounded-full"
+                             :alt="selectedCompetitor.plain_name" />
+                        <div class="flex-1">
+                            <div class="text-lg font-bold text-white" v-html="q3tohtml(selectedCompetitor.name || selectedCompetitor.plain_name)"></div>
+                            <div class="text-sm text-gray-400">Comparing records...</div>
+                        </div>
+                        <button @click="clearCompetitor" class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm font-bold transition-colors">
+                            Clear
+                        </button>
+                    </div>
+
+                    <!-- Explanation -->
+                    <div class="text-sm text-gray-400 bg-white/5 border border-white/10 rounded-lg p-4">
+                        <p>Maps are sorted by priority: <span class="text-red-400 font-bold">Behind</span> (easiest to beat), <span class="text-gray-400 font-bold">No Record</span> (opportunities), and <span class="text-green-400 font-bold">Ahead</span> (already winning).</p>
+                    </div>
+
+                    <!-- VQ3 and CPM Comparison Tables Side by Side -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- VQ3 Comparison Table -->
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                                <img src="/images/modes/vq3-icon.svg" class="w-6 h-6" alt="VQ3" />
+                                🎯 Top {{ vq3Comparison.length }} Easiest VQ3 Maps to Beat Your Competitor!
+                            </h3>
+                            <div v-if="loadingComparison" class="text-center py-10">
+                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                            </div>
+                            <div v-else-if="vq3ComparisonPaginated.length > 0" class="space-y-4">
+                                <div class="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full">
+                                            <thead class="bg-white/5 border-b border-white/10">
+                                                <tr>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Map</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Your Time</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Their Time</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Difference</th>
+                                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-white/5">
+                                                <tr v-for="record in vq3ComparisonPaginated" :key="record.mapname" class="hover:bg-white/5 transition-colors">
+                                                    <td class="px-4 py-3 text-sm font-medium text-white">{{ record.mapname }}</td>
+                                                    <td class="px-4 py-3 text-sm text-white">{{ record.my_time ? formatTime(record.my_time) : '-' }}</td>
+                                                    <td class="px-4 py-3 text-sm text-white">{{ formatTime(record.rival_time) }}</td>
+                                                    <td class="px-4 py-3 text-sm" :class="record.status === 'ahead' ? 'text-green-400' : record.status === 'behind' ? 'text-red-400' : 'text-gray-400'">
+                                                        {{ record.time_diff ? (record.status === 'ahead' ? '-' : '+') + formatTime(Math.abs(record.time_diff)) : '-' }}
+                                                    </td>
+                                                    <td class="px-4 py-3 text-sm">
+                                                        <span v-if="record.status === 'ahead'" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-bold">Ahead</span>
+                                                        <span v-else-if="record.status === 'behind'" class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-bold">Behind</span>
+                                                        <span v-else class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-bold">No Record</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <!-- VQ3 Pagination -->
+                                <div v-if="vq3TotalPages > 1" class="flex items-center justify-center gap-2">
+                                    <button @click="vq3Page = Math.max(1, vq3Page - 1)" :disabled="vq3Page === 1" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
+                                        Previous
+                                    </button>
+                                    <span class="text-sm text-gray-400">Page {{ vq3Page }} of {{ vq3TotalPages }}</span>
+                                    <button @click="vq3Page = Math.min(vq3TotalPages, vq3Page + 1)" :disabled="vq3Page === vq3TotalPages" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-else class="text-center py-10 text-gray-500">
+                                No VQ3 comparison data available
+                            </div>
+                        </div>
+
+                        <!-- CPM Comparison Table -->
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                                <img src="/images/modes/cpm-icon.svg" class="w-6 h-6" alt="CPM" />
+                                🎯 Top {{ cpmComparison.length }} Easiest CPM Maps to Beat Your Competitor!
+                            </h3>
+                        <div v-if="loadingComparison" class="text-center py-10">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                        </div>
+                        <div v-else-if="cpmComparisonPaginated.length > 0" class="space-y-4">
+                            <div class="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="w-full">
+                                        <thead class="bg-white/5 border-b border-white/10">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Map</th>
+                                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Your Time</th>
+                                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Their Time</th>
+                                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Difference</th>
+                                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-white/5">
+                                            <tr v-for="record in cpmComparisonPaginated" :key="record.mapname" class="hover:bg-white/5 transition-colors">
+                                                <td class="px-4 py-3 text-sm font-medium text-white">{{ record.mapname }}</td>
+                                                <td class="px-4 py-3 text-sm text-white">{{ record.my_time ? formatTime(record.my_time) : '-' }}</td>
+                                                <td class="px-4 py-3 text-sm text-white">{{ formatTime(record.rival_time) }}</td>
+                                                <td class="px-4 py-3 text-sm" :class="record.status === 'ahead' ? 'text-green-400' : record.status === 'behind' ? 'text-red-400' : 'text-gray-400'">
+                                                    {{ record.time_diff ? (record.status === 'ahead' ? '-' : '+') + formatTime(Math.abs(record.time_diff)) : '-' }}
+                                                </td>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <span v-if="record.status === 'ahead'" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-bold">Ahead</span>
+                                                    <span v-else-if="record.status === 'behind'" class="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs font-bold">Behind</span>
+                                                    <span v-else class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs font-bold">No Record</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- CPM Pagination -->
+                            <div v-if="cpmTotalPages > 1" class="flex items-center justify-center gap-2">
+                                <button @click="cpmPage = Math.max(1, cpmPage - 1)" :disabled="cpmPage === 1" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
+                                    Previous
+                                </button>
+                                <span class="text-sm text-gray-400">Page {{ cpmPage }} of {{ cpmTotalPages }}</span>
+                                <button @click="cpmPage = Math.min(cpmTotalPages, cpmPage + 1)" :disabled="cpmPage === cpmTotalPages" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                            <div v-else class="text-center py-10 text-gray-500">
+                                No CPM comparison data available
+                            </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else class="text-center py-5">
+                    <svg class="w-12 h-12 mx-auto mb-2 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    <div class="text-sm text-gray-500">Search for a player to see head-to-head comparison</div>
+                </div>
+            </div>
+
+            <!-- Records Container with Sidebar Tabs -->
+            <div class="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                <!-- Sidebar Tabs -->
+                <div class="lg:col-span-2 flex">
+                    <div class="backdrop-blur-xl bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
+                        <!-- Gamemode Filter (MOVED TO TOP) -->
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>
+                            <div class="space-y-2">
+                                <!-- All Modes -->
+                                <button @click="sortByMode('all')" :class="mode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    ALL
+                                </button>
+
+                                <!-- Run Mode -->
+                                <button @click="sortByMode('run')" :class="mode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    RUN
+                                </button>
+
+                                <!-- All CTF -->
+                                <button @click="sortByMode('ctf')" :class="mode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    CTF
+                                </button>
+
+                                <!-- CTF 1-7 -->
+                                <div class="grid grid-cols-7 gap-1">
+                                    <button v-for="i in 7" :key="'ctf' + i" @click="sortByMode('ctf' + i)" :class="mode === 'ctf' + i ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-2 py-2 rounded transition-all text-xs font-bold">
+                                        {{ i }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Buttons (MOVED BELOW MODES) -->
+                        <div class="pt-4 border-t border-white/10">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Filters</h3>
+                            <div class="space-y-2">
+                                <button v-for="(data, option) in options" :key="option" @click="selectOption(option)"
+                                     :class="selectedOption === option
+                                        ? 'bg-white/10 text-white shadow-lg border border-white/20'
+                                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'"
+                                     class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-bold">
+                                    <svg v-if="loading !== option" :class="selectedOption === option ? 'text-white' : data.color"
+                                         class="w-6 h-6 fill-current stroke-current transition-transform">
+                                        <use :xlink:href="`/images/svg/icons.svg#icon-` + data.icon"></use>
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                         class="w-6 h-6 animate-spin">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                    </svg>
+                                    <span class="text-left flex-1 leading-normal">{{ data.label }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Spacer to match table height -->
+                        <div class="flex-1"></div>
+                    </div>
+                </div>
+
+                <!-- Records Tables - Two Side by Side -->
+                <div class="lg:col-span-8">
+                    <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- VQ3 Records -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
+                            <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                    <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                </div>
+                            </div>
+
+                            <div v-if="vq3Records.total > 0" class="px-4 py-2 flex-1">
+                                <Link v-for="record in vq3Records.data" :key="record.id" :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                    <!-- Background Map Thumbnail -->
+                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+                                        <img
+                                            :src="`/storage/${record.map.thumbnail}`"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            :alt="record.mapname"
+                                            onerror="this.src='/images/unknown.jpg'"
+                                        />
+                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
+                                        <!-- Rank -->
+                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
+                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
+                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
+                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
+                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                        </div>
+
+                                        <!-- Map Name -->
+                                        <div class="flex-1">
+                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Time -->
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                                        </div>
+
+                                        <!-- Date -->
+                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+
+                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
+                                <div class="text-sm font-bold text-gray-600">No VQ3 Records</div>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div v-if="vq3Records.total > vq3Records.per_page" class="border-t border-blue-500/20 bg-transparent p-4 mt-auto">
+                                <Pagination :last_page="vq3Records.last_page" :current_page="vq3Records.current_page" :link="vq3Records.first_page_url" pageName="vq3_page" />
+                            </div>
+                        </div>
+
+                        <!-- CPM Records -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
+                            <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                    <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                </div>
+                            </div>
+
+                            <div v-if="cpmRecords.total > 0" class="px-4 py-2 flex-1">
+                                <Link v-for="record in cpmRecords.data" :key="record.id" :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                    <!-- Background Map Thumbnail -->
+                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+                                        <img
+                                            :src="`/storage/${record.map.thumbnail}`"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            :alt="record.mapname"
+                                            onerror="this.src='/images/unknown.jpg'"
+                                        />
+                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
+                                        <!-- Rank -->
+                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
+                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
+                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
+                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
+                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                        </div>
+
+                                        <!-- Map Name -->
+                                        <div class="flex-1">
+                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Time -->
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                                        </div>
+
+                                        <!-- Date -->
+                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+
+                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
+                                <div class="text-sm font-bold text-gray-600">No CPM Records</div>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div v-if="cpmRecords.total > cpmRecords.per_page" class="border-t border-purple-500/20 bg-transparent p-4 mt-auto">
+                                <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" pageName="cpm_page" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Records State -->
+                    <div v-else class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                        <div class="text-center py-20">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
+                                <use xlink:href="/images/svg/icons.svg#icon-trophy"></use>
+                            </svg>
+                            <div class="text-xl font-bold text-gray-600">No Records Yet</div>
+                            <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
+        <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="max-w-screen-2xl mx-auto px-4 mt-8 mb-8">
+            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics (Backend Load Times)</h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
+                        <div class="text-xl font-bold" :class="time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400'">
+                            {{ time }}ms
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 text-sm text-gray-500">
+                    <p><span class="text-green-400">Green</span> = Fast (&lt;500ms) | <span class="text-yellow-400">Yellow</span> = Moderate (500-1000ms) | <span class="text-red-400">Red</span> = Slow (&gt;1000ms)</p>
                 </div>
             </div>
         </div>

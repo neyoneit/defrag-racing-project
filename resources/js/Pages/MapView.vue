@@ -173,6 +173,139 @@
         return result
     })
 
+    // Helper functions for weapon/item/function icons and names
+    const getWeaponIcon = (abbr) => {
+        const icons = {
+            'gauntlet': '/images/weapons/iconw_gauntlet.svg',
+            'gt': '/images/weapons/iconw_gauntlet.svg',
+            'mg': '/images/weapons/iconw_machinegun.svg',
+            'sg': '/images/weapons/iconw_shotgun.svg',
+            'gl': '/images/weapons/iconw_grenade.svg',
+            'rl': '/images/weapons/iconw_rocket.svg',
+            'lg': '/images/weapons/iconw_lightning.svg',
+            'rg': '/images/weapons/iconw_railgun.svg',
+            'pg': '/images/weapons/iconw_plasma.svg',
+            'bfg': '/images/weapons/iconw_bfg.svg',
+            'grapple': '/images/weapons/iconw_grapple.svg',
+            'hook': '/images/weapons/iconw_grapple.svg',
+            'gh': '/images/weapons/iconw_grapple.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/weapons/iconw_gauntlet.svg';
+    };
+
+    const getWeaponName = (abbr) => {
+        const weapons = {
+            'gauntlet': 'Gauntlet',
+            'gt': 'Gauntlet',
+            'mg': 'Machine Gun',
+            'sg': 'Shotgun',
+            'gl': 'Grenade Launcher',
+            'rl': 'Rocket Launcher',
+            'lg': 'Lightning Gun',
+            'rg': 'Rail Gun',
+            'pg': 'Plasma Gun',
+            'bfg': 'BFG',
+            'grapple': 'Grappling Hook',
+            'hook': 'Grappling Hook',
+            'gh': 'Grappling Hook'
+        };
+        return weapons[abbr.toLowerCase().trim()] || abbr.toUpperCase();
+    };
+
+    const getItemIcon = (abbr) => {
+        const icons = {
+            // Powerups
+            'enviro': '/images/powerups/envirosuit.svg',
+            'haste': '/images/powerups/haste.svg',
+            'quad': '/images/powerups/quad.svg',
+            'regen': '/images/powerups/regen.svg',
+            'invis': '/images/powerups/invis.svg',
+            'flight': '/images/powerups/flight.svg',
+            // Health
+            'health': '/images/items/iconh_yellow.svg',
+            'smallhealth': '/images/items/iconh_green.svg',
+            'bighealth': '/images/items/iconh_red.svg',
+            'mega': '/images/items/iconh_mega.svg',
+            'medkit': '/images/items/medkit.svg',
+            // Armor
+            'shard': '/images/items/iconr_shard.svg',
+            'ya': '/images/items/iconr_yellow.svg',
+            'ra': '/images/items/iconr_red.svg',
+            // CTF
+            'flag': '/images/items/iconf_blu2.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/items/iconh_yellow.svg';
+    };
+
+    const getItemName = (abbr) => {
+        const items = {
+            // Powerups
+            'enviro': 'Battle Suit',
+            'haste': 'Haste',
+            'quad': 'Quad Damage',
+            'regen': 'Regeneration',
+            'invis': 'Invisibility',
+            'flight': 'Flight',
+            // Health
+            'health': 'Health (+25)',
+            'smallhealth': 'Small Health (+5)',
+            'bighealth': 'Large Health (+50)',
+            'mega': 'Mega Health (+100)',
+            'medkit': 'Medkit',
+            // Armor
+            'shard': 'Armor Shard (+5)',
+            'ya': 'Yellow Armor (+50)',
+            'ra': 'Red Armor (+100)',
+            // CTF
+            'flag': 'Flag'
+        };
+        return items[abbr.toLowerCase().trim()] || abbr;
+    };
+
+    const getFunctionIcon = (abbr) => {
+        const icons = {
+            'tele': '/images/functions/tele.svg',
+            'teleporter': '/images/functions/teleporter.svg',
+            'slick': '/images/functions/slick.svg',
+            'timer': '/images/functions/timer.svg',
+            'fog': '/images/functions/fog.svg',
+            'water': '/images/functions/water.svg',
+            'lava': '/images/functions/lava.svg',
+            'moving': '/images/functions/moving.svg',
+            'door': '/images/functions/door.svg',
+            'button': '/images/functions/button.svg',
+            'push': '/images/functions/push.svg',
+            'break': '/images/functions/break.svg',
+            'slime': '/images/functions/slime.svg',
+            'shootergl': '/images/functions/shootergl.svg',
+            'shooterpg': '/images/functions/shooterpg.svg',
+            'shooterrl': '/images/functions/shooterrl.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/functions/timer.svg';
+    };
+
+    const getFunctionName = (abbr) => {
+        const functions = {
+            'tele': 'Teleporter',
+            'teleporter': 'Teleporter',
+            'slick': 'Slick Surface',
+            'timer': 'Timer',
+            'fog': 'Fog',
+            'water': 'Water',
+            'lava': 'Lava',
+            'moving': 'Moving Platforms',
+            'door': 'Doors',
+            'button': 'Buttons',
+            'push': 'Push Trigger',
+            'break': 'Breakable',
+            'slime': 'Slime',
+            'shootergl': 'Grenade Shooter',
+            'shooterpg': 'Plasma Shooter',
+            'shooterrl': 'Rocket Shooter'
+        };
+        return functions[abbr.toLowerCase().trim()] || abbr;
+    };
+
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);
 
@@ -244,6 +377,45 @@
                                 <span class="truncate max-w-[100px]">{{ server.plain_name || server.name }}</span>
                                 <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ server.online_players.length }} playing</span>
                             </a>
+                        </div>
+                    </div>
+
+                    <!-- Map Features: Weapons, Items, Functions -->
+                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap gap-3 justify-center mb-4 pt-3 border-t border-white/10">
+                        <!-- Weapons -->
+                        <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-2">
+                            <span class="text-gray-400 font-medium text-xs">Weapons:</span>
+                            <div class="flex gap-1.5">
+                                <img v-for="weapon in map.weapons.split(',')" :key="weapon"
+                                     :src="getWeaponIcon(weapon)"
+                                     :alt="getWeaponName(weapon)"
+                                     :title="getWeaponName(weapon)"
+                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
+                        </div>
+
+                        <!-- Items -->
+                        <div v-if="map.items && map.items.length > 0" class="flex items-center gap-2">
+                            <span class="text-gray-400 font-medium text-xs">Items:</span>
+                            <div class="flex gap-1.5">
+                                <img v-for="item in map.items.split(',')" :key="item"
+                                     :src="getItemIcon(item)"
+                                     :alt="getItemName(item)"
+                                     :title="getItemName(item)"
+                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
+                        </div>
+
+                        <!-- Functions -->
+                        <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-2">
+                            <span class="text-gray-400 font-medium text-xs">Functions:</span>
+                            <div class="flex gap-1.5">
+                                <img v-for="func in map.functions.split(',')" :key="func"
+                                     :src="getFunctionIcon(func)"
+                                     :alt="getFunctionName(func)"
+                                     :title="getFunctionName(func)"
+                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
                         </div>
                     </div>
 
@@ -325,13 +497,12 @@
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50">
                     <!-- VQ3 Header -->
-                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/20 border-b border-blue-500/30 px-3 py-2">
+                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <div class="flex items-center gap-2">
                                 <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                                <span>VQ3</span>
-                                <span class="text-xs text-gray-400 font-normal">({{ vq3Records.total }})</span>
-                            </h3>
+                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                            </div>
                             <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
                                 <div v-if="my_vq3_record" class="text-sm font-bold text-blue-400 tabular-nums">
@@ -376,13 +547,12 @@
                 <!-- CPM Leaderboard -->
                 <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50 mt-5 md:mt-0">
                     <!-- CPM Header -->
-                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/20 border-b border-purple-500/30 px-3 py-2">
+                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <div class="flex items-center gap-2">
                                 <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                                <span>CPM</span>
-                                <span class="text-xs text-gray-400 font-normal">({{ cpmRecords.total }})</span>
-                            </h3>
+                                <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                            </div>
                             <div class="text-right min-w-[80px]">
                                 <div class="text-[10px] text-gray-400">Your Best</div>
                                 <div v-if="my_cpm_record" class="text-sm font-bold text-purple-400 tabular-nums">

@@ -22,7 +22,7 @@
         <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
             <img
                 :src="`/storage/${record.map.thumbnail}`"
-                class="w-full h-full object-cover scale-110 blur-md group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
                 :alt="record.mapname"
                 onerror="this.src='/images/unknown.jpg'"
             />
@@ -41,7 +41,7 @@
 
             <!-- Map Name -->
             <div class="w-28 sm:w-40 flex-shrink-0">
-                <div class="text-xs sm:text-sm font-bold text-blue-400 group-hover:text-blue-200 transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
             </div>
 
             <!-- Player Info -->
@@ -63,15 +63,15 @@
             </div>
 
             <!-- Physics Icon -->
-            <div class="w-5 sm:w-10 flex-shrink-0 text-center">
+            <div class="w-5 sm:w-6 flex-shrink-0 text-center">
                 <img v-if="record.physics.includes('cpm')" src="/images/modes/cpm-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="CPM" />
                 <img v-else src="/images/modes/vq3-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="VQ3" />
             </div>
 
             <!-- Date -->
-            <div class="w-8 sm:w-16 flex-shrink-0 text-right">
+            <div class="w-14 sm:w-20 flex-shrink-0 text-right">
                 <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                    {{ new Date(record.date_set).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) }}
+                    {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
                 </div>
             </div>
         </div>
