@@ -34,3 +34,9 @@ PRODUCTION_DEPLOYMENT.md
 
 # Production credentials (keep local only)
 PRODUCTION_CREDENTIALS.md
+
+# Unused icon libraries (development resources only)
+/resources/icon-libraries/
+
+# Rust build artifacts (build on server)
+/rust-rating-service/target/
