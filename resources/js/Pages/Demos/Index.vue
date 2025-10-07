@@ -437,17 +437,28 @@ watch(selectedPhysics, () => {
     <div>
         <Head title="Demo Upload" />
 
-        <div class="py-6 overflow-x-hidden">
+        <!-- Header Section -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="mb-8">
-                    <h2 class="text-3xl font-bold text-gray-200">Demos</h2>
-                    <p class="text-gray-400 mt-2">
-                        <span>Upload and manage demo files. If you're not logged in, you can still upload demos from this page — they will be stored as guest uploads and cannot be deleted by you. Logging in later will not automatically link guest uploads to your account.</span>
-                    </p>
+                <div class="flex justify-between items-start flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Demos</h1>
+                        <div class="flex items-center gap-2 text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                            </svg>
+                            <span class="text-sm font-semibold">Upload and manage demo files</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-hidden -mt-10">
+            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
-                <div class="bg-gray-800 rounded-xl p-8 mb-8 shadow-2xl border border-gray-700">
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-8 mb-8 shadow-2xl border border-white/5">
                     <h3 class="text-2xl font-bold text-gray-100 mb-6 flex items-center">
                         <svg class="w-8 h-8 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -641,7 +652,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Processing Status (real-time) -->
-                <div v-if="processingDemos.length > 0 || Object.keys(queueStats).length > 0" class="bg-gray-800 rounded-xl p-6 mb-8 shadow-xl border border-gray-700">
+                <div v-if="processingDemos.length > 0 || Object.keys(queueStats).length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-6 mb-8 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">Processing Status</h3>
 
                     <!-- Queue Statistics -->
@@ -690,7 +701,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Demos List -->
-                <div class="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         <span v-if="$page.props.auth.user">Your Uploaded Demos</span>
                         <span v-else>Recent Demos</span>
@@ -845,7 +856,7 @@ watch(selectedPhysics, () => {
 
         <!-- Manual Assignment Modal -->
         <div v-if="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeAssignModal">
-            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+            <div class="backdrop-blur-xl bg-black/40 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/5" @click.stop>
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-semibold text-gray-200">Assign Demo to Record</h3>
                     <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200">

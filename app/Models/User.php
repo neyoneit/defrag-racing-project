@@ -56,6 +56,23 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'tournament_news',
         'records_vq3',
         'records_cpm',
+        'discord_id',
+        'discord_token',
+        'discord_refresh_token',
+        'discord_token_expires_at',
+        'twitch_id',
+        'twitch_token',
+        'twitch_refresh_token',
+        'twitch_token_expires_at',
+        'is_live',
+        'live_status_checked_at',
+        'steam_id',
+        'steam_name',
+        'steam_avatar',
+        'twitter_id',
+        'twitter_token',
+        'twitter_refresh_token',
+        'twitter_token_expires_at',
     ];
 
     /**

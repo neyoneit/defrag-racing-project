@@ -26,9 +26,16 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('tournaments:notifications-send')->everyTwoMinutes();
 
-        $schedule->command('run:calculate-ratings')->withoutOverlapping()->everySixHours(); // ->runInBackground();
+        // Calculate VQ3 and CPM ratings using Rust - all 8 categories (overall, rocket, plasma, grenade, slick, tele, bfg, strafe)
+        // VQ3: ~89s, CPM: ~166s = ~4.5 minutes total for all 16 category rankings
+        $schedule->command('ratings:calculate --physics=vq3')->withoutOverlapping()->daily();
+        $schedule->command('ratings:calculate --physics=cpm')->withoutOverlapping()->daily();
 
-        $schedule->command('rankings:cache')->withoutOverlapping()->everyTwentyMinutes();
+        // Cache WR/Top3 counts for clan statistics (updates cached_wr_count and cached_top3_count on users table)
+        $schedule->command('rankings:cache')->withoutOverlapping()->hourly();
+
+        // Check Twitch live status every 2 minutes
+        $schedule->command('twitch:check-live-status')->withoutOverlapping()->everyTwoMinutes();
     }
 
     /**

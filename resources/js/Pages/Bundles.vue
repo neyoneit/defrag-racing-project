@@ -58,7 +58,7 @@
         <Head title="Bundles" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-20">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
@@ -92,14 +92,14 @@
                                 @click="selectCategory(category)"
                                 class="group flex items-center justify-between px-4 py-3 transition-all duration-300 hover:bg-white/5"
                                 :class="{
-                                    'bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-l-4 border-blue-500': currentCategory?.id == category.id,
+                                    'bg-white/10 border-l-4 border-white/50': currentCategory?.id == category.id,
                                     'hover:border-l-4 hover:border-white/20': currentCategory?.id != category.id
                                 }">
                                 <span class="font-semibold transition-colors" :class="currentCategory?.id == category.id ? 'text-white' : 'text-gray-400 group-hover:text-white'">
                                     {{ category.name }}
                                 </span>
                                 <span class="text-xs font-bold px-2 py-1 rounded-full transition-all"
-                                    :class="currentCategory?.id == category.id ? 'bg-blue-500/30 text-blue-300' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-300'">
+                                    :class="currentCategory?.id == category.id ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-500 group-hover:bg-white/10 group-hover:text-gray-300'">
                                     {{ category.bundles.length }}
                                 </span>
                             </Link>
@@ -111,7 +111,7 @@
                 <div class="flex-1">
                     <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
                         <!-- Category Header -->
-                        <div v-if="currentCategory" class="p-6 border-b border-white/5 bg-gradient-to-r from-blue-600/10 to-purple-600/10">
+                        <div v-if="currentCategory" class="p-6 border-b border-white/5 bg-black/20">
                             <h2 class="text-2xl font-black text-white mb-1">{{ currentCategory.name }}</h2>
                             <p class="text-sm text-gray-400">{{ currentCategory.bundles.length }} bundle{{ currentCategory.bundles.length !== 1 ? 's' : '' }} available</p>
                         </div>

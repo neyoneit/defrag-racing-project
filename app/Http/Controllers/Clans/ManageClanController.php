@@ -255,7 +255,8 @@ class ManageClanController extends Controller {
             'avatar_effect' => 'nullable|in:glow,pulse,ring,shine,border,particles,spin,none',
             'effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
             'avatar_effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
-            'featured_stat' => 'nullable|in:total_records,world_records,podium_finishes,top10_positions,avg_wr_age,map_coverage',
+            'featured_stats' => 'nullable|array|max:3',
+            'featured_stats.*' => 'in:total_records,world_records,podium_finishes,top10_positions,avg_wr_age,map_coverage',
         ]);
 
         $clan->name = $request->name;
@@ -287,9 +288,8 @@ class ManageClanController extends Controller {
             $clan->avatar_effect_color = $request->avatar_effect_color;
         }
 
-        if ($request->has('featured_stat')) {
-            $clan->featured_stat = $request->featured_stat;
-        }
+        // Always update featured_stats (can be empty array or have values)
+        $clan->featured_stats = $request->input('featured_stats', []);
 
         if ($request->file('image')) {
             $image = $request->file('image');

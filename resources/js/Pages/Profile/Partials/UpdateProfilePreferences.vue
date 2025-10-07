@@ -47,6 +47,16 @@
             Customize your profile.
         </template>
 
+        <template #topActions>
+            <ActionMessage :on="form.recentlySuccessful" class="me-3">
+                Saved.
+            </ActionMessage>
+
+            <PrimaryButton type="button" @click="updateProfilePreferences" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                Save
+            </PrimaryButton>
+        </template>
+
         <template #form>
             <div class="col-span-6">
                 <div class="flex justify-center">
@@ -73,16 +83,6 @@
                 </div>
                 <InputError :message="form.errors.color" class="mt-2" />
             </div>
-        </template>
-
-        <template #actions>
-            <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
-            </ActionMessage>
-
-            <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
-            </PrimaryButton>
         </template>
     </FormSection>
 </template>

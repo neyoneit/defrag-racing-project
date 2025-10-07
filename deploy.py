@@ -31,6 +31,7 @@ def pipeline_cmds(name):
         "composer install --optimize-autoloader --no-dev --no-interaction",
         "npm install",
         "npm run build",
+        "./build-rust.sh",
         f"ln -s {PROJECT_PATH}/deploy/.env {PROJECT_PATH}/releases/{name}/.env",
         f"rm -rdf {PROJECT_PATH}/releases/{name}/storage",
         f"ln -s {PROJECT_PATH}/deploy/storage {PROJECT_PATH}/releases/{name}/storage",

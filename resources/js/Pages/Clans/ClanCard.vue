@@ -179,22 +179,11 @@
                     </div>
                 </Link>
 
-                <!-- Featured Stat Box -->
-                <div v-if="!manage && clan.featured_stat" class="group relative overflow-hidden rounded-xl p-3 hover:scale-105 transition-transform duration-300"
-                    :class="{
-                        'bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30': clan.featured_stat === 'total_records',
-                        'bg-gradient-to-br from-yellow-600/20 to-orange-800/20 border border-yellow-500/30': clan.featured_stat === 'world_records',
-                        'bg-gradient-to-br from-purple-600/20 to-pink-800/20 border border-purple-500/30': clan.featured_stat === 'podium_finishes'
-                    }"
-                    :title="getStatTitle(clan.featured_stat)"
-                >
-                    <Link
-                        :href="route('clans.show', clan.id)"
-                        class="relative flex items-center gap-2"
-                        @click.stop
-                    >
-                        <!-- Total Records -->
-                        <template v-if="clan.featured_stat === 'total_records'">
+                <!-- Featured Stats Boxes -->
+                <div v-if="!manage && clan.featured_stats && clan.featured_stats.length > 0" class="flex gap-3">
+                    <!-- Total Records -->
+                    <div v-if="clan.featured_stats.includes('total_records')" class="group relative overflow-hidden rounded-xl p-3 hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30" :title="getStatTitle('total_records')">
+                        <Link :href="route('clans.show', clan.id)" class="relative flex items-center gap-2" @click.stop>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400 flex-shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
                             </svg>
@@ -202,10 +191,12 @@
                                 <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_records || 0) }}</div>
                                 <div class="text-xs font-medium text-blue-300">Total Records</div>
                             </div>
-                        </template>
+                        </Link>
+                    </div>
 
-                        <!-- World Records -->
-                        <template v-else-if="clan.featured_stat === 'world_records'">
+                    <!-- World Records -->
+                    <div v-if="clan.featured_stats.includes('world_records')" class="group relative overflow-hidden rounded-xl p-3 hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-yellow-600/20 to-orange-800/20 border border-yellow-500/30" :title="getStatTitle('world_records')">
+                        <Link :href="route('clans.show', clan.id)" class="relative flex items-center gap-2" @click.stop>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 flex-shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                             </svg>
@@ -213,10 +204,12 @@
                                 <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_wrs || 0) }}</div>
                                 <div class="text-xs font-medium text-yellow-300">World Records</div>
                             </div>
-                        </template>
+                        </Link>
+                    </div>
 
-                        <!-- Podium Finishes -->
-                        <template v-else-if="clan.featured_stat === 'podium_finishes'">
+                    <!-- Podium Finishes -->
+                    <div v-if="clan.featured_stats.includes('podium_finishes')" class="group relative overflow-hidden rounded-xl p-3 hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-purple-600/20 to-pink-800/20 border border-purple-500/30" :title="getStatTitle('podium_finishes')">
+                        <Link :href="route('clans.show', clan.id)" class="relative flex items-center gap-2" @click.stop>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-purple-400 flex-shrink-0">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                             </svg>
@@ -224,8 +217,8 @@
                                 <div class="text-2xl font-black text-white">{{ formatNumber(clan.total_top3 || 0) }}</div>
                                 <div class="text-xs font-medium text-purple-300">Podium Finishes</div>
                             </div>
-                        </template>
-                    </Link>
+                        </Link>
+                    </div>
                 </div>
 
                 <!-- Members & Stats -->
@@ -255,20 +248,6 @@
                         </div>
                     </div>
 
-                    <!-- Achievement Stats -->
-                    <div class="flex items-center gap-2">
-                        <!-- World Records Badge -->
-                        <div v-if="clan.total_wrs > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-600/20 to-amber-600/20 border border-yellow-500/30 rounded-lg" title="Total World Records">
-                            <img src="/images/powerups/quad.svg" class="w-5 h-5" alt="WRs" />
-                            <span class="text-yellow-400 text-sm font-bold">{{ clan.total_wrs }}</span>
-                        </div>
-
-                        <!-- Top 3 Positions Badge -->
-                        <div v-if="clan.total_top3 > 0" class="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 rounded-lg" title="Total Top 3 Positions">
-                            <img src="/images/powerups/haste.svg" class="w-5 h-5" alt="Top 3" />
-                            <span class="text-blue-400 text-sm font-bold">{{ clan.total_top3 }}</span>
-                        </div>
-                    </div>
 
                     <!-- Management Buttons -->
                     <div v-if="manage" class="flex flex-wrap gap-2">

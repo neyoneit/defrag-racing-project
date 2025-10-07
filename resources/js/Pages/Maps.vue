@@ -18,7 +18,10 @@
     <div>
         <Head title="Maps" />
 
-        <div class="max-w-8xl mx-auto pt-6 px-4 md:px-6 lg:px-8">
+        <!-- Top Shadow Gradient -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16"></div>
+
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8">
             <div class="flex justify-between flex-wrap">
                 <h2 class="font-semibold text-3xl text-gray-200 leading-tight">
                     Maps

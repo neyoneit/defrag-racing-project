@@ -17,18 +17,32 @@
 </script>
 
 <template>
-    <div class="mb-5 text-sm font-medium text-center" v-if="condition">
-        <ul class="mr-5 w-60">
-            <li v-for="tab in tabs">
+    <div class="border-b border-white/10" v-if="condition">
+        <ul class="flex flex-wrap -mb-px">
+            <li v-for="tab in tabs" :key="tab.name">
                 <Link :href="route(tab.route, tab.params)" v-if="tab.link">
-                    <div :class="{ 'text-white bg-grayop-300': activeTab === tab.name, 'bg-grayop-500 hover:bg-grayop-400': activeTab !== tab.name}" class="cursor-pointer rounded-lg w-full py-3 text-gray-300 mb-4">
+                    <button
+                        :class="{
+                            'text-blue-400 border-blue-400': activeTab === tab.name,
+                            'text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-300': activeTab !== tab.name
+                        }"
+                        class="inline-block px-6 py-3 border-b-2 font-medium transition-colors"
+                    >
                         {{ tab.label }}
-                    </div>
+                    </button>
                 </Link>
 
-                <div v-else @click="toggleTab(tab)" :class="{ 'text-white bg-grayop-300': activeTab === tab.name, 'bg-grayop-500 hover:bg-grayop-400': activeTab !== tab.name}" class="cursor-pointer rounded-lg w-full py-3 text-gray-300 mb-4">
+                <button
+                    v-else
+                    @click="toggleTab(tab)"
+                    :class="{
+                        'text-blue-400 border-blue-400': activeTab === tab.name,
+                        'text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-300': activeTab !== tab.name
+                    }"
+                    class="inline-block px-6 py-3 border-b-2 font-medium transition-colors"
+                >
                     {{ tab.label }}
-                </div>
+                </button>
             </li>
         </ul>
     </div>

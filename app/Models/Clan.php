@@ -16,6 +16,14 @@ class Clan extends Model
         'admin_id'
     ];
 
+    protected $casts = [
+        'featured_stats' => 'array'
+    ];
+
+    protected $attributes = [
+        'featured_stats' => '[]'
+    ];
+
     public function players()
     {
         return $this->hasMany(ClanPlayer::class);

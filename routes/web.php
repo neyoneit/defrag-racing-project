@@ -57,7 +57,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
     Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
-    
+
     Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
     Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
@@ -67,6 +67,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/demos/maps/{mapname}/records', [DemosController::class, 'getRecords'])->name('demos.records');
     Route::post('/demos/{demo}/assign', [DemosController::class, 'assign'])->name('demos.assign');
     Route::post('/demos/{demo}/unassign', [DemosController::class, 'unassign'])->name('demos.unassign');
+
+    // OAuth routes
+    Route::get('/oauth/discord', [App\Http\Controllers\OAuthController::class, 'redirectToDiscord'])->name('oauth.discord');
+    Route::get('/oauth/discord/callback', [App\Http\Controllers\OAuthController::class, 'handleDiscordCallback'])->name('oauth.discord.callback');
+    Route::post('/oauth/discord/disconnect', [App\Http\Controllers\OAuthController::class, 'disconnectDiscord'])->name('oauth.discord.disconnect');
+
+    Route::get('/oauth/twitch', [App\Http\Controllers\OAuthController::class, 'redirectToTwitch'])->name('oauth.twitch');
+    Route::get('/oauth/twitch/callback', [App\Http\Controllers\OAuthController::class, 'handleTwitchCallback'])->name('oauth.twitch.callback');
+    Route::post('/oauth/twitch/disconnect', [App\Http\Controllers\OAuthController::class, 'disconnectTwitch'])->name('oauth.twitch.disconnect');
+
+    Route::get('/oauth/steam', [App\Http\Controllers\OAuthController::class, 'redirectToSteam'])->name('oauth.steam');
+    Route::get('/oauth/steam/callback', [App\Http\Controllers\OAuthController::class, 'handleSteamCallback'])->name('oauth.steam.callback');
+    Route::post('/oauth/steam/disconnect', [App\Http\Controllers\OAuthController::class, 'disconnectSteam'])->name('oauth.steam.disconnect');
+
+    Route::get('/oauth/twitter', [App\Http\Controllers\OAuthController::class, 'redirectToTwitter'])->name('oauth.twitter');
+    Route::get('/oauth/twitter/callback', [App\Http\Controllers\OAuthController::class, 'handleTwitterCallback'])->name('oauth.twitter.callback');
+    Route::post('/oauth/twitter/disconnect', [App\Http\Controllers\OAuthController::class, 'disconnectTwitter'])->name('oauth.twitter.disconnect');
 });
 
 // Make the main upload endpoint publicly reachable so the demos page can accept
@@ -128,13 +145,13 @@ Route::post('/notifications/records', [NotificationsController::class, 'recordsc
 Route::get('/notifications/system', [NotificationsController::class, 'system'])->middleware('auth')->name('notifications.system.index');
 Route::post('/notifications/system', [NotificationsController::class, 'systemclear'])->middleware('auth')->name('notifications.system.clear');
 
-Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('profile.index');
+Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/profile/mdd/{userId}', [ProfileController::class, 'mdd'])->name('profile.mdd');
+Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('profile.index');
 
 Route::get('/images/flags/{flag}', [WebController::class, 'flags'])->name('images.flags');
 Route::get('/storage/thumbs/{image}', [WebController::class, 'thumbs'])->name('images.thumbs');
 
-Route::get('/changelog', [ChangelogController::class, 'index'])->name('changelog');
 Route::get('/announcements', [ChangelogController::class, 'announcements'])->name('announcements');
 
 Route::get('/privacy-policy', [PagesController::class, 'privacypolicy'])->name('pages.privacy-policy');

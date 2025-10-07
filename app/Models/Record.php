@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 
 class Record extends Model
 {
@@ -36,5 +37,38 @@ class Record extends Model
 
     public function uploadedDemos () {
         return $this->hasMany(UploadedDemo::class, 'record_id', 'id');
+    }
+
+    /**
+     * Boot method to clear profile cache when records change
+     */
+    protected static function boot() {
+        parent::boot();
+
+        // Clear cache when record is saved (created or updated)
+        static::saved(function ($record) {
+            if ($record->mdd_id) {
+                self::clearProfileCache($record->mdd_id);
+            }
+        });
+
+        // Clear cache when record is deleted
+        static::deleted(function ($record) {
+            if ($record->mdd_id) {
+                self::clearProfileCache($record->mdd_id);
+            }
+        });
+    }
+
+    /**
+     * Clear all profile cache for a player
+     */
+    protected static function clearProfileCache($mddId) {
+        Cache::forget("profile:competitors:{$mddId}:cpm");
+        Cache::forget("profile:competitors:{$mddId}:vq3");
+        Cache::forget("profile:rivals:{$mddId}:cpm");
+        Cache::forget("profile:rivals:{$mddId}:vq3");
+
+        \Log::info("Profile cache cleared for player {$mddId}");
     }
 }

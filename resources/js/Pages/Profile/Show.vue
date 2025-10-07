@@ -10,6 +10,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
 import VerifyMddProfile from '@/Pages/Profile/Partials/VerifyMddProfile.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
+import InputError from '@/Components/Laravel/InputError.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
 import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
 import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
@@ -40,6 +41,14 @@ const selectNewPhoto = () => photoInput.value.click();
 const updatePhotoPreview = () => {
     const photo = photoInput.value.files[0];
     if (!photo) return;
+    // 1MB size limit for profile photo
+    const maxSize = 1 * 1024 * 1024;
+    if (photo.size > maxSize) {
+        profileForm.errors.photo = 'The profile photo must be smaller than 1MB.';
+        photoInput.value.value = '';
+        return;
+    }
+    profileForm.errors.photo = '';
     const reader = new FileReader();
     reader.onload = (e) => { photoPreview.value = e.target.result; };
     reader.readAsDataURL(photo);
@@ -90,6 +99,13 @@ const updateBackgroundPreview = () => {
         backgroundInput.value.value = '';
         return;
     }
+    // 5MB size limit for profile background
+    const maxSize = 5 * 1024 * 1024;
+    if (background.size > maxSize) {
+        backgroundForm.errors.background = 'The background image must be smaller than 5MB.';
+        backgroundInput.value.value = '';
+        return;
+    }
     backgroundForm.errors.background = '';
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -105,6 +121,12 @@ const handleBackgroundCrop = () => {
     const { canvas } = backgroundCropper.value.getResult();
 
     canvas.toBlob((blob) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            backgroundPreview.value = e.target.result;
+        };
+        reader.readAsDataURL(blob);
+
         backgroundForm.background = new File([blob], 'background.jpg', { type: 'image/jpeg' });
         showBackgroundCropper.value = false;
         tempBackgroundSrc.value = null;
@@ -113,6 +135,7 @@ const handleBackgroundCrop = () => {
             preserveScroll: true,
             onSuccess: () => {
                 backgroundInput.value.value = '';
+                backgroundPreview.value = null;
             }
         });
     }, 'image/jpeg', 0.92);
@@ -246,11 +269,16 @@ const updateNotifications = () => {
                                 </div>
                                 <h2 class="text-sm font-bold text-white">Profile</h2>
                             </div>
-                            <div v-if="profileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-xs font-medium text-green-400">Saved</span>
+                            <div class="flex items-center gap-2">
+                                <div v-if="profileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                    <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span class="text-xs font-medium text-green-400">Saved</span>
+                                </div>
+                                <PrimaryButton type="button" @click="updateProfile" :disabled="profileForm.processing">
+                                    Save
+                                </PrimaryButton>
                             </div>
                         </div>
 
@@ -293,12 +321,6 @@ const updateNotifications = () => {
                                 <InputLabel for="country" value="Country" />
                                 <CountrySelect :setCountry="setCountry" :selectedCountry="profileForm.country" class="mt-1" />
                             </div>
-
-                            <div class="flex justify-end pt-1">
-                                <PrimaryButton :disabled="profileForm.processing">
-                                    Save
-                                </PrimaryButton>
-                            </div>
                         </form>
                     </div>
                 </div>
@@ -314,6 +336,109 @@ const updateNotifications = () => {
                 </div>
             </div>
 
+            <!-- Profile Images Card -->
+            <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 border border-cyan-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-cyan-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-sm font-bold text-white">Profile Images</h2>
+                        </div>
+                        <div v-if="profileForm.recentlySuccessful || backgroundForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                            <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span class="text-xs font-medium text-green-400">Saved</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Avatar Upload -->
+                        <div>
+                            <input ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview" accept="image/*" />
+                            <InputLabel value="Avatar" class="text-sm font-medium mb-2" />
+                            <div class="text-xs text-gray-400 mb-4">Max 1MB. GIF supported.</div>
+                            <div class="flex flex-col items-center gap-4">
+                                <div v-if="photoPreview" class="shrink-0">
+                                    <img :src="photoPreview" class="rounded-full h-32 w-32 object-cover border-2 border-white/20 shadow-lg">
+                                </div>
+                                <div v-else-if="user.profile_photo_path" class="shrink-0">
+                                    <img :src="'/storage/' + user.profile_photo_path" class="rounded-full h-32 w-32 object-cover border-2 border-white/20 shadow-lg">
+                                </div>
+                                <div v-else class="shrink-0 w-32 h-32 rounded-full bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
+                                    <span class="text-xs text-gray-500">No avatar</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" @click="selectNewPhoto" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-md transition">
+                                        Change
+                                    </button>
+                                    <button v-if="user.profile_photo_path" type="button" @click="deletePhoto" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-md transition">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <InputError :message="profileForm.errors.photo" class="mt-2" />
+                        </div>
+
+                        <!-- Background Upload -->
+                        <div>
+                            <input ref="backgroundInput" type="file" class="hidden" @change="updateBackgroundPreview" accept="image/*" />
+                            <InputLabel value="Background" class="text-sm font-medium mb-2" />
+                            <div class="text-xs text-gray-400 mb-4">Recommended: 1920x400px. Max 5MB. GIF supported.</div>
+                            <div class="space-y-4">
+                                <div v-if="backgroundPreview || user.profile_background_path" class="w-full h-32 rounded-lg overflow-hidden border-2 border-white/20 shadow-lg">
+                                    <img :src="backgroundPreview || '/storage/' + user.profile_background_path" class="w-full h-full object-cover" />
+                                </div>
+                                <div v-else class="w-full h-32 rounded-lg bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
+                                    <span class="text-xs text-gray-500">No background image</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="button" @click="selectNewBackground" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-md transition">
+                                        Change
+                                    </button>
+                                    <button v-if="user.profile_background_path" type="button" @click="deleteBackground" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-md transition">
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                            <InputError :message="backgroundForm.errors.background" class="mt-2" />
+                        </div>
+                    </div>
+
+                    <!-- Background Cropper -->
+                    <div v-if="showBackgroundCropper" class="mt-6 pt-6 border-t border-white/10">
+                        <div class="bg-black rounded-lg overflow-hidden border border-white/10" style="height: 400px;">
+                            <Cropper
+                                ref="backgroundCropper"
+                                :src="tempBackgroundSrc"
+                                :stencil-props="{
+                                    aspectRatio: 4.8,
+                                    movable: true,
+                                    resizable: true
+                                }"
+                                :canvas="{
+                                    maxWidth: 1920,
+                                    maxHeight: 400
+                                }"
+                                class="cropper"
+                            />
+                        </div>
+                        <div class="flex gap-2 mt-4">
+                            <PrimaryButton type="button" @click="handleBackgroundCrop">
+                                Crop & Upload
+                            </PrimaryButton>
+                            <SecondaryButton type="button" @click="cancelBackgroundCrop">
+                                Cancel
+                            </SecondaryButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Preferences Card -->
             <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
                 <div class="p-4">
@@ -326,11 +451,16 @@ const updateNotifications = () => {
                             </div>
                             <h2 class="text-sm font-bold text-white">Customization</h2>
                         </div>
-                        <div v-if="prefsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                            <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span class="text-xs font-medium text-green-400">Saved</span>
+                        <div class="flex items-center gap-2">
+                            <div v-if="prefsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span class="text-xs font-medium text-green-400">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="updatePreferences" :disabled="prefsForm.processing">
+                                Save
+                            </PrimaryButton>
                         </div>
                     </div>
 
@@ -412,90 +542,7 @@ const updateNotifications = () => {
                                 </div>
                             </div>
                         </div>
-
-                        <div class="flex justify-end pt-1">
-                            <PrimaryButton :disabled="prefsForm.processing">
-                                Save
-                            </PrimaryButton>
-                        </div>
                     </form>
-                </div>
-            </div>
-
-            <!-- Profile Background Upload Card -->
-            <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
-                <div class="p-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-indigo-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                                </svg>
-                            </div>
-                            <h2 class="text-sm font-bold text-white">Profile Background</h2>
-                        </div>
-                        <div v-if="backgroundForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                            <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span class="text-xs font-medium text-green-400">Saved</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <div>
-                            <InputLabel value="Background Image" />
-                            <div class="mt-1 flex items-center gap-3">
-                                <!-- Current Background Preview -->
-                                <div v-if="user.profile_background_path" class="relative w-48 h-32 rounded-lg overflow-hidden border-2 border-white/10">
-                                    <img :src="'/storage/' + user.profile_background_path" class="w-full h-full object-cover" />
-                                </div>
-                                <div v-else class="w-48 h-32 rounded-lg bg-black/20 border-2 border-dashed border-white/10 flex items-center justify-center">
-                                    <span class="text-xs text-gray-500">No background</span>
-                                </div>
-
-                                <!-- Action Buttons -->
-                                <div class="flex flex-col gap-2">
-                                    <button type="button" @click="selectNewBackground" class="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-md transition">
-                                        Select New Background
-                                    </button>
-                                    <button v-if="user.profile_background_path" type="button" @click="deleteBackground" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-md transition">
-                                        Remove Background
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-400">Upload a background image for your profile page</p>
-                            <input ref="backgroundInput" type="file" class="hidden" @change="updateBackgroundPreview" accept="image/*" />
-
-                            <!-- Background Cropper -->
-                            <div v-if="showBackgroundCropper" class="mt-4">
-                                <div class="bg-black rounded-lg overflow-hidden border border-white/10" style="height: 400px;">
-                                    <Cropper
-                                        ref="backgroundCropper"
-                                        :src="tempBackgroundSrc"
-                                        :stencil-props="{
-                                            aspectRatio: 4.8,
-                                            movable: true,
-                                            resizable: true
-                                        }"
-                                        :canvas="{
-                                            maxWidth: 1920,
-                                            maxHeight: 400
-                                        }"
-                                        class="cropper"
-                                    />
-                                </div>
-                                <div class="flex gap-3 mt-3">
-                                    <PrimaryButton type="button" @click="handleBackgroundCrop">
-                                        Crop & Apply
-                                    </PrimaryButton>
-                                    <SecondaryButton type="button" @click="cancelBackgroundCrop">
-                                        Cancel
-                                    </SecondaryButton>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -513,11 +560,16 @@ const updateNotifications = () => {
                                 </div>
                                 <h2 class="text-sm font-bold text-white">Notifications</h2>
                             </div>
-                            <div v-if="notifsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-xs font-medium text-green-400">Saved</span>
+                            <div class="flex items-center gap-2">
+                                <div v-if="notifsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                    <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span class="text-xs font-medium text-green-400">Saved</span>
+                                </div>
+                                <PrimaryButton type="button" @click="updateNotifications" :disabled="notifsForm.processing">
+                                    Save
+                                </PrimaryButton>
                             </div>
                         </div>
 
@@ -576,12 +628,6 @@ const updateNotifications = () => {
                                         </label>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="flex justify-end pt-1">
-                                <PrimaryButton :disabled="notifsForm.processing">
-                                    Save
-                                </PrimaryButton>
                             </div>
                         </form>
                     </div>

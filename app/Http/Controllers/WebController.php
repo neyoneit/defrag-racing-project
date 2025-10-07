@@ -9,17 +9,22 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use App\Models\Map;
 use App\Models\Server;
 use App\Models\Tournament;
+use App\Models\MddProfile;
+use Illuminate\Support\Facades\DB;
 
 class WebController extends Controller
 {
     public function home() {
-        $announcement = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first();
+        $latestAnnouncement = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first();
+        $recentAnnouncements = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->skip(1)->limit(5)->get();
 
         $maps = Map::query()
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->limit(5)
+            ->limit(4)
             ->get();
+
+        $totalMaps = Map::count();
 
         $tournaments = Tournament::query()
             ->where('start_date', '<=', now())
@@ -35,13 +40,21 @@ class WebController extends Controller
 
         $servers = $this->sortServers($servers);
 
+        $activeServers = $servers->count();
         $servers = $servers->values()->take(3);
 
+        // Count active players in last 30 days (using updated_at as proxy for activity)
+        $activePlayers = MddProfile::where('updated_at', '>=', now()->subDays(30))->count();
+
         return Inertia::render('Home')
-            ->with('announcement', $announcement)
+            ->with('latestAnnouncement', $latestAnnouncement)
+            ->with('recentAnnouncements', $recentAnnouncements)
             ->with('maps', $maps)
             ->with('servers', $servers)
-            ->with('tournaments', $tournaments);
+            ->with('tournaments', $tournaments)
+            ->with('totalMaps', $totalMaps)
+            ->with('activeServers', $activeServers)
+            ->with('activePlayers', $activePlayers);
     }
 
     function sortServers($servers) {

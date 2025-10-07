@@ -159,7 +159,10 @@ const sortByAlphabets = () => {
 
         <Head title="Servers" />
 
-        <div class="max-w-8xl mx-auto pt-6 px-4 md:px-6 lg:px-8">
+        <!-- Top Shadow Gradient -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16"></div>
+
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8">
             <div class="flex justify-between items-center flex-wrap">
                 <h2 class="sub-header text-3xl text-gray-200 leading-tight">
                     Servers

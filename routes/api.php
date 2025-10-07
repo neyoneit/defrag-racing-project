@@ -17,3 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::get('/profile/{userId}/beatable-records/{rivalMddId}', [\App\Http\Controllers\ProfileController::class, 'beatableRecordsApi']);
+Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);
+Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\ProfileController::class, 'comparePlayer']);

@@ -4,7 +4,9 @@ import SectionTitle from './SectionTitle.vue';
 
 defineEmits(['submitted']);
 
-const hasActions = computed(() => !! useSlots().actions);
+const slots = useSlots();
+const hasActions = computed(() => !! slots.actions);
+const hasTopActions = computed(() => !! slots.topActions);
 </script>
 
 <template>
@@ -21,9 +23,11 @@ const hasActions = computed(() => !! useSlots().actions);
         <div class="mt-3 md:mt-0 md:col-span-2">
             <form @submit.prevent="$emit('submitted')">
                 <div
-                    class="px-4 py-4 bg-grayop-800 sm:p-4 shadow"
-                    :class="hasActions ? 'sm:rounded-tl-md sm:rounded-tr-md' : 'sm:rounded-md'"
+                    class="px-4 py-4 bg-grayop-800 sm:p-4 shadow sm:rounded-md"
                 >
+                    <div v-if="hasTopActions" class="flex items-center justify-end mb-4">
+                        <slot name="topActions" />
+                    </div>
                     <div class="grid grid-cols-6 gap-3">
                         <slot name="form" />
                     </div>

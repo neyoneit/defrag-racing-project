@@ -272,6 +272,7 @@ class ProfileController extends Controller {
         // Get unplayed maps for completionist list
         $start = microtime(true);
         $unplayedMaps = $this->getUnplayedMaps($user->mdd_id, $request->input('unplayed_page', 1));
+        $totalMaps = DB::table('maps')->count();
         $timings['unplayed_maps'] = round((microtime(true) - $start) * 1000, 2);
 
         \Log::info('Unplayed maps data', [
@@ -298,6 +299,7 @@ class ProfileController extends Controller {
             ->with('cpm_rivals', $cpmRivals)
             ->with('vq3_rivals', $vq3Rivals)
             ->with('unplayed_maps', $unplayedMaps)
+            ->with('total_maps', $totalMaps)
             ->with('load_times', $timings)
             ->with('hasProfile', true);
     }
@@ -457,6 +459,7 @@ class ProfileController extends Controller {
 
         // Get unplayed maps for completionist list
         $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1));
+        $totalMaps = DB::table('maps')->count();
 
         return Inertia::render('Profile')
             ->with('vq3Records', $vq3Records)
@@ -471,6 +474,7 @@ class ProfileController extends Controller {
             ->with('cpm_rivals', $cpmRivals)
             ->with('vq3_rivals', $vq3Rivals)
             ->with('unplayed_maps', $unplayedMaps)
+            ->with('total_maps', $totalMaps)
             ->with('hasProfile', true);
     }
 
@@ -1008,5 +1012,32 @@ class ProfileController extends Controller {
             ->paginate(10, ['*'], 'unplayed_page', $page);
 
         return $unplayedMaps;
+    }
+
+    /**
+     * Standalone progress bar view for overlays/embeds
+     */
+    public function progressBar($userId) {
+        $user = User::query()
+            ->where('id', $userId)
+            ->first(['id', 'mdd_id', 'name']);
+
+        if (!$user || !$user->mdd_id) {
+            abort(404);
+        }
+
+        $totalMaps = DB::table('maps')->count();
+        $playedMaps = Record::where('mdd_id', $user->mdd_id)
+            ->whereNull('deleted_at')
+            ->distinct('mapname')
+            ->count('mapname');
+        $unplayedMaps = $totalMaps - $playedMaps;
+
+        return Inertia::render('ProfileProgressBar', [
+            'user_name' => $user->name,
+            'total_maps' => $totalMaps,
+            'played_maps' => $playedMaps,
+            'unplayed_maps' => $unplayedMaps,
+        ]);
     }
 }

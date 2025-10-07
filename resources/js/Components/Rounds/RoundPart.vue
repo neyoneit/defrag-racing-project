@@ -85,155 +85,125 @@
 </script>
 
 <template>
-    <div class="mb-5 p-2 rounded-lg mx-auto">
-        <div class="flex justify-between">
-            <div class="font-black text-3xl text-white">{{ round.name }}</div>
+    <div class="p-6">
+        <!-- Round Header -->
+        <div class="mb-6">
+            <h2 class="text-3xl font-black text-white">{{ round.name }}</h2>
         </div>
-    
-        <div class="tech-line-overview mt-4 mb-8"></div>
-    
-        <div class="md:flex justify-between">
-            <div class="w-1/2 mx-auto">
-                <a class="block p-2 text-center" href="#">
-                    <img :src="`/storage/${round.image}`" class="rounded-md border-2 border-gray-700">
-                </a>
-                <div class="p-2 text-gray-500">
-                    <div class="text-center font-bold text-sm"> {{ round.mapname }} </div>
-                    <div class="text-center text-sm mt-1"> By 
-                        <Link :href="route('maps.filters', { author: round.author })" class="hover:link-shadow text-gray-400 hover:text-gray-300" v-html="q3tohtml(round.author)"></Link>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Map Image Section -->
+            <div class="flex flex-col items-center">
+                <div class="w-full">
+                    <img :src="`/storage/${round.image}`" class="rounded-lg border-2 border-white/10 w-full">
+                </div>
+                <div class="mt-4 text-center">
+                    <div class="font-bold text-lg text-white">{{ round.mapname }}</div>
+                    <div class="text-sm text-gray-400 mt-1">
+                        By <Link :href="route('maps.filters', { author: round.author })" class="text-blue-400 hover:text-blue-300 transition" v-html="q3tohtml(round.author)"></Link>
                     </div>
                 </div>
             </div>
-    
-            <div class="p-2 rounded-lg flex-grow ml-3">
-                <div class="w-full text-left text-sm rounded-lg">
-                    <div class="flex flex-col items-center" v-if="showCountdown">
-                        <div class="font-semibold text-lg text-white uppercase tracking-widest mb-2">FINISHES AT</div>
-                        <div class="font-semibold text-lg text-white">
-                            <div class="grid grid-flow-col gap-5 text-center auto-cols-max">
-                                <div class="flex flex-col">
-                                    <span class="countdown font-mono text-5xl">
-                                        {{ countdownData.days }}
-                                    </span>
-                                    <span>DAYS</span>
-                                </div>
-                            
-                                <div class="flex flex-col">
-                                    <span class="countdown font-mono text-5xl">
-                                        {{ countdownData.hours }}
-                                    </span>
-                                    <span>HOURS</span>
-                                </div> 
-                                <div class="flex flex-col">
-                                    <span class="countdown font-mono text-5xl">
-                                        {{ countdownData.minutes }}
-                                    </span>
-                                    <span>MIN</span>
-                                </div> 
-                                <div class="flex flex-col">
-                                    <span class="countdown font-mono text-5xl">
-                                        {{ countdownData.seconds }}
-                                    </span>
-                                    <span>SEC</span>
-                                </div>
-                            </div>
+
+            <!-- Round Info Section -->
+            <div class="space-y-4">
+                <!-- Countdown Timer -->
+                <div v-if="showCountdown" class="backdrop-blur-xl bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-4">
+                    <div class="text-center mb-4">
+                        <div class="font-bold text-sm text-blue-300 uppercase tracking-wider">Finishes In</div>
+                    </div>
+                    <div class="grid grid-cols-4 gap-4 text-center">
+                        <div class="flex flex-col">
+                            <span class="font-mono text-4xl font-black text-white">{{ countdownData.days }}</span>
+                            <span class="text-xs text-gray-400 mt-1">DAYS</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-mono text-4xl font-black text-white">{{ countdownData.hours }}</span>
+                            <span class="text-xs text-gray-400 mt-1">HOURS</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-mono text-4xl font-black text-white">{{ countdownData.minutes }}</span>
+                            <span class="text-xs text-gray-400 mt-1">MIN</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-mono text-4xl font-black text-white">{{ countdownData.seconds }}</span>
+                            <span class="text-xs text-gray-400 mt-1">SEC</span>
                         </div>
                     </div>
+                </div>
 
-                    <div v-if="showCountdown" class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
-
-                    <div class="flex">
-                        <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                            Start
-                        </div>
-                        <div class="text-lg text-white flex-grow flex items-center">
-                            <span class="mr-4">{{ getDate(round.start_date) }}</span>
-                            <div class="h-4 w-4 rounded-full bg-blue-600"></div>
-                            <span @click="changeDisplayTime" class="py-1 px-2 rounded-lg text-gray-500 hover:text-white hover:cursor-pointer">
+                <!-- Round Details -->
+                <div class="space-y-3">
+                    <!-- Start Time -->
+                    <div class="flex items-center justify-between py-3 border-b border-white/10">
+                        <div class="font-medium text-gray-400">Start</div>
+                        <div class="flex items-center gap-2 text-white">
+                            <span>{{ getDate(round.start_date) }}</span>
+                            <div class="h-3 w-3 rounded-full bg-blue-600"></div>
+                            <span @click="changeDisplayTime" class="px-2 py-1 text-sm rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition">
                                 {{ displayTime }}
                             </span>
                         </div>
                     </div>
-    
-                    <div class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
-    
-                    <div class="flex">
-                        <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                            Finish
-                        </div>
-                        <div class="text-lg text-white flex-grow flex items-center">
-                            <span class="mr-4">{{ getDate(round.end_date) }}</span>
-                            <div class="h-4 w-4 rounded-full bg-blue-600"></div>
-                            <span @click="changeDisplayTime" class="py-1 px-2 rounded-lg text-gray-500 hover:text-white hover:cursor-pointer">
+
+                    <!-- Finish Time -->
+                    <div class="flex items-center justify-between py-3 border-b border-white/10">
+                        <div class="font-medium text-gray-400">Finish</div>
+                        <div class="flex items-center gap-2 text-white">
+                            <span>{{ getDate(round.end_date) }}</span>
+                            <div class="h-3 w-3 rounded-full bg-blue-600"></div>
+                            <span @click="changeDisplayTime" class="px-2 py-1 text-sm rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition">
                                 {{ displayTime }}
                             </span>
                         </div>
                     </div>
-    
-                    <div class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
 
-                    <div class="flex">
-                        <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                            Type
-                        </div>
-                        <div class="text-lg text-white flex-grow">
-                            {{ round.category }} Map
-                        </div>
+                    <!-- Type -->
+                    <div class="flex items-center justify-between py-3 border-b border-white/10">
+                        <div class="font-medium text-gray-400">Type</div>
+                        <div class="text-white">{{ round.category }} Map</div>
                     </div>
-    
-                    <div class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
 
-                    <div class="flex">
-                        <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                            Download
-                        </div>
-                        <div class="text-lg text-white flex flex-grow">
-                            <div v-for="pk3 in round.maps" class="flex flex-wrap">
-                                <div v-if="pk3.external" class="flex px-2">
-                                    <Link :href="route('maps.map', pk3.name)" class="text-indigo-400 hover:underline mr-3">
+                    <!-- Download -->
+                    <div class="flex items-start justify-between py-3 border-b border-white/10">
+                        <div class="font-medium text-gray-400">Download</div>
+                        <div class="flex flex-wrap gap-2 justify-end">
+                            <div v-for="pk3 in round.maps" :key="pk3.id">
+                                <div v-if="pk3.external" class="flex items-center gap-2">
+                                    <Link :href="route('maps.map', pk3.name)" class="text-blue-400 hover:text-blue-300 transition">
                                         {{ pk3.name }}
                                     </Link>
-                                    <a :download="pk3.download_name" :href="'https://dl.defrag.racing/downloads/maps/' + pk3.pk3.split('/').pop()" class="text-indigo-400 hover:text-indigo-300 hover:underline mr-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                    <a :download="pk3.download_name" :href="'https://dl.defrag.racing/downloads/maps/' + pk3.pk3.split('/').pop()" class="text-blue-400 hover:text-blue-300 transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                         </svg>
                                     </a>
                                 </div>
-                                
-                                <a v-else target="_blank" :href="route('tournaments.maps.download', pk3.id)" class="text-indigo-400 hover:underline mr-3">
+                                <a v-else target="_blank" :href="route('tournaments.maps.download', pk3.id)" class="text-blue-400 hover:text-blue-300 transition">
                                     {{ pk3.name }}
                                 </a>
                             </div>
                         </div>
                     </div>
-    
-                    <div class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
-    
-                    <div class="flex">
-                        <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                            Details
-                        </div>
-                        <div class="text-lg text-white flex-grow">
-                            <div class="flex flex-wrap justify-start">
-                                <div v-if="round.weapons.length > 0" class="flex flex-wrap items-center mr-4">
-                                    <div v-for="item in round.weapons.split(',')" :class="`sprite-items sprite-${item} w-5 h-5 mr-1 mb-1`" :title="item"></div>
-                                </div>
 
-                                <div v-if="round.items.length > 0" class="flex flex-wrap items-center mr-4">
-                                    <div v-for="item in round.items.split(',')" :class="`sprite-items sprite-${item} w-5 h-5 mr-1 mb-1`" :title="item"></div>
-                                </div>
-
-                                <div v-if="round.functions.length > 0" class="flex flex-wrap items-center mr-4">
-                                    <div v-for="item in round.functions.split(',')" :class="`sprite-items sprite-${item} w-5 h-5 mr-1 mb-1`" :title="item"></div>
-                                </div>
+                    <!-- Details -->
+                    <div class="flex items-start justify-between py-3 border-b border-white/10">
+                        <div class="font-medium text-gray-400">Details</div>
+                        <div class="flex flex-wrap gap-2 justify-end">
+                            <div v-if="round.weapons.length > 0" class="flex flex-wrap gap-1">
+                                <div v-for="item in round.weapons.split(',')" :key="item" :class="`sprite-items sprite-${item} w-5 h-5`" :title="item"></div>
+                            </div>
+                            <div v-if="round.items.length > 0" class="flex flex-wrap gap-1">
+                                <div v-for="item in round.items.split(',')" :key="item" :class="`sprite-items sprite-${item} w-5 h-5`" :title="item"></div>
+                            </div>
+                            <div v-if="round.functions.length > 0" class="flex flex-wrap gap-1">
+                                <div v-for="item in round.functions.split(',')" :key="item" :class="`sprite-items sprite-${item} w-5 h-5`" :title="item"></div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="my-1.5" style="width: 100%; height: 1px; background-color: #72727244"></div>
-
-                    <slot name="additional" />
                 </div>
+
+                <slot name="additional" />
             </div>
         </div>
     </div>

@@ -25,7 +25,12 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event) {
+            $event->extendSocialite('discord', \SocialiteProviders\Discord\Provider::class);
+            $event->extendSocialite('twitch', \SocialiteProviders\Twitch\Provider::class);
+            $event->extendSocialite('steam', \SocialiteProviders\Steam\Provider::class);
+            $event->extendSocialite('twitter', \SocialiteProviders\Twitter\Provider::class);
+        });
     }
 
     /**
