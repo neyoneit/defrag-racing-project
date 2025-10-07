@@ -23,7 +23,7 @@ class MapsController extends Controller
         $maps = Map::query()
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(21)
+            ->paginate(30)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
@@ -43,7 +43,7 @@ class MapsController extends Controller
 
         $maps = $mapFilters['query'];
 
-        $maps = $maps->paginate(21)->withQueryString();
+        $maps = $maps->paginate(30)->withQueryString();
 
         $queries = $mapFilters['data'];
 

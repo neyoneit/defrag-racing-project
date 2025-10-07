@@ -116,43 +116,114 @@
 
 <template>
     <div class="relative">
-        <input ref="searchInput" @focus="isOpen = true" @blur="onBlur" class="w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm" v-model="search" @input="filterOptions" placeholder="Select Player" autocomplete="off" />
+        <div class="relative">
+            <input
+                ref="searchInput"
+                @focus="isOpen = true"
+                @blur="onBlur"
+                class="w-full bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-lg px-4 py-2.5 transition-all outline-none"
+                v-model="search"
+                @input="filterOptions"
+                placeholder="Search players..."
+                autocomplete="off"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+        </div>
 
-        <div class="options p-2 m-1 rounded-md" v-show="isOpen">
-            <div class="flex justify-between items-center text-sm text-blue-400 mb-2">
-                <div>{{ selectedOptions.length }} Selected</div>
-                <div class="hover:text-blue-300 cursor-pointer" @click="clearOptions">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        <div class="dropdown-modern" v-show="isOpen && search.length > 0">
+            <div class="flex justify-between items-center px-3 py-2 border-b border-white/10 bg-white/5">
+                <span class="text-xs font-semibold text-gray-400">{{ selectedOptions.length }} selected</span>
+                <button @click="clearOptions" class="text-red-400 hover:text-red-300 transition-colors p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="option-list">
+                <div
+                    v-for="(user, index) in filteredOptions"
+                    :key="index"
+                    @click="selectOption(user.id)"
+                    class="option-item"
+                    :class="{'option-selected': selectedOptions.includes(user.id)}"
+                >
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-6 h-4 object-cover rounded flex-shrink-0">
+                        <span class="truncate text-sm" v-html="q3tohtml(getName(user))"></span>
+                    </div>
+                    <svg v-if="selectedOptions.includes(user.id)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-5 h-5 text-blue-400 flex-shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                 </div>
-            </div>
-            <div :class="{'option': !selectedOptions.includes(user.id), 'bg-blue-600 hover:bg-blue-700': selectedOptions.includes(user.id)}" class="p-2 cursor-pointer rounded-md mb-2 text-white flex items-center" v-for="(user, index) in filteredOptions" :key="index" @click="selectOption(user.id)">
-                <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-8 pt-1 mr-5">
-                <span v-html="q3tohtml(getName(user))"></span>
             </div>
         </div>
     </div>
 </template>
-  
+
 <style scoped>
-    .options {
-        background-color: #272e3b;
+    .dropdown-modern {
         position: absolute;
-        top: 100%;
+        top: calc(100% + 0.5rem);
         left: 0;
-        width: 100%;
-        height: 200px;
-        overflow-y: auto;
+        right: 0;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.75rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         z-index: 100;
+        overflow: hidden;
     }
 
-    .option {
-        background-color: #2b323f;
+    .option-list {
+        max-height: 240px;
+        overflow-y: auto;
+        padding: 0.25rem;
     }
 
-    .option:hover {
-        background-color: #343b49;
+    .option-list::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .option-list::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+    }
+
+    .option-list::-webkit-scrollbar-thumb {
+        background: rgba(59, 130, 246, 0.5);
+        border-radius: 10px;
+    }
+
+    .option-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(59, 130, 246, 0.7);
+    }
+
+    .option-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.625rem 0.75rem;
+        margin-bottom: 0.125rem;
+        cursor: pointer;
+        border-radius: 0.5rem;
+        color: rgba(255, 255, 255, 0.9);
+        transition: all 0.15s ease;
+    }
+
+    .option-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .option-selected {
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .option-selected:hover {
+        background: rgba(59, 130, 246, 0.3);
     }
 </style>
   
