@@ -38,6 +38,8 @@ class MapFilters {
 
         $maps = $this->averageLength($request, $maps);
 
+        $maps = $this->rankThreshold($request, $maps);
+
         return [
             'query'     =>      $maps,
             'data'      =>      $this->queries
@@ -257,6 +259,35 @@ class MapFilters {
             $maps = $maps->whereRaw('(cpm_average + vq3_average) / 2 BETWEEN ? AND ?', [$start, $end]);
 
             $this->queries['average_length'] = $request->average_length;
+        }
+
+        return $maps;
+    }
+
+    public function rankThreshold(Request $request, $maps) {
+        $rankMin = $request->input('rank_min', 1);
+        $rankMax = $request->input('rank_max', 999);
+
+        // Only apply filter if it's not the default range
+        if ($rankMin > 1 || $rankMax < 999) {
+            if (! is_numeric($rankMin) || ! is_numeric($rankMax)) {
+                return $maps;
+            }
+
+            if ($rankMin > $rankMax) {
+                return $maps;
+            }
+
+            // Filter maps based on player records within the rank range
+            if ($request->filled('has_records') && count($request->has_records) > 0) {
+                $maps = $maps->whereHas('records', function (Builder $query) use ($request, $rankMin, $rankMax) {
+                    $query->whereIn('mdd_id', $request->has_records)
+                        ->whereBetween('rank', [$rankMin, $rankMax]);
+                });
+            }
+
+            $this->queries['rank_min'] = $rankMin;
+            $this->queries['rank_max'] = $rankMax;
         }
 
         return $maps;

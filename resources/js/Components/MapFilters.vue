@@ -190,6 +190,8 @@
         functions: props.queries?.functions ?? {},
         records_count: props.queries?.records_count ?? [0, 1000],
         average_length: props.queries?.average_length ?? [0, 1000],
+        rank_min: props.queries?.rank_min ?? 1,
+        rank_max: props.queries?.rank_max ?? 999,
     })
     
     const onFilterSubmit = () => {
@@ -209,6 +211,8 @@
         form.functions = {};
         form.records_count = [0, 1000];
         form.average_length = [0, 1000];
+        form.rank_min = 1;
+        form.rank_max = 999;
         recordsSliderMin.value = 0;
         recordsSliderMax.value = 100;
         lengthSliderMin.value = 0;
@@ -339,7 +343,7 @@
                 </svg>
                 Player Records
             </h3>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
                 <div>
                     <div class="flex justify-between items-center mb-2">
                         <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Has Record</label>
@@ -376,6 +380,32 @@
                         :multi="false"
                         v-model="form.world_record"
                         :values="form.world_record"
+                    />
+                </div>
+            </div>
+
+            <!-- Rank Threshold -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                <div>
+                    <label class="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">Min Rank</label>
+                    <input
+                        type="number"
+                        v-model.number="form.rank_min"
+                        min="1"
+                        max="999"
+                        class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                        placeholder="1"
+                    />
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-gray-400 mb-2 block uppercase tracking-wide">Max Rank</label>
+                    <input
+                        type="number"
+                        v-model.number="form.rank_max"
+                        min="1"
+                        max="999"
+                        class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                        placeholder="999"
                     />
                 </div>
             </div>

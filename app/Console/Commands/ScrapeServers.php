@@ -105,20 +105,33 @@ class ScrapeServers extends Command
         try {
             $connection = new DefragServer($server->ip, $server->port);
 
+            // Try rcon first if password available
             if ($server->rconpassword) {
                 $result = $connection->getRconData($server->rconpassword);
-            } else {
+
+                if ($result == 'Bad rconpassword') {
+                    $this->info('Bad rconpassword ' . $server->ip . ':' . $server->port);
+                    $result = null;
+                } elseif ($result == 'Rcon not usable') {
+                    $this->info('Rcon not usable (missing rs_id ?) ' . $server->ip . ':' . $server->port);
+                    $result = null;
+                }
+            }
+
+            // If rcon failed or not available, try getdfstatus
+            if ($result === null) {
+                $result = $connection->getDfStatusData();
+
+                if ($result !== null) {
+                    $this->info('Using getdfstatus for ' . $server->ip . ':' . $server->port);
+                }
+            }
+
+            // If getdfstatus also failed, fall back to basic getstatus
+            if ($result === null) {
                 $result = $connection->getData();
             }
 
-            if ($result == 'Bad rconpassword') {
-                $this->info('Bad rconpassword ' . $server->ip . ':' . $server->port);
-                $result = $connection->getData();
-            }
-            if ($result == 'Rcon not usable') {
-                $this->info('Rcon not usable (missing rs_id ?) ' . $server->ip . ':' . $server->port);
-                $result = $connection->getData();
-            }
         } catch (\Exception $e) {
             return null;
         }
@@ -152,6 +165,7 @@ class ScrapeServers extends Command
         $server->plain_name = $plainName;
 
         $server->defrag = trim($data['defrag']);
+        // Don't update defrag_gametype - let admin set it manually in DefragHQ
         $server->map = strtolower(trim($data['map']));
         $server->online = true;
 
@@ -184,27 +198,33 @@ class ScrapeServers extends Command
             foreach($data['players'] as $clientId => $player) {
                 $onlinePlayer = new OnlinePlayer();
                 $onlinePlayer->server_id = $server->id;
-    
+
                 $onlinePlayer->name = $this->cleanName($player['name']);
-    
+
                 $onlinePlayer->client_id = $clientId;
-    
+
                 $onlinePlayer->mdd_id = array_key_exists('mddId', $player) ? intval($player['mddId']) : 0;
-    
+
                 $onlinePlayer->nospec = array_key_exists('nospec', $player) ? intval($player['nospec']) : false;
-    
+
                 $onlinePlayer->model = array_key_exists('model', $player) ? $player['model'] : 'sarge';
-    
+
                 $onlinePlayer->headmodel = array_key_exists('headmodel', $player) ? $player['headmodel'] : 'sarge';
-    
+
                 $onlinePlayer->country = array_key_exists('country', $player) ? $player['country'] : '_404';
-    
-                $score = $this->getPlayerScore($data, $clientId);
-    
-                $onlinePlayer->follow_num = $score[0];
-    
-                $onlinePlayer->time = $score[1];
-    
+
+                // Check if time is directly in player array (getdfstatus) or needs to be fetched from scores (rcon)
+                if (array_key_exists('time', $player)) {
+                    // getdfstatus format
+                    $onlinePlayer->time = $player['time'];
+                    $onlinePlayer->follow_num = -1; // TODO: parse spectating info
+                } else {
+                    // rcon format
+                    $score = $this->getPlayerScore($data, $clientId);
+                    $onlinePlayer->follow_num = $score[0];
+                    $onlinePlayer->time = $score[1];
+                }
+
                 $onlinePlayer->save();
             }
 
@@ -224,6 +244,7 @@ class ScrapeServers extends Command
         $server->plain_name = $plainName;
 
         $server->defrag = trim($data['defrag']);
+        // Don't update defrag_gametype - let admin set it manually in DefragHQ
         $server->map = strtolower(trim($data['map']));
         $server->online = true;
 

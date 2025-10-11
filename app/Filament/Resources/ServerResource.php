@@ -20,6 +20,7 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
 
 class ServerResource extends Resource
 {
@@ -45,9 +46,17 @@ class ServerResource extends Resource
                 TextInput::make('location')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('type')
+                Select::make('type')
+                    ->label('Server Type')
                     ->required()
-                    ->maxLength(255),
+                    ->options([
+                        'run' => 'Run',
+                        'ctf' => 'CTF / FastCaps',
+                        'freestyle' => 'Freestyle',
+                        'teamrun' => 'Teamrun',
+                    ])
+                    ->default('run')
+                    ->helperText('Manually set the server type for filtering'),
                 TextInput::make('admin_name')
                     ->required()
                     ->maxLength(255),
@@ -65,10 +74,6 @@ class ServerResource extends Resource
                 TextInput::make('defrag')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('defrag_gametype')
-                    ->required()
-                    ->maxLength(255)
-                    ->default(5),
                 Group::make()->schema([
                     TextInput::make('rconpassword')
                         ->password()
