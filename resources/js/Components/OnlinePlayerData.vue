@@ -2,7 +2,7 @@
     import { Link } from '@inertiajs/vue3';
     import { computed } from 'vue';
     import Popper from "vue3-popper";
-
+    // FORCE REBUILD v2
     const props = defineProps({
         player: Object,
         spectator: Boolean
@@ -25,16 +25,16 @@
     <div>
         <Popper arrow hover :disabled="player.profile == null" style="z-index: 100;">
             <Link :href="getProfile" v-if="player.mdd_id">
-                <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text" v-html="q3tohtml(player.name)"></div>
-    
+                <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text px-2 py-0.5 rounded" style="background: rgba(0,0,0,0.6); text-shadow: 1px 1px 2px rgba(0,0,0,0.95), -1px -1px 2px rgba(0,0,0,0.95), 1px -1px 2px rgba(0,0,0,0.95), -1px 1px 2px rgba(0,0,0,0.95);" v-html="q3tohtml(player.name)"></div>
+
                 <svg v-if="player.profile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="mb-0.5 ml-1 text-green-500 w-4 h-4 inline">
                     <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" />
                 </svg>
             </Link>
 
             <div v-else>
-                <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text" v-html="q3tohtml(player.name)"></div>
-    
+                <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text px-2 py-0.5 rounded" style="background: rgba(0,0,0,0.6); text-shadow: 1px 1px 2px rgba(0,0,0,0.95), -1px -1px 2px rgba(0,0,0,0.95), 1px -1px 2px rgba(0,0,0,0.95), -1px 1px 2px rgba(0,0,0,0.95);" v-html="q3tohtml(player.name)"></div>
+
                 <svg v-if="player.profile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="mb-0.5 ml-1 text-green-500 w-4 h-4 inline">
                     <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 0 0-5.25 5.25v3a3 3 0 0 0-3 3v6.75a3 3 0 0 0 3 3h10.5a3 3 0 0 0 3-3v-6.75a3 3 0 0 0-3-3v-3c0-2.9-2.35-5.25-5.25-5.25Zm3.75 8.25v-3a3.75 3.75 0 1 0-7.5 0v3h7.5Z" clip-rule="evenodd" />
                 </svg>
@@ -87,5 +87,29 @@
 <style scoped>
     .online-player-name-text{
         font-size: 14px;
+    }
+
+    /* Make black Q3 text (^0) visible with white outline - like subtitles/memes */
+    .online-player-name-text :deep(.q3c-0) {
+        text-shadow:
+            -1px -1px 0 #fff,
+            1px -1px 0 #fff,
+            -1px 1px 0 #fff,
+            1px 1px 0 #fff,
+            0 0 3px #fff !important;
+    }
+
+    .player-name-stroke {
+        text-shadow:
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000,
+            -2px -2px 0 #000,
+            2px -2px 0 #000,
+            -2px 2px 0 #000,
+            2px 2px 0 #000,
+            0 0 4px rgba(0,0,0,0.9),
+            0 2px 6px rgba(0,0,0,0.8);
     }
 </style>

@@ -8,6 +8,16 @@
     display: none;
 }
 
+/* Make black Q3 text (^0 color code) visible with white outline - global fix */
+.q3c-0 {
+    text-shadow:
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff,
+        0 0 3px #fff !important;
+}
+
 .rotate-animation {
     animation: rotateOnce 1.5s ease-in-out;
 }

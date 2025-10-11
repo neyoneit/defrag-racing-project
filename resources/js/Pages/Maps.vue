@@ -23,7 +23,7 @@
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold text-white">Maps</h1>
+                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Maps</h1>
                         <span class="text-sm text-gray-400">{{ maps.total }} total</span>
                     </div>
 
