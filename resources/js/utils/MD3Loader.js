@@ -71,12 +71,25 @@ export class MD3Loader {
                 // Convert relative path to absolute URL
                 // If texture path starts with models/, use it as-is from storage root
                 if (texturePath.startsWith('models/')) {
-                    // Extract the base storage path from the skin URL
-                    // e.g., /storage/models/extracted/worm-123/models/players/worm/
-                    // We want: /storage/models/extracted/worm-123/
-                    const match = baseUrl.match(/(\/storage\/models\/extracted\/[^\/]+)\//);
-                    if (match) {
-                        texturePath = match[1] + '/' + texturePath;
+                    // Check if this is a base Q3 model (in public/models/basequake3)
+                    if (baseUrl.includes('/models/basequake3/')) {
+                        // Base Q3 models: /models/basequake3/players/xxx/
+                        // Texture path: models/players/xxx/texture.tga
+                        // Result: /models/basequake3/players/xxx/texture.tga
+                        const match = baseUrl.match(/\/models\/basequake3\/players\/([^\/]+)\//);
+                        if (match) {
+                            const modelName = match[1];
+                            texturePath = `/models/basequake3/players/${modelName}/${texturePath.split('/').pop()}`;
+                        }
+                    } else {
+                        // User-uploaded models
+                        // Extract the base storage path from the skin URL
+                        // e.g., /storage/models/extracted/worm-123/models/players/worm/
+                        // We want: /storage/models/extracted/worm-123/
+                        const match = baseUrl.match(/(\/storage\/models\/extracted\/[^\/]+)\//);
+                        if (match) {
+                            texturePath = match[1] + '/' + texturePath;
+                        }
                     }
                 } else {
                     // Relative to skin file location
@@ -117,7 +130,7 @@ export class MD3Loader {
 
         // Create meshes for each surface
         surfaces.forEach(surface => {
-            const geometry = this.createGeometry(surface, frames[0]); // Use first frame
+            const geometry = this.createGeometry(surface); // Use first frame
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff, // White color so texture shows correctly
                 side: THREE.DoubleSide,
@@ -131,9 +144,15 @@ export class MD3Loader {
             // Load texture if skin data is available
             if (this.skinData && this.skinData[surface.name]) {
                 const texturePath = this.skinData[surface.name];
-                this.loadTextureForMesh(texturePath, material).catch(err => {
-                    console.warn(`Failed to load texture for ${surface.name}:`, err);
-                });
+
+                // Skip nodraw surfaces - they're meant to be invisible in Quake 3
+                if (texturePath.includes('/nodraw') || texturePath.includes('common/nodraw')) {
+                    mesh.visible = false;
+                } else {
+                    this.loadTextureForMesh(texturePath, material).catch(err => {
+                        console.warn(`Failed to load texture for ${surface.name}:`, err);
+                    });
+                }
             }
 
             group.add(mesh);
@@ -406,7 +425,7 @@ export class MD3Loader {
     /**
      * Create Three.js geometry from surface data
      */
-    createGeometry(surface, frame) {
+    createGeometry(surface) {
         const geometry = new THREE.BufferGeometry();
 
         const vertices = surface.vertices[0]; // Use first frame
@@ -511,6 +530,13 @@ export class MD3Loader {
             const lowerSkinUrl = `${baseUrl}lower_${skinName}.skin`;
             const lower = await this.load(lowerUrl, lowerSkinUrl);
             lower.name = 'lower';
+
+            // Debug: Check frame count
+            console.log(`Lower MD3 loaded: ${lower.userData.frames?.length || 0} frames`);
+            if (lower.children[0]?.userData?.surface?.vertices) {
+                console.log(`Lower surface has ${lower.children[0].userData.surface.vertices.length} vertex frames`);
+            }
+
             playerGroup.add(lower);
 
             // Find the tag_torso on the lower model
@@ -525,9 +551,15 @@ export class MD3Loader {
                     const upper = await this.load(upperUrl, upperSkinUrl);
                     upper.name = 'upper';
 
+                    // Debug: Check frame count
+                    console.log(`Upper MD3 loaded: ${upper.userData.frames?.length || 0} frames`);
+                    if (upper.children[0]?.userData?.surface?.vertices) {
+                        console.log(`Upper surface has ${upper.children[0].userData.surface.vertices.length} vertex frames`);
+                    }
+
                     // Position upper body at torso tag
                     this.attachToTag(upper, torsoTag);
-                    playerGroup.add(upper);
+                    lower.add(upper); // ATTACH UPPER TO LOWER so it moves with legs!
 
                     // Find the tag_head on the upper model
                     const upperTags = upper.userData.tags;
@@ -551,7 +583,7 @@ export class MD3Loader {
 
             // Store references for animation
             playerGroup.userData.lower = lower;
-            playerGroup.userData.upper = playerGroup.children.find(c => c.name === 'upper');
+            playerGroup.userData.upper = lower.children.find(c => c.name === 'upper'); // Upper is child of lower now!
             playerGroup.userData.head = playerGroup.userData.upper?.children.find(c => c.name === 'head');
 
             // Load animation config
@@ -663,6 +695,7 @@ export class MD3Loader {
             }
         }
 
+        console.log('📋 Parsed animation.cfg:', animations);
         return animations;
     }
 

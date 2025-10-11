@@ -198,6 +198,15 @@ async function loadModel() {
             animationManager = new MD3AnimationManager(model);
             availableAnimations.value = animationManager.getAvailableAnimations();
 
+            // Debug: Check if upper body exists
+            console.log('Player model parts:', {
+                lower: !!model.userData.lower,
+                upper: !!model.userData.upper,
+                head: !!model.userData.head,
+                lowerChildren: model.userData.lower?.children.length || 0,
+                upperChildren: model.userData.upper?.children.length || 0
+            });
+
             // Initialize sound manager
             if (soundsEnabled.value) {
                 try {
@@ -235,13 +244,8 @@ async function loadModel() {
                 }
             }
 
-            // Start with idle animations by default
-            if (availableAnimations.value.legs.includes('LEGS_IDLE')) {
-                animationManager.playLegsAnimation('LEGS_IDLE');
-            }
-            if (availableAnimations.value.torso.includes('TORSO_STAND')) {
-                animationManager.playTorsoAnimation('TORSO_STAND');
-            }
+            // DON'T start any animations by default - let user click buttons
+            // Model will show in T-pose / first frame
 
             emit('animationsReady', availableAnimations.value);
         }
@@ -315,6 +319,7 @@ defineExpose({
     playLegsAnimation: (name) => animationManager?.playLegsAnimation(name),
     playTorsoAnimation: (name) => animationManager?.playTorsoAnimation(name),
     stopAnimations: () => animationManager?.stop(),
+    resetToIdle: () => animationManager?.resetToIdle(),
     getAvailableAnimations: () => availableAnimations.value,
     playSound: (name, options) => soundManager?.playSound(name, options),
     stopSound: (name) => soundManager?.stopSound(name),

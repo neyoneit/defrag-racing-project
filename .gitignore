@@ -40,3 +40,6 @@ PRODUCTION_CREDENTIALS.md
 
 # Rust build artifacts (build on server)
 /rust-rating-service/target/
+
+# Don't commit model files
+/public/models/
