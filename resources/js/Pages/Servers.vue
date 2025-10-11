@@ -441,7 +441,7 @@ const getFunctionName = (abbr) => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
             <!-- Large Card Layout -->
             <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden map-features-hover-group player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] pointer-events-none rounded-t-2xl">
                         <div class="relative inline-block w-full">
@@ -467,7 +467,7 @@ const getFunctionName = (abbr) => {
 
                             <!-- Map Info with hover group -->
                             <div class="space-y-1.5">
-                                <div v-if="server.map" class="map-features-hover-group bg-white/5 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10 transition-all relative">
+                                <div v-if="server.map" class="bg-white/5 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10 transition-all relative">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <span class="text-gray-300 text-base font-semibold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Map:</span>
@@ -544,7 +544,7 @@ const getFunctionName = (abbr) => {
                         </div>
 
                         <!-- Players List -->
-                        <div v-if="server.online_players.length > 0" :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')" class="player-list-hover-group">
+                        <div v-if="server.online_players.length > 0" :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
                             <div class="text-xs text-gray-300 font-bold uppercase tracking-wide mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Players Online</div>
                             <div class="player-list-container bg-white/10 rounded-lg p-2 border border-white/10 backdrop-blur-sm">
                                 <div class="space-y-1.5">
@@ -937,12 +937,14 @@ const getFunctionName = (abbr) => {
     max-height: 70px;
     overflow: hidden;
     position: relative;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .player-list-hover-group:hover .player-list-container {
     max-height: 1200px;
-    transition: max-height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 }
 
 /* Show More Indicator at bottom of player list - Enhanced */

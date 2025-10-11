@@ -133,10 +133,10 @@
             </div>
         </div>
 
-        <!-- Date & Demo - Subtle by default, visible on hover -->
-        <div class="flex items-center gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+        <!-- Date & Demo - More visible -->
+        <div class="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
             <div
-                class="text-[11px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300"
+                class="text-xs text-gray-300 whitespace-nowrap font-mono group-hover:text-gray-200"
                 :title="record.date_set"
             >
                 {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}

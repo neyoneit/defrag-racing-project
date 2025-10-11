@@ -2,7 +2,7 @@
     import { Head, Link, router, usePage } from '@inertiajs/vue3';
     import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
-    import MapRecordSmall from '@/Components/MapRecordSmall.vue';
+    // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
     import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
@@ -381,40 +381,42 @@
                     </div>
 
                     <!-- Map Features: Weapons, Items, Functions -->
-                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap gap-3 justify-center mb-4 pt-3 border-t border-white/10">
-                        <!-- Weapons -->
-                        <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-2">
-                            <span class="text-gray-400 font-medium text-xs">Weapons:</span>
-                            <div class="flex gap-1.5">
-                                <img v-for="weapon in map.weapons.split(',')" :key="weapon"
-                                     :src="getWeaponIcon(weapon)"
-                                     :alt="getWeaponName(weapon)"
-                                     :title="getWeaponName(weapon)"
-                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="mb-4 pt-3 border-t border-white/10">
+                        <div class="grid grid-cols-3 gap-4">
+                            <!-- Weapons Column (Left) -->
+                            <div v-if="map.weapons && map.weapons.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Weapons</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="weapon in map.weapons.split(',')" :key="weapon"
+                                         :src="getWeaponIcon(weapon)"
+                                         :alt="getWeaponName(weapon)"
+                                         :title="getWeaponName(weapon)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Items -->
-                        <div v-if="map.items && map.items.length > 0" class="flex items-center gap-2">
-                            <span class="text-gray-400 font-medium text-xs">Items:</span>
-                            <div class="flex gap-1.5">
-                                <img v-for="item in map.items.split(',')" :key="item"
-                                     :src="getItemIcon(item)"
-                                     :alt="getItemName(item)"
-                                     :title="getItemName(item)"
-                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                            <!-- Items Column (Middle) -->
+                            <div v-if="map.items && map.items.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Items</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="item in map.items.split(',')" :key="item"
+                                         :src="getItemIcon(item)"
+                                         :alt="getItemName(item)"
+                                         :title="getItemName(item)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Functions -->
-                        <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-2">
-                            <span class="text-gray-400 font-medium text-xs">Functions:</span>
-                            <div class="flex gap-1.5">
-                                <img v-for="func in map.functions.split(',')" :key="func"
-                                     :src="getFunctionIcon(func)"
-                                     :alt="getFunctionName(func)"
-                                     :title="getFunctionName(func)"
-                                     class="w-8 h-8 opacity-90 hover:opacity-100 transition-opacity" />
+                            <!-- Functions Column (Right) -->
+                            <div v-if="map.functions && map.functions.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Functions</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="func in map.functions.split(',')" :key="func"
+                                         :src="getFunctionIcon(func)"
+                                         :alt="getFunctionName(func)"
+                                         :title="getFunctionName(func)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -495,7 +497,7 @@
 
                 <div class="md:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -504,10 +506,10 @@
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
                             </div>
                             <div class="text-right min-w-[80px]">
-                                <div class="text-[10px] text-gray-400">Your Best</div>
-                                <div v-if="my_vq3_record" class="text-sm font-bold text-blue-400 tabular-nums">
+                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div v-if="my_vq3_record" class="text-sm font-bold text-blue-300 tabular-nums">
                                     {{ formatTime(my_vq3_record.time) }}
-                                    <span class="text-xs text-gray-500">#{{ my_vq3_record.rank }}</span>
+                                    <span class="text-xs text-blue-400">#{{ my_vq3_record.rank }}</span>
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
@@ -517,13 +519,13 @@
                     <!-- VQ3 Records List -->
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
-                            <div class="flex-grow" v-if="screenWidth > 640">
+                            <div class="flex-grow">
                                 <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
                             </div>
 
-                            <div class="flex-grow" v-else>
+                            <!-- <div class="flex-grow" v-else>
                                 <MapRecordSmall v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                            </div>
+                            </div> -->
                         </div>
 
                         <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
@@ -545,7 +547,7 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-grayop-700/80 rounded-xl overflow-hidden shadow-xl border border-gray-700/50 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -554,10 +556,10 @@
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
                             </div>
                             <div class="text-right min-w-[80px]">
-                                <div class="text-[10px] text-gray-400">Your Best</div>
-                                <div v-if="my_cpm_record" class="text-sm font-bold text-purple-400 tabular-nums">
+                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div v-if="my_cpm_record" class="text-sm font-bold text-purple-300 tabular-nums">
                                     {{ formatTime(my_cpm_record.time) }}
-                                    <span class="text-xs text-gray-500">#{{ my_cpm_record.rank }}</span>
+                                    <span class="text-xs text-purple-400">#{{ my_cpm_record.rank }}</span>
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
@@ -567,20 +569,20 @@
                     <!-- CPM Records List -->
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
-                            <div class="flex-grow" v-if="screenWidth > 640">
+                            <div class="flex-grow">
                                 <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.id" :record="record" />
                             </div>
 
-                            <div class="flex-grow" v-else>
+                            <!-- <div class="flex-grow" v-else>
                                 <MapRecordSmall v-for="record in getCpmRecords.data" physics="CPM" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                            </div>
+                            </div> -->
                         </div>
 
                         <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
                             <div>
                                 <div class="flex items-center justify-center mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z" />
                                     </svg>
                                 </div>
                                 <div>There are no CPM Records</div>
@@ -598,3 +600,6 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+</style>
