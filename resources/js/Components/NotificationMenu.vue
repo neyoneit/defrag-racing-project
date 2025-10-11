@@ -1,8 +1,10 @@
 <script setup>
-    import { onMounted, onUnmounted, ref } from 'vue';
+    import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue';
     import { Link, usePage } from '@inertiajs/vue3';
 
     let open = ref(false);
+    const triggerRef = ref(null);
+    const dropdownPosition = ref({ top: 0, right: 0 });
 
     const page = usePage()
 
@@ -31,11 +33,41 @@
         });
     }
 
+    const updatePosition = () => {
+        if (triggerRef.value && open.value) {
+            nextTick(() => {
+                const rect = triggerRef.value.getBoundingClientRect();
+                dropdownPosition.value = {
+                    top: rect.bottom + 8,
+                    right: window.innerWidth - rect.right,
+                };
+            });
+        }
+    };
+
+    watch(open, (newVal) => {
+        if (newVal) {
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+        } else {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        }
+    });
+
+    onMounted(() => document.addEventListener('keydown', closeOnEscape));
+    onUnmounted(() => {
+        document.removeEventListener('keydown', closeOnEscape);
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+    });
+
 </script>
 
 <template>
     <div class="relative">
-        <div @click="open = ! open">
+        <div ref="triggerRef" @click="open = ! open">
             <button v-if="notifications.length == 0" class="p-2 rounded-lg hover:bg-white/5 transition-all relative">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
@@ -52,18 +84,23 @@
         </div>
 
         <!-- Backdrop -->
-        <div v-show="open" class="fixed inset-0 z-40" @click="open = false"></div>
+        <Teleport to="body">
+            <div v-show="open" class="fixed inset-0 z-[60] pointer-events-auto" @click="open = false"></div>
+        </Teleport>
 
         <!-- Dropdown -->
-        <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="transform opacity-0 scale-95"
-            enter-to-class="transform opacity-100 scale-100"
-            leave-active-class="transition ease-in duration-75"
-            leave-from-class="transform opacity-100 scale-100"
-            leave-to-class="transform opacity-0 scale-95"
-        >
-            <div v-show="open" class="absolute top-full mt-2 right-0 rounded-xl shadow-2xl z-50" style="width: 420px; max-width: 90vw;" @click.stop>
+        <Teleport to="body">
+            <transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="transform opacity-0 scale-95"
+                enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition ease-in duration-75"
+                leave-from-class="transform opacity-100 scale-100"
+                leave-to-class="transform opacity-0 scale-95"
+            >
+                <div v-show="open" class="fixed rounded-xl shadow-2xl z-[70]"
+                     :style="{ top: dropdownPosition.top + 'px', right: dropdownPosition.right + 'px', width: '420px', maxWidth: '90vw' }"
+                     @click.stop>
                 <div class="rounded-xl bg-gray-950 backdrop-blur-xl border border-white/10 p-4">
                     <!-- Header -->
                     <div class="flex items-center justify-between mb-3">
@@ -136,6 +173,7 @@
                     </div>
                 </div>
             </div>
-        </transition>
+            </transition>
+        </Teleport>
     </div>
 </template>

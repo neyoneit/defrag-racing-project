@@ -1,6 +1,6 @@
 <script setup>
     import { Link, usePage } from '@inertiajs/vue3';
-    import { computed } from 'vue';
+    import { computed, ref } from 'vue';
 
     const props = defineProps({
         record: Object,
@@ -14,6 +14,8 @@
     });
 
     const page = usePage();
+    const showTooltip = ref(false);
+    const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const isMyRecord = computed(() => {
         const userId = page.props.auth?.user?.id;
@@ -36,15 +38,14 @@
     });
 
     const getRoute = computed(() => {
+        // Only link to registered users with full profiles
         if (props.record.user) {
             return route('profile.index', props.record.user.id);
         }
 
-        if (props.record.mdd_id) {
-            return route('profile.mdd', props.record.mdd_id);
-        }
-
-        return '#'
+        // Players with only mdd_id have no proper profile page
+        // Show tooltip to encourage registration
+        return null;
     })
 
     const rankColorClass = computed(() => {
@@ -89,7 +90,16 @@
         </div>
 
         <!-- Player Info - Compact -->
-        <Link :href="getRoute" class="flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1">
+        <component
+            :is="getRoute ? Link : 'div'"
+            :href="getRoute"
+            :class="[
+                'flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1',
+                !getRoute && isLoggedIn ? 'cursor-default opacity-70' : !getRoute ? 'cursor-help opacity-70' : 'cursor-pointer'
+            ]"
+            @mouseenter="!getRoute && (showTooltip = true)"
+            @mouseleave="!getRoute && (showTooltip = false)"
+        >
             <img
                 class="h-7 w-7 rounded-full object-cover flex-shrink-0 ring-1"
                 :class="{
@@ -114,12 +124,39 @@
                 }"
                 v-html="q3tohtml(record.user?.name ?? record.name)"
             ></span>
-        </Link>
+        </component>
+
+        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
+        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
+            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
+                    <div class="flex items-center gap-4 mb-3">
+                        <span class="text-5xl animate-bounce">🔓</span>
+                        <div class="text-left flex-1">
+                            <div class="text-2xl font-black leading-tight">Unclaimed Profile</div>
+                            <div class="text-xl font-bold text-orange-100">Is it yours?</div>
+                        </div>
+                    </div>
+                    <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
+                        Register now and link your q3df.org account to see detailed profile page and much more!
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
+        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn">
+            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
+                    Not linked account
+                </div>
+            </div>
+        </Teleport>
 
         <!-- Time - MASSIVE and eye-catching -->
         <div class="text-right">
             <div
-                class="font-black text-base tabular-nums leading-none"
+                class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
                     'text-amber-300': record.oldtop,
                     'text-emerald-300': isMyRecord && !record.oldtop,
@@ -128,15 +165,15 @@
             >
                 {{ formatTime(record.time) }}
             </div>
-            <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5">
+            <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 -{{ formatTime(timeDiff) }}
             </div>
         </div>
 
         <!-- Date & Demo - More visible -->
-        <div class="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+        <div class="flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
             <div
-                class="text-xs text-gray-300 whitespace-nowrap font-mono group-hover:text-gray-200"
+                class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :title="record.date_set"
             >
                 {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}

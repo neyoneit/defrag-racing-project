@@ -3,10 +3,9 @@ import { Head } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref, computed } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
-import Popper from "vue3-popper";
 import { useClipboard } from '@/Composables/useClipboard';
 
-const { copy, copyState } = useClipboard();
+const { copy } = useClipboard();
 const copiedIP = ref(null);
 
 const props = defineProps({
@@ -330,18 +329,21 @@ const getFunctionName = (abbr) => {
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">
                             Live Servers
                         </h1>
-                        <div class="flex items-center gap-6 text-sm">
-                            <div class="flex items-center gap-2 text-blue-400 font-bold">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                        <div class="flex items-center gap-3 text-sm">
+                            <div class="flex items-center gap-2 bg-blue-500/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/30">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-400">
+                                    <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                                 </svg>
-                                <span>{{ players }} Players Online</span>
+                                <span class="font-bold text-blue-300">{{ players }}</span>
+                                <span class="text-gray-300 font-semibold">Players Online</span>
                             </div>
-                            <div class="flex items-center gap-2 text-gray-400 font-bold">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                            <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/20">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
+                                    <path d="M4.5 3.75a3 3 0 0 0-3 3v.75h21v-.75a3 3 0 0 0-3-3h-15Z" />
+                                    <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
                                 </svg>
-                                <span>{{ serverCount }} Active Servers</span>
+                                <span class="font-bold text-white">{{ serverCount }}</span>
+                                <span class="text-gray-300 font-semibold">Active Servers</span>
                             </div>
                         </div>
                     </div>
@@ -441,7 +443,7 @@ const getFunctionName = (abbr) => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
             <!-- Large Card Layout -->
             <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden map-features-hover-group player-list-hover-group">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] pointer-events-none rounded-t-2xl">
                         <div class="relative inline-block w-full">
@@ -467,7 +469,7 @@ const getFunctionName = (abbr) => {
 
                             <!-- Map Info with hover group -->
                             <div class="space-y-1.5">
-                                <div v-if="server.map" class="bg-white/5 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10 transition-all relative">
+                                <div v-if="server.map" class="bg-white/5 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10 transition-all relative map-features-hover-group">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <span class="text-gray-300 text-base font-semibold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Map:</span>
@@ -543,25 +545,15 @@ const getFunctionName = (abbr) => {
                             </div>
                         </div>
 
-                        <!-- Players List -->
+                        <!-- Players List - Always expanded -->
                         <div v-if="server.online_players.length > 0" :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
-                            <div class="text-xs text-gray-300 font-bold uppercase tracking-wide mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Players Online</div>
-                            <div class="player-list-container bg-white/10 rounded-lg p-2 border border-white/10 backdrop-blur-sm">
+                            <div class="bg-white/10 rounded-lg p-2 border border-white/10 backdrop-blur-sm">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
-                                </div>
-                                <!-- Show More Indicator - only show if there are more than 2 players -->
-                                <div v-if="server.online_players.length > 2" class="show-more-indicator">
-                                    <div class="show-more-content">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div v-else :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
-                            <div class="text-xs text-gray-300 font-bold uppercase tracking-wide mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">Players Online</div>
                             <div class="p-3 bg-white/10 rounded-lg border border-white/10 text-center backdrop-blur-sm">
                                 <span class="text-sm text-gray-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
                             </div>

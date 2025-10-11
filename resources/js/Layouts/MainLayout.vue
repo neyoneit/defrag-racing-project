@@ -1,5 +1,5 @@
 <script setup>
-    import { ref } from 'vue';
+    import { ref, watch, nextTick } from 'vue';
     import { Head, Link, router } from '@inertiajs/vue3';
     import ApplicationMark from '@/Components/Laravel/ApplicationMark.vue';
     import Banner from '@/Components/Laravel/Banner.vue';
@@ -38,6 +38,7 @@
 
     const resultsSection = ref(null);
     const searchSection = ref(null);
+    const searchDropdownPosition = ref({ top: 0, right: 0 });
 
     const searchCategory = ref('maps');
 
@@ -85,6 +86,29 @@
 
         debounce()
     }
+
+    const updateSearchPosition = () => {
+        if (searchSection.value && showResultsSection.value) {
+            nextTick(() => {
+                const rect = searchSection.value.getBoundingClientRect();
+                searchDropdownPosition.value = {
+                    top: rect.bottom + 8,
+                    right: window.innerWidth - rect.right,
+                };
+            });
+        }
+    };
+
+    watch(showResultsSection, (newVal) => {
+        if (newVal) {
+            updateSearchPosition();
+            window.addEventListener('resize', updateSearchPosition);
+            window.addEventListener('scroll', updateSearchPosition, true);
+        } else {
+            window.removeEventListener('resize', updateSearchPosition);
+            window.removeEventListener('scroll', updateSearchPosition, true);
+        }
+    });
 </script>
 
 <template>
@@ -227,10 +251,15 @@
                                 </div>
 
                                 <!-- Backdrop -->
-                                <div v-if="showResultsSection" class="fixed inset-0 z-40" @click="closeSearch"></div>
+                                <Teleport to="body">
+                                    <div v-if="showResultsSection" class="fixed inset-0 z-[60] pointer-events-auto" @click="closeSearch"></div>
+                                </Teleport>
 
                                 <!-- Search Results Dropdown -->
-                                <div v-if="showResultsSection" class="absolute top-full mt-2 right-0 rounded-xl shadow-2xl backdrop-blur-xl bg-gray-950 border border-white/10 flex overflow-hidden z-50" style="width: 600px; max-height: 600px;" @click.stop>
+                                <Teleport to="body">
+                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl backdrop-blur-xl bg-gray-950 border border-white/10 flex overflow-hidden z-[70]"
+                                         :style="{ top: searchDropdownPosition.top + 'px', right: searchDropdownPosition.right + 'px', width: '600px', maxWidth: '90vw', maxHeight: '600px' }"
+                                         @click.stop>
 
                                     <!-- Left Sidebar - Filter Tabs -->
                                     <div class="flex flex-col border-r border-white/10 w-40 shrink-0">
@@ -360,6 +389,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                </Teleport>
                             </div>
 
                             <!-- Notifications (Always visible) -->

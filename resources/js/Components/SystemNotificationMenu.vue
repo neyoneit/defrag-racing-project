@@ -1,8 +1,10 @@
 <script setup>
-    import { onMounted, onUnmounted, ref } from 'vue';
+    import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue';
     import { Link, usePage } from '@inertiajs/vue3';
 
     let open = ref(false);
+    const triggerRef = ref(null);
+    const dropdownPosition = ref({ top: 0, right: 0 });
 
     const page = usePage()
 
@@ -18,20 +20,47 @@
         }
     };
 
-    onMounted(() => document.addEventListener('keydown', closeOnEscape));
-    onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
-
     const clearNotifications = () => {
         axios.post(route('notifications.system.clear')).then(() => {
             notifications.value = [];
         });
     }
 
+    const updatePosition = () => {
+        if (triggerRef.value && open.value) {
+            nextTick(() => {
+                const rect = triggerRef.value.getBoundingClientRect();
+                dropdownPosition.value = {
+                    top: rect.bottom + 8,
+                    right: window.innerWidth - rect.right,
+                };
+            });
+        }
+    };
+
+    watch(open, (newVal) => {
+        if (newVal) {
+            updatePosition();
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
+        } else {
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        }
+    });
+
+    onMounted(() => document.addEventListener('keydown', closeOnEscape));
+    onUnmounted(() => {
+        document.removeEventListener('keydown', closeOnEscape);
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition, true);
+    });
+
 </script>
 
 <template>
     <div class="relative">
-        <div @click="open = ! open">
+        <div ref="triggerRef" @click="open = ! open">
             <button v-if="notifications.length == 0" class="rounded-lg p-2 hover:bg-white/10 transition-all group">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
@@ -48,18 +77,23 @@
 
         <!-- Dropdown with Overlay -->
         <!-- Backdrop -->
-        <div v-show="open" class="fixed inset-0 z-40" @click="open = false"></div>
+        <Teleport to="body">
+            <div v-show="open" class="fixed inset-0 z-[60] pointer-events-auto" @click="open = false"></div>
+        </Teleport>
 
         <!-- Dropdown -->
-        <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="transform opacity-0 scale-95"
-            enter-to-class="transform opacity-100 scale-100"
-            leave-active-class="transition ease-in duration-75"
-            leave-from-class="transform opacity-100 scale-100"
-            leave-to-class="transform opacity-0 scale-95"
-        >
-            <div v-show="open" class="absolute top-full mt-2 right-0 rounded-xl shadow-2xl z-50" style="width: 480px; max-width: 90vw;" @click.stop>
+        <Teleport to="body">
+            <transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="transform opacity-0 scale-95"
+                enter-to-class="transform opacity-100 scale-100"
+                leave-active-class="transition ease-in duration-75"
+                leave-from-class="transform opacity-100 scale-100"
+                leave-to-class="transform opacity-0 scale-95"
+            >
+                <div v-show="open" class="fixed rounded-xl shadow-2xl z-[70]"
+                     :style="{ top: dropdownPosition.top + 'px', right: dropdownPosition.right + 'px', width: '480px', maxWidth: '90vw' }"
+                     @click.stop>
                 <div class="rounded-xl bg-gray-950 backdrop-blur-xl border border-white/10 p-4">
                     <!-- Header -->
                     <div class="flex items-center justify-between mb-3">
@@ -125,6 +159,7 @@
                     </div>
                 </div>
             </div>
-        </transition>
+            </transition>
+        </Teleport>
     </div>
 </template>

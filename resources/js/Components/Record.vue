@@ -1,10 +1,14 @@
 <script setup>
-    import { Link } from '@inertiajs/vue3';
-    import { computed } from 'vue';
+    import { Link, usePage } from '@inertiajs/vue3';
+    import { computed, ref } from 'vue';
 
     const props = defineProps({
         record: Object
     });
+
+    const page = usePage();
+    const showTooltip = ref(false);
+    const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const bestrecordCountry = computed(() => {
         let country = props.record.user?.country ?? props.record.country;
@@ -12,7 +16,14 @@
     });
 
     const getRoute = computed(() => {
-        return route(props.record.user ? 'profile.index' : 'profile.mdd', props.record.user ? props.record.user.id : props.record.mdd_id);
+        // Only link to registered users with full profiles
+        if (props.record.user) {
+            return route('profile.index', props.record.user.id);
+        }
+
+        // Players with only mdd_id have no proper profile page
+        // Show tooltip to encourage registration
+        return null;
     });
 </script>
 
@@ -45,7 +56,17 @@
             </div>
 
             <!-- Player Info -->
-            <Link :href="getRoute" @click.stop class="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 group/player hover:bg-white/5 -my-2 py-2 px-1 sm:px-2 -ml-1 sm:-ml-2 rounded transition-colors">
+            <component
+                :is="getRoute ? Link : 'div'"
+                :href="getRoute"
+                @click.stop
+                :class="[
+                    'flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 group/player hover:bg-white/5 -my-2 py-2 px-1 sm:px-2 -ml-1 sm:-ml-2 rounded transition-colors',
+                    !getRoute && isLoggedIn ? 'cursor-default opacity-70' : !getRoute ? 'cursor-help opacity-70' : 'cursor-pointer'
+                ]"
+                @mouseenter="!getRoute && (showTooltip = true)"
+                @mouseleave="!getRoute && (showTooltip = false)"
+            >
                 <img
                     :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
                     class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover ring-1 ring-white/10 group-hover/player:ring-blue-500/60 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
@@ -55,7 +76,34 @@
                     <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
                     <span class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover/player:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
                 </div>
-            </Link>
+            </component>
+
+            <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
+            <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
+                <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
+                        <div class="flex items-center gap-4 mb-3">
+                            <span class="text-5xl animate-bounce">🔓</span>
+                            <div class="text-left flex-1">
+                                <div class="text-2xl font-black leading-tight">Unclaimed Profile</div>
+                                <div class="text-xl font-bold text-orange-100">Is it yours?</div>
+                            </div>
+                        </div>
+                        <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
+                            Register now and link your q3df.org account to see detailed profile page and much more!
+                        </div>
+                    </div>
+                </div>
+            </Teleport>
+
+            <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
+            <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn">
+                <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                    <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
+                        Not linked account
+                    </div>
+                </div>
+            </Teleport>
 
             <!-- Time -->
             <div class="w-12 sm:w-20 flex-shrink-0 text-right">
