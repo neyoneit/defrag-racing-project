@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
+use App\Http\Controllers\ModelsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,13 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 
 Route::get('/bundles/{id?}/{slug?}', [BundlesController::class, 'index'])->name('bundles');
+
+// Models routes
+Route::get('/models', [ModelsController::class, 'index'])->name('models.index');
+Route::get('/models/create', [ModelsController::class, 'create'])->middleware('auth')->name('models.create');
+Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
+Route::get('/models/{id}', [ModelsController::class, 'show'])->name('models.show');
+Route::get('/models/{id}/download', [ModelsController::class, 'download'])->name('models.download');
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
