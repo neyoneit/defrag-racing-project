@@ -7,6 +7,12 @@ const props = defineProps({
     model: Object,
 });
 
+// Check if we're in thumbnail generation mode
+const isThumbnailMode = computed(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('thumbnail') === '1';
+});
+
 const viewer3D = ref(null);
 const viewerLoaded = ref(false);
 const viewerError = ref(false);
@@ -23,6 +29,30 @@ const autoRotate = ref(false);
 const animationSpeed = ref(1.0); // FPS multiplier
 const manualFrame = ref(0);
 const maxFrames = ref(10); // Will be updated based on animation
+
+// Skin selection
+const availableSkins = computed(() => {
+    // Ensure available_skins is always an array
+    const skins = props.model.available_skins;
+
+    // If it's a string (JSON), parse it
+    if (typeof skins === 'string') {
+        try {
+            return JSON.parse(skins);
+        } catch (e) {
+            return ['default'];
+        }
+    }
+
+    // If it's already an array, use it
+    if (Array.isArray(skins)) {
+        return skins;
+    }
+
+    // Fallback
+    return ['default'];
+});
+const currentSkin = ref('default');
 
 // Q3-style input state (mimics usercmd_t and playerState_t)
 const forwardMove = ref(0);  // -127 to 127
@@ -43,11 +73,10 @@ const modelFilePath = computed(() => {
     }
 
     // User-uploaded models (extracted from PK3)
-    // The file_path is like: models/extracted/worm-1760208803
-    // And the actual MD3 is at: models/extracted/worm-1760208803/models/players/worm/head.md3
-    const parts = props.model.file_path.split('/');
-    const modelSlug = parts[parts.length - 1]; // e.g., "worm-1760208803"
-    const modelName = modelSlug.split('-')[0]; // e.g., "worm"
+    // The file_path is like: models/extracted/model-1760208803
+    // The model name is auto-detected and stored in props.model.name
+    // And the actual MD3 is at: models/extracted/model-1760208803/models/players/{name}/head.md3
+    const modelName = props.model.name;
 
     return `/storage/${props.model.file_path}/models/players/${modelName}/head.md3`;
 });
@@ -58,20 +87,23 @@ const skinFilePath = computed(() => {
 
     // Check if this is a base Q3 model
     if (props.model.file_path.startsWith('models/basequake3/players/')) {
-        return `/${props.model.file_path}/head_default.skin`;
+        return `/${props.model.file_path}/head_${currentSkin.value}.skin`;
     }
 
-    // User-uploaded models
-    const parts = props.model.file_path.split('/');
-    const modelSlug = parts[parts.length - 1];
-    const modelName = modelSlug.split('-')[0];
+    // User-uploaded models - use detected model name and selected skin
+    const modelName = props.model.name;
 
-    return `/storage/${props.model.file_path}/models/players/${modelName}/head_default.skin`;
+    return `/storage/${props.model.file_path}/models/players/${modelName}/head_${currentSkin.value}.skin`;
 });
 
 const onViewerLoaded = (model) => {
     viewerLoaded.value = true;
-    console.log('3D Model loaded:', model);
+
+    // Expose camera and scene to window for Puppeteer thumbnail generation
+    if (isThumbnailMode.value && viewer3D.value) {
+        window.camera = viewer3D.value.getCamera();
+        window.scene = viewer3D.value.getScene();
+    }
 };
 
 const onViewerError = (error) => {
@@ -80,11 +112,6 @@ const onViewerError = (error) => {
 };
 
 const onAnimationsReady = (animations) => {
-    console.log('🎬 Animations ready:', animations);
-    console.log('🦵 LEGS:', Object.entries(animations.legs || {}).map(([k, v]) => `${k}: f${v.firstFrame}-${v.firstFrame + v.numFrames - 1}`));
-    console.log('💪 TORSO:', Object.entries(animations.torso || {}).map(([k, v]) => `${k}: f${v.firstFrame}-${v.firstFrame + v.numFrames - 1}`));
-    console.log('🔀 BOTH:', Object.keys(animations.both || {}));
-
     availableAnimations.value = animations;
     animationsReady.value = true;
 
@@ -96,7 +123,6 @@ const onAnimationsReady = (animations) => {
 const onSoundsReady = (sounds) => {
     soundsReady.value = true;
     availableSounds.value = sounds;
-    console.log('Sounds ready:', sounds);
 };
 
 // Q3 ANIMATION SYSTEM: Animations ALWAYS play, they just switch between states
@@ -176,66 +202,86 @@ const updateAnimations = () => {
     currentTorsoAnim.value = torsoAnim;
 };
 
-// Input handlers - Q3-style HOLD buttons (mousedown = start, mouseup = stop)
-const startMovement = (forward, right) => {
-    forwardMove.value = forward;
-    rightMove.value = right;
-    updateAnimations();
+
+// Define one-shot animations (play once, then return to idle)
+const oneShotAnimations = {
+    legs: ['LEGS_JUMP', 'LEGS_JUMPB', 'LEGS_LAND', 'LEGS_LANDB'],
+    torso: ['TORSO_GESTURE', 'TORSO_DROP', 'TORSO_RAISE'],
+    both: ['BOTH_DEATH1', 'BOTH_DEATH2', 'BOTH_DEATH3', 'BOTH_DEAD1', 'BOTH_DEAD2', 'BOTH_DEAD3']
 };
 
-const stopMovement = () => {
-    forwardMove.value = 0;
-    rightMove.value = 0;
-    updateAnimations();
-};
-
-// HOLD-based action handlers (like Q3!)
-const startCrouch = () => {
-    isCrouching.value = true;
-    updateAnimations();
-};
-
-const stopCrouch = () => {
-    isCrouching.value = false;
-    updateAnimations();
-};
-
-const startJump = () => {
+// Generic function to play a one-shot animation
+const playOneShotAnimation = (animName, animType) => {
     if (!viewer3D.value) return;
-    const jumpAnim = forwardMove.value < 0 ? 'LEGS_JUMPB' : 'LEGS_JUMP';
-    viewer3D.value.playLegsAnimation(jumpAnim);
-    currentLegsAnim.value = jumpAnim;
+    const animMgr = viewer3D.value.getAnimationManager();
+    if (!animMgr) return;
 
-    // Q3 Event: EV_JUMP triggers jump sound
-    triggerAnimationSound(jumpAnim, 'legs');
+    // Get the animation data
+    let anim = null;
+    if (animType === 'legs') {
+        anim = availableAnimations.value.legs[animName];
+        if (anim) {
+            // Enable no-loop mode for legs
+            animMgr.noLoopLegs = true;
+            viewer3D.value.playLegsAnimation(animName);
+            currentLegsAnim.value = animName;
+        }
+    } else if (animType === 'torso') {
+        anim = availableAnimations.value.torso[animName];
+        if (anim) {
+            // Enable no-loop mode for torso
+            animMgr.noLoopTorso = true;
+            viewer3D.value.playTorsoAnimation(animName);
+            currentTorsoAnim.value = animName;
+        }
+    } else if (animType === 'both') {
+        anim = availableAnimations.value.both[animName];
+        if (anim) {
+            // Enable no-loop mode for both legs and torso
+            animMgr.noLoopLegs = true;
+            animMgr.noLoopTorso = true;
+            viewer3D.value.playBothAnimation(animName);
+            currentLegsAnim.value = animName;
+            currentTorsoAnim.value = animName;
+        }
+    }
+
+    if (!anim) return;
+
+    // Start playing
+    animMgr.playing = true;
+
+    // Trigger sound
+    triggerAnimationSound(animName, animType);
+
+    // Calculate animation duration (account for animation speed)
+    const duration = (anim.numFrames / anim.fps / animationSpeed.value) * 1000; // Convert to milliseconds
+
+    // Animations that need to hold on last frame for 2 seconds
+    const needsHoldDuration = animName.includes('DEATH') || animName.includes('DEAD');
+    const holdDuration = needsHoldDuration ? 2000 : 0; // 2 seconds hold time
+
+    // After animation completes (+ hold duration for dead anims), return to idle
+    setTimeout(() => {
+        // Disable no-loop mode
+        animMgr.noLoopLegs = false;
+        animMgr.noLoopTorso = false;
+
+        // Reset last animation tracker so sound can play again on repeat clicks
+        if (animType === 'legs') {
+            lastLegsAnim.value = null;
+        } else if (animType === 'torso') {
+            lastTorsoAnim.value = null;
+        } else if (animType === 'both') {
+            lastLegsAnim.value = null;
+            lastTorsoAnim.value = null;
+        }
+
+        // Return to idle animations
+        updateAnimations(); // Returns to LEGS_IDLE / TORSO_STAND
+    }, duration + holdDuration);
 };
 
-const stopJump = () => {
-    updateAnimations();
-};
-
-const startAttack = () => {
-    isAttacking.value = true;
-    updateAnimations();
-};
-
-const stopAttack = () => {
-    isAttacking.value = false;
-    updateAnimations();
-};
-
-const startGesture = () => {
-    isGesturing.value = true;
-    updateAnimations();
-
-    // Q3 Event: EV_TAUNT triggers taunt sound
-    triggerAnimationSound('TORSO_GESTURE', 'torso');
-};
-
-const stopGesture = () => {
-    isGesturing.value = false;
-    updateAnimations();
-};
 
 const playSound = (soundName) => {
     if (viewer3D.value && soundsEnabled.value) {
@@ -282,7 +328,6 @@ const triggerAnimationSound = (animName, animType) => {
     // Look up sound for this animation
     const soundName = animationSoundMap[animName];
     if (soundName) {
-        console.log(`🔊 Q3 Event: ${animName} → ${soundName}.wav`);
         playSound(soundName);
     }
 };
@@ -310,16 +355,15 @@ const updateAnimationSpeed = (event) => {
     }
 };
 
-const updateManualFrame = (event) => {
-    const frame = parseInt(event.target.value);
-    manualFrame.value = frame;
-    if (viewer3D.value && viewer3D.value.getAnimationManager()) {
-        viewer3D.value.getAnimationManager().setManualFrame(frame);
-    }
-};
-
 const downloadModel = () => {
     window.location.href = route('models.download', props.model.id);
+};
+
+// Change skin
+const changeSkin = (skinName) => {
+    currentSkin.value = skinName;
+    // The skinFilePath computed property will update automatically
+    // ModelViewer watches skinPath and will reload textures
 };
 
 // Watch for autoRotate changes
@@ -339,23 +383,23 @@ watch(showWireframe, (newValue) => {
 
 <template>
     <Head :title="model.name" />
-    <div class="min-h-screen py-12">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen py-12'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
+            <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                 <!-- Back Button -->
-                <Link :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+                <Link v-if="!isThumbnailMode" :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
                     Back to Models
                 </Link>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div :class="isThumbnailMode ? 'w-full h-full' : 'grid grid-cols-1 lg:grid-cols-2 gap-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                     <!-- Left Column: 3D Viewer / Preview -->
-                    <div>
+                    <div :class="isThumbnailMode ? 'w-full h-full' : ''" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                         <!-- 3D Viewer Card -->
-                        <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8 mb-8">
+                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                             <!-- Viewer Controls -->
-                            <div v-if="viewerLoaded" class="flex gap-2 mb-4">
+                            <div v-if="viewerLoaded && !isThumbnailMode" class="flex gap-2 mb-4">
                                 <button @click="autoRotate = !autoRotate" :class="[
                                     'px-3 py-1 rounded-lg text-xs font-semibold transition-all',
                                     autoRotate
@@ -374,20 +418,38 @@ watch(showWireframe, (newValue) => {
                                 </button>
                             </div>
 
+                            <!-- Skin Selector -->
+                            <div v-if="viewerLoaded && availableSkins.length > 1 && !isThumbnailMode" class="flex gap-2 mb-4">
+                                <span class="text-xs text-gray-400 self-center">Skin:</span>
+                                <button
+                                    v-for="skin in availableSkins"
+                                    :key="skin"
+                                    @click="changeSkin(skin)"
+                                    :class="[
+                                        'px-3 py-1 rounded-lg text-xs font-semibold transition-all capitalize',
+                                        currentSkin === skin
+                                            ? 'bg-orange-500/30 text-orange-300 border border-orange-500/50'
+                                            : 'bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30'
+                                    ]">
+                                    {{ skin }}
+                                </button>
+                            </div>
+
                             <ModelViewer
                                 v-if="modelFilePath"
                                 ref="viewer3D"
                                 :model-path="modelFilePath"
                                 :skin-path="skinFilePath"
+                                :skin-name="currentSkin"
                                 :auto-rotate="autoRotate"
-                                :show-grid="true"
+                                :show-grid="!isThumbnailMode"
                                 :enable-sounds="true"
                                 @loaded="onViewerLoaded"
                                 @error="onViewerError"
                                 @animations-ready="onAnimationsReady"
                                 @sounds-ready="onSoundsReady"
-                                class="rounded-xl"
-                                style="height: 900px;"
+                                :class="isThumbnailMode ? '' : 'rounded-xl'"
+                                :style="isThumbnailMode ? 'width: 100%; height: 100%;' : 'height: 800px;'"
                             />
 
                             <!-- Fallback if no model file path -->
@@ -405,142 +467,55 @@ watch(showWireframe, (newValue) => {
                         </div>
 
                         <!-- Animation Controls Card -->
-                        <div v-if="animationsReady" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8 mb-8">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-sm font-bold text-gray-300">Player Animations</h4>
+                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-bold text-gray-300">Controls</h4>
 
-                                <!-- Current Animation State - Fixed Position -->
-                                <div class="flex gap-2 min-w-[200px] justify-end">
-                                    <span v-if="currentLegsAnim" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold border border-blue-500/30">
+                                <!-- Current Animation State -->
+                                <div class="flex gap-2">
+                                    <span v-if="currentLegsAnim" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold border border-blue-500/30">
                                         {{ currentLegsAnim.replace('LEGS_', '') }}
                                     </span>
-                                    <span v-if="currentTorsoAnim" class="px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs font-semibold border border-green-500/30">
+                                    <span v-if="currentTorsoAnim" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold border border-green-500/30">
                                         {{ currentTorsoAnim.replace('TORSO_', '') }}
                                     </span>
                                 </div>
                             </div>
 
-                            <!-- Animation Speed Slider -->
-                            <div class="mb-4">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-400">Speed:</span>
-                                    <input
-                                        type="range"
-                                        min="0.1"
-                                        max="3.0"
-                                        step="0.1"
-                                        :value="animationSpeed"
-                                        @input="updateAnimationSpeed"
-                                        class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <span class="text-xs text-gray-400 w-12">{{ animationSpeed.toFixed(1) }}x</span>
-                                </div>
-                            </div>
-
-                            <!-- Manual Frame Slider -->
-                            <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-yellow-400 font-semibold">Frame:</span>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        :max="maxFrames - 1"
-                                        step="1"
-                                        :value="manualFrame"
-                                        @input="updateManualFrame"
-                                        class="flex-1 h-2 bg-yellow-500/20 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <span class="text-xs text-yellow-400 w-16 font-mono">{{ manualFrame }}/{{ maxFrames - 1 }}</span>
-                                </div>
-                                <div class="text-xs text-yellow-400/70 mt-1">🔍 Debug: Manually step through frames</div>
-                            </div>
-
-                            <!-- Q3-Style Input Simulator -->
-                            <div>
-                                <h5 class="text-xs font-bold text-blue-400 mb-2">Q3 INPUT SIMULATOR</h5>
-
-                                <!-- Movement Controls -->
-                                <div class="grid grid-cols-3 gap-2 mb-3">
-                                    <div class="col-span-3 text-xs text-gray-400 mb-1">Movement (HOLD to move, like Q3!)</div>
-                                    <div></div>
-                                    <button @mousedown="startMovement(127, 0)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        forwardMove === 127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
-                                    ]" class="text-white">
-                                        ⬆️ Forward (W)
-                                    </button>
-                                    <div></div>
-
-                                    <button @mousedown="startMovement(0, -127)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        rightMove === -127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
-                                    ]" class="text-white">
-                                        ⬅️ Left (A)
-                                    </button>
-                                    <button @mousedown="startMovement(-127, 0)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        forwardMove === -127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
-                                    ]" class="text-white">
-                                        ⬇️ Back (S)
-                                    </button>
-                                    <button @mousedown="startMovement(0, 127)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        rightMove === 127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
-                                    ]" class="text-white">
-                                        ➡️ Right (D)
-                                    </button>
-                                </div>
-
-                                <!-- Action Controls -->
-                                <div class="grid grid-cols-4 gap-2">
-                                    <div class="col-span-4 text-xs text-gray-400 mb-1">Actions (HOLD!)</div>
-                                    <button @mousedown="startCrouch" @mouseup="stopCrouch" @mouseleave="stopCrouch" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        isCrouching ? 'bg-yellow-600/50 border-yellow-500/50' : 'bg-yellow-600/30 hover:bg-yellow-600/50 border-yellow-500/30'
-                                    ]" class="text-white">
-                                        🦆 Crouch
-                                    </button>
-                                    <button @mousedown="startJump" @mouseup="stopJump" @mouseleave="stopJump" class="px-4 py-3 bg-green-600/30 hover:bg-green-600/50 text-white rounded-lg text-sm font-semibold transition-colors border border-green-500/30">
-                                        ⬆️ Jump
-                                    </button>
-                                    <button @mousedown="startAttack" @mouseup="stopAttack" @mouseleave="stopAttack" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        isAttacking ? 'bg-red-600/70 border-red-500/70' : 'bg-red-600/30 hover:bg-red-600/50 border-red-500/30'
-                                    ]" class="text-white">
-                                        ⚔️ Attack
-                                    </button>
-                                    <button @mousedown="startGesture" @mouseup="stopGesture" @mouseleave="stopGesture" :class="[
-                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
-                                        isGesturing ? 'bg-purple-600/70 border-purple-500/70' : 'bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/30'
-                                    ]" class="text-white">
-                                        👋 Gesture
-                                    </button>
-                                </div>
-
-                                <div class="text-xs text-gray-400 mt-2">
-                                    💡 Q3-Style: Model always animates! Press buttons to change animation, release to return to idle (LEGS_IDLE + TORSO_STAND).
-                                </div>
+                            <!-- Animation Speed -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-gray-400 w-16">Speed:</span>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="3.0"
+                                    step="0.1"
+                                    :value="animationSpeed"
+                                    @input="updateAnimationSpeed"
+                                    class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span class="text-xs text-gray-400 w-12 text-right">{{ animationSpeed.toFixed(1) }}x</span>
                             </div>
                         </div>
 
                         <!-- Sound Controls Card -->
-                        <div v-if="soundsReady" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8">
-                            <div class="flex items-center justify-between mb-2">
+                        <div v-if="soundsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
                                 <button @click="toggleSounds" :class="[
-                                    'px-3 py-1 rounded-lg text-xs font-semibold transition-all',
+                                    'px-3 py-1 rounded text-xs font-semibold transition-all',
                                     soundsEnabled
                                         ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                         : 'bg-red-500/20 text-red-400 border border-red-500/30'
                                 ]">
-                                    {{ soundsEnabled ? '🔊 ON' : '🔇 OFF' }}
+                                    {{ soundsEnabled ? '🔊' : '🔇' }}
                                 </button>
                             </div>
 
                             <!-- Volume Slider -->
-                            <div class="mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs text-gray-400">Volume:</span>
+                            <div class="mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-400 w-16">Volume:</span>
                                     <input
                                         type="range"
                                         min="0"
@@ -551,18 +526,18 @@ watch(showWireframe, (newValue) => {
                                         class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
                                         :disabled="!soundsEnabled"
                                     />
-                                    <span class="text-xs text-gray-400 w-8">{{ Math.round(soundVolume * 100) }}%</span>
+                                    <span class="text-xs text-gray-400 w-12 text-right">{{ Math.round(soundVolume * 100) }}%</span>
                                 </div>
                             </div>
 
                             <!-- Sound Test Buttons -->
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-4 gap-2">
                                 <button
                                     v-for="soundName in availableSounds"
                                     :key="soundName"
                                     @click="playSound(soundName)"
                                     :disabled="!soundsEnabled"
-                                    class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors">
+                                    class="px-2 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-semibold transition-colors">
                                     {{ soundName }}
                                 </button>
                             </div>
@@ -570,7 +545,7 @@ watch(showWireframe, (newValue) => {
                     </div>
 
                     <!-- Right Column: Model Info -->
-                    <div>
+                    <div v-if="!isThumbnailMode">
                         <!-- Title and Category -->
                         <div class="mb-6">
                             <div class="flex items-start justify-between mb-2">
@@ -587,68 +562,66 @@ watch(showWireframe, (newValue) => {
                             </p>
                         </div>
 
-                        <!-- RAW ANIMATION BUTTONS -->
+                        <!-- ANIMATION BUTTONS -->
                         <div v-if="animationsReady" class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
-                            <h3 class="text-lg font-bold text-white mb-3">🔍 ALL ANIMATIONS (Raw Test)</h3>
+                            <h3 class="text-lg font-bold text-white mb-4">Animations</h3>
 
                             <!-- LEGS ANIMATIONS -->
                             <div class="mb-4">
-                                <h4 class="text-sm font-bold text-blue-400 mb-2">LEGS (Lower.md3) - {{ Object.keys(availableAnimations.legs || {}).length }} animations</h4>
-                                <div class="grid grid-cols-2 gap-2">
+                                <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Legs ({{ Object.keys(availableAnimations.legs || {}).length }})</h4>
+                                <div class="grid grid-cols-3 gap-1.5">
                                     <button
                                         v-for="(animData, animName) in availableAnimations.legs"
                                         :key="animName"
-                                        @click="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName; viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'legs')"
+                                        @click="oneShotAnimations.legs.includes(animName) ? playOneShotAnimation(animName, 'legs') : (viewer3D.playLegsAnimation(animName), currentLegsAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'legs'))"
                                         :class="[
-                                            'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
+                                            'px-2 py-1.5 rounded text-xs font-mono transition-colors border text-left',
                                             currentLegsAnim === animName
                                                 ? 'bg-blue-600/70 border-blue-500/70 text-white'
                                                 : 'bg-blue-600/20 border-blue-500/30 text-blue-300 hover:bg-blue-600/40'
                                         ]">
-                                        <div class="font-bold">{{ animName }}</div>
-                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                        <div class="font-bold text-xs">{{ animName.replace('LEGS_', '') }}</div>
+                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
                                     </button>
                                 </div>
                             </div>
 
                             <!-- TORSO ANIMATIONS -->
                             <div class="mb-4">
-                                <h4 class="text-sm font-bold text-green-400 mb-2">TORSO (Upper.md3) - {{ Object.keys(availableAnimations.torso || {}).length }} animations</h4>
-                                <div class="grid grid-cols-2 gap-2">
+                                <h4 class="text-xs font-bold text-green-400 mb-2 uppercase">Torso ({{ Object.keys(availableAnimations.torso || {}).length }})</h4>
+                                <div class="grid grid-cols-3 gap-1.5">
                                     <button
                                         v-for="(animData, animName) in availableAnimations.torso"
                                         :key="animName"
-                                        @click="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName; viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'torso')"
+                                        @click="oneShotAnimations.torso.includes(animName) ? playOneShotAnimation(animName, 'torso') : (viewer3D.playTorsoAnimation(animName), currentTorsoAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'torso'))"
                                         :class="[
-                                            'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
+                                            'px-2 py-1.5 rounded text-xs font-mono transition-colors border text-left',
                                             currentTorsoAnim === animName
                                                 ? 'bg-green-600/70 border-green-500/70 text-white'
                                                 : 'bg-green-600/20 border-green-500/30 text-green-300 hover:bg-green-600/40'
                                         ]">
-                                        <div class="font-bold">{{ animName }}</div>
-                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                        <div class="font-bold text-xs">{{ animName.replace('TORSO_', '') }}</div>
+                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- BOTH ANIMATIONS (death animations - affect both legs and torso) -->
-                            <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0" class="mb-4">
-                                <h4 class="text-sm font-bold text-purple-400 mb-2">BOTH (Death animations) - {{ Object.keys(availableAnimations.both || {}).length }} animations</h4>
-                                <div class="text-xs text-gray-400 mb-2">💀 BOTH animations play on BOTH legs AND torso simultaneously (Q3-style death animations)</div>
-                                <div class="grid grid-cols-2 gap-2">
+                            <!-- BOTH ANIMATIONS -->
+                            <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0">
+                                <h4 class="text-xs font-bold text-purple-400 mb-2 uppercase">Both ({{ Object.keys(availableAnimations.both || {}).length }})</h4>
+                                <div class="grid grid-cols-3 gap-1.5 mb-3">
                                     <button
                                         v-for="(animData, animName) in availableAnimations.both"
                                         :key="animName"
-                                        @click="viewer3D.playBothAnimation(animName); viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'both')"
-                                        class="px-3 py-2 rounded-lg text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
-                                        <div class="font-bold">{{ animName }}</div>
-                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                        @click="playOneShotAnimation(animName, 'both')"
+                                        class="px-2 py-1.5 rounded text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
+                                        <div class="font-bold text-xs">{{ animName.replace('BOTH_', '') }}</div>
+                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
                                     </button>
                                 </div>
-                            </div>
-
-                            <div class="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                                💡 CLICK button to play animation endlessly. Check if animations are paired correctly!
+                                <div class="text-xs text-gray-400 italic">
+                                    One-shot animations hold 2s, then return to idle
+                                </div>
                             </div>
                         </div>
 

@@ -31,6 +31,10 @@ export class MD3AnimationManager {
             legs: false,
             torso: false
         };
+
+        // No-loop flags for one-shot animations (clamp to last frame instead of looping)
+        this.noLoopLegs = false;
+        this.noLoopTorso = false;
     }
 
     /**
@@ -80,18 +84,11 @@ export class MD3AnimationManager {
         }
 
         this.currentLegsAnim = anim;
+        this.currentLegsAnim.name = animName; // Store name for reference
         this.legsFrame = 0;
         this.legsTime = 0;
         this.soundTriggered.legs = false;
         this.playing = true;
-
-        console.log(`🦵 Playing legs animation: ${animName}`, {
-            firstFrame: this.currentLegsAnim.firstFrame,
-            numFrames: this.currentLegsAnim.numFrames,
-            fps: this.currentLegsAnim.fps,
-            loop: this.currentLegsAnim.loop,
-            loopingFrames: this.currentLegsAnim.loopingFrames
-        });
 
         // Trigger sound at animation start
         if (this.soundCallback) {
@@ -120,15 +117,6 @@ export class MD3AnimationManager {
         this.torsoTime = 0;
         this.soundTriggered.torso = false;
         this.playing = true;
-
-        console.log(`💪 Playing torso animation: ${animName}`, {
-            firstFrame: this.currentTorsoAnim.firstFrame,
-            numFrames: this.currentTorsoAnim.numFrames,
-            fps: this.currentTorsoAnim.fps,
-            loop: this.currentTorsoAnim.loop,
-            loopingFrames: this.currentTorsoAnim.loopingFrames,
-            upperBodyExists: !!this.playerModel.userData.upper
-        });
 
         // Trigger sound at animation start
         if (this.soundCallback) {
@@ -201,23 +189,39 @@ export class MD3AnimationManager {
             const frameFloat = (currentTime / frameTime);
             frame = Math.floor(frameFloat);
 
-            // Handle looping - match Quake 3 engine behavior
+            // Handle looping
             if (frame >= anim.numFrames) {
-                frame -= anim.numFrames;
-                if (anim.loopingFrames > 0) {
-                    // Loop back to (numFrames - loopingFrames) position
-                    // Example: numFrames=11, loopingFrames=10 -> loops to frame 1
-                    frame = (frame % anim.loopingFrames) + (anim.numFrames - anim.loopingFrames);
-                } else {
-                    // No looping - clamp to last frame
-                    frame = anim.numFrames - 1;
-                }
+                // Check if no-loop is enabled (for one-shot animations)
+                const noLoop = isLegs ? this.noLoopLegs : this.noLoopTorso;
 
-                // Reset time to match the new frame
-                if (isLegs) {
-                    this.legsTime = frame * frameTime;
+                if (noLoop) {
+                    // Clamp to last frame (don't loop) - for one-shot animations
+                    frame = anim.numFrames - 1;
+
+                    // Reset time to match the last frame
+                    if (isLegs) {
+                        this.legsTime = frame * frameTime;
+                    } else {
+                        this.torsoTime = frame * frameTime;
+                    }
                 } else {
-                    this.torsoTime = frame * frameTime;
+                    // Normal looping behavior for continuous animations
+                    if (anim.loopingFrames > 0) {
+                        // Q3-style partial loop: loop back to (numFrames - loopingFrames) position
+                        // Example: numFrames=11, loopingFrames=10 -> loops to frame 1
+                        frame = (frame % anim.loopingFrames) + (anim.numFrames - anim.loopingFrames);
+                    } else {
+                        // No loopingFrames defined - loop entire animation from start
+                        // This makes LEGS_JUMP, LEGS_LAND, etc. loop endlessly for viewing
+                        frame = frame % anim.numFrames;
+                    }
+
+                    // Reset time to match the new frame
+                    if (isLegs) {
+                        this.legsTime = frame * frameTime;
+                    } else {
+                        this.torsoTime = frame * frameTime;
+                    }
                 }
             }
         }
@@ -330,7 +334,6 @@ export class MD3AnimationManager {
             // Animation frame exceeds available vertex data
             // Clamp to last available frame to hold the final pose
             frameIndex = surface.vertices.length - 1;
-            console.log(`⚠️ ${anim.name} frame ${frame} (md3Frame ${anim.firstFrame + frame}) exceeds vertex data, clamping to ${frameIndex}`);
         }
 
         // Safety check
@@ -382,7 +385,6 @@ export class MD3AnimationManager {
      */
     setSpeed(speed) {
         this.speed = Math.max(0.1, Math.min(3.0, speed)); // Clamp between 0.1x and 3.0x
-        console.log(`⚡ Animation speed set to ${this.speed.toFixed(1)}x`);
     }
 
     /**
@@ -399,8 +401,6 @@ export class MD3AnimationManager {
             const md3Frame = this.currentLegsAnim.firstFrame + clampedFrame;
             const lower = this.playerModel.userData.lower;
 
-            console.log(`🎯 Manual frame: ${frame} -> clampedFrame=${clampedFrame}, md3Frame=${md3Frame}, totalTags=${lower.userData.tags?.length || 0}`);
-
             // Update leg meshes
             lower.children.forEach(child => {
                 if (child.userData.surface) {
@@ -416,7 +416,6 @@ export class MD3AnimationManager {
                 // If md3Frame exceeds available tags, use the last valid frame
                 if (md3Frame >= totalTagFrames) {
                     safeTagFrame = totalTagFrames - 1;
-                    console.warn(`⚠️ md3Frame ${md3Frame} exceeds tags, clamping to ${safeTagFrame}`);
                 } else {
                     safeTagFrame = md3Frame;
                 }

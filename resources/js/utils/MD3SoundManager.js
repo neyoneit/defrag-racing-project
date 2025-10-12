@@ -51,7 +51,6 @@ export class MD3SoundManager {
 
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('Audio context initialized');
         } catch (error) {
             console.error('Failed to create audio context:', error);
             this.enabled = false;
@@ -86,8 +85,6 @@ export class MD3SoundManager {
                 const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
                 this.soundBuffers.set(soundName, audioBuffer);
-                console.log(`Loaded sound: ${soundName}`);
-
                 return soundName;
             } catch (error) {
                 console.warn(`Failed to load sound ${filename}:`, error);
@@ -97,8 +94,6 @@ export class MD3SoundManager {
 
         const results = await Promise.all(loadPromises);
         const loadedCount = results.filter(r => r !== null).length;
-        console.log(`Loaded ${loadedCount}/${this.soundFiles.length} sounds`);
-
         return loadedCount > 0;
     }
 
@@ -218,10 +213,10 @@ export class MD3SoundManager {
     }
 
     /**
-     * Get list of loaded sounds
+     * Get list of loaded sounds (sorted alphabetically)
      */
     getLoadedSounds() {
-        return Array.from(this.soundBuffers.keys());
+        return Array.from(this.soundBuffers.keys()).sort();
     }
 
     /**

@@ -26,6 +26,7 @@ class PlayerModel extends Model
         'vert_count',
         'has_sounds',
         'has_ctf_skins',
+        'available_skins',
         'approved',
     ];
 
@@ -36,6 +37,7 @@ class PlayerModel extends Model
         'downloads' => 'integer',
         'poly_count' => 'integer',
         'vert_count' => 'integer',
+        'available_skins' => 'array',
     ];
 
     /**

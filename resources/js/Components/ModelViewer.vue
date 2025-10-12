@@ -34,6 +34,10 @@ const props = defineProps({
     enableSounds: {
         type: Boolean,
         default: true
+    },
+    thumbnailMode: {
+        type: Boolean,
+        default: false
     }
 });
 
@@ -103,8 +107,8 @@ onUnmounted(() => {
 function initScene() {
     // Create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a1a);
-    scene.fog = new THREE.Fog(0x1a1a1a, 50, 200);
+    scene.background = new THREE.Color(0x000000); // Black background
+    scene.fog = new THREE.Fog(0x000000, 50, 200);
 
     // Create camera
     camera = new THREE.PerspectiveCamera(
@@ -113,8 +117,14 @@ function initScene() {
         0.1,
         1000
     );
-    camera.position.set(0, 50, 100);
-    camera.lookAt(0, 30, 0);
+    // Different camera positions for thumbnail vs detail view
+    if (props.thumbnailMode) {
+        camera.position.set(0, 15, 45);  // Much closer for thumbnail
+        camera.lookAt(0, 10, 10);  // Look at model center
+    } else {
+        camera.position.set(0, 40, 40);  // Original position for detail view
+        camera.lookAt(0, 30, 10);
+    }
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({
@@ -142,11 +152,7 @@ function initScene() {
     backLight.position.set(-50, 50, -50);
     scene.add(backLight);
 
-    // Add grid helper
-    if (props.showGrid) {
-        const gridHelper = new THREE.GridHelper(200, 20, 0x444444, 0x222222);
-        scene.add(gridHelper);
-    }
+    // Grid removed - no floor
 
     // Add orbit controls
     controls = new OrbitControls(camera, renderer.domElement);
@@ -156,7 +162,7 @@ function initScene() {
     controls.maxDistance = 300;
     controls.autoRotate = props.autoRotate;
     controls.autoRotateSpeed = 2.0;
-    controls.target.set(0, 30, 0);
+    controls.target.set(0, props.thumbnailMode ? 7 : 37, 0);
 }
 
 async function loadModel() {
@@ -198,20 +204,8 @@ async function loadModel() {
         // Force matrix update after scale
         model.updateMatrixWorld(true);
 
-        // Calculate the bounding box center for reference
-        const finalBox = new THREE.Box3().setFromObject(model);
-        const center = finalBox.getCenter(new THREE.Vector3());
-
-        console.log('Model bounding box center before positioning:', center);
-
-        // Simply position the model at camera target (0, 30, 0)
-        // This should work if the model's pivot is at its geometric center
-        model.position.set(0, 30, 0);
-
-        // Recalculate where the visual center ended up
-        const checkBox = new THREE.Box3().setFromObject(model);
-        const visualCenter = checkBox.getCenter(new THREE.Vector3());
-        console.log('Visual center after positioning at (0,30,0):', visualCenter);
+        // Position model differently for thumbnail vs detail view
+        model.position.set(0, props.thumbnailMode ? 0 : 30, 0);
 
         scene.add(model);
 
@@ -220,27 +214,30 @@ async function loadModel() {
             animationManager = new MD3AnimationManager(model);
             availableAnimations.value = animationManager.getAvailableAnimations();
 
-            // Debug: Check if upper body exists
-            console.log('Player model parts:', {
-                lower: !!model.userData.lower,
-                upper: !!model.userData.upper,
-                head: !!model.userData.head,
-                lowerChildren: model.userData.lower?.children.length || 0,
-                upperChildren: model.userData.upper?.children.length || 0
-            });
-
             // Initialize sound manager
             if (soundsEnabled.value) {
                 try {
-                    // Extract sound path from model path
-                    // modelPath: /storage/models/extracted/worm-123/models/players/worm/head.md3
-                    // soundPath: /storage/models/extracted/worm-123/sound/player/worm
-                    const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
-                    if (extractedPath) {
-                        const basePath = extractedPath[1];
-                        const modelName = baseDir.split('/').pop();
-                        const soundPath = `${basePath}/sound/player/${modelName}`;
+                    // Extract model name from path
+                    const pathParts = props.modelPath.split('/');
+                    const modelName = pathParts[pathParts.length - 2]; // Get second-to-last part (model name)
+                    let soundPath;
 
+                    // Check if this is a base Q3 model or user-uploaded model
+                    if (props.modelPath.startsWith('/models/basequake3/players/')) {
+                        // Base Q3 model: /models/basequake3/players/anarki/head.md3
+                        // Sound path: /models/sound/anarki/
+                        soundPath = `/models/sound/${modelName}`;
+                    } else {
+                        // User-uploaded model: /storage/models/extracted/worm-123/models/players/worm/head.md3
+                        // Sound path: /storage/models/extracted/worm-123/sound/player/worm/
+                        const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
+                        if (extractedPath) {
+                            const basePath = extractedPath[1];
+                            soundPath = `${basePath}/sound/player/${modelName}`;
+                        }
+                    }
+
+                    if (soundPath) {
                         soundManager = new MD3SoundManager(soundPath, modelName);
 
                         // Initialize audio context on first user interaction
@@ -251,7 +248,6 @@ async function loadModel() {
                         soundsLoaded.value = loaded;
 
                         if (loaded) {
-                            console.log('Sounds loaded successfully');
                             emit('soundsReady', soundManager.getLoadedSounds());
 
                             // Set up sound callback for animations
@@ -261,13 +257,15 @@ async function loadModel() {
                         }
                     }
                 } catch (err) {
-                    console.warn('Failed to initialize sounds:', err);
                     soundsEnabled.value = false;
                 }
             }
 
-            // DON'T start any animations by default - let user click buttons
-            // Model will show in T-pose / first frame
+            // Start idle animations automatically (LEGS_IDLE + TORSO_STAND)
+            // This matches the default behavior on the model detail page
+            animationManager.playLegsAnimation('LEGS_IDLE');
+            animationManager.playTorsoAnimation('TORSO_STAND');
+            animationManager.playing = true;
 
             emit('animationsReady', availableAnimations.value);
         }
@@ -286,11 +284,15 @@ function animate() {
     animationFrameId = requestAnimationFrame(animate);
 
     const deltaTime = clock.getDelta();
+    const time = clock.getElapsedTime();
 
     // Update animation manager
     if (animationManager) {
         animationManager.update(deltaTime);
     }
+
+    // Update shader animations (tcMod)
+    updateShaderAnimations(time);
 
     if (controls) {
         controls.update();
@@ -299,6 +301,23 @@ function animate() {
     if (renderer && scene && camera) {
         renderer.render(scene, camera);
     }
+}
+
+function updateShaderAnimations(time) {
+    if (!model || !loader) return;
+
+    // Use the shader material system's update method
+    const shaderSystem = loader.shaderMaterialSystem;
+    if (!shaderSystem) return;
+
+    model.traverse((child) => {
+        if (child.isMesh && child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            materials.forEach(material => {
+                shaderSystem.updateMaterialAnimation(material, time);
+            });
+        }
+    });
 }
 
 function onWindowResize() {
@@ -330,15 +349,29 @@ watch(() => props.modelPath, () => {
     loadModel();
 });
 
+// Watch for skin changes (reload model with new skin)
+watch(() => props.skinName, () => {
+    if (model) {
+        scene.remove(model);
+        model.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
+    }
+    loadModel();
+});
+
 // Method to toggle wireframe mode
 function setWireframe(enabled) {
     if (!model) {
-        console.warn('setWireframe: model not loaded yet');
         return;
     }
-
-    console.log(`Setting wireframe to: ${enabled}`);
-    let meshCount = 0;
 
     // Only affect the model, not other scene objects like grid
     model.traverse((child) => {
@@ -348,7 +381,6 @@ function setWireframe(enabled) {
                 return;
             }
 
-            meshCount++;
             if (Array.isArray(child.material)) {
                 child.material.forEach(mat => {
                     mat.wireframe = enabled;
@@ -360,8 +392,6 @@ function setWireframe(enabled) {
             }
         }
     });
-
-    console.log(`Wireframe updated on ${meshCount} meshes`);
 }
 
 // Method to set auto-rotate
@@ -425,7 +455,7 @@ defineExpose({
         </div>
 
         <!-- Controls hint -->
-        <div class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 text-xs text-gray-300">
+        <div v-if="showGrid" class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 text-xs text-gray-300">
             <div class="flex items-center gap-2">
                 <span>🖱️</span>
                 <span>Left click: Rotate | Right click: Pan | Scroll: Zoom</span>

@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
+import ModelViewer from '@/Components/ModelViewer.vue';
 
 const props = defineProps({
     models: Object,
@@ -68,13 +69,24 @@ const switchCategory = (category) => {
                           :href="route('models.show', model.id)"
                           class="group backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
-                        <!-- Thumbnail -->
+                        <!-- Thumbnail - Always show 3D viewer if file_path exists -->
                         <div class="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center relative overflow-hidden">
-                            <div v-if="model.thumbnail" class="w-full h-full">
-                                <img :src="`/storage/${model.thumbnail}`" :alt="model.name" class="w-full h-full object-cover">
-                            </div>
+                            <!-- 3D Model Viewer as thumbnail (preferred) -->
+                            <ModelViewer
+                                v-if="model.file_path"
+                                :key="model.id"
+                                :model-path="`${model.file_path.startsWith('models/basequake3') ? '/' : '/storage/'}${model.file_path}/models/players/${model.name}/head.md3`"
+                                :skin-path="`${model.file_path.startsWith('models/basequake3') ? '/' : '/storage/'}${model.file_path}/models/players/${model.name}/head_default.skin`"
+                                skin-name="default"
+                                :auto-rotate="false"
+                                :show-grid="false"
+                                :enable-sounds="false"
+                                :thumbnail-mode="true"
+                                style="width: 100%; height: 100%; pointer-events: none;"
+                            />
+                            <!-- Fallback to emoji if no file_path -->
                             <div v-else class="text-6xl">
-                                {{ category === 'player' ? '🏃' : category === 'weapon' ? '🔫' : '👤' }}
+                                {{ model.category === 'player' ? '🏃' : model.category === 'weapon' ? '🔫' : '👤' }}
                             </div>
 
                             <!-- Category Badge -->

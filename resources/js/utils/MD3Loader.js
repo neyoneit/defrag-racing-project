@@ -124,7 +124,6 @@ export class MD3Loader {
             for (const pattern of shaderPatterns) {
                 try {
                     await this.loadShaderFile(scriptsUrl + pattern);
-                    console.log(`✅ Loaded shader file: ${scriptsUrl + pattern} (${this.shaders.size} shaders parsed)`);
                     // If we successfully loaded a shader file, break the loop
                     break;
                 } catch (e) {
@@ -253,8 +252,6 @@ export class MD3Loader {
 
                     const shader = this.shaders.get(shaderName);
 
-                    console.log(`🔍 Surface "${surface.name}": texture="${texturePath}", shaderName="${shaderName}", shader found=${!!shader}`);
-
                     if (shader) {
                         // Apply shader properties and load texture
                         this.shaderMaterialSystem.createMaterialForShader(
@@ -265,7 +262,6 @@ export class MD3Loader {
                             // Replace material with shader material
                             mesh.material = shaderMaterial;
                             material.dispose();
-                            console.log(`✅ Applied shader material to ${surface.name}`);
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
                         });
@@ -686,8 +682,6 @@ export class MD3Loader {
         if (!shader || !shader.stages || shader.stages.length === 0) {
             return;
         }
-
-        console.log(`🎨 Applying shader "${shaderName}" to material (${shader.stages.length} stages)`);
 
         // Store shader info on material for animation
         material.userData.shader = shader;

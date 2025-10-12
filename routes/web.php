@@ -55,6 +55,7 @@ Route::get('/models/create', [ModelsController::class, 'create'])->middleware('a
 Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->name('models.show');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->name('models.download');
+Route::post('/models/{id}/generate-thumbnail', [ModelsController::class, 'generateThumbnail'])->middleware('auth')->name('models.generateThumbnail');
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');

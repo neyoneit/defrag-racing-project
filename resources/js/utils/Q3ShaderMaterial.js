@@ -17,11 +17,8 @@ export class Q3ShaderMaterialSystem {
      * Returns an array of materials (one per stage) or a single material
      */
     async createMaterialForShader(shader, defaultTexturePath, surfaceName) {
-        console.log(`🎨 Creating shader material for surface "${surfaceName}", shader: "${shader.name}", texture: "${defaultTexturePath}"`);
-
         if (!shader || !shader.stages || shader.stages.length === 0) {
             // No shader, return basic material
-            console.warn(`⚠️ Shader has no stages for ${surfaceName}`);
             return this.createBasicMaterial();
         }
 
@@ -69,17 +66,14 @@ export class Q3ShaderMaterialSystem {
 
         // For multi-stage shaders, check if there's a better stage to use
         if (shader.stages.length > 1) {
-            console.log(`🔍 Multi-stage shader for ${surfaceName} (${shader.stages.length} stages)`);
             // Find the last stage with a blendFunc and real texture (not environment/lightmap)
             for (let i = shader.stages.length - 1; i >= 0; i--) {
                 const stage = shader.stages[i];
-                console.log(`  Stage ${i}: map=${stage.map}, blendFunc=${stage.blendFunc}, tcGen=${stage.tcGen}`);
                 if (stage.blendFunc && stage.map &&
                     stage.map !== '$lightmap' &&
                     stage.map !== '$whiteimage' &&
                     stage.tcGen !== 'environment') {
                     textureStage = stage;
-                    console.log(`  ✅ Selected stage ${i} for texture`);
                     break;
                 }
             }
@@ -87,7 +81,6 @@ export class Q3ShaderMaterialSystem {
 
         if (textureStage.map && textureStage.map !== '$lightmap' && textureStage.map !== '$whiteimage') {
             texturePath = this.resolveTexturePath(textureStage.map, defaultTexturePath);
-            console.log(`📸 Loading texture for ${surfaceName}: ${texturePath}`);
         }
 
         try {
@@ -106,7 +99,6 @@ export class Q3ShaderMaterialSystem {
                 textureStage.blendFunc.src === 'GL_ONE' &&
                 textureStage.blendFunc.dst === 'GL_ONE')) {
                 material.alphaTest = 0.01;  // Very low threshold - cut out only fully transparent pixels
-                console.log(`  ✅ Using alphaTest=0.01 for additive blending`);
             }
         } catch (error) {
             console.warn('Failed to load shader texture:', error);
@@ -120,15 +112,6 @@ export class Q3ShaderMaterialSystem {
             material.depthWrite = false;
             material.depthTest = true;
         }
-
-        // DEBUG: Log final material properties
-        console.log(`🎭 FINAL MATERIAL for ${surfaceName}:`);
-        console.log(`   transparent: ${material.transparent}`);
-        console.log(`   depthWrite: ${material.depthWrite}`);
-        console.log(`   alphaTest: ${material.alphaTest}`);
-        console.log(`   blending: ${material.blending} (0=No, 1=Normal, 2=Additive, 3=Subtractive, 4=Multiply, 5=Custom)`);
-        console.log(`   side: ${material.side} (0=Front, 1=Back, 2=Double)`);
-        console.log(`   opacity: ${material.opacity}`);
 
         return material;
     }
