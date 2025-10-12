@@ -178,23 +178,40 @@ async function loadModel() {
             model = await loader.load(props.modelPath, props.skinPath);
         }
 
-        // Q3 MD3 models are stored lying down - rotate to stand upright
-        // In Q3, +X is forward, +Z is up. In Three.js, +Y is up.
-        // So we need to rotate -90 degrees around X axis
-        model.rotation.x = -Math.PI / 2;
+        // Q3 MD3 models coordinate system conversion:
+        // Q3: +X = forward, +Z = up, +Y = left
+        // Three.js: +X = right, +Y = up, +Z = backward (towards camera)
+        // Rotate to stand upright and face camera
+        model.rotation.x = -Math.PI / 2;  // Stand upright
+        model.rotation.z = -Math.PI / 2;  // Turn to face camera
 
-        // Center the model
+        // Force matrix update after rotation
+        model.updateMatrixWorld(true);
+
+        // Calculate scale after rotation
         const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        model.position.x = -center.x;
-        model.position.y = -center.y;
-        model.position.z = -center.z;
-
-        // Scale the model to fit the view
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 50 / maxDim;
         model.scale.setScalar(scale);
+
+        // Force matrix update after scale
+        model.updateMatrixWorld(true);
+
+        // Calculate the bounding box center for reference
+        const finalBox = new THREE.Box3().setFromObject(model);
+        const center = finalBox.getCenter(new THREE.Vector3());
+
+        console.log('Model bounding box center before positioning:', center);
+
+        // Simply position the model at camera target (0, 30, 0)
+        // This should work if the model's pivot is at its geometric center
+        model.position.set(0, 30, 0);
+
+        // Recalculate where the visual center ended up
+        const checkBox = new THREE.Box3().setFromObject(model);
+        const visualCenter = checkBox.getCenter(new THREE.Vector3());
+        console.log('Visual center after positioning at (0,30,0):', visualCenter);
 
         scene.add(model);
 

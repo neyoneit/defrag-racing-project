@@ -548,9 +548,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.legs"
                                         :key="animName"
-                                        @mousedown="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName"
-                                        @mouseup="viewer3D.getAnimationManager().playing = false"
-                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        @click="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName; viewer3D.getAnimationManager().playing = true"
                                         :class="[
                                             'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
                                             currentLegsAnim === animName
@@ -570,9 +568,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.torso"
                                         :key="animName"
-                                        @mousedown="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName"
-                                        @mouseup="viewer3D.getAnimationManager().playing = false"
-                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        @click="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName; viewer3D.getAnimationManager().playing = true"
                                         :class="[
                                             'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
                                             currentTorsoAnim === animName
@@ -593,9 +589,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.both"
                                         :key="animName"
-                                        @mousedown="viewer3D.playBothAnimation(animName)"
-                                        @mouseup="viewer3D.getAnimationManager().playing = false"
-                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        @click="viewer3D.playBothAnimation(animName); viewer3D.getAnimationManager().playing = true"
                                         class="px-3 py-2 rounded-lg text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
                                         <div class="font-bold">{{ animName }}</div>
                                         <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
@@ -604,7 +598,7 @@ watch(showWireframe, (newValue) => {
                             </div>
 
                             <div class="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                                💡 HOLD button to play animation, RELEASE to stop. Check if animations are paired correctly!
+                                💡 CLICK button to play animation endlessly. Check if animations are paired correctly!
                             </div>
                         </div>
 
