@@ -87,6 +87,10 @@ const onAnimationsReady = (animations) => {
 
     availableAnimations.value = animations;
     animationsReady.value = true;
+
+    // START IDLE ANIMATIONS IMMEDIATELY (Q3 default state)
+    // This makes the model animate on page load with LEGS_IDLE + TORSO_STAND
+    updateAnimations();
 };
 
 const onSoundsReady = (sounds) => {

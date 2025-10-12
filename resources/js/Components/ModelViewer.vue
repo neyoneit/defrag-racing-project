@@ -178,6 +178,11 @@ async function loadModel() {
             model = await loader.load(props.modelPath, props.skinPath);
         }
 
+        // Q3 MD3 models are stored lying down - rotate to stand upright
+        // In Q3, +X is forward, +Z is up. In Three.js, +Y is up.
+        // So we need to rotate -90 degrees around X axis
+        model.rotation.x = -Math.PI / 2;
+
         // Center the model
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
