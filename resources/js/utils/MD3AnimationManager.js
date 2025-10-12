@@ -20,6 +20,9 @@ export class MD3AnimationManager {
 
         this.playing = false;
 
+        // Animation speed multiplier
+        this.speed = 1.0;
+
         // Sound callback for animation events
         this.soundCallback = null;
 
@@ -43,12 +46,40 @@ export class MD3AnimationManager {
      * @param {string} animName - Animation name (e.g., 'LEGS_WALK', 'LEGS_RUN')
      */
     playLegsAnimation(animName) {
-        if (!this.animations || !this.animations.legs[animName]) {
-            console.warn(`Animation ${animName} not found in legs animations:`, this.animations?.legs ? Object.keys(this.animations.legs) : 'No legs animations');
+        // Check legs category first, then both category (for death animations)
+        let anim = null;
+        if (this.animations?.legs[animName]) {
+            anim = this.animations.legs[animName];
+        } else if (this.animations?.both[animName]) {
+            anim = this.animations.both[animName];
+        } else {
+            console.warn(`Animation ${animName} not found in legs or both animations`);
             return;
         }
 
-        this.currentLegsAnim = this.animations.legs[animName];
+        // Q3 behavior: PM_ContinueLegsAnim() - DON'T restart if already playing same animation
+        if (this.currentLegsAnim && this.currentLegsAnim.name === animName) {
+            // Already playing this animation - just keep it going (don't reset)
+            return;
+        }
+
+        // VALIDATE ANIMATION FITS IN MODEL
+        const lower = this.playerModel.userData.lower;
+        if (lower && lower.children[0] && lower.children[0].userData.surface) {
+            const totalFrames = lower.children[0].userData.surface.vertices.length;
+            const lastFrame = anim.firstFrame + anim.numFrames - 1;
+
+            if (anim.firstFrame >= totalFrames) {
+                console.error(`❌ ${animName} INVALID! firstFrame=${anim.firstFrame} >= totalFrames=${totalFrames}. animation.cfg is WRONG for this model!`);
+                return;  // DON'T PLAY INVALID ANIMATION
+            }
+
+            if (lastFrame >= totalFrames) {
+                console.warn(`⚠️ ${animName} PARTIALLY OUT OF BOUNDS! lastFrame=${lastFrame} >= totalFrames=${totalFrames}. Will clamp.`);
+            }
+        }
+
+        this.currentLegsAnim = anim;
         this.legsFrame = 0;
         this.legsTime = 0;
         this.soundTriggered.legs = false;
@@ -73,12 +104,18 @@ export class MD3AnimationManager {
      * @param {string} animName - Animation name (e.g., 'TORSO_STAND', 'TORSO_ATTACK')
      */
     playTorsoAnimation(animName) {
-        if (!this.animations || !this.animations.torso[animName]) {
-            console.warn(`Animation ${animName} not found in torso animations:`, this.animations?.torso ? Object.keys(this.animations.torso) : 'No torso animations');
+        // Check torso category first, then both category (for death animations)
+        let anim = null;
+        if (this.animations?.torso[animName]) {
+            anim = this.animations.torso[animName];
+        } else if (this.animations?.both[animName]) {
+            anim = this.animations.both[animName];
+        } else {
+            console.warn(`Animation ${animName} not found in torso or both animations`);
             return;
         }
 
-        this.currentTorsoAnim = this.animations.torso[animName];
+        this.currentTorsoAnim = anim;
         this.torsoFrame = 0;
         this.torsoTime = 0;
         this.soundTriggered.torso = false;
@@ -151,11 +188,11 @@ export class MD3AnimationManager {
             // Animated - update time and calculate frame
             const frameTime = 1 / anim.fps;
 
-            // Update time
+            // Update time with speed multiplier
             if (isLegs) {
-                this.legsTime += deltaTime;
+                this.legsTime += deltaTime * this.speed;
             } else {
-                this.torsoTime += deltaTime;
+                this.torsoTime += deltaTime * this.speed;
             }
 
             const currentTime = isLegs ? this.legsTime : this.torsoTime;
@@ -164,16 +201,24 @@ export class MD3AnimationManager {
             const frameFloat = (currentTime / frameTime);
             frame = Math.floor(frameFloat);
 
-            // Handle looping
-            if (anim.loop && frame >= anim.numFrames) {
-                frame = frame % anim.loopingFrames;
+            // Handle looping - match Quake 3 engine behavior
+            if (frame >= anim.numFrames) {
+                frame -= anim.numFrames;
+                if (anim.loopingFrames > 0) {
+                    // Loop back to (numFrames - loopingFrames) position
+                    // Example: numFrames=11, loopingFrames=10 -> loops to frame 1
+                    frame = (frame % anim.loopingFrames) + (anim.numFrames - anim.loopingFrames);
+                } else {
+                    // No looping - clamp to last frame
+                    frame = anim.numFrames - 1;
+                }
+
+                // Reset time to match the new frame
                 if (isLegs) {
                     this.legsTime = frame * frameTime;
                 } else {
                     this.torsoTime = frame * frameTime;
                 }
-            } else if (frame >= anim.numFrames) {
-                frame = anim.numFrames - 1;
             }
         }
 
@@ -194,52 +239,65 @@ export class MD3AnimationManager {
         });
 
         // Update tags for this frame (tags animate with the model!)
-        if (isLegs && modelPart.userData.tags && modelPart.userData.tags[md3Frame]) {
-            // Update upper body position to follow tag_torso
-            const upper = this.playerModel.userData.upper;
-            if (upper) {
-                const torsoTag = modelPart.userData.tags[md3Frame].find(tag => tag.name === 'tag_torso');
-                if (torsoTag) {
-                    // Update upper body position and rotation to match the tag
-                    upper.position.copy(torsoTag.origin);
+        if (isLegs && modelPart.userData.tags) {
+            // If md3Frame exceeds available tags, clamp to last available frame
+            // This prevents wrapping to beginning of model when animation extends beyond tag data
+            const totalTagFrames = modelPart.userData.tags.length;
+            const safeTagFrame = Math.min(md3Frame, totalTagFrames - 1);
 
-                    // Set rotation from tag axis (3x3 rotation matrix)
-                    const matrix = new THREE.Matrix4();
-                    matrix.set(
-                        torsoTag.axis[0].x, torsoTag.axis[1].x, torsoTag.axis[2].x, 0,
-                        torsoTag.axis[0].y, torsoTag.axis[1].y, torsoTag.axis[2].y, 0,
-                        torsoTag.axis[0].z, torsoTag.axis[1].z, torsoTag.axis[2].z, 0,
-                        0, 0, 0, 1
-                    );
+            if (modelPart.userData.tags[safeTagFrame]) {
+                // Update upper body position to follow tag_torso
+                const upper = this.playerModel.userData.upper;
+                if (upper) {
+                    const torsoTag = modelPart.userData.tags[safeTagFrame].find(tag => tag.name === 'tag_torso');
+                    if (torsoTag) {
+                        // Update upper body position and rotation to match the tag
+                        upper.position.copy(torsoTag.origin);
 
-                    const rotation = new THREE.Euler();
-                    rotation.setFromRotationMatrix(matrix);
-                    upper.rotation.copy(rotation);
+                        // Set rotation from tag axis (3x3 rotation matrix)
+                        const matrix = new THREE.Matrix4();
+                        matrix.set(
+                            torsoTag.axis[0].x, torsoTag.axis[1].x, torsoTag.axis[2].x, 0,
+                            torsoTag.axis[0].y, torsoTag.axis[1].y, torsoTag.axis[2].y, 0,
+                            torsoTag.axis[0].z, torsoTag.axis[1].z, torsoTag.axis[2].z, 0,
+                            0, 0, 0, 1
+                        );
+
+                        const rotation = new THREE.Euler();
+                        rotation.setFromRotationMatrix(matrix);
+                        upper.rotation.copy(rotation);
+                    }
                 }
             }
         }
 
         // Update head tag if upper body is animating
-        if (!isLegs && modelPart.userData.tags && modelPart.userData.tags[md3Frame]) {
-            const head = this.playerModel.userData.head;
-            if (head) {
-                const headTag = modelPart.userData.tags[md3Frame].find(tag => tag.name === 'tag_head');
-                if (headTag) {
-                    // Update head position and rotation to match the tag
-                    head.position.copy(headTag.origin);
+        if (!isLegs && modelPart.userData.tags) {
+            // If md3Frame exceeds available tags, clamp to last available frame
+            const totalTagFrames = modelPart.userData.tags.length;
+            const safeTagFrame = Math.min(md3Frame, totalTagFrames - 1);
 
-                    // Set rotation from tag axis
-                    const matrix = new THREE.Matrix4();
-                    matrix.set(
-                        headTag.axis[0].x, headTag.axis[1].x, headTag.axis[2].x, 0,
-                        headTag.axis[0].y, headTag.axis[1].y, headTag.axis[2].y, 0,
-                        headTag.axis[0].z, headTag.axis[1].z, headTag.axis[2].z, 0,
-                        0, 0, 0, 1
-                    );
+            if (modelPart.userData.tags[safeTagFrame]) {
+                const head = this.playerModel.userData.head;
+                if (head) {
+                    const headTag = modelPart.userData.tags[safeTagFrame].find(tag => tag.name === 'tag_head');
+                    if (headTag) {
+                        // Update head position and rotation to match the tag
+                        head.position.copy(headTag.origin);
 
-                    const rotation = new THREE.Euler();
-                    rotation.setFromRotationMatrix(matrix);
-                    head.rotation.copy(rotation);
+                        // Set rotation from tag axis
+                        const matrix = new THREE.Matrix4();
+                        matrix.set(
+                            headTag.axis[0].x, headTag.axis[1].x, headTag.axis[2].x, 0,
+                            headTag.axis[0].y, headTag.axis[1].y, headTag.axis[2].y, 0,
+                            headTag.axis[0].z, headTag.axis[1].z, headTag.axis[2].z, 0,
+                            0, 0, 0, 1
+                        );
+
+                        const rotation = new THREE.Euler();
+                        rotation.setFromRotationMatrix(matrix);
+                        head.rotation.copy(rotation);
+                    }
                 }
             }
         }
@@ -260,10 +318,8 @@ export class MD3AnimationManager {
         // Calculate frame index and clamp to available frames
         let frameIndex = anim.firstFrame + frame;
 
-        // Debug logging (only log first frame)
-        if (frame === 0) {
-            console.log(`🎬 Frame calculation for ${anim.name}: firstFrame=${anim.firstFrame}, frame=${frame}, frameIndex=${frameIndex}, totalFrames=${surface.vertices.length}`)
-        }
+        // Debug logging (disabled - animation is working correctly)
+        // console.log(`🎬 Frame calculation for ${anim.name}: firstFrame=${anim.firstFrame}, frame=${frame}, frameIndex=${frameIndex}, totalFrames=${surface.vertices.length}`)
 
         // If firstFrame itself is beyond available frames, remap the animation to available range
         if (anim.firstFrame >= surface.vertices.length) {
@@ -271,14 +327,10 @@ export class MD3AnimationManager {
             // This handles cases where upper.md3 has fewer frames than animation.cfg expects
             frameIndex = frame % surface.vertices.length;
         } else if (frameIndex >= surface.vertices.length) {
-            // Animation started in valid range but current frame is out of bounds
-            // Loop within available frames
-            const availableFrames = surface.vertices.length - anim.firstFrame;
-            if (availableFrames > 0) {
-                frameIndex = anim.firstFrame + (frame % availableFrames);
-            } else {
-                frameIndex = 0;
-            }
+            // Animation frame exceeds available vertex data
+            // Clamp to last available frame to hold the final pose
+            frameIndex = surface.vertices.length - 1;
+            console.log(`⚠️ ${anim.name} frame ${frame} (md3Frame ${anim.firstFrame + frame}) exceeds vertex data, clamping to ${frameIndex}`);
         }
 
         // Safety check
@@ -325,14 +377,97 @@ export class MD3AnimationManager {
     }
 
     /**
+     * Set animation speed multiplier
+     * @param {number} speed - Speed multiplier (1.0 = normal, 2.0 = 2x speed, etc.)
+     */
+    setSpeed(speed) {
+        this.speed = Math.max(0.1, Math.min(3.0, speed)); // Clamp between 0.1x and 3.0x
+        console.log(`⚡ Animation speed set to ${this.speed.toFixed(1)}x`);
+    }
+
+    /**
+     * Set manual frame for debugging
+     * @param {number} frame - Frame number to display
+     */
+    setManualFrame(frame) {
+        // Stop automatic animation
+        this.playing = false;
+
+        // Update legs to specific frame
+        if (this.currentLegsAnim && this.playerModel.userData.lower) {
+            const clampedFrame = Math.min(frame, this.currentLegsAnim.numFrames - 1);
+            const md3Frame = this.currentLegsAnim.firstFrame + clampedFrame;
+            const lower = this.playerModel.userData.lower;
+
+            console.log(`🎯 Manual frame: ${frame} -> clampedFrame=${clampedFrame}, md3Frame=${md3Frame}, totalTags=${lower.userData.tags?.length || 0}`);
+
+            // Update leg meshes
+            lower.children.forEach(child => {
+                if (child.userData.surface) {
+                    this.updateMeshFrame(child, this.currentLegsAnim, clampedFrame);
+                }
+            });
+
+            // Update torso tag attachment
+            if (lower.userData.tags) {
+                const totalTagFrames = lower.userData.tags.length;
+                let safeTagFrame;
+
+                // If md3Frame exceeds available tags, use the last valid frame
+                if (md3Frame >= totalTagFrames) {
+                    safeTagFrame = totalTagFrames - 1;
+                    console.warn(`⚠️ md3Frame ${md3Frame} exceeds tags, clamping to ${safeTagFrame}`);
+                } else {
+                    safeTagFrame = md3Frame;
+                }
+
+                if (lower.userData.tags[safeTagFrame]) {
+                    const upper = this.playerModel.userData.upper;
+                    if (upper) {
+                        const torsoTag = lower.userData.tags[safeTagFrame].find(tag => tag.name === 'tag_torso');
+                        if (torsoTag) {
+                            upper.position.copy(torsoTag.origin);
+
+                            const matrix = new THREE.Matrix4();
+                            matrix.set(
+                                torsoTag.axis[0].x, torsoTag.axis[1].x, torsoTag.axis[2].x, 0,
+                                torsoTag.axis[0].y, torsoTag.axis[1].y, torsoTag.axis[2].y, 0,
+                                torsoTag.axis[0].z, torsoTag.axis[1].z, torsoTag.axis[2].z, 0,
+                                0, 0, 0, 1
+                            );
+
+                            const rotation = new THREE.Euler();
+                            rotation.setFromRotationMatrix(matrix);
+                            upper.rotation.copy(rotation);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update torso to specific frame
+        if (this.currentTorsoAnim && this.playerModel.userData.upper) {
+            const clampedFrame = Math.min(frame, this.currentTorsoAnim.numFrames - 1);
+            const upper = this.playerModel.userData.upper;
+
+            upper.children.forEach(child => {
+                if (child.userData.surface) {
+                    this.updateMeshFrame(child, this.currentTorsoAnim, clampedFrame);
+                }
+            });
+        }
+    }
+
+    /**
      * Get available animations
      */
     getAvailableAnimations() {
-        if (!this.animations) return { legs: [], torso: [] };
+        if (!this.animations) return { legs: {}, torso: {}, both: {} };
 
         return {
-            legs: Object.keys(this.animations.legs),
-            torso: Object.keys(this.animations.torso)
+            legs: this.animations.legs,
+            torso: this.animations.torso,
+            both: this.animations.both || {}
         };
     }
 }

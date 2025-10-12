@@ -588,9 +588,13 @@ export class MD3Loader {
 
             // Load animation config
             const animConfigUrl = `${baseUrl}animation.cfg`;
+            console.log(`🔍 Loading animation.cfg from: ${animConfigUrl}`);
             const animations = await this.loadAnimationConfig(animConfigUrl);
             if (animations) {
                 playerGroup.userData.animations = animations;
+                console.log(`✅ Loaded ${Object.keys(animations.legs).length} leg animations from ${animConfigUrl}`);
+            } else {
+                console.warn(`❌ Failed to load animation.cfg from ${animConfigUrl}`);
             }
 
             return playerGroup;
@@ -655,7 +659,9 @@ export class MD3Loader {
 
         const lines = content.split('\n');
 
+        let lineNumber = 0;
         for (const line of lines) {
+            lineNumber++;
             const trimmed = line.trim();
 
             // Skip empty lines and comments
@@ -673,16 +679,26 @@ export class MD3Loader {
             // Parse animation line: firstFrame numFrames loopingFrames fps // NAME
             const match = trimmed.match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+\/\/\s*(.+)$/);
             if (match) {
-                const [, firstFrame, numFrames, loopingFrames, fps, name] = match;
+                const [, firstFrame, numFrames, loopingFrames, fps, rawName] = match;
+
+                // STRIP TABS, COMMENTS, AND EXTRA WHITESPACE FROM NAME
+                let name = rawName.trim();
+                // Remove everything after tab or comment
+                name = name.split('\t')[0].trim();
+                name = name.split('(')[0].trim();
+                name = name.split('//')[0].trim();
 
                 const anim = {
-                    name: name.trim(),
+                    name: name,
                     firstFrame: parseInt(firstFrame),
                     numFrames: parseInt(numFrames),
                     loopingFrames: parseInt(loopingFrames),
                     fps: parseInt(fps),
                     loop: parseInt(loopingFrames) > 0
                 };
+
+                // DEBUG: Log each parsed animation with line number
+                console.log(`📝 Line ${lineNumber}: ${name} => f${anim.firstFrame}-${anim.firstFrame + anim.numFrames - 1} (${anim.numFrames} frames, loop=${anim.loopingFrames}, fps=${anim.fps})`);
 
                 // Categorize animation by prefix
                 if (name.startsWith('BOTH_')) {
@@ -692,6 +708,34 @@ export class MD3Loader {
                 } else if (name.startsWith('LEGS_')) {
                     animations.legs[name] = anim;
                 }
+            }
+        }
+
+        // Q3 ENGINE FRAME OFFSET LOGIC (from cg_players.c:210-214)
+        // The animation.cfg defines frame numbers for the COMBINED model,
+        // but MD3 files split the frames: lower.md3 and upper.md3 each contain
+        // BOTH animations (0-82) followed by their specific animations.
+        //
+        // Q3 calculates: skip = LEGS_WALKCR.firstFrame - TORSO_GESTURE.firstFrame
+        // Then subtracts skip from all LEGS animation frames.
+        //
+        // This is because:
+        // - animation.cfg: BOTH(0-82), TORSO(83-145), LEGS(146-294)
+        // - lower.md3: BOTH(0-82), LEGS(83-231) - LEGS frames are offset by -63
+        // - upper.md3: BOTH(0-82), TORSO(83-145) - TORSO frames match cfg
+
+        const firstLegsAnim = animations.legs['LEGS_WALKCR'];
+        const firstTorsoAnim = animations.torso['TORSO_GESTURE'];
+
+        if (firstLegsAnim && firstTorsoAnim) {
+            const skip = firstLegsAnim.firstFrame - firstTorsoAnim.firstFrame;
+            console.log(`🔧 Q3 frame offset: skip = ${firstLegsAnim.firstFrame} - ${firstTorsoAnim.firstFrame} = ${skip}`);
+
+            // Apply offset to all LEGS animations
+            for (const [name, anim] of Object.entries(animations.legs)) {
+                const originalFrame = anim.firstFrame;
+                anim.firstFrame -= skip;
+                console.log(`   ${name}: f${originalFrame} -> f${anim.firstFrame} (offset -${skip})`);
             }
         }
 

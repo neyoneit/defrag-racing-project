@@ -49,7 +49,7 @@ const loader = new MD3Loader();
 
 const loading = ref(true);
 const error = ref(null);
-const availableAnimations = ref({ legs: [], torso: [] });
+const availableAnimations = ref({ legs: {}, torso: {}, both: {} });
 const soundsEnabled = ref(props.enableSounds);
 const soundsLoaded = ref(false);
 
@@ -308,6 +308,47 @@ watch(() => props.modelPath, () => {
     loadModel();
 });
 
+// Method to toggle wireframe mode
+function setWireframe(enabled) {
+    if (!model) {
+        console.warn('setWireframe: model not loaded yet');
+        return;
+    }
+
+    console.log(`Setting wireframe to: ${enabled}`);
+    let meshCount = 0;
+
+    // Only affect the model, not other scene objects like grid
+    model.traverse((child) => {
+        if (child.isMesh && child.material) {
+            // Skip materials that shouldn't be affected (like grid helpers)
+            if (child.isGridHelper || child.type === 'GridHelper') {
+                return;
+            }
+
+            meshCount++;
+            if (Array.isArray(child.material)) {
+                child.material.forEach(mat => {
+                    mat.wireframe = enabled;
+                    mat.needsUpdate = true;
+                });
+            } else {
+                child.material.wireframe = enabled;
+                child.material.needsUpdate = true;
+            }
+        }
+    });
+
+    console.log(`Wireframe updated on ${meshCount} meshes`);
+}
+
+// Method to set auto-rotate
+function setAutoRotate(enabled) {
+    if (controls) {
+        controls.autoRotate = enabled;
+    }
+}
+
 // Expose methods for parent component
 defineExpose({
     getModel: () => model,
@@ -318,6 +359,11 @@ defineExpose({
     getSoundManager: () => soundManager,
     playLegsAnimation: (name) => animationManager?.playLegsAnimation(name),
     playTorsoAnimation: (name) => animationManager?.playTorsoAnimation(name),
+    playBothAnimation: (name) => {
+        // Q3-style: BOTH animations play on BOTH legs and torso simultaneously
+        animationManager?.playLegsAnimation(name);
+        animationManager?.playTorsoAnimation(name);
+    },
     stopAnimations: () => animationManager?.stop(),
     resetToIdle: () => animationManager?.resetToIdle(),
     getAvailableAnimations: () => availableAnimations.value,
@@ -329,7 +375,9 @@ defineExpose({
         soundsEnabled.value = enabled;
         soundManager?.setEnabled(enabled);
     },
-    areSoundsLoaded: () => soundsLoaded.value
+    areSoundsLoaded: () => soundsLoaded.value,
+    setWireframe: setWireframe,
+    setAutoRotate: setAutoRotate
 });
 </script>
 
@@ -369,7 +417,6 @@ defineExpose({
     position: relative;
     width: 100%;
     height: 100%;
-    min-height: 400px;
     overflow: hidden;
     border-radius: 1rem;
 }

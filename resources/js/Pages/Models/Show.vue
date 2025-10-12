@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
 
 const props = defineProps({
@@ -14,12 +14,22 @@ const animationsReady = ref(false);
 const soundsReady = ref(false);
 const soundsEnabled = ref(true);
 const soundVolume = ref(0.5);
-const availableAnimations = ref({ legs: [], torso: [] });
+const availableAnimations = ref({ legs: {}, torso: {}, both: {} });
 const availableSounds = ref([]);
 const currentLegsAnim = ref(null);
 const currentTorsoAnim = ref(null);
 const showWireframe = ref(false);
-const autoRotate = ref(true);
+const autoRotate = ref(false);
+const animationSpeed = ref(1.0); // FPS multiplier
+const manualFrame = ref(0);
+const maxFrames = ref(10); // Will be updated based on animation
+
+// Q3-style input state (mimics usercmd_t and playerState_t)
+const forwardMove = ref(0);  // -127 to 127
+const rightMove = ref(0);    // -127 to 127
+const isCrouching = ref(false); // PMF_DUCKED
+const isAttacking = ref(false); // BUTTON_ATTACK
+const isGesturing = ref(false); // BUTTON_GESTURE
 
 // Get the path to the model file (scan for MD3 files in models/players/* subdirectory)
 const modelFilePath = computed(() => {
@@ -70,9 +80,13 @@ const onViewerError = (error) => {
 };
 
 const onAnimationsReady = (animations) => {
-    animationsReady.value = true;
+    console.log('🎬 Animations ready:', animations);
+    console.log('🦵 LEGS:', Object.entries(animations.legs || {}).map(([k, v]) => `${k}: f${v.firstFrame}-${v.firstFrame + v.numFrames - 1}`));
+    console.log('💪 TORSO:', Object.entries(animations.torso || {}).map(([k, v]) => `${k}: f${v.firstFrame}-${v.firstFrame + v.numFrames - 1}`));
+    console.log('🔀 BOTH:', Object.keys(animations.both || {}));
+
     availableAnimations.value = animations;
-    console.log('Animations ready:', animations);
+    animationsReady.value = true;
 };
 
 const onSoundsReady = (sounds) => {
@@ -81,37 +95,138 @@ const onSoundsReady = (sounds) => {
     console.log('Sounds ready:', sounds);
 };
 
-const playAnimation = (legsAnim, torsoAnim = null) => {
-    if (viewer3D.value) {
-        // Play legs animation
-        if (legsAnim) {
-            viewer3D.value.playLegsAnimation(legsAnim);
-            currentLegsAnim.value = legsAnim;
+// USER WANTS: HOLD = animate, RELEASE = STOP ANIMATION COMPLETELY
+const updateAnimations = () => {
+    if (!viewer3D.value) return;
+
+    const animMgr = viewer3D.value.getAnimationManager();
+    if (!animMgr) return;
+
+    // Check if ANY button is held
+    const anyButtonHeld = forwardMove.value !== 0 || rightMove.value !== 0 || isAttacking.value || isGesturing.value || isCrouching.value;
+
+    if (!anyButtonHeld) {
+        // NO BUTTONS HELD = STOP ALL ANIMATION
+        if (animMgr) {
+            animMgr.playing = false;
         }
-        // Play torso animation if specified
-        if (torsoAnim) {
-            viewer3D.value.playTorsoAnimation(torsoAnim);
-            currentTorsoAnim.value = torsoAnim;
+        return;
+    }
+
+    // AT LEAST ONE BUTTON HELD = PLAY ANIMATION
+    if (animMgr) {
+        animMgr.playing = true;
+    }
+
+    // LEGS ANIMATION (only if moving)
+    let legsAnim = null;
+    if (forwardMove.value !== 0 || rightMove.value !== 0) {
+        // Determine PMF_BACKWARDS_RUN flag (bg_pmove.c line 1920-1925)
+        let backwardsRun = false;
+        if (forwardMove.value < 0) {
+            backwardsRun = true;
+        } else if (forwardMove.value > 0 || (forwardMove.value === 0 && rightMove.value !== 0)) {
+            backwardsRun = false;
+        }
+
+        if (isCrouching.value) {
+            // PM_Footsteps line 1361-1368: Crouched movement
+            if (backwardsRun) {
+                legsAnim = 'LEGS_BACKCR';   // Q3: PM_ContinueLegsAnim(LEGS_BACKCR)
+            } else {
+                legsAnim = 'LEGS_WALKCR';   // Q3: PM_ContinueLegsAnim(LEGS_WALKCR)
+            }
+        } else {
+            // PM_Footsteps line 1380-1398: Normal movement
+            // Note: Q3 checks BUTTON_WALKING here, we don't have that button
+            // Always assume NOT walking (running)
+            if (backwardsRun) {
+                legsAnim = 'LEGS_BACK';     // Q3: PM_ContinueLegsAnim(LEGS_BACK)
+            } else {
+                legsAnim = 'LEGS_RUN';      // Q3: PM_ContinueLegsAnim(LEGS_RUN)
+            }
         }
     }
+
+    // TORSO ANIMATION (always runs)
+    let torsoAnim = 'TORSO_STAND';
+
+    if (isGesturing.value) {
+        torsoAnim = 'TORSO_GESTURE';  // Q3: PM_StartTorsoAnim(TORSO_GESTURE)
+    } else if (isAttacking.value) {
+        torsoAnim = 'TORSO_ATTACK';   // Q3: PM_StartTorsoAnim(TORSO_ATTACK)
+    } else {
+        torsoAnim = 'TORSO_STAND';    // Q3: PM_ContinueTorsoAnim(TORSO_STAND)
+    }
+
+    // Apply animations
+    if (legsAnim) {
+        viewer3D.value.playLegsAnimation(legsAnim);
+        currentLegsAnim.value = legsAnim;
+
+        if (animMgr.currentLegsAnim) {
+            maxFrames.value = animMgr.currentLegsAnim.numFrames;
+            manualFrame.value = 0;
+        }
+    }
+
+    viewer3D.value.playTorsoAnimation(torsoAnim);
+    currentTorsoAnim.value = torsoAnim;
 };
 
-const stopAllAnimations = () => {
-    if (viewer3D.value) {
-        // Stop ALL animations - model freezes completely
-        viewer3D.value.stopAnimations();
-        currentLegsAnim.value = null;
-        currentTorsoAnim.value = null;
-    }
+// Input handlers - Q3-style HOLD buttons (mousedown = start, mouseup = stop)
+const startMovement = (forward, right) => {
+    forwardMove.value = forward;
+    rightMove.value = right;
+    updateAnimations();
 };
 
-const resetToIdle = () => {
-    if (viewer3D.value) {
-        // Return to idle animation (LEGS_IDLE + TORSO_STAND)
-        viewer3D.value.resetToIdle();
-        currentLegsAnim.value = 'LEGS_IDLE';
-        currentTorsoAnim.value = 'TORSO_STAND';
-    }
+const stopMovement = () => {
+    forwardMove.value = 0;
+    rightMove.value = 0;
+    updateAnimations();
+};
+
+// HOLD-based action handlers (like Q3!)
+const startCrouch = () => {
+    isCrouching.value = true;
+    updateAnimations();
+};
+
+const stopCrouch = () => {
+    isCrouching.value = false;
+    updateAnimations();
+};
+
+const startJump = () => {
+    if (!viewer3D.value) return;
+    const jumpAnim = forwardMove.value < 0 ? 'LEGS_JUMPB' : 'LEGS_JUMP';
+    viewer3D.value.playLegsAnimation(jumpAnim);
+    currentLegsAnim.value = jumpAnim;
+};
+
+const stopJump = () => {
+    updateAnimations();
+};
+
+const startAttack = () => {
+    isAttacking.value = true;
+    updateAnimations();
+};
+
+const stopAttack = () => {
+    isAttacking.value = false;
+    updateAnimations();
+};
+
+const startGesture = () => {
+    isGesturing.value = true;
+    updateAnimations();
+};
+
+const stopGesture = () => {
+    isGesturing.value = false;
+    updateAnimations();
 };
 
 const playSound = (soundName) => {
@@ -135,9 +250,39 @@ const updateVolume = (event) => {
     }
 };
 
+const updateAnimationSpeed = (event) => {
+    const speed = parseFloat(event.target.value);
+    animationSpeed.value = speed;
+    if (viewer3D.value && viewer3D.value.getAnimationManager()) {
+        viewer3D.value.getAnimationManager().setSpeed(speed);
+    }
+};
+
+const updateManualFrame = (event) => {
+    const frame = parseInt(event.target.value);
+    manualFrame.value = frame;
+    if (viewer3D.value && viewer3D.value.getAnimationManager()) {
+        viewer3D.value.getAnimationManager().setManualFrame(frame);
+    }
+};
+
 const downloadModel = () => {
     window.location.href = route('models.download', props.model.id);
 };
+
+// Watch for autoRotate changes
+watch(autoRotate, (newValue) => {
+    if (viewer3D.value) {
+        viewer3D.value.setAutoRotate(newValue);
+    }
+});
+
+// Watch for showWireframe changes
+watch(showWireframe, (newValue) => {
+    if (viewer3D.value) {
+        viewer3D.value.setWireframe(newValue);
+    }
+});
 </script>
 
 <template>
@@ -189,7 +334,8 @@ const downloadModel = () => {
                                 @error="onViewerError"
                                 @animations-ready="onAnimationsReady"
                                 @sounds-ready="onSoundsReady"
-                                class="h-[500px] rounded-xl"
+                                class="rounded-xl"
+                                style="height: 900px;"
                             />
 
                             <!-- Fallback if no model file path -->
@@ -222,68 +368,106 @@ const downloadModel = () => {
                                 </div>
                             </div>
 
-                            <!-- Combined Animations -->
-                            <div class="grid grid-cols-3 gap-2">
-                                <!-- Walk -->
-                                <button
-                                    @mousedown="playAnimation('LEGS_WALK', 'TORSO_STAND')"
-                                    @mouseup="stopAllAnimations"
-                                    class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-white rounded-lg text-sm font-semibold transition-colors select-none">
-                                    🚶 Walk
-                                </button>
+                            <!-- Animation Speed Slider -->
+                            <div class="mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-400">Speed:</span>
+                                    <input
+                                        type="range"
+                                        min="0.1"
+                                        max="3.0"
+                                        step="0.1"
+                                        :value="animationSpeed"
+                                        @input="updateAnimationSpeed"
+                                        class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span class="text-xs text-gray-400 w-12">{{ animationSpeed.toFixed(1) }}x</span>
+                                </div>
+                            </div>
 
-                                <!-- Run -->
-                                <button
-                                    @mousedown="playAnimation('LEGS_RUN', 'TORSO_STAND')"
-                                    @mouseup="stopAllAnimations"
-                                    class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-white rounded-lg text-sm font-semibold transition-colors select-none">
-                                    🏃 Run
-                                </button>
+                            <!-- Manual Frame Slider -->
+                            <div class="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-yellow-400 font-semibold">Frame:</span>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        :max="maxFrames - 1"
+                                        step="1"
+                                        :value="manualFrame"
+                                        @input="updateManualFrame"
+                                        class="flex-1 h-2 bg-yellow-500/20 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span class="text-xs text-yellow-400 w-16 font-mono">{{ manualFrame }}/{{ maxFrames - 1 }}</span>
+                                </div>
+                                <div class="text-xs text-yellow-400/70 mt-1">🔍 Debug: Manually step through frames</div>
+                            </div>
 
-                                <!-- Jump -->
-                                <button
-                                    @mousedown="playAnimation('LEGS_JUMP', 'TORSO_STAND')"
-                                    @mouseup="stopAllAnimations"
-                                    class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-white rounded-lg text-sm font-semibold transition-colors select-none">
-                                    ⬆️ Jump
-                                </button>
+                            <!-- Q3-Style Input Simulator -->
+                            <div>
+                                <h5 class="text-xs font-bold text-blue-400 mb-2">Q3 INPUT SIMULATOR</h5>
 
-                                <!-- Crouch Walk -->
-                                <button
-                                    @mousedown="playAnimation('LEGS_WALKCR', 'TORSO_STAND')"
-                                    @mouseup="stopAllAnimations"
-                                    class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-white rounded-lg text-sm font-semibold transition-colors select-none">
-                                    🦆 Crouch Walk
-                                </button>
+                                <!-- Movement Controls -->
+                                <div class="grid grid-cols-3 gap-2 mb-3">
+                                    <div class="col-span-3 text-xs text-gray-400 mb-1">Movement (HOLD to move, like Q3!)</div>
+                                    <div></div>
+                                    <button @mousedown="startMovement(127, 0)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        forwardMove === 127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
+                                    ]" class="text-white">
+                                        ⬆️ Forward (W)
+                                    </button>
+                                    <div></div>
 
-                                <!-- Crouch Idle -->
-                                <button
-                                    @mousedown="playAnimation('LEGS_IDLECR', 'TORSO_STAND')"
-                                    @mouseup="stopAllAnimations"
-                                    class="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-white rounded-lg text-sm font-semibold transition-colors select-none">
-                                    ⬇️ Crouch
-                                </button>
+                                    <button @mousedown="startMovement(0, -127)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        rightMove === -127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
+                                    ]" class="text-white">
+                                        ⬅️ Left (A)
+                                    </button>
+                                    <button @mousedown="startMovement(-127, 0)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        forwardMove === -127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
+                                    ]" class="text-white">
+                                        ⬇️ Back (S)
+                                    </button>
+                                    <button @mousedown="startMovement(0, 127)" @mouseup="stopMovement" @mouseleave="stopMovement" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        rightMove === 127 ? 'bg-blue-600/70 border-blue-500/70' : 'bg-blue-600/30 hover:bg-blue-600/50 border-blue-500/30'
+                                    ]" class="text-white">
+                                        ➡️ Right (D)
+                                    </button>
+                                </div>
 
-                                <!-- Gesture -->
-                                <button
-                                    @click="playAnimation('LEGS_IDLE', 'TORSO_GESTURE')"
-                                    class="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-white rounded-lg text-sm font-semibold transition-colors">
-                                    👋 Gesture
-                                </button>
+                                <!-- Action Controls -->
+                                <div class="grid grid-cols-4 gap-2">
+                                    <div class="col-span-4 text-xs text-gray-400 mb-1">Actions (HOLD!)</div>
+                                    <button @mousedown="startCrouch" @mouseup="stopCrouch" @mouseleave="stopCrouch" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        isCrouching ? 'bg-yellow-600/50 border-yellow-500/50' : 'bg-yellow-600/30 hover:bg-yellow-600/50 border-yellow-500/30'
+                                    ]" class="text-white">
+                                        🦆 Crouch
+                                    </button>
+                                    <button @mousedown="startJump" @mouseup="stopJump" @mouseleave="stopJump" class="px-4 py-3 bg-green-600/30 hover:bg-green-600/50 text-white rounded-lg text-sm font-semibold transition-colors border border-green-500/30">
+                                        ⬆️ Jump
+                                    </button>
+                                    <button @mousedown="startAttack" @mouseup="stopAttack" @mouseleave="stopAttack" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        isAttacking ? 'bg-red-600/70 border-red-500/70' : 'bg-red-600/30 hover:bg-red-600/50 border-red-500/30'
+                                    ]" class="text-white">
+                                        ⚔️ Attack
+                                    </button>
+                                    <button @mousedown="startGesture" @mouseup="stopGesture" @mouseleave="stopGesture" :class="[
+                                        'px-4 py-3 rounded-lg text-sm font-semibold transition-colors border',
+                                        isGesturing ? 'bg-purple-600/70 border-purple-500/70' : 'bg-purple-600/30 hover:bg-purple-600/50 border-purple-500/30'
+                                    ]" class="text-white">
+                                        👋 Gesture
+                                    </button>
+                                </div>
 
-                                <!-- Attack -->
-                                <button
-                                    @click="playAnimation('LEGS_IDLE', 'TORSO_ATTACK')"
-                                    class="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-white rounded-lg text-sm font-semibold transition-colors">
-                                    ⚔️ Attack
-                                </button>
-
-                                <!-- Idle -->
-                                <button
-                                    @click="resetToIdle"
-                                    class="px-3 py-2 bg-gray-500/20 hover:bg-gray-500/30 text-white rounded-lg text-sm font-semibold transition-colors">
-                                    🧍 Idle
-                                </button>
+                                <div class="text-xs text-gray-400 mt-2">
+                                    HOLD ALL buttons to animate! Release to STOP animation completely!
+                                </div>
                             </div>
                         </div>
 
@@ -349,6 +533,77 @@ const downloadModel = () => {
                                     ({{ model.author_email }})
                                 </span>
                             </p>
+                        </div>
+
+                        <!-- RAW ANIMATION BUTTONS -->
+                        <div v-if="animationsReady" class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                            <h3 class="text-lg font-bold text-white mb-3">🔍 ALL ANIMATIONS (Raw Test)</h3>
+
+                            <!-- LEGS ANIMATIONS -->
+                            <div class="mb-4">
+                                <h4 class="text-sm font-bold text-blue-400 mb-2">LEGS (Lower.md3) - {{ Object.keys(availableAnimations.legs || {}).length }} animations</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.legs"
+                                        :key="animName"
+                                        @mousedown="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName"
+                                        @mouseup="viewer3D.getAnimationManager().playing = false"
+                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        :class="[
+                                            'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
+                                            currentLegsAnim === animName
+                                                ? 'bg-blue-600/70 border-blue-500/70 text-white'
+                                                : 'bg-blue-600/20 border-blue-500/30 text-blue-300 hover:bg-blue-600/40'
+                                        ]">
+                                        <div class="font-bold">{{ animName }}</div>
+                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- TORSO ANIMATIONS -->
+                            <div class="mb-4">
+                                <h4 class="text-sm font-bold text-green-400 mb-2">TORSO (Upper.md3) - {{ Object.keys(availableAnimations.torso || {}).length }} animations</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.torso"
+                                        :key="animName"
+                                        @mousedown="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName"
+                                        @mouseup="viewer3D.getAnimationManager().playing = false"
+                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        :class="[
+                                            'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
+                                            currentTorsoAnim === animName
+                                                ? 'bg-green-600/70 border-green-500/70 text-white'
+                                                : 'bg-green-600/20 border-green-500/30 text-green-300 hover:bg-green-600/40'
+                                        ]">
+                                        <div class="font-bold">{{ animName }}</div>
+                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- BOTH ANIMATIONS (death animations - affect both legs and torso) -->
+                            <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0" class="mb-4">
+                                <h4 class="text-sm font-bold text-purple-400 mb-2">BOTH (Death animations) - {{ Object.keys(availableAnimations.both || {}).length }} animations</h4>
+                                <div class="text-xs text-gray-400 mb-2">💀 BOTH animations play on BOTH legs AND torso simultaneously (Q3-style death animations)</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.both"
+                                        :key="animName"
+                                        @mousedown="viewer3D.playBothAnimation(animName)"
+                                        @mouseup="viewer3D.getAnimationManager().playing = false"
+                                        @mouseleave="viewer3D.getAnimationManager().playing = false"
+                                        class="px-3 py-2 rounded-lg text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
+                                        <div class="font-bold">{{ animName }}</div>
+                                        <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                                💡 HOLD button to play animation, RELEASE to stop. Check if animations are paired correctly!
+                            </div>
                         </div>
 
                         <!-- Description -->
