@@ -379,6 +379,27 @@ watch(showWireframe, (newValue) => {
         viewer3D.value.setWireframe(newValue);
     }
 });
+
+// Model type badge helpers
+const getModelTypeLabel = (type) => {
+    const labels = {
+        'complete': 'Complete Model',
+        'skin': 'Skin Pack',
+        'sound': 'Sound Pack',
+        'mixed': 'Mixed Pack'
+    };
+    return labels[type] || type;
+};
+
+const getModelTypeBadgeClass = (type) => {
+    const classes = {
+        'complete': 'bg-green-500/20 text-green-400 border border-green-500/30',
+        'skin': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+        'sound': 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
+        'mixed': 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+    };
+    return classes[type] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+};
 </script>
 
 <template>
@@ -554,12 +575,22 @@ watch(showWireframe, (newValue) => {
                                     {{ model.category }}
                                 </span>
                             </div>
-                            <p v-if="model.author" class="text-gray-400">
-                                Created by <span class="text-white font-semibold">{{ model.author }}</span>
-                                <span v-if="model.author_email" class="text-gray-500">
-                                    ({{ model.author_email }})
-                                </span>
-                            </p>
+                            <div class="text-gray-400">
+                                <p v-if="model.author">
+                                    Created by <span class="text-white font-semibold">{{ model.author }}</span>
+                                    <span v-if="model.author_email" class="text-gray-500">
+                                        ({{ model.author_email }})
+                                    </span>
+                                </p>
+                                <div class="flex items-center gap-3 mt-2">
+                                    <p v-if="model.base_model" class="text-sm text-gray-500">
+                                        Based on <span class="text-gray-300 font-semibold">{{ model.base_model }}</span>
+                                    </p>
+                                    <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
+                                        {{ getModelTypeLabel(model.model_type) }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- ANIMATION BUTTONS -->

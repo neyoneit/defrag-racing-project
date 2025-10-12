@@ -14,6 +14,8 @@ class PlayerModel extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'base_model',
+        'model_type',
         'description',
         'category',
         'author',

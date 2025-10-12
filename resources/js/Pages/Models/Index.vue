@@ -21,6 +21,26 @@ const switchCategory = (category) => {
         preserveScroll: true,
     });
 };
+
+const getModelTypeLabel = (type) => {
+    const labels = {
+        'complete': 'Complete Model',
+        'skin': 'Skin Pack',
+        'sound': 'Sound Pack',
+        'mixed': 'Mixed Pack'
+    };
+    return labels[type] || type;
+};
+
+const getModelTypeBadgeClass = (type) => {
+    const classes = {
+        'complete': 'bg-green-500/20 text-green-400 border border-green-500/30',
+        'skin': 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+        'sound': 'bg-purple-500/20 text-purple-400 border border-purple-500/30',
+        'mixed': 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+    };
+    return classes[type] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+};
 </script>
 
 <template>
@@ -34,15 +54,29 @@ const switchCategory = (category) => {
                             <h1 class="text-4xl font-black text-white mb-2">Quake 3 Models</h1>
                             <p class="text-gray-400">Browse and download custom player, weapon, and shadow models</p>
                         </div>
-                        <Link v-if="$page.props.auth.user" :href="route('models.create')"
-                              class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-blue-500/50">
-                            <span class="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Upload Model
-                            </span>
-                        </Link>
+                        <div v-if="$page.props.auth.user" class="flex gap-3">
+                            <!-- Bulk Upload (Admin Only) -->
+                            <Link v-if="$page.props.auth.user.admin" :href="route('models.bulk-upload')"
+                                  class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-purple-500/50">
+                                <span class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
+                                    </svg>
+                                    Bulk Upload
+                                </span>
+                            </Link>
+
+                            <!-- Single Upload -->
+                            <Link :href="route('models.create')"
+                                  class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-blue-500/50">
+                                <span class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Upload Model
+                                </span>
+                            </Link>
+                        </div>
                     </div>
 
                     <!-- Category Tabs -->
@@ -101,9 +135,15 @@ const switchCategory = (category) => {
                                 {{ model.name }}
                             </h3>
 
-                            <p v-if="model.author" class="text-sm text-gray-400 mb-3">
-                                by {{ model.author }}
-                            </p>
+                            <div class="text-sm text-gray-400 mb-3">
+                                <p v-if="model.author">by {{ model.author }}</p>
+                                <p v-if="model.base_model" class="text-xs text-gray-500">based on {{ model.base_model }}</p>
+                                <div v-if="model.model_type" class="mt-2">
+                                    <span :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
+                                        {{ getModelTypeLabel(model.model_type) }}
+                                    </span>
+                                </div>
+                            </div>
 
                             <!-- Stats -->
                             <div class="flex items-center gap-4 text-xs text-gray-500">

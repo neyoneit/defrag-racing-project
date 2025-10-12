@@ -198,10 +198,23 @@ class ModelsController extends Controller
                 // Parse metadata and available skins
                 $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
 
+                // Check if this model has MD3 files (complete custom model) or just skins
+                $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+
+                // Determine base_model:
+                // - If has MD3 files: this IS a base model (use its own name)
+                // - If no MD3 files: this is a skin for an existing base model
+                $baseModel = $hasMd3Files ? $finalModelName : $detectedModelName;
+
+                // Determine model type based on content
+                $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+
                 // Create model record
                 $model = PlayerModel::create([
                     'user_id' => $userId,
                     'name' => $finalModelName,
+                    'base_model' => $baseModel,
+                    'model_type' => $modelType,
                     'description' => $request->description,
                     'category' => $request->category,
                     'author' => $metadata['author'] ?? null,
@@ -225,6 +238,206 @@ class ModelsController extends Controller
     }
 
     /**
+     * Show bulk upload form (admin only)
+     */
+    public function bulkUploadForm()
+    {
+        // Check if user is admin
+        if (!Auth::user()->admin) {
+            abort(403, 'Only admins can bulk upload models');
+        }
+
+        return Inertia::render('Models/BulkUpload');
+    }
+
+    /**
+     * Handle bulk upload of multiple PK3 files (admin only)
+     * Automatically extracts metadata from files without requiring manual input
+     */
+    public function bulkUpload(Request $request)
+    {
+        // Check if user is admin
+        if (!Auth::user()->admin) {
+            abort(403, 'Only admins can bulk upload models');
+        }
+
+        $request->validate([
+            'model_files' => 'required|array|min:1',
+            'model_files.*' => 'required|file|mimes:zip,pk3|max:51200', // 50MB max per file
+            'category' => 'required|in:player,weapon,shadow',
+        ]);
+
+        $uploadedFiles = $request->file('model_files');
+        $userId = Auth::id();
+        $category = $request->category;
+        $results = [
+            'success' => [],
+            'failed' => [],
+        ];
+
+        foreach ($uploadedFiles as $uploadedFile) {
+            try {
+                $originalName = $uploadedFile->getClientOriginalName();
+                $slug = \Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '-' . time() . '-' . rand(1000, 9999);
+
+                // Extracted files go to PUBLIC storage
+                $extractPath = storage_path('app/public/models/extracted/' . $slug);
+
+                // Original PK3 goes to PRIVATE storage
+                $pk3StoragePath = storage_path('app/models/pk3s');
+                if (!file_exists($pk3StoragePath)) {
+                    mkdir($pk3StoragePath, 0755, true);
+                }
+
+                // Store original file temporarily
+                $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension());
+                $tempFullPath = storage_path('app/' . $tempPath);
+
+                // Create extraction directory
+                if (!file_exists($extractPath)) {
+                    mkdir($extractPath, 0755, true);
+                }
+
+                $zip = new ZipArchive;
+                $pk3Found = false;
+                $pk3PathForDownload = null;
+
+                if ($zip->open($tempFullPath) === TRUE) {
+                    // Check if this is a ZIP containing PK3 files
+                    $containsPK3 = false;
+                    $pk3FileName = null;
+
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+                        $basename = basename($filename);
+                        $ext = pathinfo($basename, PATHINFO_EXTENSION);
+                        $hasSlash = strpos($filename, '/');
+
+                        if ($ext === 'pk3' && $hasSlash === false) {
+                            $containsPK3 = true;
+                            $pk3FileName = $filename;
+                            break;
+                        }
+                    }
+
+                    if ($containsPK3 && $pk3FileName) {
+                        // Extract ZIP to find PK3
+                        $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
+                        if (!file_exists($tempExtract)) {
+                            mkdir($tempExtract, 0755, true);
+                        }
+
+                        $zip->extractTo($tempExtract);
+                        $zip->close();
+
+                        $pk3File = $tempExtract . '/' . $pk3FileName;
+
+                        if (file_exists($pk3File)) {
+                            $pk3Found = true;
+                            $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                            copy($pk3File, storage_path('app/' . $pk3PathForDownload));
+
+                            // Extract the PK3 contents
+                            $pk3Zip = new ZipArchive;
+                            if ($pk3Zip->open($pk3File) === TRUE) {
+                                $pk3Zip->extractTo($extractPath);
+                                $pk3Zip->close();
+                            }
+                        }
+
+                        $this->deleteDirectory($tempExtract);
+                    } else {
+                        // Direct PK3 file
+                        $hasProperStructure = false;
+
+                        for ($i = 0; $i < $zip->numFiles; $i++) {
+                            $filename = $zip->getNameIndex($i);
+                            if (strpos($filename, 'models/players/') === 0 || strpos($filename, 'sound/player/') === 0) {
+                                $hasProperStructure = true;
+                                break;
+                            }
+                        }
+
+                        if ($hasProperStructure) {
+                            $zip->extractTo($extractPath);
+                            $zip->close();
+                            $pk3Found = true;
+
+                            $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                            copy($tempFullPath, storage_path('app/' . $pk3PathForDownload));
+                        } else {
+                            $zip->close();
+                        }
+                    }
+
+                    Storage::delete($tempPath);
+
+                    if ($pk3Found) {
+                        // Auto-detect model name
+                        $detectedModelName = $this->detectModelName($extractPath);
+
+                        if (!$detectedModelName) {
+                            $this->deleteDirectory($extractPath);
+                            $results['failed'][] = [
+                                'file' => $originalName,
+                                'error' => 'Could not find model folder'
+                            ];
+                            continue;
+                        }
+
+                        // Use original filename as display name (without extension)
+                        $displayName = pathinfo($originalName, PATHINFO_FILENAME);
+
+                        // Parse metadata
+                        $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+                        $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+                        $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
+                        $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+
+                        // Create model record
+                        $model = PlayerModel::create([
+                            'user_id' => $userId,
+                            'name' => $displayName,
+                            'base_model' => $baseModel,
+                            'model_type' => $modelType,
+                            'description' => $metadata['author'] ? "Created by {$metadata['author']}" : null,
+                            'category' => $category,
+                            'author' => $metadata['author'] ?? null,
+                            'author_email' => $metadata['author_email'] ?? null,
+                            'file_path' => 'models/extracted/' . $slug,
+                            'zip_path' => $pk3PathForDownload,
+                            'poly_count' => $metadata['poly_count'] ?? null,
+                            'vert_count' => $metadata['vert_count'] ?? null,
+                            'has_sounds' => $metadata['has_sounds'] ?? false,
+                            'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                            'available_skins' => json_encode($metadata['available_skins'] ?? ['default']),
+                            'approved' => true, // Auto-approve for admin bulk uploads
+                        ]);
+
+                        $results['success'][] = [
+                            'file' => $originalName,
+                            'model' => $model->name,
+                            'id' => $model->id,
+                        ];
+                    } else {
+                        $results['failed'][] = [
+                            'file' => $originalName,
+                            'error' => 'Not a valid PK3 file'
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                $results['failed'][] = [
+                    'file' => $uploadedFile->getClientOriginalName(),
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        return back()->with('bulkResults', $results);
+    }
+
+    /**
      * Detect model name from extracted files
      * Looks for models/players/{name}/ directory
      */
@@ -245,6 +458,79 @@ class ModelsController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Check if model directory contains MD3 files (complete model)
+     * Returns true if has head.md3, upper.md3, lower.md3
+     * Returns false if only has skins/textures (skin-only upload)
+     */
+    private function checkForMd3Files($extractPath, $modelName)
+    {
+        $modelPath = $extractPath . '/models/players/' . $modelName;
+
+        if (!is_dir($modelPath)) {
+            return false;
+        }
+
+        // Check for the three required MD3 files
+        $hasHead = file_exists($modelPath . '/head.md3');
+        $hasUpper = file_exists($modelPath . '/upper.md3');
+        $hasLower = file_exists($modelPath . '/lower.md3');
+
+        // Model is complete if it has all three MD3 files
+        return $hasHead && $hasUpper && $hasLower;
+    }
+
+    /**
+     * Determine the type of model based on its contents
+     * Types:
+     * - complete: Has MD3 files (full custom model)
+     * - skin: Only has skin files (.skin, .tga, .jpg) - no MD3
+     * - sound: Only has sound files - no MD3, no skins
+     * - mixed: Has combination (skins + sounds, or any other mix without MD3)
+     */
+    private function determineModelType($extractPath, $modelName, $hasMd3Files, $metadata)
+    {
+        // If has MD3 files, it's a complete model
+        if ($hasMd3Files) {
+            return 'complete';
+        }
+
+        // Otherwise check what content it has
+        $hasSkins = false;
+        $hasSounds = $metadata['has_sounds'] ?? false;
+        $hasShaders = false;
+
+        // Check for skin files
+        $modelPath = $extractPath . '/models/players/' . $modelName;
+        if (is_dir($modelPath)) {
+            $skinFiles = glob($modelPath . '/*.skin');
+            $textureFiles = array_merge(
+                glob($modelPath . '/*.tga'),
+                glob($modelPath . '/*.jpg'),
+                glob($modelPath . '/*.jpeg'),
+                glob($modelPath . '/*.png')
+            );
+            $hasSkins = !empty($skinFiles) || !empty($textureFiles);
+        }
+
+        // Check for shader files
+        $scriptsPath = $extractPath . '/scripts';
+        if (is_dir($scriptsPath)) {
+            $shaderFiles = glob($scriptsPath . '/*.shader');
+            $hasShaders = !empty($shaderFiles);
+        }
+
+        // Determine type based on content
+        if ($hasSkins && !$hasSounds && !$hasShaders) {
+            return 'skin';
+        } elseif ($hasSounds && !$hasSkins && !$hasShaders) {
+            return 'sound';
+        } else {
+            // Has multiple types of content (skins + sounds, skins + shaders, etc.)
+            return 'mixed';
+        }
     }
 
     /**

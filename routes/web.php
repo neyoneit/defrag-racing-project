@@ -53,6 +53,8 @@ Route::get('/bundles/{id?}/{slug?}', [BundlesController::class, 'index'])->name(
 Route::get('/models', [ModelsController::class, 'index'])->name('models.index');
 Route::get('/models/create', [ModelsController::class, 'create'])->middleware('auth')->name('models.create');
 Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
+Route::get('/models/bulk-upload', [ModelsController::class, 'bulkUploadForm'])->middleware('auth')->name('models.bulk-upload');
+Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->middleware('auth')->name('models.bulk-upload.store');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->name('models.show');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->name('models.download');
 Route::post('/models/{id}/generate-thumbnail', [ModelsController::class, 'generateThumbnail'])->middleware('auth')->name('models.generateThumbnail');

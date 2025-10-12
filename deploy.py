@@ -46,6 +46,9 @@ def pipeline_cmds(name):
         "php artisan scout:import 'App\\Models\\Demo'",
         "php artisan scout:import 'App\\Models\\Map'",
         "php artisan scout:import 'App\\Models\\Player'",
+        # Link public/baseq3 from deploy directory (base Q3 game files)
+        f"rm -rf {PROJECT_PATH}/releases/{name}/public/baseq3",
+        f"ln -s {PROJECT_PATH}/deploy/baseq3 {PROJECT_PATH}/releases/{name}/public/baseq3",
         f"rm {PROJECT_PATH}/current",
         f"ln -s {PROJECT_PATH}/releases/{name} {PROJECT_PATH}/current",
         'supervisorctl restart "defrag-racing-octane:*"',

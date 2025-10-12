@@ -44,11 +44,17 @@ PRODUCTION_CREDENTIALS.md
 # Don't commit model files
 /public/models/
 
+# Don't commit base Q3 game files (pak0.pk3 & pak2.pk3 extractions)
+/public/baseq3/
+
 # Don't commit pk3 files (Quake 3 archives)
 *.pk3
 
 # Don't commit extracted model files from storage
 /storage/models/
+
+# Don't commit pak files in storage (upload manually on production)
+/storage/app/pak*.pk3
 
 # Don't commit test files (zip, pk3, txt from extractions)
 /public/test/

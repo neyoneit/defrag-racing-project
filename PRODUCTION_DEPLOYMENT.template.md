@@ -523,3 +523,92 @@ php artisan tinker --execute="Storage::disk('s3')->put('test.txt', 'test');"
 # Monitor queue
 php artisan queue:monitor redis:demos --max=100
 ```
+
+---
+
+## Models System Deployment
+
+### One-Time Setup (Required for Q3 Models Feature)
+
+The models system requires base Quake 3 game files (pak0.pk3 and pak2.pk3) to be installed on production.
+
+**See detailed guide in:** `MODELS_DEPLOYMENT.md`
+
+#### Quick Setup Steps:
+
+1. **Upload pak files to production:**
+   ```bash
+   # From your local machine
+   scp pak0.pk3 pak2.pk3 user@production-vps:/var/www/defrag-racing-project/production/deploy/storage/app/
+   ```
+
+2. **Extract pak files on production:**
+   ```bash
+   # SSH to production
+   ssh user@production-vps
+   cd /var/www/defrag-racing-project/production/current
+
+   # Extract base Q3 files to deploy/baseq3/ (persistent across deployments)
+   php artisan setup:base-q3
+   ```
+
+3. **Verify installation:**
+   ```bash
+   ls /var/www/defrag-racing-project/production/deploy/baseq3/models/players/
+   # Should show 31 base model directories
+   ```
+
+#### Directory Structure:
+
+```
+/var/www/defrag-racing-project/production/
+├── deploy/
+│   ├── storage/              # Shared storage (models uploads)
+│   │   └── app/
+│   │       ├── pak0.pk3     # Base Q3 game data (upload once)
+│   │       ├── pak2.pk3     # Team Arena content (upload once)
+│   │       └── models/      # User-uploaded model PK3 files
+│   ├── baseq3/              # Extracted base Q3 files (run setup:base-q3 once)
+│   │   ├── models/players/  # 31 base player models (MD3 + textures)
+│   │   ├── sound/           # All base sounds
+│   │   ├── textures/        # All base textures
+│   │   └── scripts/         # Shader definitions
+│   └── .env                 # Production config
+├── releases/
+│   └── defrag-racing-project-1/
+│       └── public/
+│           └── baseq3 -> ../../deploy/baseq3  # Symlinked by deploy.py
+└── current -> releases/defrag-racing-project-1
+```
+
+#### How It Works:
+
+- **deploy.py** automatically creates symlink: `public/baseq3 -> deploy/baseq3`
+- Base Q3 files persist across deployments (only extracted once)
+- User-uploaded models go to `storage/app/models/` (also persistent)
+- 3D viewer uses base files as fallback for skin-only uploads
+
+#### Troubleshooting:
+
+**Models not loading in 3D viewer:**
+```bash
+# Check baseq3 symlink exists
+ls -la /var/www/defrag-racing-project/production/current/public/baseq3
+# Should show: baseq3 -> ../../deploy/baseq3
+
+# Check base models are extracted
+ls /var/www/defrag-racing-project/production/deploy/baseq3/models/players/
+# Should show 31 directories
+```
+
+**Re-extract pak files if needed:**
+```bash
+cd /var/www/defrag-racing-project/production/current
+php artisan setup:base-q3
+```
+
+**Permissions issues:**
+```bash
+sudo chown -R www-data:www-data /var/www/defrag-racing-project/production/deploy/baseq3
+sudo chmod -R 755 /var/www/defrag-racing-project/production/deploy/baseq3
+```
