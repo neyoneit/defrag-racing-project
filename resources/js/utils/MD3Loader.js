@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader.js';
+import { Q3ShaderParser } from './Q3ShaderParser.js';
+import { Q3ShaderMaterialSystem } from './Q3ShaderMaterial.js';
 
 /**
  * MD3 (Quake 3 Model) Loader for Three.js
@@ -12,6 +14,9 @@ export class MD3Loader {
         this.textureLoader = new THREE.TextureLoader();
         this.tgaLoader = new TGALoader();
         this.skinData = null; // Stores parsed skin file data
+        this.shaderParser = new Q3ShaderParser();
+        this.shaders = new Map(); // Stores loaded shader definitions
+        this.shaderMaterialSystem = new Q3ShaderMaterialSystem(this);
     }
 
     /**
@@ -43,6 +48,91 @@ export class MD3Loader {
         } catch (error) {
             console.warn('Failed to load skin file:', error);
             this.skinData = null;
+        }
+    }
+
+    /**
+     * Load and parse shader files
+     * @param {string} url - The URL to the .shader file
+     */
+    async loadShaderFile(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const text = await response.text();
+        this.shaderParser.parseShaderFile(text);
+        this.shaders = this.shaderParser.getAllShaders();
+    }
+
+    /**
+     * Load all shader files from a model directory
+     * @param {string} baseUrl - Base URL to the model directory
+     */
+    async loadShaders(baseUrl) {
+        try {
+            // Try to load shader files from scripts directory
+            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+
+            // Fetch directory listing to find .shader files
+            // Since we can't list directories, we'll try common shader file patterns
+            const shaderPatterns = [
+                'model.shader',
+                'models.shader',
+                'player.shader',
+                'players.shader'
+            ];
+
+            for (const pattern of shaderPatterns) {
+                try {
+                    await this.loadShaderFile(scriptsUrl + pattern);
+                } catch (e) {
+                    // Ignore, try next pattern
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load shaders:', error);
+        }
+    }
+
+    /**
+     * Load shader files for a specific model
+     * @param {string} baseUrl - Base URL to the model directory (may or may not end with /)
+     * @param {string} modelName - Name of the model
+     */
+    async loadShadersForModel(baseUrl, modelName) {
+        try {
+            // Ensure baseUrl ends with /
+            if (!baseUrl.endsWith('/')) {
+                baseUrl += '/';
+            }
+
+            // Get the scripts directory URL
+            // baseUrl format: /storage/models/extracted/xxx/models/players/niria/
+            // We want: /storage/models/extracted/xxx/scripts/
+            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+
+            // Try loading shader file with model name first (e.g., niria.shader)
+            const shaderPatterns = [
+                `${modelName}.shader`,
+                'model.shader',
+                'models.shader',
+                'player.shader',
+                'players.shader'
+            ];
+
+            for (const pattern of shaderPatterns) {
+                try {
+                    await this.loadShaderFile(scriptsUrl + pattern);
+                    console.log(`✅ Loaded shader file: ${scriptsUrl + pattern} (${this.shaders.size} shaders parsed)`);
+                    // If we successfully loaded a shader file, break the loop
+                    break;
+                } catch (e) {
+                    // Silently ignore, try next pattern
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load shaders for model:', error);
         }
     }
 
@@ -128,11 +218,11 @@ export class MD3Loader {
         // Parse surfaces (mesh geometry)
         const surfaces = this.parseSurfaces(view, header);
 
-        // Create meshes for each surface
+        // Create meshes for each surface (non-async, textures load in background)
         surfaces.forEach(surface => {
             const geometry = this.createGeometry(surface); // Use first frame
             const material = new THREE.MeshPhongMaterial({
-                color: 0xffffff, // White color so texture shows correctly
+                color: 0xffffff,
                 side: THREE.DoubleSide,
             });
 
@@ -141,17 +231,50 @@ export class MD3Loader {
             mesh.userData.surface = surface;
             mesh.userData.frames = frames;
 
-            // Load texture if skin data is available
+            // Load texture and apply shaders asynchronously
             if (this.skinData && this.skinData[surface.name]) {
                 const texturePath = this.skinData[surface.name];
 
-                // Skip nodraw surfaces - they're meant to be invisible in Quake 3
+                // Skip nodraw surfaces
                 if (texturePath.includes('/nodraw') || texturePath.includes('common/nodraw')) {
                     mesh.visible = false;
                 } else {
-                    this.loadTextureForMesh(texturePath, material).catch(err => {
-                        console.warn(`Failed to load texture for ${surface.name}:`, err);
-                    });
+                    // Extract shader name from texture path
+                    // Remove extension first
+                    let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
+
+                    // Normalize to Q3 format: extract just "models/players/xxx/texture" part
+                    // texturePath: /storage/models/extracted/xxx/models/players/niria/slashskate.TGA
+                    // shaderName should be: models/players/niria/slashskate
+                    const match = shaderName.match(/models\/players\/[^\/]+\/.+$/);
+                    if (match) {
+                        shaderName = match[0];
+                    }
+
+                    const shader = this.shaders.get(shaderName);
+
+                    console.log(`🔍 Surface "${surface.name}": texture="${texturePath}", shaderName="${shaderName}", shader found=${!!shader}`);
+
+                    if (shader) {
+                        // Apply shader properties and load texture
+                        this.shaderMaterialSystem.createMaterialForShader(
+                            shader,
+                            texturePath,
+                            surface.name
+                        ).then(shaderMaterial => {
+                            // Replace material with shader material
+                            mesh.material = shaderMaterial;
+                            material.dispose();
+                            console.log(`✅ Applied shader material to ${surface.name}`);
+                        }).catch(err => {
+                            console.warn(`Failed to create shader material for ${surface.name}:`, err);
+                        });
+                    } else {
+                        // No shader, just load texture
+                        this.loadTextureForMesh(texturePath, material).catch(err => {
+                            console.warn(`Failed to load texture for ${surface.name}:`, err);
+                        });
+                    }
                 }
             }
 
@@ -472,29 +595,70 @@ export class MD3Loader {
     }
 
     /**
-     * Load texture for a mesh material
+     * Load texture for a mesh material (with case-insensitive fallback)
      * @param {string} url - Texture URL
      * @param {THREE.Material} material - Material to apply texture to
      */
     async loadTextureForMesh(url, material) {
-        const loader = url.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
+        // Try lowercase extension first (most common on Linux servers)
+        const lastDot = url.lastIndexOf('.');
+        if (lastDot !== -1) {
+            const extension = url.substring(lastDot + 1);
+            const basePath = url.substring(0, lastDot + 1);
 
+            // Always try lowercase first
+            const lowercaseUrl = basePath + extension.toLowerCase();
+            const uppercaseUrl = basePath + extension.toUpperCase();
+
+            // Determine which loader to use based on extension
+            const loader = extension.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
+
+            // Try lowercase first, then uppercase
+            try {
+                const texture = await this.tryLoadTexture(loader, lowercaseUrl);
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.flipY = false;
+                material.map = texture;
+                material.needsUpdate = true;
+
+                // Apply shader effects if available
+                this.applyShaderEffects(material, url);
+
+                return texture;
+            } catch (error) {
+                // Try uppercase extension
+                try {
+                    const texture = await this.tryLoadTexture(loader, uppercaseUrl);
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.RepeatWrapping;
+                    texture.flipY = false;
+                    material.map = texture;
+                    material.needsUpdate = true;
+
+                    // Apply shader effects if available
+                    this.applyShaderEffects(material, url);
+
+                    return texture;
+                } catch (secondError) {
+                    console.warn(`Failed to load texture (tried both ${lowercaseUrl} and ${uppercaseUrl})`);
+                    throw error;
+                }
+            }
+        }
+
+        // Fallback if no extension found
+        throw new Error('Invalid texture URL: ' + url);
+    }
+
+    // Helper method to load texture with proper error handling
+    tryLoadTexture(loader, url) {
         return new Promise((resolve, reject) => {
             loader.load(
                 url,
-                (texture) => {
-                    texture.wrapS = THREE.RepeatWrapping;
-                    texture.wrapT = THREE.RepeatWrapping;
-                    texture.flipY = false; // MD3 textures don't need flipping
-                    material.map = texture;
-                    material.needsUpdate = true;
-                    resolve(texture);
-                },
+                (texture) => resolve(texture),
                 undefined,
-                (error) => {
-                    console.error('Texture load error:', error);
-                    reject(error);
-                }
+                (error) => reject(error)
             );
         });
     }
@@ -506,6 +670,94 @@ export class MD3Loader {
      */
     async loadTexture(url, material) {
         return this.loadTextureForMesh(url, material);
+    }
+
+    /**
+     * Apply Q3 shader effects to a material
+     * @param {THREE.Material} material - Material to apply shader to
+     * @param {string} texturePath - The texture path to find shader for
+     */
+    applyShaderEffects(material, texturePath) {
+        // Extract shader name from texture path
+        // e.g., "models/players/niria/niria_h.tga" -> "models/players/niria/niria_h"
+        const shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
+
+        const shader = this.shaders.get(shaderName);
+        if (!shader || !shader.stages || shader.stages.length === 0) {
+            return;
+        }
+
+        console.log(`🎨 Applying shader "${shaderName}" to material (${shader.stages.length} stages)`);
+
+        // Store shader info on material for animation
+        material.userData.shader = shader;
+        material.userData.shaderName = shaderName;
+
+        // Apply first stage as base
+        const baseStage = shader.stages[0];
+
+        // Apply blend function
+        if (baseStage.blendFunc) {
+            if (typeof baseStage.blendFunc === 'string') {
+                switch (baseStage.blendFunc) {
+                    case 'add':
+                        material.blending = THREE.AdditiveBlending;
+                        break;
+                    case 'blend':
+                        material.blending = THREE.NormalBlending;
+                        material.transparent = true;
+                        break;
+                    case 'filter':
+                        material.blending = THREE.MultiplyBlending;
+                        break;
+                }
+            } else if (typeof baseStage.blendFunc === 'object') {
+                // Custom blend function
+                const { src, dst } = baseStage.blendFunc;
+                if (src === 'GL_ONE' && dst === 'GL_ONE') {
+                    material.blending = THREE.AdditiveBlending;
+                }
+            }
+        }
+
+        // Apply RGB generation
+        if (baseStage.rgbGen) {
+            if (baseStage.rgbGen === 'lightingdiffuse') {
+                // Use default lighting
+                material.emissive = new THREE.Color(0x000000);
+            } else if (baseStage.rgbGen === 'identity') {
+                // Full brightness
+                material.emissive = new THREE.Color(0xffffff);
+                material.emissiveIntensity = 0.5;
+            }
+        }
+
+        // Apply environment mapping for stages with tcGen environment
+        const envMapStage = shader.stages.find(stage => stage.tcGen === 'environment');
+        if (envMapStage) {
+            // Create a simple environment map (chrome effect)
+            material.envMapIntensity = 0.3;
+            material.metalness = 0.5;
+            material.roughness = 0.5;
+        }
+
+        // Apply cull mode
+        if (shader.cull) {
+            switch (shader.cull) {
+                case 'none':
+                case 'disable':
+                    material.side = THREE.DoubleSide;
+                    break;
+                case 'back':
+                    material.side = THREE.FrontSide;
+                    break;
+                case 'front':
+                    material.side = THREE.BackSide;
+                    break;
+            }
+        }
+
+        material.needsUpdate = true;
     }
 
     /**
@@ -525,17 +777,14 @@ export class MD3Loader {
         playerGroup.name = `player_${modelName}`;
 
         try {
+            // Load shader files first
+            await this.loadShadersForModel(baseUrl, modelName);
+
             // Load lower body (legs)
             const lowerUrl = `${baseUrl}lower.md3`;
             const lowerSkinUrl = `${baseUrl}lower_${skinName}.skin`;
             const lower = await this.load(lowerUrl, lowerSkinUrl);
             lower.name = 'lower';
-
-            // Debug: Check frame count
-            console.log(`Lower MD3 loaded: ${lower.userData.frames?.length || 0} frames`);
-            if (lower.children[0]?.userData?.surface?.vertices) {
-                console.log(`Lower surface has ${lower.children[0].userData.surface.vertices.length} vertex frames`);
-            }
 
             playerGroup.add(lower);
 
@@ -550,12 +799,6 @@ export class MD3Loader {
                     const upperSkinUrl = `${baseUrl}upper_${skinName}.skin`;
                     const upper = await this.load(upperUrl, upperSkinUrl);
                     upper.name = 'upper';
-
-                    // Debug: Check frame count
-                    console.log(`Upper MD3 loaded: ${upper.userData.frames?.length || 0} frames`);
-                    if (upper.children[0]?.userData?.surface?.vertices) {
-                        console.log(`Upper surface has ${upper.children[0].userData.surface.vertices.length} vertex frames`);
-                    }
 
                     // Position upper body at torso tag
                     this.attachToTag(upper, torsoTag);
@@ -588,13 +831,9 @@ export class MD3Loader {
 
             // Load animation config
             const animConfigUrl = `${baseUrl}animation.cfg`;
-            console.log(`🔍 Loading animation.cfg from: ${animConfigUrl}`);
             const animations = await this.loadAnimationConfig(animConfigUrl);
             if (animations) {
                 playerGroup.userData.animations = animations;
-                console.log(`✅ Loaded ${Object.keys(animations.legs).length} leg animations from ${animConfigUrl}`);
-            } else {
-                console.warn(`❌ Failed to load animation.cfg from ${animConfigUrl}`);
             }
 
             return playerGroup;
@@ -697,8 +936,6 @@ export class MD3Loader {
                     loop: parseInt(loopingFrames) > 0
                 };
 
-                // DEBUG: Log each parsed animation with line number
-                console.log(`📝 Line ${lineNumber}: ${name} => f${anim.firstFrame}-${anim.firstFrame + anim.numFrames - 1} (${anim.numFrames} frames, loop=${anim.loopingFrames}, fps=${anim.fps})`);
 
                 // Categorize animation by prefix
                 if (name.startsWith('BOTH_')) {
@@ -729,17 +966,13 @@ export class MD3Loader {
 
         if (firstLegsAnim && firstTorsoAnim) {
             const skip = firstLegsAnim.firstFrame - firstTorsoAnim.firstFrame;
-            console.log(`🔧 Q3 frame offset: skip = ${firstLegsAnim.firstFrame} - ${firstTorsoAnim.firstFrame} = ${skip}`);
 
             // Apply offset to all LEGS animations
-            for (const [name, anim] of Object.entries(animations.legs)) {
-                const originalFrame = anim.firstFrame;
+            for (const anim of Object.values(animations.legs)) {
                 anim.firstFrame -= skip;
-                console.log(`   ${name}: f${originalFrame} -> f${anim.firstFrame} (offset -${skip})`);
             }
         }
 
-        console.log('📋 Parsed animation.cfg:', animations);
         return animations;
     }
 

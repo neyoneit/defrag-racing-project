@@ -43,3 +43,12 @@ PRODUCTION_CREDENTIALS.md
 
 # Don't commit model files
 /public/models/
+
+# Don't commit pk3 files (Quake 3 archives)
+*.pk3
+
+# Don't commit extracted model files from storage
+/storage/models/
+
+# Don't commit test files (zip, pk3, txt from extractions)
+/public/test/
