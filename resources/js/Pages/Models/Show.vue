@@ -95,32 +95,30 @@ const onSoundsReady = (sounds) => {
     console.log('Sounds ready:', sounds);
 };
 
-// USER WANTS: HOLD = animate, RELEASE = STOP ANIMATION COMPLETELY
+// Q3 ANIMATION SYSTEM: Animations ALWAYS play, they just switch between states
+// This function is called every time input state changes (like Q3's PmoveSingle)
 const updateAnimations = () => {
     if (!viewer3D.value) return;
 
     const animMgr = viewer3D.value.getAnimationManager();
     if (!animMgr) return;
 
-    // Check if ANY button is held
-    const anyButtonHeld = forwardMove.value !== 0 || rightMove.value !== 0 || isAttacking.value || isGesturing.value || isCrouching.value;
+    // Animations ALWAYS play in Q3!
+    animMgr.playing = true;
 
-    if (!anyButtonHeld) {
-        // NO BUTTONS HELD = STOP ALL ANIMATION
-        if (animMgr) {
-            animMgr.playing = false;
-        }
-        return;
-    }
-
-    // AT LEAST ONE BUTTON HELD = PLAY ANIMATION
-    if (animMgr) {
-        animMgr.playing = true;
-    }
-
-    // LEGS ANIMATION (only if moving)
+    // === LEGS ANIMATION (PM_Footsteps logic) ===
     let legsAnim = null;
-    if (forwardMove.value !== 0 || rightMove.value !== 0) {
+
+    // PM_Footsteps line 1345-1355: If not trying to move
+    if (forwardMove.value === 0 && rightMove.value === 0) {
+        // No movement = IDLE
+        if (isCrouching.value) {
+            legsAnim = 'LEGS_IDLECR';  // Crouched idle
+        } else {
+            legsAnim = 'LEGS_IDLE';     // Standing idle
+        }
+    } else {
+        // PM_Footsteps line 1356+: Moving
         // Determine PMF_BACKWARDS_RUN flag (bg_pmove.c line 1920-1925)
         let backwardsRun = false;
         if (forwardMove.value < 0) {
@@ -466,7 +464,7 @@ watch(showWireframe, (newValue) => {
                                 </div>
 
                                 <div class="text-xs text-gray-400 mt-2">
-                                    HOLD ALL buttons to animate! Release to STOP animation completely!
+                                    💡 Q3-Style: Model always animates! Press buttons to change animation, release to return to idle (LEGS_IDLE + TORSO_STAND).
                                 </div>
                             </div>
                         </div>
