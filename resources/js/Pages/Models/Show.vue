@@ -205,6 +205,9 @@ const startJump = () => {
     const jumpAnim = forwardMove.value < 0 ? 'LEGS_JUMPB' : 'LEGS_JUMP';
     viewer3D.value.playLegsAnimation(jumpAnim);
     currentLegsAnim.value = jumpAnim;
+
+    // Q3 Event: EV_JUMP triggers jump sound
+    triggerAnimationSound(jumpAnim, 'legs');
 };
 
 const stopJump = () => {
@@ -224,6 +227,9 @@ const stopAttack = () => {
 const startGesture = () => {
     isGesturing.value = true;
     updateAnimations();
+
+    // Q3 Event: EV_TAUNT triggers taunt sound
+    triggerAnimationSound('TORSO_GESTURE', 'torso');
 };
 
 const stopGesture = () => {
@@ -232,8 +238,52 @@ const stopGesture = () => {
 };
 
 const playSound = (soundName) => {
-    if (viewer3D.value) {
+    if (viewer3D.value && soundsEnabled.value) {
         viewer3D.value.playSound(soundName);
+    }
+};
+
+// Q3-STYLE ANIMATION-TO-SOUND MAPPING
+// Based on ioq3 cg_event.c event handling
+const animationSoundMap = {
+    // Jump sounds (EV_JUMP)
+    'LEGS_JUMP': 'jump1',
+    'LEGS_JUMPB': 'jump1',
+
+    // Death sounds (EV_DEATH1/2/3)
+    'BOTH_DEATH1': 'death1',
+    'BOTH_DEATH2': 'death2',
+    'BOTH_DEATH3': 'death3',
+
+    // Taunt/Gesture sound (EV_TAUNT)
+    'TORSO_GESTURE': 'taunt',
+
+    // Note: Footsteps, pain, and land sounds are handled differently in Q3
+    // They're triggered by game events (bobCycle, damage, velocity), not animations
+    // For now, we only map direct animation-to-sound relationships
+};
+
+// Track last played animation to avoid repeating sounds
+const lastLegsAnim = ref(null);
+const lastTorsoAnim = ref(null);
+
+// Play sound when animation changes (Q3-style event triggering)
+const triggerAnimationSound = (animName, animType) => {
+    if (!soundsEnabled.value) return;
+
+    // Check if this is a new animation (not repeating)
+    if (animType === 'legs' && lastLegsAnim.value === animName) return;
+    if (animType === 'torso' && lastTorsoAnim.value === animName) return;
+
+    // Update last animation tracker
+    if (animType === 'legs') lastLegsAnim.value = animName;
+    if (animType === 'torso') lastTorsoAnim.value = animName;
+
+    // Look up sound for this animation
+    const soundName = animationSoundMap[animName];
+    if (soundName) {
+        console.log(`🔊 Q3 Event: ${animName} → ${soundName}.wav`);
+        playSound(soundName);
     }
 };
 
@@ -548,7 +598,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.legs"
                                         :key="animName"
-                                        @click="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName; viewer3D.getAnimationManager().playing = true"
+                                        @click="viewer3D.playLegsAnimation(animName); currentLegsAnim = animName; viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'legs')"
                                         :class="[
                                             'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
                                             currentLegsAnim === animName
@@ -568,7 +618,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.torso"
                                         :key="animName"
-                                        @click="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName; viewer3D.getAnimationManager().playing = true"
+                                        @click="viewer3D.playTorsoAnimation(animName); currentTorsoAnim = animName; viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'torso')"
                                         :class="[
                                             'px-3 py-2 rounded-lg text-xs font-mono transition-colors border text-left',
                                             currentTorsoAnim === animName
@@ -589,7 +639,7 @@ watch(showWireframe, (newValue) => {
                                     <button
                                         v-for="(animData, animName) in availableAnimations.both"
                                         :key="animName"
-                                        @click="viewer3D.playBothAnimation(animName); viewer3D.getAnimationManager().playing = true"
+                                        @click="viewer3D.playBothAnimation(animName); viewer3D.getAnimationManager().playing = true; triggerAnimationSound(animName, 'both')"
                                         class="px-3 py-2 rounded-lg text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
                                         <div class="font-bold">{{ animName }}</div>
                                         <div class="text-xs opacity-60">f{{ animData.firstFrame }}-{{ animData.firstFrame + animData.numFrames - 1 }} ({{ animData.numFrames }})</div>
