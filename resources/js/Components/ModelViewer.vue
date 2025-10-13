@@ -15,6 +15,10 @@ const props = defineProps({
         type: String,
         default: null
     },
+    skinPackBasePath: {
+        type: String,
+        default: null
+    },
     loadFullPlayer: {
         type: Boolean,
         default: true
@@ -183,7 +187,8 @@ async function loadModel() {
             const modelName = baseDir.split('/').pop(); // Get "worm" from path
 
             // Load complete player model (head + upper + lower)
-            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName);
+            // Pass skinPackBasePath for skin/mixed packs that override base model skins
+            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath);
         } else {
             // Load single MD3 file with optional skin file
             model = await loader.load(props.modelPath, props.skinPath);
@@ -234,11 +239,21 @@ async function loadModel() {
                         soundPath = `/baseq3/sound/player/${modelName}`;
                     } else {
                         // User-uploaded model: /storage/models/extracted/worm-123/models/players/worm/head.md3
-                        // Sound path: /storage/models/extracted/worm-123/sound/player/worm/
-                        const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
-                        if (extractedPath) {
-                            const basePath = extractedPath[1];
-                            soundPath = `${basePath}/sound/player/${modelName}`;
+                        // For skin packs, try the skin pack's sound directory first, then fall back to base model
+                        if (props.skinPackBasePath) {
+                            // Skin pack: try /storage/models/extracted/scorn-myriane.../sound/player/major/
+                            const skinPackPath = props.skinPackBasePath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
+                            if (skinPackPath) {
+                                const basePath = skinPackPath[1];
+                                soundPath = `${basePath}/sound/player/${modelName}`;
+                            }
+                        } else {
+                            // Complete model: use its own sound directory
+                            const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
+                            if (extractedPath) {
+                                const basePath = extractedPath[1];
+                                soundPath = `${basePath}/sound/player/${modelName}`;
+                            }
                         }
                     }
 

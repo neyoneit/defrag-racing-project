@@ -17,6 +17,7 @@ export class MD3Loader {
         this.shaderParser = new Q3ShaderParser();
         this.shaders = new Map(); // Stores loaded shader definitions
         this.shaderMaterialSystem = new Q3ShaderMaterialSystem(this);
+        this.fallbackBaseUrl = null; // Fallback base URL for missing textures (e.g., baseq3 path)
     }
 
     /**
@@ -296,8 +297,8 @@ export class MD3Loader {
                         });
                     } else {
                         console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size})`);
-                        // No shader, just load texture
-                        this.loadTextureForMesh(texturePath, material).catch(err => {
+                        // No shader, just load texture (with fallback if available)
+                        this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).catch(err => {
                             console.warn(`Failed to load texture for ${surface.name}:`, err);
                         });
                     }
@@ -621,27 +622,42 @@ export class MD3Loader {
     }
 
     /**
-     * Load texture for a mesh material (with case-insensitive fallback)
+     * Load texture for a mesh material (with case-insensitive and multi-extension fallback)
      * @param {string} url - Texture URL
      * @param {THREE.Material} material - Material to apply texture to
+     * @param {string} fallbackBaseUrl - Optional fallback base URL (e.g., for loading from base model if skin pack is missing textures)
      */
-    async loadTextureForMesh(url, material) {
-        // Try lowercase extension first (most common on Linux servers)
+    async loadTextureForMesh(url, material, fallbackBaseUrl = null) {
         const lastDot = url.lastIndexOf('.');
-        if (lastDot !== -1) {
-            const extension = url.substring(lastDot + 1);
-            const basePath = url.substring(0, lastDot + 1);
+        if (lastDot === -1) {
+            throw new Error('Invalid texture URL: ' + url);
+        }
 
-            // Always try lowercase first
-            const lowercaseUrl = basePath + extension.toLowerCase();
-            const uppercaseUrl = basePath + extension.toUpperCase();
+        const extension = url.substring(lastDot + 1);
+        const basePath = url.substring(0, lastDot);
+        const filename = url.substring(url.lastIndexOf('/') + 1);
 
-            // Determine which loader to use based on extension
-            const loader = extension.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
+        // Try multiple extension variants
+        // Order: lowercase original, uppercase original, jpg, JPG, jpeg, JPEG, png, PNG
+        const extensionsToTry = [
+            extension.toLowerCase(),
+            extension.toUpperCase(),
+        ];
 
-            // Try lowercase first, then uppercase
+        // If original extension is .tga, also try jpg/jpeg/png as fallbacks
+        if (extension.toLowerCase() === 'tga') {
+            extensionsToTry.push('jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG');
+        }
+
+        let lastError = null;
+
+        // First try the original path with all extensions
+        for (const ext of extensionsToTry) {
             try {
-                const texture = await this.tryLoadTexture(loader, lowercaseUrl);
+                const testUrl = basePath + '.' + ext;
+                const loader = ext.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
+
+                const texture = await this.tryLoadTexture(loader, testUrl);
                 texture.wrapS = THREE.RepeatWrapping;
                 texture.wrapT = THREE.RepeatWrapping;
                 texture.flipY = false;
@@ -653,9 +669,21 @@ export class MD3Loader {
 
                 return texture;
             } catch (error) {
-                // Try uppercase extension
+                lastError = error;
+                // Continue to next extension
+            }
+        }
+
+        // If original path failed and we have a fallback base URL, try loading from there
+        if (fallbackBaseUrl) {
+            const fallbackBasePath = fallbackBaseUrl + filename.substring(0, filename.lastIndexOf('.'));
+
+            for (const ext of extensionsToTry) {
                 try {
-                    const texture = await this.tryLoadTexture(loader, uppercaseUrl);
+                    const testUrl = fallbackBasePath + '.' + ext;
+                    const loader = ext.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
+
+                    const texture = await this.tryLoadTexture(loader, testUrl);
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
                     texture.flipY = false;
@@ -665,16 +693,18 @@ export class MD3Loader {
                     // Apply shader effects if available
                     this.applyShaderEffects(material, url);
 
+                    console.log(`✅ Loaded texture from fallback: ${testUrl}`);
                     return texture;
-                } catch (secondError) {
-                    console.warn(`Failed to load texture (tried both ${lowercaseUrl} and ${uppercaseUrl})`);
-                    throw error;
+                } catch (error) {
+                    lastError = error;
+                    // Continue to next extension
                 }
             }
         }
 
-        // Fallback if no extension found
-        throw new Error('Invalid texture URL: ' + url);
+        // If we get here, all attempts failed
+        console.warn(`Failed to load texture (tried extensions: ${extensionsToTry.join(', ')}) for ${basePath}${fallbackBaseUrl ? ' and fallback ' + fallbackBaseUrl + filename.substring(0, filename.lastIndexOf('.')) : ''}`);
+        throw lastError;
     }
 
     // Helper method to load texture with proper error handling
@@ -791,10 +821,42 @@ export class MD3Loader {
      * @param {string} skinName - Skin name (default, blue, red)
      * @returns {Promise<THREE.Group>} - Complete player model
      */
-    async loadPlayerModel(baseUrl, modelName, skinName = 'default') {
+    async loadPlayerModel(baseUrl, modelName, skinName = 'default', skinPackBasePath = null) {
         // Ensure baseUrl ends with /
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
+        }
+
+        // If skinPackBasePath is provided, ensure it ends with /
+        if (skinPackBasePath && !skinPackBasePath.endsWith('/')) {
+            skinPackBasePath += '/';
+        }
+
+        // Set fallback base URL for missing textures
+        // ALWAYS fallback to the base model in baseq3 if it exists
+        // This handles:
+        // 1. Skin packs that reference base model textures
+        // 2. Incomplete model packs that are missing some textures
+        // 3. Mixed packs that override only some textures
+
+        if (skinPackBasePath && baseUrl.includes('/baseq3/')) {
+            // Skin pack case: baseUrl already points to baseq3 base model
+            this.fallbackBaseUrl = baseUrl;
+        } else if (!baseUrl.includes('/baseq3/')) {
+            // User-uploaded model: try to fall back to baseq3 version
+            // Extract model name from the path
+            // e.g., /storage/models/extracted/xxx/models/players/brandon/
+            // We want to try: /baseq3/models/players/brandon/
+            const modelNameMatch = baseUrl.match(/models\/players\/([^\/]+)\/?$/);
+            if (modelNameMatch) {
+                const modelName = modelNameMatch[1];
+                this.fallbackBaseUrl = `/baseq3/models/players/${modelName}/`;
+            } else {
+                this.fallbackBaseUrl = null;
+            }
+        } else {
+            // Already loading from baseq3, no fallback needed
+            this.fallbackBaseUrl = null;
         }
 
         const playerGroup = new THREE.Group();
@@ -802,11 +864,19 @@ export class MD3Loader {
 
         try {
             // Load shader files first
+            // For skin packs, load shaders from the skin pack's scripts directory
+            if (skinPackBasePath) {
+                const skinPackScriptsUrl = skinPackBasePath.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+                await this.loadShadersForModel(skinPackScriptsUrl, modelName);
+            }
             await this.loadShadersForModel(baseUrl, modelName);
+
+            // Determine where to load skin files from
+            const skinBaseUrl = skinPackBasePath || baseUrl;
 
             // Load lower body (legs)
             const lowerUrl = `${baseUrl}lower.md3`;
-            const lowerSkinUrl = `${baseUrl}lower_${skinName}.skin`;
+            const lowerSkinUrl = `${skinBaseUrl}lower_${skinName}.skin`;
             const lower = await this.load(lowerUrl, lowerSkinUrl);
             lower.name = 'lower';
 
@@ -820,7 +890,7 @@ export class MD3Loader {
                 if (torsoTag) {
                     // Load upper body (torso)
                     const upperUrl = `${baseUrl}upper.md3`;
-                    const upperSkinUrl = `${baseUrl}upper_${skinName}.skin`;
+                    const upperSkinUrl = `${skinBaseUrl}upper_${skinName}.skin`;
                     const upper = await this.load(upperUrl, upperSkinUrl);
                     upper.name = 'upper';
 
@@ -836,7 +906,7 @@ export class MD3Loader {
                         if (headTag) {
                             // Load head
                             const headUrl = `${baseUrl}head.md3`;
-                            const headSkinUrl = `${baseUrl}head_${skinName}.skin`;
+                            const headSkinUrl = `${skinBaseUrl}head_${skinName}.skin`;
                             const head = await this.load(headUrl, headSkinUrl);
                             head.name = 'head';
 

@@ -61,3 +61,4 @@ PRODUCTION_CREDENTIALS.md
 
 # Don't commit one-off player rename commands
 /app/Console/Commands/RenamePlayer.php
+*.sql

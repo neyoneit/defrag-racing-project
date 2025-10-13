@@ -89,7 +89,8 @@ export class Q3ShaderMaterialSystem {
                 }
 
                 try {
-                    texture = await this.loadTexture(texturePath);
+                    // Pass fallback URL from MD3Loader to shader texture loading
+                    texture = await this.loadTexture(texturePath, this.loader.fallbackBaseUrl);
                     console.log(`✅ Loaded texture for stage ${i}: ${texturePath}`);
                 } catch (error) {
                     console.warn(`Failed to load texture for stage ${i}:`, texturePath, error);
@@ -1223,7 +1224,7 @@ export class Q3ShaderMaterialSystem {
      * Tries multiple extensions like Q3 engine does: .tga, .TGA, .jpg, .JPG, .jpeg, .png
      * Uses static cache to avoid loading the same texture multiple times (shared across all instances)
      */
-    loadTexture(url) {
+    loadTexture(url, fallbackBaseUrl = null) {
         // Check static cache first
         if (Q3ShaderMaterialSystem.textureCache.has(url)) {
             console.log(`♻️ Using cached texture: ${url}`);
@@ -1233,27 +1234,50 @@ export class Q3ShaderMaterialSystem {
         return new Promise((resolve, reject) => {
             const lastDot = url.lastIndexOf('.');
             const basePath = url.substring(0, lastDot + 1);
+            const filename = url.substring(url.lastIndexOf('/') + 1);
 
             // Try these extensions in order (like Q3 engine)
             const fallbackExtensions = ['tga', 'TGA', 'jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG'];
 
             let currentIndex = 0;
+            let tryingFallbackPath = false;
 
             const tryNextExtension = () => {
                 if (currentIndex >= fallbackExtensions.length) {
-                    reject(new Error(`Failed to load texture: ${url} (tried all formats)`));
+                    // If we were trying the original path and fallback is available, switch to fallback
+                    if (!tryingFallbackPath && fallbackBaseUrl) {
+                        console.log(`⚠️ Original path failed, trying fallback: ${fallbackBaseUrl}`);
+                        tryingFallbackPath = true;
+                        currentIndex = 0;
+                        tryNextExtension();
+                        return;
+                    }
+                    // All attempts exhausted
+                    reject(new Error(`Failed to load texture: ${url} (tried all formats${fallbackBaseUrl ? ' and fallback' : ''})`));
                     return;
                 }
 
                 const ext = fallbackExtensions[currentIndex];
-                const testUrl = basePath + ext;
+                let testUrl;
+
+                if (tryingFallbackPath) {
+                    // Build fallback path: fallbackBaseUrl + filename_without_extension + extension
+                    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+                    testUrl = fallbackBaseUrl + filenameWithoutExt + '.' + ext;
+                } else {
+                    // Try original path with current extension
+                    testUrl = basePath + ext;
+                }
+
                 const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
 
                 loader.load(
                     testUrl,
                     (texture) => {
                         texture.flipY = false;
-                        if (currentIndex > 0) {
+                        if (tryingFallbackPath) {
+                            console.log(`✅ Loaded texture from fallback: ${testUrl}`);
+                        } else if (currentIndex > 0) {
                             console.log(`📁 Texture fallback: ${url} → ${testUrl}`);
                         }
                         // Store in static cache

@@ -5,6 +5,7 @@ import ModelViewer from '@/Components/ModelViewer.vue';
 
 const props = defineProps({
     model: Object,
+    baseModelData: Object,
 });
 
 // Check if we're in thumbnail generation mode
@@ -60,7 +61,9 @@ const availableSkins = computed(() => {
     // Fallback
     return ['default'];
 });
-const currentSkin = ref('default');
+
+// Initialize currentSkin with the first available skin
+const currentSkin = ref(availableSkins.value[0] || 'default');
 
 // Q3-style input state (mimics usercmd_t and playerState_t)
 const forwardMove = ref(0);  // -127 to 127
@@ -69,23 +72,28 @@ const isCrouching = ref(false); // PMF_DUCKED
 const isAttacking = ref(false); // BUTTON_ATTACK
 const isGesturing = ref(false); // BUTTON_GESTURE
 
-// Get the path to the model file (scan for MD3 files in models/players/* subdirectory)
+// Get the path to the model file (MD3 files for the 3D geometry)
 const modelFilePath = computed(() => {
+    // For skin/mixed packs, use the base model's file_path (where the MD3 files are)
+    if (props.baseModelData && props.baseModelData.file_path) {
+        const basePath = props.baseModelData.file_path;
+        const modelName = props.baseModelData.name;
+
+        if (basePath.startsWith('baseq3/')) {
+            return `/${basePath}/head.md3`;
+        }
+
+        return `/storage/${basePath}/models/players/${modelName}/head.md3`;
+    }
+
+    // For complete models, use the model's own file_path
     if (!props.model.file_path) return null;
 
-    // Check if this is a base Q3 model (starts with "baseq3/")
     if (props.model.file_path.startsWith('baseq3/')) {
-        // Base models are in public/baseq3
-        // Path is like: baseq3/models/players/sarge
         return `/${props.model.file_path}/head.md3`;
     }
 
-    // User-uploaded models (extracted from PK3)
-    // The file_path is like: models/extracted/model-1760208803
-    // The model name is auto-detected and stored in props.model.name
-    // And the actual MD3 is at: models/extracted/model-1760208803/models/players/{name}/head.md3
-    const modelName = props.model.name;
-
+    const modelName = props.model.base_model || props.model.name;
     return `/storage/${props.model.file_path}/models/players/${modelName}/head.md3`;
 });
 
@@ -98,10 +106,26 @@ const skinFilePath = computed(() => {
         return `/${props.model.file_path}/head_${currentSkin.value}.skin`;
     }
 
-    // User-uploaded models - use detected model name and selected skin
-    const modelName = props.model.name;
+    // User-uploaded models - use base_model for folder path (where the actual files are)
+    // For complete models: base_model == name
+    // For skin/mixed packs: base_model is the folder with the actual files
+    const modelName = props.model.base_model || props.model.name;
 
     return `/storage/${props.model.file_path}/models/players/${modelName}/head_${currentSkin.value}.skin`;
+});
+
+// Get the base path for skin pack files (for skin/mixed packs that override base model skins)
+const skinPackBasePath = computed(() => {
+    // Only needed if this is a skin/mixed pack (has baseModelData)
+    if (!props.baseModelData) return null;
+
+    // Return the skin pack's extracted directory path
+    if (props.model.file_path && !props.model.file_path.startsWith('baseq3/')) {
+        const modelName = props.model.base_model || props.model.name;
+        return `/storage/${props.model.file_path}/models/players/${modelName}`;
+    }
+
+    return null;
 });
 
 const onViewerLoaded = (model) => {
@@ -541,6 +565,7 @@ const getModelTypeBadgeClass = (type) => {
                                 ref="viewer3D"
                                 :model-path="modelFilePath"
                                 :skin-path="skinFilePath"
+                                :skin-pack-base-path="skinPackBasePath"
                                 :skin-name="currentSkin"
                                 :auto-rotate="autoRotate"
                                 :show-grid="!isThumbnailMode"

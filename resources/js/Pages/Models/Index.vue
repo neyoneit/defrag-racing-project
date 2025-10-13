@@ -6,6 +6,7 @@ import ModelViewer from '@/Components/ModelViewer.vue';
 const props = defineProps({
     models: Object,
     category: String,
+    sort: String,
 });
 
 const categories = [
@@ -15,8 +16,20 @@ const categories = [
     { value: 'shadow', label: 'Shadow Models', icon: '👤' },
 ];
 
+const sortOptions = [
+    { value: 'newest', label: 'Newest First' },
+    { value: 'oldest', label: 'Oldest First' },
+];
+
 const switchCategory = (category) => {
-    router.visit(route('models.index', { category }), {
+    router.visit(route('models.index', { category, sort: props.sort }), {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const changeSort = (newSort) => {
+    router.visit(route('models.index', { category: props.category, sort: newSort }), {
         preserveState: true,
         preserveScroll: true,
     });
@@ -40,6 +53,26 @@ const getModelTypeBadgeClass = (type) => {
         'mixed': 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
     };
     return classes[type] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+};
+
+const getFirstSkin = (model) => {
+    // Parse available_skins if it's a string
+    let skins = model.available_skins;
+
+    if (typeof skins === 'string') {
+        try {
+            skins = JSON.parse(skins);
+        } catch (e) {
+            return 'default';
+        }
+    }
+
+    // Return first skin or 'default'
+    if (Array.isArray(skins) && skins.length > 0) {
+        return skins[0];
+    }
+
+    return 'default';
 };
 </script>
 
@@ -79,21 +112,42 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
                     </div>
 
-                    <!-- Category Tabs -->
-                    <div class="flex gap-2 flex-wrap">
-                        <button v-for="cat in categories" :key="cat.value"
-                                @click="switchCategory(cat.value)"
-                                :class="[
-                                    'px-4 py-2 rounded-lg font-semibold transition-all',
-                                    category === cat.value
-                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                                ]">
-                            <span class="flex items-center gap-2">
-                                <span>{{ cat.icon }}</span>
-                                <span>{{ cat.label }}</span>
-                            </span>
-                        </button>
+                    <!-- Category Tabs and Sort -->
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex gap-2 flex-wrap">
+                            <button v-for="cat in categories" :key="cat.value"
+                                    @click="switchCategory(cat.value)"
+                                    :class="[
+                                        'px-4 py-2 rounded-lg font-semibold transition-all',
+                                        category === cat.value
+                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                    ]">
+                                <span class="flex items-center gap-2">
+                                    <span>{{ cat.icon }}</span>
+                                    <span>{{ cat.label }}</span>
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- Sort Toggle -->
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-400">Sort:</span>
+                            <div class="flex gap-1 bg-white/5 rounded-lg p-1">
+                                <button
+                                    v-for="option in sortOptions"
+                                    :key="option.value"
+                                    @click="changeSort(option.value)"
+                                    :class="[
+                                        'px-3 py-1.5 rounded text-xs font-semibold transition-all',
+                                        (sort || 'newest') === option.value
+                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                            : 'text-gray-400 hover:text-white'
+                                    ]">
+                                    {{ option.label }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -109,9 +163,18 @@ const getModelTypeBadgeClass = (type) => {
                             <ModelViewer
                                 v-if="model.file_path"
                                 :key="model.id"
-                                :model-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + model.name}/head.md3`"
-                                :skin-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + model.name}/head_default.skin`"
-                                skin-name="default"
+                                :model-path="
+                                    model.file_path.startsWith('baseq3/')
+                                        ? `/baseq3/models/players/${model.base_model || model.name}/head.md3`
+                                        : (model.model_type !== 'complete' && model.base_model)
+                                            ? `/baseq3/models/players/${model.base_model}/head.md3`
+                                            : `/storage/${model.file_path}/models/players/${model.base_model || model.name}/head.md3`
+                                "
+                                :skin-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + (model.base_model || model.name)}/head_${getFirstSkin(model)}.skin`"
+                                :skin-pack-base-path="model.model_type !== 'complete' && !model.file_path.startsWith('baseq3/')
+                                    ? `/storage/${model.file_path}/models/players/${model.base_model || model.name}`
+                                    : null"
+                                :skin-name="getFirstSkin(model)"
                                 :auto-rotate="false"
                                 :show-grid="false"
                                 :enable-sounds="false"

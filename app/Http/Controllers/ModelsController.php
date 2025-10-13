@@ -17,13 +17,20 @@ class ModelsController extends Controller
     public function index(Request $request)
     {
         $category = $request->get('category', 'all');
+        $sort = $request->get('sort', 'newest'); // newest or oldest
 
         $query = PlayerModel::with('user')
-            ->approved()
-            ->orderBy('created_at', 'desc');
+            ->approved();
 
         if ($category !== 'all') {
             $query->category($category);
+        }
+
+        // Apply sorting (use id as tiebreaker when created_at is same)
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc')->orderBy('id', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'); // newest (default)
         }
 
         $models = $query->paginate(12);
@@ -31,6 +38,7 @@ class ModelsController extends Controller
         return Inertia::render('Models/Index', [
             'models' => $models,
             'category' => $category,
+            'sort' => $sort,
         ]);
     }
 
@@ -184,53 +192,86 @@ class ModelsController extends Controller
             Storage::delete($tempPath);
 
             if ($pk3Found) {
-                // Auto-detect model name from folder structure
-                $detectedModelName = $this->detectModelName($extractPath);
+                // Auto-detect ALL model names (PK3 might contain multiple models)
+                $detectedModelNames = $this->detectAllModelNames($extractPath);
 
-                if (!$detectedModelName) {
+                if (empty($detectedModelNames)) {
                     $this->deleteDirectory($extractPath);
-                    return back()->with('error', 'Could not find model folder. Make sure the PK3 contains a models/players/{name}/ directory.');
+                    return back()->with('error', 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.');
                 }
 
-                // Use detected name, or fallback to user input
-                $finalModelName = $detectedModelName ?? $modelName;
+                $createdModels = [];
+                $isMultiModelPack = count($detectedModelNames) > 1;
 
-                // Parse metadata and available skins
-                $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+                // Create a separate database entry for each model+skin combination
+                foreach ($detectedModelNames as $detectedModelName) {
+                    // Parse metadata and available skins
+                    $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
 
-                // Check if this model has MD3 files (complete custom model) or just skins
-                $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+                    // Check if this model has MD3 files (complete custom model) or just skins
+                    $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
 
-                // Determine base_model:
-                // - If has MD3 files: this IS a base model (use its own name)
-                // - If no MD3 files: this is a skin for an existing base model
-                $baseModel = $hasMd3Files ? $finalModelName : $detectedModelName;
+                    // Determine base_model:
+                    // - If has MD3 files: this IS a base model (use its own name)
+                    // - If no MD3 files: this is a skin for an existing base model
+                    $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
 
-                // Determine model type based on content
-                $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+                    // Determine model type based on content
+                    $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
 
-                // Create model record
-                $model = PlayerModel::create([
-                    'user_id' => $userId,
-                    'name' => $finalModelName,
-                    'base_model' => $baseModel,
-                    'model_type' => $modelType,
-                    'description' => $request->description,
-                    'category' => $request->category,
-                    'author' => $metadata['author'] ?? null,
-                    'author_email' => $metadata['author_email'] ?? null,
-                    'file_path' => 'models/extracted/' . $slug,
-                    'zip_path' => $pk3PathForDownload,
-                    'poly_count' => $metadata['poly_count'] ?? null,
-                    'vert_count' => $metadata['vert_count'] ?? null,
-                    'has_sounds' => $metadata['has_sounds'] ?? false,
-                    'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
-                    'available_skins' => json_encode($metadata['available_skins'] ?? ['default']),
-                    'approved' => false, // Requires admin approval
-                ]);
+                    // Get available skins for this model
+                    $availableSkins = $metadata['available_skins'] ?? ['default'];
 
-                return redirect()->route('models.show', $model->id)
-                    ->with('success', 'Model "' . $finalModelName . '" uploaded successfully! It will be visible once approved by an admin.');
+                    // Create a separate entry for each skin
+                    foreach ($availableSkins as $skinName) {
+                        // Determine display name:
+                        // For multi-model packs: use "{ModelName} ({skin})"
+                        // For single-model packs with one skin: use user-provided name
+                        // For single-model packs with multiple skins: use "{user-provided name} ({skin})"
+                        if ($isMultiModelPack) {
+                            $finalModelName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
+                        } else {
+                            // Single model pack
+                            if (count($availableSkins) > 1) {
+                                $finalModelName = $modelName . ' (' . $skinName . ')';
+                            } else {
+                                $finalModelName = $modelName;
+                            }
+                        }
+
+                        // Create model record
+                        $model = PlayerModel::create([
+                            'user_id' => $userId,
+                            'name' => $finalModelName,
+                            'base_model' => $baseModel,
+                            'model_type' => $modelType,
+                            'description' => $request->description,
+                            'category' => $request->category,
+                            'author' => $metadata['author'] ?? null,
+                            'author_email' => $metadata['author_email'] ?? null,
+                            'file_path' => 'models/extracted/' . $slug,
+                            'zip_path' => $pk3PathForDownload,
+                            'poly_count' => $metadata['poly_count'] ?? null,
+                            'vert_count' => $metadata['vert_count'] ?? null,
+                            'has_sounds' => $metadata['has_sounds'] ?? false,
+                            'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                            'available_skins' => json_encode([$skinName]), // Store only this skin
+                            'approved' => false, // Requires admin approval
+                        ]);
+
+                        $createdModels[] = $model;
+                    }
+                }
+
+                // Return to the first model's page
+                $successMessage = count($createdModels) > 1
+                    ? sprintf('Successfully uploaded %d model variations: %s. They will be visible once approved by an admin.',
+                        count($createdModels),
+                        implode(', ', array_map(fn($m) => $m->name, $createdModels)))
+                    : sprintf('Model "%s" uploaded successfully! It will be visible once approved by an admin.', $createdModels[0]->name);
+
+                return redirect()->route('models.show', $createdModels[0]->id)
+                    ->with('success', $successMessage);
             }
         }
 
@@ -373,51 +414,81 @@ class ModelsController extends Controller
                     Storage::delete($tempPath);
 
                     if ($pk3Found) {
-                        // Auto-detect model name
-                        $detectedModelName = $this->detectModelName($extractPath);
+                        // Auto-detect ALL model names (PK3 might contain multiple models)
+                        $detectedModelNames = $this->detectAllModelNames($extractPath);
 
-                        if (!$detectedModelName) {
+                        if (empty($detectedModelNames)) {
                             $this->deleteDirectory($extractPath);
                             $results['failed'][] = [
                                 'file' => $originalName,
-                                'error' => 'Could not find model folder'
+                                'error' => 'Could not find any model folders'
                             ];
                             continue;
                         }
 
-                        // Use original filename as display name (without extension)
-                        $displayName = pathinfo($originalName, PATHINFO_FILENAME);
+                        $createdModels = [];
+                        $isMultiModelPack = count($detectedModelNames) > 1;
 
-                        // Parse metadata
-                        $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
-                        $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
-                        $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
-                        $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+                        // Create a separate database entry for each model+skin combination
+                        foreach ($detectedModelNames as $detectedModelName) {
+                            // Parse metadata
+                            $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+                            $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+                            $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
+                            $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
 
-                        // Create model record
-                        $model = PlayerModel::create([
-                            'user_id' => $userId,
-                            'name' => $displayName,
-                            'base_model' => $baseModel,
-                            'model_type' => $modelType,
-                            'description' => $metadata['author'] ? "Created by {$metadata['author']}" : null,
-                            'category' => $category,
-                            'author' => $metadata['author'] ?? null,
-                            'author_email' => $metadata['author_email'] ?? null,
-                            'file_path' => 'models/extracted/' . $slug,
-                            'zip_path' => $pk3PathForDownload,
-                            'poly_count' => $metadata['poly_count'] ?? null,
-                            'vert_count' => $metadata['vert_count'] ?? null,
-                            'has_sounds' => $metadata['has_sounds'] ?? false,
-                            'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
-                            'available_skins' => json_encode($metadata['available_skins'] ?? ['default']),
-                            'approved' => true, // Auto-approve for admin bulk uploads
-                        ]);
+                            // Get available skins for this model
+                            $availableSkins = $metadata['available_skins'] ?? ['default'];
+
+                            // Create a separate entry for each skin
+                            foreach ($availableSkins as $skinName) {
+                                // Determine display name:
+                                // For multi-model packs: use "{ModelName} ({skin})"
+                                // For single-model packs with one skin: use filename
+                                // For single-model packs with multiple skins: use "{filename} ({skin})"
+                                if ($isMultiModelPack) {
+                                    $displayName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
+                                } else {
+                                    // Single model pack
+                                    if (count($availableSkins) > 1) {
+                                        $displayName = pathinfo($originalName, PATHINFO_FILENAME) . ' (' . $skinName . ')';
+                                    } else {
+                                        $displayName = pathinfo($originalName, PATHINFO_FILENAME);
+                                    }
+                                }
+
+                                // Create model record
+                                $model = PlayerModel::create([
+                                    'user_id' => $userId,
+                                    'name' => $displayName,
+                                    'base_model' => $baseModel,
+                                    'model_type' => $modelType,
+                                    'description' => $metadata['author'] ? "Created by {$metadata['author']}" : null,
+                                    'category' => $category,
+                                    'author' => $metadata['author'] ?? null,
+                                    'author_email' => $metadata['author_email'] ?? null,
+                                    'file_path' => 'models/extracted/' . $slug,
+                                    'zip_path' => $pk3PathForDownload,
+                                    'poly_count' => $metadata['poly_count'] ?? null,
+                                    'vert_count' => $metadata['vert_count'] ?? null,
+                                    'has_sounds' => $metadata['has_sounds'] ?? false,
+                                    'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                                    'available_skins' => json_encode([$skinName]), // Store only this skin
+                                    'approved' => true, // Auto-approve for admin bulk uploads
+                                ]);
+
+                                $createdModels[] = [
+                                    'id' => $model->id,
+                                    'name' => $model->name,
+                                ];
+                            }
+                        }
 
                         $results['success'][] = [
                             'file' => $originalName,
-                            'model' => $model->name,
-                            'id' => $model->id,
+                            'model' => implode(', ', array_column($createdModels, 'name')),
+                            'id' => $createdModels[0]['id'],
+                            'created_count' => count($createdModels),
                         ];
                     } else {
                         $results['failed'][] = [
@@ -458,6 +529,30 @@ class ModelsController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Detect ALL model names in a PK3 (for multi-model packs)
+     * Returns array of model directory names
+     */
+    private function detectAllModelNames($extractPath)
+    {
+        $playersPath = $extractPath . '/models/players';
+
+        if (!is_dir($playersPath)) {
+            return [];
+        }
+
+        $dirs = array_diff(scandir($playersPath), ['.', '..']);
+        $modelNames = [];
+
+        foreach ($dirs as $dir) {
+            if (is_dir($playersPath . '/' . $dir)) {
+                $modelNames[] = $dir;
+            }
+        }
+
+        return $modelNames;
     }
 
     /**
@@ -545,15 +640,25 @@ class ModelsController extends Controller
             abort(404);
         }
 
+        // For skin/mixed packs, fetch the base model data (for MD3 file paths)
+        $baseModelData = null;
+        if ($model->model_type !== 'complete' && $model->base_model && $model->base_model !== $model->name) {
+            $baseModelData = PlayerModel::where('name', $model->base_model)
+                ->where('model_type', 'complete')
+                ->first(['name', 'file_path']);
+        }
+
         // For thumbnail generation, render without layout
         if ($request->has('thumbnail')) {
             return Inertia::render('Models/ShowThumbnail', [
                 'model' => $model,
+                'baseModelData' => $baseModelData,
             ]);
         }
 
         return Inertia::render('Models/Show', [
             'model' => $model,
+            'baseModelData' => $baseModelData,
         ]);
     }
 
