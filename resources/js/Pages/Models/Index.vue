@@ -109,8 +109,8 @@ const getModelTypeBadgeClass = (type) => {
                             <ModelViewer
                                 v-if="model.file_path"
                                 :key="model.id"
-                                :model-path="`${model.file_path.startsWith('models/basequake3') ? '/' : '/storage/'}${model.file_path}/models/players/${model.name}/head.md3`"
-                                :skin-path="`${model.file_path.startsWith('models/basequake3') ? '/' : '/storage/'}${model.file_path}/models/players/${model.name}/head_default.skin`"
+                                :model-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + model.name}/head.md3`"
+                                :skin-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + model.name}/head_default.skin`"
                                 skin-name="default"
                                 :auto-rotate="false"
                                 :show-grid="false"

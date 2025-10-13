@@ -223,10 +223,10 @@ async function loadModel() {
                     let soundPath;
 
                     // Check if this is a base Q3 model or user-uploaded model
-                    if (props.modelPath.startsWith('/models/basequake3/players/')) {
-                        // Base Q3 model: /models/basequake3/players/anarki/head.md3
-                        // Sound path: /models/sound/anarki/
-                        soundPath = `/models/sound/${modelName}`;
+                    if (props.modelPath.startsWith('/baseq3/')) {
+                        // Base Q3 model: /baseq3/models/players/anarki/head.md3
+                        // Sound path: /baseq3/sound/player/anarki/
+                        soundPath = `/baseq3/sound/player/${modelName}`;
                     } else {
                         // User-uploaded model: /storage/models/extracted/worm-123/models/players/worm/head.md3
                         // Sound path: /storage/models/extracted/worm-123/sound/player/worm/

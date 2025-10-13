@@ -108,26 +108,40 @@ export class MD3Loader {
             }
 
             // Get the scripts directory URL
-            // baseUrl format: /storage/models/extracted/xxx/models/players/niria/
-            // We want: /storage/models/extracted/xxx/scripts/
+            // For base Q3 models: /baseq3/models/players/major/ -> /baseq3/scripts/
+            // For user models: /storage/models/extracted/xxx/models/players/niria/ -> /storage/models/extracted/xxx/scripts/
             const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
 
-            // Try loading shader file with model name first (e.g., niria.shader)
-            const shaderPatterns = [
-                `${modelName}.shader`,
-                'model.shader',
-                'models.shader',
-                'player.shader',
-                'players.shader'
-            ];
+            // For base Q3 models, load the bulk models.shader file that contains all model shaders
+            // For user models, try model-specific shader files
+            const isBaseQ3 = baseUrl.includes('/baseq3/');
 
-            for (const pattern of shaderPatterns) {
+            if (isBaseQ3) {
+                // Base Q3 uses a single models.shader file with all model shaders
                 try {
-                    await this.loadShaderFile(scriptsUrl + pattern);
-                    // If we successfully loaded a shader file, break the loop
-                    break;
+                    await this.loadShaderFile(scriptsUrl + 'models.shader');
+                    console.log(`✅ Loaded base Q3 models.shader - ${this.shaders.size} shaders total`);
                 } catch (e) {
-                    // Silently ignore, try next pattern
+                    console.warn('Failed to load base Q3 models.shader:', e);
+                }
+            } else {
+                // User-uploaded models: try model-specific shader files
+                const shaderPatterns = [
+                    `${modelName}.shader`,
+                    'model.shader',
+                    'models.shader',
+                    'player.shader',
+                    'players.shader'
+                ];
+
+                for (const pattern of shaderPatterns) {
+                    try {
+                        await this.loadShaderFile(scriptsUrl + pattern);
+                        // Successfully loaded a shader file
+                        break;
+                    } catch (e) {
+                        // Silently ignore, try next pattern
+                    }
                 }
             }
         } catch (error) {
@@ -160,15 +174,15 @@ export class MD3Loader {
                 // Convert relative path to absolute URL
                 // If texture path starts with models/, use it as-is from storage root
                 if (texturePath.startsWith('models/')) {
-                    // Check if this is a base Q3 model (in public/models/basequake3)
-                    if (baseUrl.includes('/models/basequake3/')) {
-                        // Base Q3 models: /models/basequake3/players/xxx/
+                    // Check if this is a base Q3 model (in public/baseq3)
+                    if (baseUrl.includes('/baseq3/')) {
+                        // Base Q3 models: /baseq3/models/players/xxx/
                         // Texture path: models/players/xxx/texture.tga
-                        // Result: /models/basequake3/players/xxx/texture.tga
-                        const match = baseUrl.match(/\/models\/basequake3\/players\/([^\/]+)\//);
+                        // Result: /baseq3/models/players/xxx/texture.tga
+                        const match = baseUrl.match(/\/baseq3\/models\/players\/([^\/]+)\//);
                         if (match) {
                             const modelName = match[1];
-                            texturePath = `/models/basequake3/players/${modelName}/${texturePath.split('/').pop()}`;
+                            texturePath = `/baseq3/models/players/${modelName}/${texturePath.split('/').pop()}`;
                         }
                     } else {
                         // User-uploaded models
@@ -253,19 +267,27 @@ export class MD3Loader {
                     const shader = this.shaders.get(shaderName);
 
                     if (shader) {
+                        console.log(`🎨 Found shader for "${shaderName}"`, shader);
                         // Apply shader properties and load texture
                         this.shaderMaterialSystem.createMaterialForShader(
                             shader,
                             texturePath,
                             surface.name
                         ).then(shaderMaterial => {
-                            // Replace material with shader material
+                            // Replace the basic material with custom shader material
                             mesh.material = shaderMaterial;
                             material.dispose();
+
+                            if (shaderMaterial.userData.isMultiStage) {
+                                console.log(`✅ Applied multi-stage shader material to ${surface.name} (${shaderMaterial.userData.numStages} stages)`);
+                            } else {
+                                console.log(`✅ Applied shader material to ${surface.name}`);
+                            }
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
                         });
                     } else {
+                        console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size})`);
                         // No shader, just load texture
                         this.loadTextureForMesh(texturePath, material).catch(err => {
                             console.warn(`Failed to load texture for ${surface.name}:`, err);

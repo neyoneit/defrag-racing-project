@@ -12,6 +12,13 @@ export class MD3SoundManager {
         this.volume = 0.5;
         this.enabled = true;
 
+        // Fallback sound path for base Q3 models (use sarge sounds if model sounds don't exist)
+        this.fallbackSoundPath = null;
+        if (baseSoundPath.includes('/baseq3/')) {
+            // For base Q3 models, fallback to sarge sounds
+            this.fallbackSoundPath = '/baseq3/sound/player/sarge';
+        }
+
         // Sound mapping for animations
         this.animationSounds = {
             'LEGS_JUMP': ['jump1'],
@@ -75,9 +82,21 @@ export class MD3SoundManager {
                 const soundName = filename.replace('.wav', '');
                 const url = `${this.baseSoundPath}/${filename}`;
 
-                const response = await fetch(url);
+                // Try primary sound path first
+                let response = await fetch(url);
+                let finalUrl = url;
+
+                // If not found and we have a fallback path, try fallback
+                if (!response.ok && this.fallbackSoundPath) {
+                    const fallbackUrl = `${this.fallbackSoundPath}/${filename}`;
+                    response = await fetch(fallbackUrl);
+                    if (response.ok) {
+                        finalUrl = fallbackUrl;
+                        console.log(`🔊 Sound fallback: ${soundName} → ${fallbackUrl}`);
+                    }
+                }
+
                 if (!response.ok) {
-                    console.warn(`Sound file not found: ${url}`);
                     return null;
                 }
 
@@ -87,13 +106,17 @@ export class MD3SoundManager {
                 this.soundBuffers.set(soundName, audioBuffer);
                 return soundName;
             } catch (error) {
-                console.warn(`Failed to load sound ${filename}:`, error);
                 return null;
             }
         });
 
         const results = await Promise.all(loadPromises);
         const loadedCount = results.filter(r => r !== null).length;
+
+        if (loadedCount > 0) {
+            console.log(`✅ Loaded ${loadedCount}/${this.soundFiles.length} sounds for ${this.modelName}`);
+        }
+
         return loadedCount > 0;
     }
 

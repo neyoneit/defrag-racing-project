@@ -65,10 +65,10 @@ const isGesturing = ref(false); // BUTTON_GESTURE
 const modelFilePath = computed(() => {
     if (!props.model.file_path) return null;
 
-    // Check if this is a base Q3 model (starts with "models/basequake3/players/")
-    if (props.model.file_path.startsWith('models/basequake3/players/')) {
-        // Base models are in public, not storage
-        // Path is like: models/basequake3/players/sarge
+    // Check if this is a base Q3 model (starts with "baseq3/")
+    if (props.model.file_path.startsWith('baseq3/')) {
+        // Base models are in public/baseq3
+        // Path is like: baseq3/models/players/sarge
         return `/${props.model.file_path}/head.md3`;
     }
 
@@ -86,7 +86,7 @@ const skinFilePath = computed(() => {
     if (!props.model.file_path) return null;
 
     // Check if this is a base Q3 model
-    if (props.model.file_path.startsWith('models/basequake3/players/')) {
+    if (props.model.file_path.startsWith('baseq3/')) {
         return `/${props.model.file_path}/head_${currentSkin.value}.skin`;
     }
 

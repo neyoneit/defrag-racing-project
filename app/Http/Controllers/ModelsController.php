@@ -26,7 +26,7 @@ class ModelsController extends Controller
             $query->category($category);
         }
 
-        $models = $query->paginate(24);
+        $models = $query->paginate(12);
 
         return Inertia::render('Models/Index', [
             'models' => $models,
