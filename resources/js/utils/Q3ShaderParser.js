@@ -91,6 +91,7 @@ export class Q3ShaderParser {
                     name: line,
                     cull: null,  // No default cull mode - will be set by shader or use material default
                     surfaceParms: [],
+                    deformVertexes: [],  // Array of vertex deformation effects
                     stages: []
                 };
             }
@@ -110,6 +111,13 @@ export class Q3ShaderParser {
                         break;
                     case 'nopicmip':
                         currentShader.noPicMip = true;
+                        break;
+                    case 'deformvertexes':
+                        // Parse deformVertexes: wave, move, normal, autosprite, autosprite2, bulge, etc.
+                        currentShader.deformVertexes.push({
+                            type: args[0].toLowerCase(),
+                            params: args.slice(1)
+                        });
                         break;
                 }
             }

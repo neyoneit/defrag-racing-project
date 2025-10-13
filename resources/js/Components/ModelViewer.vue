@@ -51,6 +51,11 @@ let soundManager = null;
 let clock = new THREE.Clock();
 const loader = new MD3Loader();
 
+// Light references
+let ambientLight = null;
+let directionalLight = null;
+let backLight = null;
+
 const loading = ref(true);
 const error = ref(null);
 const availableAnimations = ref({ legs: {}, torso: {}, both: {} });
@@ -138,17 +143,17 @@ function initScene() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Add lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.65);
     directionalLight.position.set(50, 100, 50);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
 
-    const backLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+    backLight = new THREE.DirectionalLight(0x4488ff, 0.20);
     backLight.position.set(-50, 50, -50);
     scene.add(backLight);
 
@@ -304,7 +309,7 @@ function animate() {
 }
 
 function updateShaderAnimations(time) {
-    if (!model || !loader) return;
+    if (!model || !loader || !scene) return;
 
     // Use the shader material system's update method
     const shaderSystem = loader.shaderMaterialSystem;
@@ -314,7 +319,10 @@ function updateShaderAnimations(time) {
         if (child.isMesh && child.material) {
             const materials = Array.isArray(child.material) ? child.material : [child.material];
             materials.forEach(material => {
+                // Update animation time
                 shaderSystem.updateMaterialAnimation(material, time);
+                // Update lighting from scene lights
+                shaderSystem.updateLightingFromScene(material, scene);
             });
         }
     });
@@ -401,6 +409,82 @@ function setAutoRotate(enabled) {
     }
 }
 
+// Light control methods
+function setAmbientLightIntensity(intensity) {
+    if (ambientLight) {
+        ambientLight.intensity = intensity;
+    }
+}
+
+function setAmbientLightColor(color) {
+    if (ambientLight) {
+        ambientLight.color.set(color);
+    }
+}
+
+function setDirectionalLightIntensity(intensity) {
+    if (directionalLight) {
+        directionalLight.intensity = intensity;
+    }
+}
+
+function setDirectionalLightColor(color) {
+    if (directionalLight) {
+        directionalLight.color.set(color);
+    }
+}
+
+function setDirectionalLightPosition(x, y, z) {
+    if (directionalLight) {
+        directionalLight.position.set(x, y, z);
+    }
+}
+
+function setBackLightIntensity(intensity) {
+    if (backLight) {
+        backLight.intensity = intensity;
+    }
+}
+
+function setBackLightColor(color) {
+    if (backLight) {
+        backLight.color.set(color);
+    }
+}
+
+function setBackLightPosition(x, y, z) {
+    if (backLight) {
+        backLight.position.set(x, y, z);
+    }
+}
+
+function getLightSettings() {
+    return {
+        ambient: {
+            intensity: ambientLight?.intensity || 0.6,
+            color: '#' + (ambientLight?.color.getHexString() || 'ffffff')
+        },
+        directional: {
+            intensity: directionalLight?.intensity || 0.8,
+            color: '#' + (directionalLight?.color.getHexString() || 'ffffff'),
+            position: {
+                x: directionalLight?.position.x || 50,
+                y: directionalLight?.position.y || 100,
+                z: directionalLight?.position.z || 50
+            }
+        },
+        back: {
+            intensity: backLight?.intensity || 0.3,
+            color: '#' + (backLight?.color.getHexString() || '4488ff'),
+            position: {
+                x: backLight?.position.x || -50,
+                y: backLight?.position.y || 50,
+                z: backLight?.position.z || -50
+            }
+        }
+    };
+}
+
 // Expose methods for parent component
 defineExpose({
     getModel: () => model,
@@ -429,7 +513,17 @@ defineExpose({
     },
     areSoundsLoaded: () => soundsLoaded.value,
     setWireframe: setWireframe,
-    setAutoRotate: setAutoRotate
+    setAutoRotate: setAutoRotate,
+    // Light controls
+    setAmbientLightIntensity,
+    setAmbientLightColor,
+    setDirectionalLightIntensity,
+    setDirectionalLightColor,
+    setDirectionalLightPosition,
+    setBackLightIntensity,
+    setBackLightColor,
+    setBackLightPosition,
+    getLightSettings
 });
 </script>
 

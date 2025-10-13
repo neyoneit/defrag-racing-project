@@ -97,7 +97,7 @@ class ImportBaseModels extends Command
 
             // Create model record
             PlayerModel::create([
-                'user_id' => 1, // Admin user (adjust if needed)
+                'user_id' => 8, // neyoneit (admin)
                 'name' => $modelName,
                 'base_model' => $modelName, // Base models reference themselves
                 'model_type' => 'complete',

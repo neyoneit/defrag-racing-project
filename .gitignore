@@ -58,3 +58,6 @@ PRODUCTION_CREDENTIALS.md
 
 # Don't commit test files (zip, pk3, txt from extractions)
 /public/test/
+
+# Don't commit one-off player rename commands
+/app/Console/Commands/RenamePlayer.php

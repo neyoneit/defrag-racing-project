@@ -274,6 +274,14 @@ export class MD3Loader {
                             texturePath,
                             surface.name
                         ).then(shaderMaterial => {
+                            // Handle null return (nodraw surfaces)
+                            if (shaderMaterial === null) {
+                                // Hide the mesh - it's a nodraw surface
+                                mesh.visible = false;
+                                material.dispose();
+                                return;
+                            }
+
                             // Replace the basic material with custom shader material
                             mesh.material = shaderMaterial;
                             material.dispose();

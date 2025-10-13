@@ -30,6 +30,14 @@ const animationSpeed = ref(1.0); // FPS multiplier
 const manualFrame = ref(0);
 const maxFrames = ref(10); // Will be updated based on animation
 
+// Light controls
+const lightSettings = ref({
+    ambient: { intensity: 0.6, color: '#ffffff' },
+    directional: { intensity: 0.8, color: '#ffffff', position: { x: 50, y: 100, z: 50 } },
+    back: { intensity: 0.3, color: '#4488ff', position: { x: -50, y: 50, z: -50 } }
+});
+const showLightControls = ref(false);
+
 // Skin selection
 const availableSkins = computed(() => {
     // Ensure available_skins is always an array
@@ -98,6 +106,11 @@ const skinFilePath = computed(() => {
 
 const onViewerLoaded = (model) => {
     viewerLoaded.value = true;
+
+    // Get initial light settings
+    if (viewer3D.value) {
+        lightSettings.value = viewer3D.value.getLightSettings();
+    }
 
     // Expose camera and scene to window for Puppeteer thumbnail generation
     if (isThumbnailMode.value && viewer3D.value) {
@@ -380,6 +393,73 @@ watch(showWireframe, (newValue) => {
     }
 });
 
+// Light update methods
+const updateAmbientIntensity = (event) => {
+    const intensity = parseFloat(event.target.value);
+    lightSettings.value.ambient.intensity = intensity;
+    if (viewer3D.value) {
+        viewer3D.value.setAmbientLightIntensity(intensity);
+    }
+};
+
+const updateAmbientColor = (event) => {
+    const color = event.target.value;
+    lightSettings.value.ambient.color = color;
+    if (viewer3D.value) {
+        viewer3D.value.setAmbientLightColor(color);
+    }
+};
+
+const updateDirectionalIntensity = (event) => {
+    const intensity = parseFloat(event.target.value);
+    lightSettings.value.directional.intensity = intensity;
+    if (viewer3D.value) {
+        viewer3D.value.setDirectionalLightIntensity(intensity);
+    }
+};
+
+const updateDirectionalColor = (event) => {
+    const color = event.target.value;
+    lightSettings.value.directional.color = color;
+    if (viewer3D.value) {
+        viewer3D.value.setDirectionalLightColor(color);
+    }
+};
+
+const updateDirectionalPosition = (axis, event) => {
+    const value = parseFloat(event.target.value);
+    lightSettings.value.directional.position[axis] = value;
+    if (viewer3D.value) {
+        const pos = lightSettings.value.directional.position;
+        viewer3D.value.setDirectionalLightPosition(pos.x, pos.y, pos.z);
+    }
+};
+
+const updateBackIntensity = (event) => {
+    const intensity = parseFloat(event.target.value);
+    lightSettings.value.back.intensity = intensity;
+    if (viewer3D.value) {
+        viewer3D.value.setBackLightIntensity(intensity);
+    }
+};
+
+const updateBackColor = (event) => {
+    const color = event.target.value;
+    lightSettings.value.back.color = color;
+    if (viewer3D.value) {
+        viewer3D.value.setBackLightColor(color);
+    }
+};
+
+const updateBackPosition = (axis, event) => {
+    const value = parseFloat(event.target.value);
+    lightSettings.value.back.position[axis] = value;
+    if (viewer3D.value) {
+        const pos = lightSettings.value.back.position;
+        viewer3D.value.setBackLightPosition(pos.x, pos.y, pos.z);
+    }
+};
+
 // Model type badge helpers
 const getModelTypeLabel = (type) => {
     const labels = {
@@ -405,7 +485,7 @@ const getModelTypeBadgeClass = (type) => {
 <template>
     <Head :title="model.name" />
     <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen py-12'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
-            <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+            <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                 <!-- Back Button -->
                 <Link v-if="!isThumbnailMode" :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -487,175 +567,6 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
                         </div>
 
-                        <!-- Animation Controls Card -->
-                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-bold text-gray-300">Controls</h4>
-
-                                <!-- Current Animation State -->
-                                <div class="flex gap-2">
-                                    <span v-if="currentLegsAnim" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold border border-blue-500/30">
-                                        {{ currentLegsAnim.replace('LEGS_', '') }}
-                                    </span>
-                                    <span v-if="currentTorsoAnim" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold border border-green-500/30">
-                                        {{ currentTorsoAnim.replace('TORSO_', '') }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Animation Speed -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs text-gray-400 w-16">Speed:</span>
-                                <input
-                                    type="range"
-                                    min="0.1"
-                                    max="3.0"
-                                    step="0.1"
-                                    :value="animationSpeed"
-                                    @input="updateAnimationSpeed"
-                                    class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                                />
-                                <span class="text-xs text-gray-400 w-12 text-right">{{ animationSpeed.toFixed(1) }}x</span>
-                            </div>
-                        </div>
-
-                        <!-- Sound Controls Card -->
-                        <div v-if="soundsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
-                                <button @click="toggleSounds" :class="[
-                                    'px-3 py-1 rounded text-xs font-semibold transition-all',
-                                    soundsEnabled
-                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                ]">
-                                    {{ soundsEnabled ? '🔊' : '🔇' }}
-                                </button>
-                            </div>
-
-                            <!-- Volume Slider -->
-                            <div class="mb-4">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-xs text-gray-400 w-16">Volume:</span>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="1"
-                                        step="0.1"
-                                        :value="soundVolume"
-                                        @input="updateVolume"
-                                        class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                                        :disabled="!soundsEnabled"
-                                    />
-                                    <span class="text-xs text-gray-400 w-12 text-right">{{ Math.round(soundVolume * 100) }}%</span>
-                                </div>
-                            </div>
-
-                            <!-- Sound Test Buttons -->
-                            <div class="grid grid-cols-4 gap-2">
-                                <button
-                                    v-for="soundName in availableSounds"
-                                    :key="soundName"
-                                    @click="playSound(soundName)"
-                                    :disabled="!soundsEnabled"
-                                    class="px-2 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-xs font-semibold transition-colors">
-                                    {{ soundName }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Model Info -->
-                    <div v-if="!isThumbnailMode">
-                        <!-- Title and Category -->
-                        <div class="mb-6">
-                            <div class="flex items-start justify-between mb-2">
-                                <h1 class="text-4xl font-black text-white">{{ model.name }}</h1>
-                                <span class="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-sm font-bold text-blue-400">
-                                    {{ model.category }}
-                                </span>
-                            </div>
-                            <div class="text-gray-400">
-                                <p v-if="model.author">
-                                    Created by <span class="text-white font-semibold">{{ model.author }}</span>
-                                    <span v-if="model.author_email" class="text-gray-500">
-                                        ({{ model.author_email }})
-                                    </span>
-                                </p>
-                                <div class="flex items-center gap-3 mt-2">
-                                    <p v-if="model.base_model" class="text-sm text-gray-500">
-                                        Based on <span class="text-gray-300 font-semibold">{{ model.base_model }}</span>
-                                    </p>
-                                    <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
-                                        {{ getModelTypeLabel(model.model_type) }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ANIMATION BUTTONS -->
-                        <div v-if="animationsReady" class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
-                            <h3 class="text-lg font-bold text-white mb-4">Animations</h3>
-
-                            <!-- LEGS ANIMATIONS -->
-                            <div class="mb-4">
-                                <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Legs ({{ Object.keys(availableAnimations.legs || {}).length }})</h4>
-                                <div class="grid grid-cols-3 gap-1.5">
-                                    <button
-                                        v-for="(animData, animName) in availableAnimations.legs"
-                                        :key="animName"
-                                        @click="oneShotAnimations.legs.includes(animName) ? playOneShotAnimation(animName, 'legs') : (viewer3D.playLegsAnimation(animName), currentLegsAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'legs'))"
-                                        :class="[
-                                            'px-2 py-1.5 rounded text-xs font-mono transition-colors border text-left',
-                                            currentLegsAnim === animName
-                                                ? 'bg-blue-600/70 border-blue-500/70 text-white'
-                                                : 'bg-blue-600/20 border-blue-500/30 text-blue-300 hover:bg-blue-600/40'
-                                        ]">
-                                        <div class="font-bold text-xs">{{ animName.replace('LEGS_', '') }}</div>
-                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- TORSO ANIMATIONS -->
-                            <div class="mb-4">
-                                <h4 class="text-xs font-bold text-green-400 mb-2 uppercase">Torso ({{ Object.keys(availableAnimations.torso || {}).length }})</h4>
-                                <div class="grid grid-cols-3 gap-1.5">
-                                    <button
-                                        v-for="(animData, animName) in availableAnimations.torso"
-                                        :key="animName"
-                                        @click="oneShotAnimations.torso.includes(animName) ? playOneShotAnimation(animName, 'torso') : (viewer3D.playTorsoAnimation(animName), currentTorsoAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'torso'))"
-                                        :class="[
-                                            'px-2 py-1.5 rounded text-xs font-mono transition-colors border text-left',
-                                            currentTorsoAnim === animName
-                                                ? 'bg-green-600/70 border-green-500/70 text-white'
-                                                : 'bg-green-600/20 border-green-500/30 text-green-300 hover:bg-green-600/40'
-                                        ]">
-                                        <div class="font-bold text-xs">{{ animName.replace('TORSO_', '') }}</div>
-                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- BOTH ANIMATIONS -->
-                            <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0">
-                                <h4 class="text-xs font-bold text-purple-400 mb-2 uppercase">Both ({{ Object.keys(availableAnimations.both || {}).length }})</h4>
-                                <div class="grid grid-cols-3 gap-1.5 mb-3">
-                                    <button
-                                        v-for="(animData, animName) in availableAnimations.both"
-                                        :key="animName"
-                                        @click="playOneShotAnimation(animName, 'both')"
-                                        class="px-2 py-1.5 rounded text-xs font-mono bg-purple-600/20 border border-purple-500/30 text-purple-300 hover:bg-purple-600/40 transition-colors text-left">
-                                        <div class="font-bold text-xs">{{ animName.replace('BOTH_', '') }}</div>
-                                        <div class="text-[10px] opacity-60">{{ animData.numFrames }}f</div>
-                                    </button>
-                                </div>
-                                <div class="text-xs text-gray-400 italic">
-                                    One-shot animations hold 2s, then return to idle
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Description -->
                         <div v-if="model.description" class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
                             <h3 class="text-lg font-bold text-white mb-3">Description</h3>
@@ -690,6 +601,352 @@ const getModelTypeBadgeClass = (type) => {
                                     <div class="text-gray-400 text-sm mb-1">Uploaded</div>
                                     <div class="text-white font-bold">{{ new Date(model.created_at).toLocaleDateString() }}</div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Model Info -->
+                    <div v-if="!isThumbnailMode">
+                        <!-- Title and Category -->
+                        <div class="mb-6">
+                            <div class="flex items-start justify-between mb-2">
+                                <h1 class="text-4xl font-black text-white">{{ model.name }}</h1>
+                                <span class="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-sm font-bold text-blue-400">
+                                    {{ model.category }}
+                                </span>
+                            </div>
+                            <div class="text-gray-400">
+                                <p v-if="model.author">
+                                    Created by <span class="text-white font-semibold">{{ model.author }}</span>
+                                    <span v-if="model.author_email" class="text-gray-500">
+                                        ({{ model.author_email }})
+                                    </span>
+                                </p>
+                                <div class="flex items-center gap-3 mt-2">
+                                    <p v-if="model.base_model" class="text-sm text-gray-500">
+                                        Based on <span class="text-gray-300 font-semibold">{{ model.base_model }}</span>
+                                    </p>
+                                    <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
+                                        {{ getModelTypeLabel(model.model_type) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ANIMATION BUTTONS -->
+                        <div v-if="animationsReady" class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+                            <h3 class="text-sm font-bold text-white mb-3">Animations</h3>
+
+                            <!-- LEGS ANIMATIONS -->
+                            <div class="mb-3">
+                                <h4 class="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-wider">Legs ({{ Object.keys(availableAnimations.legs || {}).length }})</h4>
+                                <div class="flex flex-wrap gap-1">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.legs"
+                                        :key="animName"
+                                        @click="oneShotAnimations.legs.includes(animName) ? playOneShotAnimation(animName, 'legs') : (viewer3D.playLegsAnimation(animName), currentLegsAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'legs'))"
+                                        :class="[
+                                            'px-2 py-1 rounded text-[10px] font-semibold transition-all border',
+                                            currentLegsAnim === animName
+                                                ? 'bg-blue-500/80 border-blue-400/80 text-white shadow-sm'
+                                                : 'bg-blue-600/15 border-blue-500/25 text-blue-300 hover:bg-blue-600/30 hover:border-blue-500/40'
+                                        ]">
+                                        {{ animName.replace('LEGS_', '') }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- TORSO ANIMATIONS -->
+                            <div class="mb-3">
+                                <h4 class="text-[10px] font-bold text-green-400 mb-1.5 uppercase tracking-wider">Torso ({{ Object.keys(availableAnimations.torso || {}).length }})</h4>
+                                <div class="flex flex-wrap gap-1">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.torso"
+                                        :key="animName"
+                                        @click="oneShotAnimations.torso.includes(animName) ? playOneShotAnimation(animName, 'torso') : (viewer3D.playTorsoAnimation(animName), currentTorsoAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'torso'))"
+                                        :class="[
+                                            'px-2 py-1 rounded text-[10px] font-semibold transition-all border',
+                                            currentTorsoAnim === animName
+                                                ? 'bg-green-500/80 border-green-400/80 text-white shadow-sm'
+                                                : 'bg-green-600/15 border-green-500/25 text-green-300 hover:bg-green-600/30 hover:border-green-500/40'
+                                        ]">
+                                        {{ animName.replace('TORSO_', '') }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- BOTH ANIMATIONS -->
+                            <div v-if="availableAnimations.both && Object.keys(availableAnimations.both || {}).length > 0" class="mb-2">
+                                <h4 class="text-[10px] font-bold text-purple-400 mb-1.5 uppercase tracking-wider">Both ({{ Object.keys(availableAnimations.both || {}).length }})</h4>
+                                <div class="flex flex-wrap gap-1 mb-2">
+                                    <button
+                                        v-for="(animData, animName) in availableAnimations.both"
+                                        :key="animName"
+                                        @click="playOneShotAnimation(animName, 'both')"
+                                        class="px-2 py-1 rounded text-[10px] font-semibold bg-purple-600/15 border border-purple-500/25 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/40 transition-all">
+                                        {{ animName.replace('BOTH_', '') }}
+                                    </button>
+                                </div>
+                                <div class="text-[10px] text-gray-400 italic">
+                                    One-shot animations hold 2s, then return to idle
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Light Controls Card -->
+                        <div v-if="viewerLoaded && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-bold text-gray-300">Lighting</h4>
+                                <button @click="showLightControls = !showLightControls" class="px-3 py-1 rounded text-xs font-semibold transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30">
+                                    {{ showLightControls ? '💡 Hide' : '💡 Show' }}
+                                </button>
+                            </div>
+
+                            <div v-if="showLightControls" class="space-y-4">
+                                <!-- Ambient Light -->
+                                <div class="border-t border-white/10 pt-4">
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">AMBIENT LIGHT</h5>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="2"
+                                                step="0.1"
+                                                :value="lightSettings.ambient.intensity"
+                                                @input="updateAmbientIntensity"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.ambient.intensity.toFixed(1) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <input
+                                                type="color"
+                                                :value="lightSettings.ambient.color"
+                                                @input="updateAmbientColor"
+                                                class="w-12 h-8 rounded cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400">{{ lightSettings.ambient.color }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Directional Light -->
+                                <div class="border-t border-white/10 pt-4">
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">MAIN LIGHT</h5>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="3"
+                                                step="0.1"
+                                                :value="lightSettings.directional.intensity"
+                                                @input="updateDirectionalIntensity"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.intensity.toFixed(1) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <input
+                                                type="color"
+                                                :value="lightSettings.directional.color"
+                                                @input="updateDirectionalColor"
+                                                class="w-12 h-8 rounded cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400">{{ lightSettings.directional.color }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position X:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.directional.position.x"
+                                                @input="(e) => updateDirectionalPosition('x', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.position.x }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position Y:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.directional.position.y"
+                                                @input="(e) => updateDirectionalPosition('y', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.position.y }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position Z:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.directional.position.z"
+                                                @input="(e) => updateDirectionalPosition('z', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.directional.position.z }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Back Light -->
+                                <div class="border-t border-white/10 pt-4">
+                                    <h5 class="text-xs font-bold text-gray-400 mb-3">BACK LIGHT (Rim)</h5>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Intensity:</span>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="2"
+                                                step="0.1"
+                                                :value="lightSettings.back.intensity"
+                                                @input="updateBackIntensity"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.intensity.toFixed(1) }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Color:</span>
+                                            <input
+                                                type="color"
+                                                :value="lightSettings.back.color"
+                                                @input="updateBackColor"
+                                                class="w-12 h-8 rounded cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400">{{ lightSettings.back.color }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position X:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.back.position.x"
+                                                @input="(e) => updateBackPosition('x', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.position.x }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position Y:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.back.position.y"
+                                                @input="(e) => updateBackPosition('y', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.position.y }}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-xs text-gray-400 w-20">Position Z:</span>
+                                            <input
+                                                type="range"
+                                                min="-200"
+                                                max="200"
+                                                step="10"
+                                                :value="lightSettings.back.position.z"
+                                                @input="(e) => updateBackPosition('z', e)"
+                                                class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <span class="text-xs text-gray-400 w-12 text-right">{{ lightSettings.back.position.z }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Animation Controls Card -->
+                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-sm font-bold text-gray-300">Controls</h4>
+
+                                <!-- Current Animation State -->
+                                <div class="flex gap-2">
+                                    <span v-if="currentLegsAnim" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold border border-blue-500/30">
+                                        {{ currentLegsAnim.replace('LEGS_', '') }}
+                                    </span>
+                                    <span v-if="currentTorsoAnim" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold border border-green-500/30">
+                                        {{ currentTorsoAnim.replace('TORSO_', '') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Animation Speed -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-gray-400 w-16">Speed:</span>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="3.0"
+                                    step="0.1"
+                                    :value="animationSpeed"
+                                    @input="updateAnimationSpeed"
+                                    class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span class="text-xs text-gray-400 w-12 text-right">{{ animationSpeed.toFixed(1) }}x</span>
+                            </div>
+                        </div>
+
+                        <!-- Sound Controls Card -->
+                        <div v-if="soundsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-4 mb-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
+                                <button @click="toggleSounds" :class="[
+                                    'px-3 py-1 rounded text-xs font-semibold transition-all',
+                                    soundsEnabled
+                                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                ]">
+                                    {{ soundsEnabled ? '🔊' : '🔇' }}
+                                </button>
+                            </div>
+
+                            <!-- Volume Slider -->
+                            <div class="mb-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-400 w-16">Volume:</span>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.1"
+                                        :value="soundVolume"
+                                        @input="updateVolume"
+                                        class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                        :disabled="!soundsEnabled"
+                                    />
+                                    <span class="text-xs text-gray-400 w-12 text-right">{{ Math.round(soundVolume * 100) }}%</span>
+                                </div>
+                            </div>
+
+                            <!-- Sound Test Buttons -->
+                            <div class="flex flex-wrap gap-1">
+                                <button
+                                    v-for="soundName in availableSounds"
+                                    :key="soundName"
+                                    @click="playSound(soundName)"
+                                    :disabled="!soundsEnabled"
+                                    class="px-2 py-1 rounded text-[10px] font-semibold bg-purple-600/15 border border-purple-500/25 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                                    {{ soundName }}
+                                </button>
                             </div>
                         </div>
 
