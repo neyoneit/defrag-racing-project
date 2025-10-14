@@ -254,4 +254,54 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
             $best_demo->save();
         }
     }
+
+    /**
+     * Get user's maplists
+     */
+    public function maplists()
+    {
+        return $this->hasMany(Maplist::class);
+    }
+
+    /**
+     * Get user's "Play Later" maplist
+     */
+    public function playLaterMaplist()
+    {
+        return $this->hasOne(Maplist::class)->where('is_play_later', true);
+    }
+
+    /**
+     * Get maplists the user has liked
+     */
+    public function likedMaplists()
+    {
+        return $this->belongsToMany(Maplist::class, 'maplist_likes')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get maplists the user has favorited
+     */
+    public function favoritedMaplists()
+    {
+        return $this->belongsToMany(Maplist::class, 'maplist_favorites')
+            ->withTimestamps();
+    }
+
+    /**
+     * Boot method to create "Play Later" maplist for new users
+     */
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            Maplist::create([
+                'user_id' => $user->id,
+                'name' => 'Play Later',
+                'description' => 'Save maps to play later',
+                'is_public' => false,
+                'is_play_later' => true,
+            ]);
+        });
+    }
 }

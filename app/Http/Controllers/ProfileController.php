@@ -289,6 +289,15 @@ class ProfileController extends Controller {
             'count' => count($unplayedMaps->items())
         ]);
 
+        // Get user's most favorited public maplists
+        $start = microtime(true);
+        $userMaplists = \App\Models\Maplist::where('user_id', $user->id)
+            ->where('is_public', true)
+            ->orderBy('favorites_count', 'desc')
+            ->limit(3)
+            ->get();
+        $timings['maplists'] = round((microtime(true) - $start) * 1000, 2);
+
         $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
         \Log::info('Profile page load times', $timings);
@@ -307,6 +316,7 @@ class ProfileController extends Controller {
             ->with('vq3_rivals', $vq3Rivals)
             ->with('unplayed_maps', $unplayedMaps)
             ->with('total_maps', $totalMaps)
+            ->with('user_maplists', $userMaplists)
             ->with('load_times', $timings)
             ->with('hasProfile', true);
     }

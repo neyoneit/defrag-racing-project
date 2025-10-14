@@ -62,3 +62,8 @@ PRODUCTION_CREDENTIALS.md
 # Don't commit one-off player rename commands
 /app/Console/Commands/RenamePlayer.php
 *.sql
+
+# MediaWiki - Don't commit LocalSettings.php (contains secrets)
+/wiki/LocalSettings.php
+/wiki/extensions/*
+!/wiki/extensions/.gitkeep

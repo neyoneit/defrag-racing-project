@@ -173,6 +173,9 @@
                                 <NavLink :href="route('maps')" :active="route().current('maps')" class="hidden lg:block">
                                     Maps
                                 </NavLink>
+                                <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')" class="hidden lg:block">
+                                    Maplists
+                                </NavLink>
                                 <NavLink href="/models" :active="route().current('models.*')" class="hidden xl:block">
                                     Models
                                 </NavLink>
@@ -207,6 +210,10 @@
                                         <DropdownLink :href="route('tournaments.index')">
                                             Tournaments
                                         </DropdownLink>
+                                        <div class="border-t border-white/5 my-1"></div>
+                                        <DropdownLink href="/wiki">
+                                            Wiki
+                                        </DropdownLink>
                                     </template>
                                 </Dropdown>
                             </div>
@@ -230,6 +237,9 @@
                                     <!-- Main items (hidden on smaller screens) -->
                                     <DropdownLink :href="route('maps')" class="lg:hidden">
                                         Maps
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('maplists.index')" class="lg:hidden">
+                                        Maplists
                                     </DropdownLink>
                                     <DropdownLink :href="route('ranking')" class="lg:hidden">
                                         Ranking
@@ -261,6 +271,9 @@
                                     <div class="border-t border-white/5 my-1"></div>
                                     <DropdownLink href="/models">
                                         Models
+                                    </DropdownLink>
+                                    <DropdownLink href="/wiki">
+                                        Wiki
                                     </DropdownLink>
                                 </template>
                             </Dropdown>
@@ -483,6 +496,21 @@
                                         </DropdownLink>
                                         <DropdownLink :href="route('profile.show')">
                                             Settings
+                                        </DropdownLink>
+                                        <div class="border-t border-white/5" />
+                                        <div class="px-4 py-2 text-xs text-gray-400">
+                                            My Maplists
+                                        </div>
+                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
+                                            <div class="flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Play Later
+                                            </div>
+                                        </DropdownLink>
+                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
+                                            All My Maplists
                                         </DropdownLink>
                                         <div class="border-t border-white/5" />
                                         <form @submit.prevent="logout">

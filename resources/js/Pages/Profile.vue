@@ -29,6 +29,10 @@
             type: Number,
             default: 0
         },
+        user_maplists: {
+            type: Array,
+            default: () => []
+        },
         hasProfile: Boolean,
         load_times: Object
     });
@@ -1222,6 +1226,50 @@
                             <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User's Featured Maplists -->
+        <div v-if="user_maplists && user_maplists.length > 0" class="max-w-screen-2xl mx-auto px-4 mt-8 mb-8">
+            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                        </svg>
+                        Featured Maplists
+                    </h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Link v-for="maplist in user_maplists" :key="maplist.id" :href="`/maplists/${maplist.id}`" class="bg-white/5 hover:bg-white/10 rounded-lg p-4 border border-white/10 hover:border-blue-500/50 transition group">
+                        <div class="flex items-start justify-between mb-2">
+                            <h4 class="text-white font-bold group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
+                            <div v-if="maplist.is_public" class="text-xs text-green-400 px-2 py-1 bg-green-400/10 rounded">Public</div>
+                        </div>
+
+                        <p v-if="maplist.description" class="text-sm text-gray-400 mb-3 line-clamp-2">
+                            {{ maplist.description }}
+                        </p>
+
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-1 text-gray-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    </svg>
+                                    <span>{{ maplist.maps_count || 0 }}</span>
+                                </div>
+                                <div class="flex items-center gap-1 text-yellow-400">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    <span>{{ maplist.favorites_count || 0 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </div>

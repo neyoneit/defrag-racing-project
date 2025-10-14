@@ -17,6 +17,7 @@ use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
 use App\Http\Controllers\ModelsController;
+use App\Http\Controllers\WikiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -170,3 +171,23 @@ Route::get('/announcements', [ChangelogController::class, 'announcements'])->nam
 Route::get('/privacy-policy', [PagesController::class, 'privacypolicy'])->name('pages.privacy-policy');
 Route::get('/privacy-policy-twitch', [PagesController::class, 'privacypolicytwitch'])->name('pages.privacy-policy-twitch');
 Route::get('/pages/{slug}', [PagesController::class, 'index'])->name('pages.show');
+
+// Maplist routes
+Route::get('/maplists', [App\Http\Controllers\MaplistController::class, 'index'])->name('maplists.index');
+Route::get('/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'show'])->name('maplists.show');
+
+// Authenticated maplist routes
+Route::middleware('auth')->group(function () {
+    Route::get('/api/maplists/user', [App\Http\Controllers\MaplistController::class, 'getUserMaplists'])->name('maplists.user');
+    Route::post('/api/maplists', [App\Http\Controllers\MaplistController::class, 'store'])->name('maplists.store');
+    Route::put('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'update'])->name('maplists.update');
+    Route::delete('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'destroy'])->name('maplists.destroy');
+    Route::post('/api/maplists/{id}/maps', [App\Http\Controllers\MaplistController::class, 'addMap'])->name('maplists.addMap');
+    Route::delete('/api/maplists/{maplistId}/maps/{mapId}', [App\Http\Controllers\MaplistController::class, 'removeMap'])->name('maplists.removeMap');
+    Route::post('/api/maplists/{id}/like', [App\Http\Controllers\MaplistController::class, 'toggleLike'])->name('maplists.toggleLike');
+    Route::post('/api/maplists/{id}/favorite', [App\Http\Controllers\MaplistController::class, 'toggleFavorite'])->name('maplists.toggleFavorite');
+    Route::get('/api/maps/search', [App\Http\Controllers\MaplistController::class, 'searchMaps'])->name('maps.search');
+});
+
+// Wiki proxy routes - must be at the end to avoid conflicts
+Route::any('/wiki/{path?}', [WikiController::class, 'proxy'])->where('path', '.*')->name('wiki');

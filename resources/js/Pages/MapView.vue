@@ -7,7 +7,10 @@
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
+    import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
     import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
+
+    const showAddToMaplistModal = ref(false);
 
     const props = defineProps({
         map: Object,
@@ -360,6 +363,18 @@
                             Download Map
                         </a>
 
+                        <!-- Add to Maplist Button (only for authenticated users) -->
+                        <button
+                            v-if="$page.props.auth.user"
+                            @click="showAddToMaplistModal = true"
+                            class="flex items-center gap-1.5 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add to Maplist
+                        </button>
+
                         <!-- Active Servers -->
                         <div v-if="servers && servers.length > 0" class="flex flex-wrap gap-2">
                             <a
@@ -598,6 +613,14 @@
                 </div>
             </div>
         </div>
+
+        <!-- Add to Maplist Modal -->
+        <AddToMaplistModal
+            :show="showAddToMaplistModal"
+            :map-id="map.id"
+            @close="showAddToMaplistModal = false"
+            @added="showAddToMaplistModal = false"
+        />
     </div>
 </template>
 

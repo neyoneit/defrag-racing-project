@@ -45,7 +45,7 @@ class ScrapeQ3dfModels extends Command
                     $page = $startPage + $i; // Go forwards from start page
                 }
 
-                $url = $page === 0 ? 'https://ws.q3df.org/models/' : "https://ws.q3df.org/models/?model=&page={$page}";
+                $url = $page === 0 ? 'https://ws.q3df.org/models/?show=50' : "https://ws.q3df.org/models/?model=&page={$page}&show=50";
                 $this->info("Fetching page " . ($page + 1) . " (page index {$page})...");
 
                 $response = Http::get($url);
@@ -333,6 +333,9 @@ class ScrapeQ3dfModels extends Command
                         $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
                         $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
 
+                        // Determine base model file path for MD3 files
+                        $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
+
                         // Use author from ws.q3df.org, fallback to metadata from txt file
                         $author = $modelData['author'] !== 'Unknown' ? $modelData['author'] : ($metadata['author'] ?? null);
 
@@ -361,6 +364,7 @@ class ScrapeQ3dfModels extends Command
                                 'user_id' => $userId,
                                 'name' => $displayName,
                                 'base_model' => $baseModel,
+                                'base_model_file_path' => $baseModelFilePath,
                                 'model_type' => $modelType,
                                 'description' => $author ? "Created by {$author}" : null,
                                 'category' => 'player', // Default to player
@@ -570,6 +574,57 @@ class ScrapeQ3dfModels extends Command
         }
 
         return $metadata;
+    }
+
+    /**
+     * Determine the base model file path for MD3 files
+     * This resolves where the actual MD3 geometry files are located
+     *
+     * For complete models: uses own file_path
+     * For skin/mixed packs: tries to find base Q3 model or existing uploaded base model
+     */
+    private function determineBaseModelFilePath($extractPath, $modelName, $hasMd3Files, $baseModel)
+    {
+        // If has MD3 files, it's complete - use its own path
+        if ($hasMd3Files) {
+            return null; // Will use file_path
+        }
+
+        // For skin/mixed packs, try to find the base model
+        // Priority 1: Check if it's a base Q3 model (pak0-pak8.pk3)
+        $baseQ3Models = [
+            'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
+            'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
+            'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel'
+        ];
+
+        if (in_array(strtolower($baseModel), $baseQ3Models)) {
+            // It's a base Q3 model
+            return 'baseq3/models/players/' . strtolower($baseModel);
+        }
+
+        // Priority 2: Try to find an existing user-uploaded complete model with this base_model name
+        $existingBaseModel = PlayerModel::where('base_model', $baseModel)
+            ->where('model_type', 'complete')
+            ->orderBy('created_at', 'asc') // Get the oldest (original) model
+            ->first(['file_path']);
+
+        if ($existingBaseModel) {
+            return $existingBaseModel->file_path;
+        }
+
+        // Priority 3: Try matching by name (for backwards compatibility)
+        $existingBaseModel = PlayerModel::where('name', 'LIKE', $baseModel . '%')
+            ->where('model_type', 'complete')
+            ->orderBy('created_at', 'asc')
+            ->first(['file_path']);
+
+        if ($existingBaseModel) {
+            return $existingBaseModel->file_path;
+        }
+
+        // Fallback: return null (will need to be resolved at runtime)
+        return null;
     }
 
     private function deleteDirectory($dir)

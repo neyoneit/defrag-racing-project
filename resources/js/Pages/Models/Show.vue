@@ -432,7 +432,16 @@ const updateAnimationSpeed = (event) => {
     }
 };
 
+// Check if this is a base Q3 model (cannot be downloaded)
+const isBaseQ3Model = computed(() => {
+    return props.model.file_path && props.model.file_path.startsWith('baseq3/');
+});
+
 const downloadModel = () => {
+    if (isBaseQ3Model.value) {
+        showErrorNotification('Base Q3 models cannot be downloaded. They are included with Quake 3.');
+        return;
+    }
     window.location.href = route('models.download', props.model.id);
 };
 
@@ -1470,15 +1479,26 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Download Button -->
-                        <button @click="downloadModel"
-                                class="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-black rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-green-500/50 text-lg mb-4">
-                            <span class="flex items-center justify-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                </svg>
-                                Download Model
-                            </span>
-                        </button>
+                        <div class="relative mb-4">
+                            <button @click="downloadModel"
+                                    :disabled="isBaseQ3Model"
+                                    :class="[
+                                        'w-full px-6 py-4 text-white font-black rounded-xl transition-all shadow-lg text-lg',
+                                        isBaseQ3Model
+                                            ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed opacity-60'
+                                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/50'
+                                    ]">
+                                <span class="flex items-center justify-center gap-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    {{ isBaseQ3Model ? 'Included with Quake 3' : 'Download Model' }}
+                                </span>
+                            </button>
+                            <p v-if="isBaseQ3Model" class="text-center text-gray-400 text-xs mt-2">
+                                This model is part of the base Quake 3 installation
+                            </p>
+                        </div>
 
                         <!-- Generate Thumbnail Button (Admin Only) -->
                         <button
@@ -1523,7 +1543,7 @@ const getModelTypeBadgeClass = (type) => {
                             </span>
                         </button>
 
-                        <p class="text-center text-gray-500 text-sm mt-2">
+                        <p v-if="!isBaseQ3Model" class="text-center text-gray-500 text-sm mt-2">
                             Extract to your Quake 3 baseq3 directory
                         </p>
 
