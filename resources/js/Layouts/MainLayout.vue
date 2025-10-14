@@ -33,6 +33,7 @@
     const demos = ref([]);
     const clans = ref([]);
     const bundles = ref([]);
+    const models = ref([]);
 
     const showResultsSection = ref(false);
 
@@ -57,6 +58,7 @@
                     demos.value = response.data?.demos || []
                     clans.value = response.data?.clans || []
                     bundles.value = response.data?.bundles || []
+                    models.value = response.data?.models || []
                 });
             }
         }, 250);
@@ -81,6 +83,7 @@
             demos.value = [];
             clans.value = [];
             bundles.value = [];
+            models.value = [];
             return;
         }
 
@@ -326,6 +329,13 @@
                                         >
                                             Bundles<span v-if="bundles?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ bundles.length }})</span>
                                         </button>
+                                        <button
+                                            @click.stop="searchCategory = 'models'"
+                                            class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
+                                            :class="searchCategory == 'models' ? 'border-blue-500 text-blue-400 bg-blue-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
+                                        >
+                                            Models<span v-if="models?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ models.length }})</span>
+                                        </button>
                                     </div>
 
                                     <!-- Right Side - Results -->
@@ -409,8 +419,31 @@
                                                 </div>
                                             </div>
 
+                                            <!-- Models -->
+                                            <div v-if="models?.length > 0 && searchCategory == 'models'" @click="closeSearch">
+                                                <Link v-for="model in models" :key="model.id" :href="`/models/${model.id}`" class="group flex items-center gap-3 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-blue-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-blue-500/5">
+                                                    <div class="shrink-0">
+                                                        <div v-if="model.head_icon" class="w-10 h-10 rounded-lg overflow-hidden border border-blue-500/30">
+                                                            <img :src="`/storage/${model.head_icon}`" :alt="model.name" class="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div v-else class="w-10 h-10 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="text-base font-black text-white group-hover:text-blue-400 transition-colors truncate">{{ model.name }}</div>
+                                                        <div class="text-xs text-gray-400 font-semibold mt-0.5">{{ model.author || 'Unknown' }}</div>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                    </svg>
+                                                </Link>
+                                            </div>
+
                                             <!-- No Results -->
-                                            <div v-if="players?.length == 0 && maps.data?.length == 0 && demos?.length == 0 && clans?.length == 0 && bundles?.length == 0" class="text-center py-20">
+                                            <div v-if="players?.length == 0 && maps.data?.length == 0 && demos?.length == 0 && clans?.length == 0 && bundles?.length == 0 && models?.length == 0" class="text-center py-20">
                                                 <p class="text-sm text-gray-400 mb-1">No results found</p>
                                                 <p class="text-xs text-gray-600">Try different keywords</p>
                                             </div>

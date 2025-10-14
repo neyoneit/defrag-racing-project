@@ -1,11 +1,48 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
 
 const props = defineProps({
     model: Object,
     baseModelData: Object,
+    load_times: Object,
+});
+
+// Frontend timing metrics
+const frontendTimings = ref({
+    mount_to_ready: 0,
+    total_page_load: 0,
+    dom_content_loaded: 0,
+    model_load_start: 0,
+    model_load_time: 0
+});
+
+// Calculate frontend load times
+onMounted(() => {
+    const mountTime = performance.now();
+    frontendTimings.value.mount_to_ready = mountTime;
+    frontendTimings.value.model_load_start = performance.now();
+
+    // Use modern Navigation Timing API
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    if (navigationEntry) {
+        // DOM Content Loaded time
+        frontendTimings.value.dom_content_loaded = navigationEntry.domContentLoadedEventEnd;
+
+        // Total page load time
+        frontendTimings.value.total_page_load = navigationEntry.loadEventEnd;
+    }
+
+    // If load event hasn't fired yet, wait for it
+    if (document.readyState !== 'complete') {
+        window.addEventListener('load', () => {
+            const navEntry = performance.getEntriesByType('navigation')[0];
+            if (navEntry) {
+                frontendTimings.value.total_page_load = navEntry.loadEventEnd;
+            }
+        });
+    }
 });
 
 // Check if we're in thumbnail generation mode
@@ -128,8 +165,11 @@ const skinPackBasePath = computed(() => {
     return null;
 });
 
-const onViewerLoaded = (model) => {
+const onViewerLoaded = () => {
     viewerLoaded.value = true;
+
+    // Record model load time
+    frontendTimings.value.model_load_time = performance.now() - frontendTimings.value.model_load_start;
 
     // Get initial light settings
     if (viewer3D.value) {
@@ -396,6 +436,443 @@ const downloadModel = () => {
     window.location.href = route('models.download', props.model.id);
 };
 
+const goBack = () => {
+    window.history.back();
+};
+
+// GIF Generation (browser-based)
+const isGeneratingGif = ref(false);
+const gifProgress = ref('');
+
+// Notification state
+const showNotification = ref(false);
+const notificationMessage = ref('');
+const notificationType = ref('success'); // 'success' or 'error'
+
+const showSuccessNotification = (message) => {
+    notificationMessage.value = message;
+    notificationType.value = 'success';
+    showNotification.value = true;
+    setTimeout(() => {
+        showNotification.value = false;
+    }, 3000);
+};
+
+const showErrorNotification = (message) => {
+    notificationMessage.value = message;
+    notificationType.value = 'error';
+    showNotification.value = true;
+    setTimeout(() => {
+        showNotification.value = false;
+    }, 5000);
+};
+
+// SEPARATE HEAD ICON GENERATOR (no GIF, just PNG)
+const isGeneratingHeadIcon = ref(false);
+const headIconProgress = ref('');
+
+// Function to log current camera position - call from console after manually positioning
+const logCameraPosition = () => {
+    if (!viewer3D.value) return;
+    const camera = viewer3D.value.getCamera();
+    const controls = viewer3D.value.getControls();
+    console.log('=== CURRENT CAMERA POSITION ===');
+    console.log('Camera Position:', { x: camera.position.x, y: camera.position.y, z: camera.position.z });
+    console.log('Target Position:', { x: controls.target.x, y: controls.target.y, z: controls.target.z });
+    console.log('================================');
+};
+
+// Expose to window so you can call it from console
+if (typeof window !== 'undefined') {
+    window.logCameraPosition = logCameraPosition;
+}
+
+const generateHeadIcon = async () => {
+    if (!viewer3D.value) {
+        showErrorNotification('3D model is not loaded yet');
+        return;
+    }
+
+    isGeneratingHeadIcon.value = true;
+    headIconProgress.value = 'Focusing on head...';
+
+    try {
+        const THREE = await import('three');
+
+        const model = viewer3D.value.getModel();
+        const camera = viewer3D.value.getCamera();
+        const controls = viewer3D.value.getControls();
+        const renderer = viewer3D.value.getRenderer();
+        const scene = viewer3D.value.getScene();
+
+        if (!model) {
+            throw new Error('Model not loaded yet');
+        }
+
+        // Save original camera position and controls target
+        const originalPosition = camera.position.clone();
+        const originalTarget = controls.target.clone();
+
+        // Find the head mesh (highest Y position = topmost part)
+        console.log('=== FINDING HEAD MESH ===');
+        let headMesh = null;
+        let highestY = -Infinity;
+
+        model.traverse((child) => {
+            if (child.isMesh) {
+                const worldPos = new THREE.Vector3();
+                child.getWorldPosition(worldPos);
+                if (worldPos.y > highestY) {
+                    highestY = worldPos.y;
+                    headMesh = child;
+                }
+            }
+        });
+
+        if (!headMesh) {
+            throw new Error('Could not find any meshes in model');
+        }
+
+        console.log('Selected as head (highest Y):', headMesh.name || 'unnamed', 'at Y:', highestY);
+
+        // Get head bounding box
+        const headBox = new THREE.Box3().setFromObject(headMesh);
+        const headCenter = headBox.getCenter(new THREE.Vector3());
+        const headSize = headBox.getSize(new THREE.Vector3());
+
+        // Calculate camera distance to fit head perfectly in frame (FOV-based)
+        const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+        cameraZ *= 1.5; // 50% padding
+
+        console.log('Calculated camera distance:', cameraZ, 'for head max dimension:', maxDim);
+
+        // Update controls target to focus on head center
+        controls.target.copy(headCenter);
+        controls.update();
+
+        // Position camera in front of head
+        camera.position.set(
+            headCenter.x,
+            headCenter.y,
+            headCenter.z + cameraZ
+        );
+
+        // Force render
+        camera.updateMatrixWorld();
+        scene.updateMatrixWorld(true);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        renderer.render(scene, camera);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        headIconProgress.value = 'Capturing...';
+
+        // Capture screenshot
+        const canvas = renderer.domElement;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        // Resize to 64x64
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 64;
+        finalCanvas.height = 64;
+        const finalCtx = finalCanvas.getContext('2d');
+        finalCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
+
+        // Convert to blob
+        const headIconBlob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png'));
+
+        headIconProgress.value = 'Uploading...';
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
+
+        const response = await fetch(route('models.saveHeadIcon', props.model.id), {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            headIconProgress.value = 'Done!';
+            showSuccessNotification('Head icon generated successfully!');
+        } else {
+            throw new Error(data.message || 'Failed to save head icon');
+        }
+
+        // Restore camera position and controls target
+        camera.position.copy(originalPosition);
+        controls.target.copy(originalTarget);
+        controls.update();
+
+    } catch (error) {
+        console.error('Head icon error:', error);
+        showErrorNotification('Failed to generate head icon: ' + error.message);
+    }
+
+    isGeneratingHeadIcon.value = false;
+};
+
+const generateGifThumbnail = async () => {
+    if (!viewer3D.value) {
+        showErrorNotification('3D model is not loaded yet');
+        return;
+    }
+
+    isGeneratingGif.value = true;
+    gifProgress.value = 'Preparing...';
+
+    try {
+        // Get the renderer and canvas from ModelViewer
+        const renderer = viewer3D.value.getRenderer();
+        const scene = viewer3D.value.getScene();
+        const camera = viewer3D.value.getCamera();
+
+        if (!renderer || !scene || !camera) {
+            throw new Error('Could not access 3D viewer components');
+        }
+
+        // Get actual canvas dimensions
+        const canvas = renderer.domElement;
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        console.log('Canvas dimensions:', canvasWidth, 'x', canvasHeight);
+
+        // Use smaller resolution for GIF (300x300 for smaller file size)
+        const gifWidth = 300;
+        const gifHeight = 300;
+
+        console.log('GIF dimensions:', gifWidth, 'x', gifHeight);
+
+        // Dynamically import gif.js
+        const GIF = (await import('gif.js')).default;
+
+        // Create GIF encoder with reduced dimensions for smaller file size
+        const gif = new GIF({
+            workers: 2,
+            quality: 10, // 1-30, higher = lower quality but smaller file (10 = good quality)
+            width: gifWidth,
+            height: gifHeight,
+            workerScript: '/gif.worker.js'
+        });
+
+        // Save the current camera position and target
+        const originalPosition = camera.position.clone();
+        const originalRotation = camera.rotation.clone();
+
+        // Get the controls target (what the camera is looking at - the model center)
+        const controls = viewer3D.value.getControls();
+        const target = controls?.target ? { x: controls.target.x, y: controls.target.y, z: controls.target.z } : { x: 0, y: 30, z: 0 };
+
+        console.log('Camera position:', originalPosition);
+        console.log('Target:', target);
+
+        // Calculate camera distance from the target (not from origin)
+        const dx = originalPosition.x - target.x;
+        const dy = originalPosition.y - target.y;
+        const dz = originalPosition.z - target.z;
+        const radius = Math.sqrt(dx * dx + dz * dz); // Horizontal distance
+        const height = dy; // Vertical offset from target
+
+        // Get the starting angle based on current camera position relative to target
+        const startAngle = Math.atan2(dx, dz);
+
+        console.log('Radius:', radius, 'Height:', height, 'Start angle:', startAngle);
+
+        // Create a temporary canvas for resizing frames
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = gifWidth;
+        tempCanvas.height = gifHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Capture 24 frames (2 second loop at 12fps)
+        const numFrames = 24;
+        const rotationStep = (Math.PI * 2) / numFrames;
+
+        for (let i = 0; i < numFrames; i++) {
+            gifProgress.value = `Capturing frame ${i + 1}/${numFrames}...`;
+
+            // Rotate the camera around the target, starting from current position
+            const angle = startAngle + (i * rotationStep);
+            camera.position.x = target.x + Math.sin(angle) * radius;
+            camera.position.z = target.z + Math.cos(angle) * radius;
+            camera.position.y = target.y + height; // Keep same height relative to target
+
+            // Use THREE.Vector3 for lookAt
+            camera.lookAt(target.x, target.y, target.z);
+
+            // Update camera matrix and force a render
+            camera.updateMatrixWorld();
+            scene.updateMatrixWorld(true);
+
+            // Wait for next frame to ensure rendering is complete
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            // Render the scene
+            renderer.render(scene, camera);
+
+            // Wait one more frame to ensure pixel data is ready
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            // Resize the canvas to the smaller GIF dimensions (simple 2D downsampling)
+            tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
+
+            // Add the resized frame to GIF
+            gif.addFrame(tempCanvas, { copy: true, delay: 83 }); // 83ms = ~12fps
+
+            // Small delay to let browser breathe
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+
+        gifProgress.value = 'Encoding GIF...';
+
+        // Render the GIF
+        gif.on('finished', async (blob) => {
+            gifProgress.value = 'Generating head icon...';
+
+            // Generate 64x64 head icon PNG using FOV-based auto-fit
+            let headIconBlob = null;
+            try {
+                const THREE = await import('three');
+
+                const model = viewer3D.value.getModel();
+                if (!model) {
+                    throw new Error('Model not loaded');
+                }
+
+                // Find the head mesh (highest Y position = topmost part)
+                console.log('=== GIF: FINDING HEAD MESH ===');
+                let headMesh = null;
+                let highestY = -Infinity;
+
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        const worldPos = new THREE.Vector3();
+                        child.getWorldPosition(worldPos);
+                        if (worldPos.y > highestY) {
+                            highestY = worldPos.y;
+                            headMesh = child;
+                        }
+                    }
+                });
+
+                if (!headMesh) {
+                    throw new Error('Could not find head mesh');
+                }
+
+                console.log('GIF: Selected head at Y:', highestY);
+
+                // Get head bounding box
+                const headBox = new THREE.Box3().setFromObject(headMesh);
+                const headCenter = headBox.getCenter(new THREE.Vector3());
+                const headSize = headBox.getSize(new THREE.Vector3());
+
+                // Calculate camera distance to fit head perfectly in frame (FOV-based)
+                const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5; // 50% padding
+
+                console.log('GIF: Head camera distance:', cameraZ, 'for max dimension:', maxDim);
+
+                // Update controls target to focus on head center (same as standalone button)
+                if (controls) {
+                    controls.target.set(headCenter.x, headCenter.y, headCenter.z);
+                    controls.update();
+                }
+
+                // Position camera in front of head
+                camera.position.set(
+                    headCenter.x,
+                    headCenter.y,
+                    headCenter.z + cameraZ
+                );
+                camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
+
+                // Force render
+                camera.updateMatrixWorld();
+                scene.updateMatrixWorld(true);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                renderer.render(scene, camera);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                // Create 64x64 canvas for head icon
+                const headCanvas = document.createElement('canvas');
+                headCanvas.width = 64;
+                headCanvas.height = 64;
+                const headCtx = headCanvas.getContext('2d');
+                headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
+
+                // Convert to blob
+                headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
+
+                // Restore camera AND controls target back to original position
+                camera.position.copy(originalPosition);
+                camera.lookAt(target.x, target.y, target.z);
+
+                if (controls) {
+                    controls.target.set(target.x, target.y, target.z);
+                    controls.update();
+                }
+            } catch (error) {
+                console.error('Head icon generation error:', error);
+                // Continue even if head icon fails
+            }
+
+            gifProgress.value = 'Uploading...';
+
+            // Upload to server
+            const formData = new FormData();
+            formData.append('gif', blob, `model_${props.model.id}.gif`);
+            if (headIconBlob) {
+                formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
+            }
+
+            try {
+                const response = await fetch(route('models.saveThumbnail', props.model.id), {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    gifProgress.value = 'Done!';
+                    showSuccessNotification('Thumbnail generated successfully!');
+                } else {
+                    throw new Error(data.message || 'Failed to save thumbnail');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showErrorNotification('Failed to upload thumbnail: ' + error.message);
+            }
+
+            isGeneratingGif.value = false;
+        });
+
+        gif.on('progress', (p) => {
+            gifProgress.value = `Encoding: ${Math.round(p * 100)}%`;
+        });
+
+        gif.render();
+
+    } catch (error) {
+        console.error('GIF generation error:', error);
+        showErrorNotification('Failed to generate thumbnail: ' + error.message);
+        isGeneratingGif.value = false;
+    }
+};
+
 // Change skin
 const changeSkin = (skinName) => {
     currentSkin.value = skinName;
@@ -511,18 +988,18 @@ const getModelTypeBadgeClass = (type) => {
     <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen py-12'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
             <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                 <!-- Back Button -->
-                <Link v-if="!isThumbnailMode" :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+                <button v-if="!isThumbnailMode" @click="goBack" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
                     Back to Models
-                </Link>
+                </button>
 
-                <div :class="isThumbnailMode ? 'w-full h-full' : 'grid grid-cols-1 lg:grid-cols-2 gap-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                <div :class="isThumbnailMode ? 'w-full h-full' : 'grid grid-cols-1 xl:grid-cols-[832px_1fr] gap-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                     <!-- Left Column: 3D Viewer / Preview -->
                     <div :class="isThumbnailMode ? 'w-full h-full' : ''" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                         <!-- 3D Viewer Card -->
-                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 pt-4 px-4 pb-4 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                             <!-- Viewer Controls -->
                             <div v-if="viewerLoaded && !isThumbnailMode" class="flex gap-2 mb-4">
                                 <button @click="autoRotate = !autoRotate" :class="[
@@ -575,7 +1052,7 @@ const getModelTypeBadgeClass = (type) => {
                                 @animations-ready="onAnimationsReady"
                                 @sounds-ready="onSoundsReady"
                                 :class="isThumbnailMode ? '' : 'rounded-xl'"
-                                :style="isThumbnailMode ? 'width: 100%; height: 100%;' : 'height: 800px;'"
+                                :style="isThumbnailMode ? 'width: 100%; height: 100%;' : 'width: 800px; height: 800px;'"
                             />
 
                             <!-- Fallback if no model file path -->
@@ -649,7 +1126,10 @@ const getModelTypeBadgeClass = (type) => {
                                 </p>
                                 <div class="flex items-center gap-3 mt-2">
                                     <p v-if="model.base_model" class="text-sm text-gray-500">
-                                        Based on <span class="text-gray-300 font-semibold">{{ model.base_model }}</span>
+                                        Based on
+                                        <Link :href="route('models.index', { base_model: model.base_model })" class="text-blue-400 font-semibold hover:text-blue-300 transition-colors cursor-pointer">
+                                            {{ model.base_model }}
+                                        </Link>
                                     </p>
                                     <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
                                         {{ getModelTypeLabel(model.model_type) }}
@@ -667,7 +1147,7 @@ const getModelTypeBadgeClass = (type) => {
                                 <h4 class="text-[10px] font-bold text-blue-400 mb-1.5 uppercase tracking-wider">Legs ({{ Object.keys(availableAnimations.legs || {}).length }})</h4>
                                 <div class="flex flex-wrap gap-1">
                                     <button
-                                        v-for="(animData, animName) in availableAnimations.legs"
+                                        v-for="(_, animName) in availableAnimations.legs"
                                         :key="animName"
                                         @click="oneShotAnimations.legs.includes(animName) ? playOneShotAnimation(animName, 'legs') : (viewer3D.playLegsAnimation(animName), currentLegsAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'legs'))"
                                         :class="[
@@ -686,7 +1166,7 @@ const getModelTypeBadgeClass = (type) => {
                                 <h4 class="text-[10px] font-bold text-green-400 mb-1.5 uppercase tracking-wider">Torso ({{ Object.keys(availableAnimations.torso || {}).length }})</h4>
                                 <div class="flex flex-wrap gap-1">
                                     <button
-                                        v-for="(animData, animName) in availableAnimations.torso"
+                                        v-for="(_, animName) in availableAnimations.torso"
                                         :key="animName"
                                         @click="oneShotAnimations.torso.includes(animName) ? playOneShotAnimation(animName, 'torso') : (viewer3D.playTorsoAnimation(animName), currentTorsoAnim = animName, viewer3D.getAnimationManager().playing = true, triggerAnimationSound(animName, 'torso'))"
                                         :class="[
@@ -705,7 +1185,7 @@ const getModelTypeBadgeClass = (type) => {
                                 <h4 class="text-[10px] font-bold text-purple-400 mb-1.5 uppercase tracking-wider">Both ({{ Object.keys(availableAnimations.both || {}).length }})</h4>
                                 <div class="flex flex-wrap gap-1 mb-2">
                                     <button
-                                        v-for="(animData, animName) in availableAnimations.both"
+                                        v-for="(_, animName) in availableAnimations.both"
                                         :key="animName"
                                         @click="playOneShotAnimation(animName, 'both')"
                                         class="px-2 py-1 rounded text-[10px] font-semibold bg-purple-600/15 border border-purple-500/25 text-purple-300 hover:bg-purple-600/30 hover:border-purple-500/40 transition-all">
@@ -991,7 +1471,7 @@ const getModelTypeBadgeClass = (type) => {
 
                         <!-- Download Button -->
                         <button @click="downloadModel"
-                                class="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-black rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-green-500/50 text-lg">
+                                class="w-full px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-black rounded-xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-green-500/50 text-lg mb-4">
                             <span class="flex items-center justify-center gap-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -999,11 +1479,145 @@ const getModelTypeBadgeClass = (type) => {
                                 Download Model
                             </span>
                         </button>
+
+                        <!-- Generate Thumbnail Button (Admin Only) -->
+                        <button
+                            v-if="$page.props.auth?.user?.admin"
+                            @click="generateGifThumbnail"
+                            :disabled="isGeneratingGif || !viewerLoaded"
+                            class="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-purple-500/50 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span v-if="!isGeneratingGif" class="flex items-center justify-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                                </svg>
+                                Generate GIF Thumbnail
+                            </span>
+                            <span v-else class="flex items-center justify-center gap-3">
+                                <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ gifProgress }}
+                            </span>
+                        </button>
+
+                        <!-- Generate Head Icon Button (Admin Only) - SEPARATE from GIF -->
+                        <button
+                            v-if="$page.props.auth?.user?.admin"
+                            @click="generateHeadIcon"
+                            :disabled="isGeneratingHeadIcon || !viewerLoaded"
+                            class="w-full px-6 py-4 mt-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-orange-500/50 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span v-if="!isGeneratingHeadIcon" class="flex items-center justify-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                                Generate Head Icon
+                            </span>
+                            <span v-else class="flex items-center justify-center gap-3">
+                                <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ headIconProgress }}
+                            </span>
+                        </button>
+
                         <p class="text-center text-gray-500 text-sm mt-2">
                             Extract to your Quake 3 baseq3 directory
                         </p>
+
+                        <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
+                        <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8">
+                            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                                <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics</h3>
+
+                                <!-- Backend Timings -->
+                                <div class="mb-6">
+                                    <h4 class="text-sm font-semibold text-blue-400 mb-3">🖥️ Backend (Server)</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
+                                            <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
+                                            <div class="text-xl font-bold" :class="typeof time === 'number' ? (time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400') : 'text-blue-400'">
+                                                {{ typeof time === 'number' ? time + 'ms' : time }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Frontend Timings -->
+                                <div>
+                                    <h4 class="text-sm font-semibold text-purple-400 mb-3">🌐 Frontend (Browser)</h4>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div v-for="(time, key) in { frontend_mount: frontendTimings.mount_to_ready, dom_content_loaded: frontendTimings.dom_content_loaded, total_page_load: frontendTimings.total_page_load, model_3d_load: frontendTimings.model_load_time }" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
+                                            <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
+                                            <div class="text-xl font-bold" :class="time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400'">
+                                                {{ Math.round(time) }}ms
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-sm text-gray-500">
+                                    <p><span class="text-green-400">Green</span> = Fast (&lt;500ms) | <span class="text-yellow-400">Yellow</span> = Moderate (500-1000ms) | <span class="text-red-400">Red</span> = Slow (&gt;1000ms)</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Custom Notification Popup -->
+            <Transition
+                enter-active-class="transform transition ease-out duration-300"
+                enter-from-class="translate-y-2 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transform transition ease-in duration-200"
+                leave-from-class="translate-y-0 opacity-100"
+                leave-to-class="translate-y-2 opacity-0">
+                <div v-if="showNotification" class="fixed top-8 right-8 z-50 max-w-md">
+                    <div :class="[
+                        'backdrop-blur-xl rounded-2xl border shadow-2xl p-6',
+                        notificationType === 'success'
+                            ? 'bg-green-500/20 border-green-500/30'
+                            : 'bg-red-500/20 border-red-500/30'
+                    ]">
+                        <div class="flex items-center gap-4">
+                            <!-- Icon -->
+                            <div :class="[
+                                'flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center',
+                                notificationType === 'success'
+                                    ? 'bg-green-500/30'
+                                    : 'bg-red-500/30'
+                            ]">
+                                <svg v-if="notificationType === 'success'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 text-green-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 text-red-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+
+                            <!-- Message -->
+                            <div class="flex-1">
+                                <h3 :class="[
+                                    'text-lg font-bold mb-1',
+                                    notificationType === 'success' ? 'text-green-300' : 'text-red-300'
+                                ]">
+                                    {{ notificationType === 'success' ? 'Success!' : 'Error' }}
+                                </h3>
+                                <p class="text-white text-sm">{{ notificationMessage }}</p>
+                            </div>
+
+                            <!-- Close Button -->
+                            <button @click="showNotification = false" class="flex-shrink-0 text-gray-400 hover:text-white transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
         </div>
 </template>

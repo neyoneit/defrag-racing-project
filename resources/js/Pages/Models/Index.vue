@@ -1,12 +1,48 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
-import ModelViewer from '@/Components/ModelViewer.vue';
+import { ref, onMounted } from 'vue';
 
 const props = defineProps({
     models: Object,
     category: String,
     sort: String,
+    baseModel: String,
+    search: String,
+    load_times: Object,
+});
+
+// Frontend timing metrics
+const frontendTimings = ref({
+    mount_to_ready: 0,
+    total_page_load: 0,
+    dom_content_loaded: 0,
+});
+
+// Calculate frontend load times
+onMounted(() => {
+    const mountTime = performance.now();
+    frontendTimings.value.mount_to_ready = mountTime;
+
+    // Use modern Navigation Timing API
+    const navigationEntry = performance.getEntriesByType('navigation')[0];
+    if (navigationEntry) {
+        // DOM Content Loaded time
+        frontendTimings.value.dom_content_loaded = navigationEntry.domContentLoadedEventEnd;
+
+        // Total page load time
+        frontendTimings.value.total_page_load = navigationEntry.loadEventEnd;
+    }
+
+    // If load event hasn't fired yet, wait for it
+    if (document.readyState !== 'complete') {
+        window.addEventListener('load', () => {
+            const navEntry = performance.getEntriesByType('navigation')[0];
+            if (navEntry) {
+                frontendTimings.value.total_page_load = navEntry.loadEventEnd;
+            }
+        });
+    }
 });
 
 const categories = [
@@ -21,17 +57,41 @@ const sortOptions = [
     { value: 'oldest', label: 'Oldest First' },
 ];
 
+const searchQuery = ref(props.search || '');
+
 const switchCategory = (category) => {
-    router.visit(route('models.index', { category, sort: props.sort }), {
+    router.visit(route('models.index', { category, sort: props.sort, base_model: props.baseModel, search: searchQuery.value }), {
         preserveState: true,
         preserveScroll: true,
     });
 };
 
 const changeSort = (newSort) => {
-    router.visit(route('models.index', { category: props.category, sort: newSort }), {
+    router.visit(route('models.index', { category: props.category, sort: newSort, base_model: props.baseModel, search: searchQuery.value }), {
         preserveState: true,
         preserveScroll: true,
+    });
+};
+
+const clearBaseModelFilter = () => {
+    router.visit(route('models.index', { category: props.category, sort: props.sort, search: searchQuery.value }), {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const performSearch = () => {
+    router.visit(route('models.index', { category: props.category, sort: props.sort, base_model: props.baseModel, search: searchQuery.value }), {
+        preserveState: true,
+        preserveScroll: false,
+    });
+};
+
+const clearSearch = () => {
+    searchQuery.value = '';
+    router.visit(route('models.index', { category: props.category, sort: props.sort, base_model: props.baseModel }), {
+        preserveState: true,
+        preserveScroll: false,
     });
 };
 
@@ -53,26 +113,6 @@ const getModelTypeBadgeClass = (type) => {
         'mixed': 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
     };
     return classes[type] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
-};
-
-const getFirstSkin = (model) => {
-    // Parse available_skins if it's a string
-    let skins = model.available_skins;
-
-    if (typeof skins === 'string') {
-        try {
-            skins = JSON.parse(skins);
-        } catch (e) {
-            return 'default';
-        }
-    }
-
-    // Return first skin or 'default'
-    if (Array.isArray(skins) && skins.length > 0) {
-        return skins[0];
-    }
-
-    return 'default';
 };
 </script>
 
@@ -109,6 +149,31 @@ const getFirstSkin = (model) => {
                                     Upload Model
                                 </span>
                             </Link>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="mb-4">
+                        <div class="relative max-w-md">
+                            <input
+                                v-model="searchQuery"
+                                @keyup.enter="performSearch"
+                                type="text"
+                                placeholder="Search models by name or author..."
+                                class="w-full px-4 py-3 pl-11 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                            </svg>
+                            <button
+                                v-if="searchQuery"
+                                @click="clearSearch"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 
@@ -151,37 +216,39 @@ const getFirstSkin = (model) => {
                     </div>
                 </div>
 
+                <!-- Base Model Filter Badge -->
+                <div v-if="baseModel" class="mb-6">
+                    <div class="inline-flex items-center gap-3 px-4 py-3 bg-blue-500/20 border border-blue-500/30 rounded-xl">
+                        <span class="text-sm text-blue-300">
+                            Showing models based on: <span class="font-bold text-blue-200">{{ baseModel }}</span>
+                        </span>
+                        <button @click="clearBaseModelFilter" class="text-blue-400 hover:text-blue-300 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Models Grid -->
                 <div v-if="models.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    <Link v-for="model in models.data" :key="model.id"
+                    <Link v-for="(model, index) in models.data" :key="model.id"
                           :href="route('models.show', model.id)"
                           class="group backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
-                        <!-- Thumbnail - Always show 3D viewer if file_path exists -->
+                        <!-- Thumbnail -->
                         <div class="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center relative overflow-hidden">
-                            <!-- 3D Model Viewer as thumbnail (preferred) -->
-                            <ModelViewer
-                                v-if="model.file_path"
-                                :key="model.id"
-                                :model-path="
-                                    model.file_path.startsWith('baseq3/')
-                                        ? `/baseq3/models/players/${model.base_model || model.name}/head.md3`
-                                        : (model.model_type !== 'complete' && model.base_model)
-                                            ? `/baseq3/models/players/${model.base_model}/head.md3`
-                                            : `/storage/${model.file_path}/models/players/${model.base_model || model.name}/head.md3`
-                                "
-                                :skin-path="`${model.file_path.startsWith('baseq3/') ? '/' : '/storage/'}${model.file_path}${model.file_path.startsWith('baseq3/') ? '' : '/models/players/' + (model.base_model || model.name)}/head_${getFirstSkin(model)}.skin`"
-                                :skin-pack-base-path="model.model_type !== 'complete' && !model.file_path.startsWith('baseq3/')
-                                    ? `/storage/${model.file_path}/models/players/${model.base_model || model.name}`
-                                    : null"
-                                :skin-name="getFirstSkin(model)"
-                                :auto-rotate="false"
-                                :show-grid="false"
-                                :enable-sounds="false"
-                                :thumbnail-mode="true"
-                                style="width: 100%; height: 100%; pointer-events: none;"
+                            <!-- Pre-rendered GIF thumbnail (instant load!) -->
+                            <img
+                                v-if="model.thumbnail"
+                                :src="`/storage/${model.thumbnail}`"
+                                :alt="model.name"
+                                class="w-full h-full object-cover"
+                                :loading="index < 8 ? 'eager' : 'lazy'"
+                                decoding="async"
+                                fetchpriority="auto"
                             />
-                            <!-- Fallback to emoji if no file_path -->
+                            <!-- Fallback to emoji if no thumbnail -->
                             <div v-else class="text-6xl">
                                 {{ model.category === 'player' ? '🏃' : model.category === 'weapon' ? '🔫' : '👤' }}
                             </div>
@@ -253,6 +320,43 @@ const getFirstSkin = (model) => {
                           class="px-4 py-2 bg-white/5 text-white rounded-lg hover:bg-white/10 transition-all">
                         Next
                     </Link>
+                </div>
+
+                <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
+                <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8 mb-8">
+                    <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                        <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics</h3>
+
+                        <!-- Backend Timings -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-blue-400 mb-3">🖥️ Backend (Server)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
+                                    <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
+                                    <div class="text-xl font-bold" :class="typeof time === 'number' ? (time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400') : 'text-blue-400'">
+                                        {{ typeof time === 'number' ? time + 'ms' : time }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Frontend Timings -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-purple-400 mb-3">🌐 Frontend (Browser)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div v-for="(time, key) in { frontend_mount: frontendTimings.mount_to_ready, dom_content_loaded: frontendTimings.dom_content_loaded, total_page_load: frontendTimings.total_page_load }" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
+                                    <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
+                                    <div class="text-xl font-bold" :class="time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400'">
+                                        {{ Math.round(time) }}ms
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-sm text-gray-500">
+                            <p><span class="text-green-400">Green</span> = Fast (&lt;500ms) | <span class="text-yellow-400">Yellow</span> = Moderate (500-1000ms) | <span class="text-red-400">Red</span> = Slow (&gt;1000ms)</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -167,7 +167,7 @@ function initScene() {
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 20;
+    controls.minDistance = 1; // Allow zooming very close (was 20)
     controls.maxDistance = 300;
     controls.autoRotate = props.autoRotate;
     controls.autoRotateSpeed = 2.0;
@@ -506,6 +506,7 @@ defineExpose({
     getScene: () => scene,
     getCamera: () => camera,
     getRenderer: () => renderer,
+    getControls: () => controls,
     getAnimationManager: () => animationManager,
     getSoundManager: () => soundManager,
     playLegsAnimation: (name) => animationManager?.playLegsAnimation(name),

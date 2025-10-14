@@ -58,6 +58,8 @@ Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->mid
 Route::get('/models/{id}', [ModelsController::class, 'show'])->name('models.show');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->name('models.download');
 Route::post('/models/{id}/generate-thumbnail', [ModelsController::class, 'generateThumbnail'])->middleware('auth')->name('models.generateThumbnail');
+Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
+Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');

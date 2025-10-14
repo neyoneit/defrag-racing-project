@@ -242,16 +242,23 @@ class ProfileController extends Controller {
         // Get competitors and rivals (with error handling)
         $start = microtime(true);
         try {
+            $start_cpm_comp = microtime(true);
             $cpmCompetitors = $this->getCachedCompetitors($user->mdd_id, 'cpm');
+            $timings['cpm_competitors_ms'] = round((microtime(true) - $start_cpm_comp) * 1000, 2);
+
+            $start_vq3_comp = microtime(true);
             $vq3Competitors = $this->getCachedCompetitors($user->mdd_id, 'vq3');
+            $timings['vq3_competitors_ms'] = round((microtime(true) - $start_vq3_comp) * 1000, 2);
+
+            $start_cpm_rivals = microtime(true);
             $cpmRivals = $this->getCachedRivals($user->mdd_id, 'cpm');
+            $timings['cpm_rivals_ms'] = round((microtime(true) - $start_cpm_rivals) * 1000, 2);
+
+            $start_vq3_rivals = microtime(true);
             $vq3Rivals = $this->getCachedRivals($user->mdd_id, 'vq3');
+            $timings['vq3_rivals_ms'] = round((microtime(true) - $start_vq3_rivals) * 1000, 2);
 
             $timings['competitors_rivals'] = round((microtime(true) - $start) * 1000, 2);
-            $timings['cpm_competitors_ms'] = $cpmCompetitors['load_time_ms'] ?? 0;
-            $timings['vq3_competitors_ms'] = $vq3Competitors['load_time_ms'] ?? 0;
-            $timings['cpm_rivals_ms'] = $cpmRivals['load_time_ms'] ?? 0;
-            $timings['vq3_rivals_ms'] = $vq3Rivals['load_time_ms'] ?? 0;
 
             // Debug logging
             \Log::info('Competitors/Rivals loaded', [
@@ -734,8 +741,7 @@ class ProfileController extends Controller {
         return [
             'better' => $betterWithDetails,
             'worse' => $worseWithDetails,
-            'my_score' => $myScore,
-            'load_time_ms' => $duration
+            'my_score' => $myScore
         ];
     }
 
@@ -826,8 +832,7 @@ class ProfileController extends Controller {
 
         return [
             'beaten' => $beatenWithDetails,
-            'beaten_by' => $beatenByWithDetails,
-            'load_time_ms' => $duration
+            'beaten_by' => $beatenByWithDetails
         ];
     }
 

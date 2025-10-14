@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Map;
 use App\Models\User;
 use App\Models\MddProfile;
+use App\Models\PlayerModel;
 
 class SearchController extends Controller
 {
@@ -54,9 +55,19 @@ class SearchController extends Controller
             ];
         })->toArray());
 
+        // Search models by name or author
+        $models = PlayerModel::where('approved', true)
+            ->where(function($query) use ($request) {
+                $query->where('name', 'LIKE', '%' . $request->search . '%')
+                      ->orWhere('author', 'LIKE', '%' . $request->search . '%');
+            })
+            ->limit(10)
+            ->get(['id', 'name', 'author', 'head_icon']);
+
         return [
             'maps'      => $maps,
-            'players'   => $players
+            'players'   => $players,
+            'models'    => $models
         ];
     }
 }

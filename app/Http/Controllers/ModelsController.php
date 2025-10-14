@@ -16,14 +16,33 @@ class ModelsController extends Controller
      */
     public function index(Request $request)
     {
+        $totalStart = microtime(true);
+        $timings = [];
+
         $category = $request->get('category', 'all');
         $sort = $request->get('sort', 'newest'); // newest or oldest
+        $baseModel = $request->get('base_model'); // Filter by base model
+        $search = $request->get('search'); // Search query
 
+        $start = microtime(true);
         $query = PlayerModel::with('user')
             ->approved();
 
         if ($category !== 'all') {
             $query->category($category);
+        }
+
+        // Filter by base model if provided
+        if ($baseModel) {
+            $query->where('base_model', $baseModel);
+        }
+
+        // Search by name or author
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('author', 'LIKE', "%{$search}%");
+            });
         }
 
         // Apply sorting (use id as tiebreaker when created_at is same)
@@ -34,12 +53,54 @@ class ModelsController extends Controller
         }
 
         $models = $query->paginate(12);
+        $timings['models_query'] = round((microtime(true) - $start) * 1000, 2);
+
+        // Add resolved MD3 paths to each model for optimized rendering
+        $start = microtime(true);
+        $models->getCollection()->transform(function ($model) {
+            // Determine the MD3 file path (for the 3D geometry)
+            $md3FilePath = $this->getResolvedMd3Path($model);
+            $model->resolved_md3_path = $md3FilePath;
+
+            return $model;
+        });
+        $timings['path_resolution'] = round((microtime(true) - $start) * 1000, 2);
+
+        $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
         return Inertia::render('Models/Index', [
             'models' => $models,
             'category' => $category,
             'sort' => $sort,
+            'baseModel' => $baseModel,
+            'search' => $search,
+            'load_times' => $timings,
         ]);
+    }
+
+    /**
+     * Get the resolved MD3 path for a model (for Index page thumbnails)
+     */
+    private function getResolvedMd3Path($model)
+    {
+        // For complete models, use their own file path
+        if ($model->model_type === 'complete') {
+            if (str_starts_with($model->file_path, 'baseq3/')) {
+                return "/{$model->file_path}/head.md3";
+            }
+            return "/storage/{$model->file_path}/models/players/{$model->base_model}/head.md3";
+        }
+
+        // For skin/mixed packs, use base_model_file_path if available
+        if ($model->base_model_file_path) {
+            if (str_starts_with($model->base_model_file_path, 'baseq3/')) {
+                return "/{$model->base_model_file_path}/head.md3";
+            }
+            return "/storage/{$model->base_model_file_path}/models/players/{$model->base_model}/head.md3";
+        }
+
+        // Fallback: assume it's a base Q3 model
+        return "/baseq3/models/players/{$model->base_model}/head.md3";
     }
 
     /**
@@ -222,6 +283,9 @@ class ModelsController extends Controller
                     // Get available skins for this model
                     $availableSkins = $metadata['available_skins'] ?? ['default'];
 
+                    // Determine base model file path for MD3 files
+                    $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
+
                     // Create a separate entry for each skin
                     foreach ($availableSkins as $skinName) {
                         // Determine display name:
@@ -244,6 +308,7 @@ class ModelsController extends Controller
                             'user_id' => $userId,
                             'name' => $finalModelName,
                             'base_model' => $baseModel,
+                            'base_model_file_path' => $baseModelFilePath,
                             'model_type' => $modelType,
                             'description' => $request->description,
                             'category' => $request->category,
@@ -440,6 +505,9 @@ class ModelsController extends Controller
                             // Get available skins for this model
                             $availableSkins = $metadata['available_skins'] ?? ['default'];
 
+                            // Determine base model file path for MD3 files
+                            $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
+
                             // Create a separate entry for each skin
                             foreach ($availableSkins as $skinName) {
                                 // Determine display name:
@@ -462,6 +530,7 @@ class ModelsController extends Controller
                                     'user_id' => $userId,
                                     'name' => $displayName,
                                     'base_model' => $baseModel,
+                                    'base_model_file_path' => $baseModelFilePath,
                                     'model_type' => $modelType,
                                     'description' => $metadata['author'] ? "Created by {$metadata['author']}" : null,
                                     'category' => $category,
@@ -633,20 +702,49 @@ class ModelsController extends Controller
      */
     public function show(Request $request, $id)
     {
+        $totalStart = microtime(true);
+        $timings = [];
+
+        $start = microtime(true);
         $model = PlayerModel::with('user')->findOrFail($id);
+        $timings['model_query'] = round((microtime(true) - $start) * 1000, 2);
 
         // Only show approved models unless user is the owner or admin
         if (!$model->approved && (!Auth::check() || (Auth::id() !== $model->user_id && !Auth::user()->is_admin))) {
             abort(404);
         }
 
-        // For skin/mixed packs, fetch the base model data (for MD3 file paths)
+        // For skin/mixed packs, use stored base_model_file_path if available
+        // Otherwise fall back to querying the database (for backwards compatibility)
+        $start = microtime(true);
         $baseModelData = null;
-        if ($model->model_type !== 'complete' && $model->base_model && $model->base_model !== $model->name) {
-            $baseModelData = PlayerModel::where('name', $model->base_model)
-                ->where('model_type', 'complete')
-                ->first(['name', 'file_path']);
+        if ($model->model_type !== 'complete' && $model->base_model) {
+            if ($model->base_model_file_path) {
+                // Use stored path (optimized)
+                $baseModelData = [
+                    'name' => $model->base_model,
+                    'file_path' => $model->base_model_file_path,
+                ];
+                $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (cached)';
+            } else {
+                // Fallback: query database (old models without base_model_file_path)
+                $existingModel = PlayerModel::where('name', $model->base_model)
+                    ->where('model_type', 'complete')
+                    ->first(['name', 'file_path']);
+
+                if ($existingModel) {
+                    $baseModelData = [
+                        'name' => $existingModel->name,
+                        'file_path' => $existingModel->file_path,
+                    ];
+                }
+                $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (db query)';
+            }
+        } else {
+            $timings['base_model_resolution'] = '0 (not needed)';
         }
+
+        $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
         // For thumbnail generation, render without layout
         if ($request->has('thumbnail')) {
@@ -659,6 +757,7 @@ class ModelsController extends Controller
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,
+            'load_times' => $timings,
         ]);
     }
 
@@ -827,6 +926,182 @@ class ModelsController extends Controller
             \Log::error("Error generating thumbnail for model {$id}: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Save browser-generated GIF thumbnail for a model
+     */
+    public function saveThumbnail($id, Request $request)
+    {
+        $model = PlayerModel::findOrFail($id);
+
+        // Check permission - only owner or admin
+        if (!Auth::check() || (Auth::id() !== $model->user_id && !Auth::user()->admin)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            // Validate the uploaded files
+            $request->validate([
+                'gif' => 'required|file|mimes:gif|max:10240', // 10MB max
+                'head_icon' => 'nullable|file|mimes:png,jpg,jpeg|max:1024', // 1MB max
+            ]);
+
+            // Create thumbnails directory if it doesn't exist
+            $thumbnailsDir = storage_path('app/public/thumbnails');
+            if (!file_exists($thumbnailsDir)) {
+                mkdir($thumbnailsDir, 0755, true);
+            }
+
+            // Save the GIF file
+            $gifFile = $request->file('gif');
+            $filename = "model_{$id}.gif";
+            $gifFile->storeAs('public/thumbnails', $filename);
+
+            $updateData = ['thumbnail' => "thumbnails/{$filename}"];
+
+            // Save head icon if provided
+            if ($request->hasFile('head_icon')) {
+                $headIconFile = $request->file('head_icon');
+                $headIconFilename = "model_{$id}_head.png";
+                $headIconFile->storeAs('public/thumbnails', $headIconFilename);
+                $updateData['head_icon'] = "thumbnails/{$headIconFilename}";
+                \Log::info("Head icon saved for model {$id}");
+            }
+
+            // Update model with thumbnail paths
+            $model->update($updateData);
+
+            \Log::info("Thumbnail saved for model {$id}");
+
+            return response()->json([
+                'success' => true,
+                'thumbnail' => "thumbnails/{$filename}",
+                'head_icon' => $updateData['head_icon'] ?? null,
+                'message' => 'Thumbnail generated successfully!'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error("Validation error saving thumbnail for model {$id}: " . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid file: ' . implode(', ', $e->errors()['gif'] ?? ['Unknown error'])
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error("Error saving thumbnail for model {$id}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save thumbnail: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save browser-generated head icon (64x64 PNG) for a model
+     */
+    public function saveHeadIcon($id, Request $request)
+    {
+        $model = PlayerModel::findOrFail($id);
+
+        // Check permission - only owner or admin
+        if (!Auth::check() || (Auth::id() !== $model->user_id && !Auth::user()->admin)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            // Validate the uploaded file
+            $request->validate([
+                'head_icon' => 'required|file|mimes:png,jpg,jpeg|max:1024', // 1MB max
+            ]);
+
+            // Create thumbnails directory if it doesn't exist
+            $thumbnailsDir = storage_path('app/public/thumbnails');
+            if (!file_exists($thumbnailsDir)) {
+                mkdir($thumbnailsDir, 0755, true);
+            }
+
+            // Save head icon
+            $headIconFile = $request->file('head_icon');
+            $headIconFilename = "model_{$id}_head.png";
+            $headIconFile->storeAs('public/thumbnails', $headIconFilename);
+
+            // Update model with head icon path
+            $model->update(['head_icon' => "thumbnails/{$headIconFilename}"]);
+
+            \Log::info("Head icon saved for model {$id}");
+
+            return response()->json([
+                'success' => true,
+                'head_icon' => "thumbnails/{$headIconFilename}",
+                'message' => 'Head icon generated successfully!'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error("Validation error saving head icon for model {$id}: " . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid file: ' . implode(', ', $e->errors()['head_icon'] ?? ['Unknown error'])
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error("Error saving head icon for model {$id}: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save head icon: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Determine the base model file path for MD3 files
+     * This resolves where the actual MD3 geometry files are located
+     *
+     * For complete models: uses own file_path
+     * For skin/mixed packs: tries to find base Q3 model or existing uploaded base model
+     */
+    private function determineBaseModelFilePath($extractPath, $modelName, $hasMd3Files, $baseModel)
+    {
+        // If has MD3 files, it's complete - use its own path
+        if ($hasMd3Files) {
+            return null; // Will use file_path
+        }
+
+        // For skin/mixed packs, try to find the base model
+        // Priority 1: Check if it's a base Q3 model (pak0-pak8.pk3)
+        $baseQ3Models = [
+            'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
+            'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
+            'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel'
+        ];
+
+        if (in_array(strtolower($baseModel), $baseQ3Models)) {
+            // It's a base Q3 model
+            return 'baseq3/models/players/' . strtolower($baseModel);
+        }
+
+        // Priority 2: Try to find an existing user-uploaded complete model with this base_model name
+        // This could be someone's custom model that others are making skins for
+        $existingBaseModel = PlayerModel::where('base_model', $baseModel)
+            ->where('model_type', 'complete')
+            ->orderBy('created_at', 'asc') // Get the oldest (original) model
+            ->first(['file_path']);
+
+        if ($existingBaseModel) {
+            return $existingBaseModel->file_path;
+        }
+
+        // Priority 3: Try matching by name (for backwards compatibility)
+        $existingBaseModel = PlayerModel::where('name', 'LIKE', $baseModel . '%')
+            ->where('model_type', 'complete')
+            ->orderBy('created_at', 'asc')
+            ->first(['file_path']);
+
+        if ($existingBaseModel) {
+            return $existingBaseModel->file_path;
+        }
+
+        // Fallback: return null (will need to be resolved at runtime)
+        // This happens when someone uploads a skin for a model that hasn't been uploaded yet
+        return null;
     }
 
     /**
