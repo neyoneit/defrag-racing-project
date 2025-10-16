@@ -23,6 +23,10 @@ const props = defineProps({
         type: Boolean,
         default: true
     },
+    isWeapon: {
+        type: Boolean,
+        default: false
+    },
     skinName: {
         type: String,
         default: 'default'
@@ -126,12 +130,23 @@ function initScene() {
         0.1,
         1000
     );
-    // Different camera positions for thumbnail vs detail view
-    if (props.thumbnailMode) {
-        camera.position.set(0, 15, 45);  // Much closer for thumbnail
-        camera.lookAt(0, 10, 10);  // Look at model center
+    // Different camera positions based on model type
+    if (props.isWeapon) {
+        // Weapon models: closer view, angled from above-right
+        if (props.thumbnailMode) {
+            camera.position.set(15, 20, 35);  // Closer for thumbnail
+            camera.lookAt(0, 10, 0);
+        } else {
+            camera.position.set(-43.7, 38.2, -15.0);  // Detail view for weapons
+            camera.lookAt(2.2, 21.7, 12.1);  // Look at weapon
+        }
+    } else if (props.thumbnailMode) {
+        // Player model thumbnail
+        camera.position.set(0, 15, 45);
+        camera.lookAt(0, 10, 10);
     } else {
-        camera.position.set(0, 40, 40);  // Original position for detail view
+        // Player model detail view
+        camera.position.set(0, 40, 40);
         camera.lookAt(0, 30, 10);
     }
 
@@ -171,7 +186,13 @@ function initScene() {
     controls.maxDistance = 300;
     controls.autoRotate = props.autoRotate;
     controls.autoRotateSpeed = 2.0;
-    controls.target.set(0, props.thumbnailMode ? 7 : 37, 0);
+
+    // Set control target based on model type
+    if (props.isWeapon) {
+        controls.target.set(props.thumbnailMode ? 0 : 2.2, props.thumbnailMode ? 10 : 21.7, props.thumbnailMode ? 0 : 12.1);
+    } else {
+        controls.target.set(0, props.thumbnailMode ? 7 : 37, 0);
+    }
 }
 
 async function loadModel() {
@@ -189,8 +210,24 @@ async function loadModel() {
             // Load complete player model (head + upper + lower)
             // Pass skinPackBasePath for skin/mixed packs that override base model skins
             model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath);
+        } else if (props.isWeapon) {
+            // Load composite weapon model (main + hand + barrel + flash)
+            // For weapons, load shaders from models.shader before loading the model
+            if (props.modelPath.includes('/baseq3/')) {
+                // Load base Q3 shaders (models.shader contains weapon shaders)
+                await loader.loadShadersForModel('/baseq3/scripts/', 'models');
+            }
+
+            // Extract base directory and weapon name
+            // modelPath is like: /baseq3/models/weapons2/machinegun/machinegun.md3
+            // We want: /baseq3/models/weapons2/machinegun/ and weaponName: machinegun
+            const baseDir = props.modelPath.substring(0, props.modelPath.lastIndexOf('/') + 1);
+            const fileName = props.modelPath.split('/').pop(); // Get "machinegun.md3"
+            const weaponName = fileName.replace('.md3', ''); // Get "machinegun"
+
+            model = await loader.loadWeaponModel(baseDir, weaponName);
         } else {
-            // Load single MD3 file with optional skin file
+            // Load single MD3 file (item, etc.) with optional skin file
             model = await loader.load(props.modelPath, props.skinPath);
         }
 
@@ -214,8 +251,14 @@ async function loadModel() {
         // Force matrix update after scale
         model.updateMatrixWorld(true);
 
-        // Position model differently for thumbnail vs detail view
-        model.position.set(0, props.thumbnailMode ? 0 : 30, 0);
+        // Position model based on type
+        if (props.isWeapon) {
+            // Weapons: center at origin (weapons are smaller, don't need much offset)
+            model.position.set(0, props.thumbnailMode ? 10 : 20, 0);
+        } else {
+            // Player models: position higher for detail view
+            model.position.set(0, props.thumbnailMode ? 0 : 30, 0);
+        }
 
         scene.add(model);
 
@@ -316,6 +359,14 @@ function animate() {
 
     if (controls) {
         controls.update();
+
+        // Log camera position and controls target for weapons (every 60 frames = ~1 second)
+        if (props.isWeapon && !props.thumbnailMode && Math.floor(time * 60) % 60 === 0) {
+            console.log('🎥 Camera:',
+                `position(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
+                `target(${controls.target.x.toFixed(1)}, ${controls.target.y.toFixed(1)}, ${controls.target.z.toFixed(1)})`
+            );
+        }
     }
 
     if (renderer && scene && camera) {

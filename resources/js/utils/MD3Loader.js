@@ -126,23 +126,40 @@ export class MD3Loader {
                     console.warn('Failed to load base Q3 models.shader:', e);
                 }
             } else {
-                // User-uploaded models: try model-specific shader files
+                // User-uploaded models: try to load ALL .shader files from scripts directory
+                // Since we can't list directories in browsers, try common patterns including:
+                // - modelName.shader (e.g., slash.shader)
+                // - modelName-*.shader (e.g., slash-greensuit.shader)
+                // - model.shader, models.shader, player.shader, players.shader
+
                 const shaderPatterns = [
                     `${modelName}.shader`,
+                    `${modelName}-*.shader`, // We'll try this as a wildcard later
                     'model.shader',
                     'models.shader',
                     'player.shader',
                     'players.shader'
                 ];
 
+                // Also try common hyphenated variations for skin packs
+                const commonSuffixes = ['greensuit', 'skin', 'default', 'red', 'blue', 'bright', 'pm'];
+                for (const suffix of commonSuffixes) {
+                    shaderPatterns.push(`${modelName}-${suffix}.shader`);
+                }
+
+                let loadedAny = false;
                 for (const pattern of shaderPatterns) {
                     try {
                         await this.loadShaderFile(scriptsUrl + pattern);
-                        // Successfully loaded a shader file
-                        break;
+                        loadedAny = true;
+                        // Don't break - load ALL shader files we can find
                     } catch (e) {
                         // Silently ignore, try next pattern
                     }
+                }
+
+                if (loadedAny) {
+                    console.log(`✅ Loaded user model shaders - ${this.shaders.size} shaders total`);
                 }
             }
         } catch (error) {
@@ -188,16 +205,20 @@ export class MD3Loader {
                     } else {
                         // User-uploaded models
                         // Extract the base storage path from the skin URL
-                        // e.g., /storage/models/extracted/worm-123/models/players/worm/
+                        // e.g., /storage/models/extracted/worm-123/models/players/worm/head_red.skin
                         // We want: /storage/models/extracted/worm-123/
-                        const match = baseUrl.match(/(\/storage\/models\/extracted\/[^\/]+)\//);
+                        const match = baseUrl.match(/(\/storage\/models\/extracted\/[^\/]+)/);
                         if (match) {
                             texturePath = match[1] + '/' + texturePath;
+                            console.log(`✅ Resolved texture path: ${texturePath} (from baseUrl: ${baseUrl})`);
+                        } else {
+                            console.warn(`❌ Failed to match baseUrl pattern: ${baseUrl}`);
                         }
                     }
                 } else {
                     // Relative to skin file location
                     texturePath = baseDir + texturePath;
+                    console.log(`✅ Resolved texture path (relative): ${texturePath}`);
                 }
 
                 skinMap[surfaceName] = texturePath;
@@ -245,9 +266,15 @@ export class MD3Loader {
             mesh.userData.surface = surface;
             mesh.userData.frames = frames;
 
+            // MD3 surfaces often have a _1, _2, etc suffix for LOD (level of detail)
+            // Strip the suffix to match skin file surface names
+            const skinSurfaceName = surface.name.replace(/_\d+$/, '');
+
+            console.log(`🔍 Processing surface: "${surface.name}" -> skin lookup: "${skinSurfaceName}", has skinData: ${!!this.skinData}, has texture mapping: ${!!(this.skinData && this.skinData[skinSurfaceName])}`);
+
             // Load texture and apply shaders asynchronously
-            if (this.skinData && this.skinData[surface.name]) {
-                const texturePath = this.skinData[surface.name];
+            if (this.skinData && this.skinData[skinSurfaceName]) {
+                const texturePath = this.skinData[skinSurfaceName];
 
                 // Skip nodraw surfaces
                 if (texturePath.includes('/nodraw') || texturePath.includes('common/nodraw')) {
@@ -296,12 +323,78 @@ export class MD3Loader {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
                         });
                     } else {
-                        console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size})`);
+                        console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size}) - loading texture directly for surface: ${surface.name}`);
                         // No shader, just load texture (with fallback if available)
-                        this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).catch(err => {
-                            console.warn(`Failed to load texture for ${surface.name}:`, err);
+                        this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).then(() => {
+                            console.log(`✅ Texture loaded and applied to ${surface.name}: ${texturePath}`);
+                        }).catch(err => {
+                            console.warn(`❌ Failed to load texture for ${surface.name}:`, err);
                         });
                     }
+                }
+            } else if (!this.skinData && surface.shaders && surface.shaders.length > 0) {
+                // No skin file - use MD3's embedded shader names (for weapons, items, etc.)
+                const embeddedShaderName = surface.shaders[0].name;
+                console.log(`📦 No skin file - using embedded shader name: "${embeddedShaderName}" for surface: ${surface.name}`);
+
+                // The embedded shader name might be empty or a default placeholder
+                if (embeddedShaderName && embeddedShaderName.trim() && !embeddedShaderName.includes('default')) {
+                    // Remove existing extension (TGA, jpg, png, etc.) from embedded name
+                    // embeddedShaderName: "models/weapons2/bfg/bfg.TGA" -> "models/weapons2/bfg/bfg"
+                    const shaderName = embeddedShaderName.replace(/\.(tga|jpg|png|jpeg)$/i, '');
+
+                    // Check if we have a shader definition for this name
+                    const shader = this.shaders.get(shaderName);
+
+                    if (shader) {
+                        console.log(`🎨 Found shader for "${shaderName}"`, shader);
+                        // For baseq3 models, prepend /baseq3/ to texture paths
+                        const texturePath = shaderName.startsWith('models/')
+                            ? `/baseq3/${shaderName}.tga`
+                            : `/${shaderName}.tga`;
+
+                        // Apply shader properties and load texture
+                        this.shaderMaterialSystem.createMaterialForShader(
+                            shader,
+                            texturePath,
+                            surface.name
+                        ).then(shaderMaterial => {
+                            // Handle null return (nodraw surfaces)
+                            if (shaderMaterial === null) {
+                                mesh.visible = false;
+                                material.dispose();
+                                return;
+                            }
+
+                            // Replace the basic material with custom shader material
+                            mesh.material = shaderMaterial;
+                            material.dispose();
+
+                            if (shaderMaterial.userData.isMultiStage) {
+                                console.log(`✅ Applied multi-stage shader material to ${surface.name} (${shaderMaterial.userData.numStages} stages)`);
+                            } else {
+                                console.log(`✅ Applied shader material to ${surface.name}`);
+                            }
+                        }).catch(err => {
+                            console.warn(`Failed to create shader material for ${surface.name}:`, err);
+                        });
+                    } else {
+                        console.log(`⚠️ No shader found for "${shaderName}" - loading texture directly for surface: ${surface.name}`);
+                        // No shader - load texture directly
+                        const texturePath = shaderName.startsWith('models/')
+                            ? `/baseq3/${shaderName}.tga`
+                            : `/${shaderName}.tga`;
+
+                        console.log(`🔫 Attempting to load weapon texture: ${texturePath}`);
+
+                        this.loadTextureForMesh(texturePath, material, null).then(() => {
+                            console.log(`✅ Texture loaded for ${surface.name}: ${texturePath}`);
+                        }).catch(err => {
+                            console.warn(`❌ Failed to load embedded shader texture for ${surface.name}:`, err);
+                        });
+                    }
+                } else {
+                    console.log(`⚠️ Embedded shader name is empty or default for ${surface.name}`);
                 }
             }
 
@@ -863,13 +956,33 @@ export class MD3Loader {
         playerGroup.name = `player_${modelName}`;
 
         try {
-            // Load shader files first
-            // For skin packs, load shaders from the skin pack's scripts directory
+            // Load shader files with proper priority:
+            // 1. For skin packs: load skin pack shaders FIRST (highest priority)
+            // 2. Then load base model shaders ONLY as fallback if skin pack doesn't have them
+
+            let shadersLoaded = false;
+
             if (skinPackBasePath) {
+                // Try loading skin pack shaders first
                 const skinPackScriptsUrl = skinPackBasePath.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+                const beforeCount = this.shaders.size;
                 await this.loadShadersForModel(skinPackScriptsUrl, modelName);
+                const afterCount = this.shaders.size;
+
+                if (afterCount > beforeCount) {
+                    shadersLoaded = true;
+                    console.log(`✅ Loaded ${afterCount - beforeCount} shaders from skin pack`);
+                }
             }
+
+            // Load base model shaders as fallback (only if skin pack didn't have shaders)
+            const beforeCount = this.shaders.size;
             await this.loadShadersForModel(baseUrl, modelName);
+            const afterCount = this.shaders.size;
+
+            if (afterCount > beforeCount) {
+                console.log(`✅ Loaded ${afterCount - beforeCount} shaders from base model`);
+            }
 
             // Determine where to load skin files from
             const skinBaseUrl = skinPackBasePath || baseUrl;
@@ -934,6 +1047,102 @@ export class MD3Loader {
 
         } catch (error) {
             console.error('Failed to load complete player model:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load a complete weapon model with all parts (main + hand + barrel + flash)
+     * @param {string} baseUrl - Base URL to the weapon directory (e.g., /baseq3/models/weapons2/machinegun/)
+     * @param {string} weaponName - Name of the weapon (e.g., "machinegun")
+     * @returns {Promise<THREE.Group>} - Complete weapon model
+     */
+    async loadWeaponModel(baseUrl, weaponName) {
+        // Ensure baseUrl ends with /
+        if (!baseUrl.endsWith('/')) {
+            baseUrl += '/';
+        }
+
+        const weaponGroup = new THREE.Group();
+        weaponGroup.name = `weapon_${weaponName}`;
+
+        try {
+            // Load main weapon body
+            const mainUrl = `${baseUrl}${weaponName}.md3`;
+            console.log(`🔫 Loading weapon main body: ${mainUrl}`);
+            const main = await this.load(mainUrl, null);
+            main.name = 'main';
+            weaponGroup.add(main);
+
+            // Find tags on the main model for attachments
+            const mainTags = main.userData.tags;
+            console.log(`🔫 Weapon ${weaponName} tags:`, mainTags && mainTags[0] ? mainTags[0].map(t => t.name) : 'none');
+            if (mainTags && mainTags[0]) {
+                // Try to load and attach barrel
+                const barrelTag = mainTags[0].find(tag => tag.name === 'tag_barrel');
+                if (barrelTag) {
+                    try {
+                        const barrelUrl = `${baseUrl}${weaponName}_barrel.md3`;
+                        console.log(`🔫 Loading weapon barrel: ${barrelUrl}`);
+                        const barrel = await this.load(barrelUrl, null);
+                        barrel.name = 'barrel';
+                        this.attachToTag(barrel, barrelTag);
+                        main.add(barrel);
+                        console.log(`✅ Attached barrel to ${weaponName}`);
+                    } catch (e) {
+                        // Barrel not found or failed to load, continue without it
+                        console.log(`⚠️ No barrel for ${weaponName}:`, e.message);
+                    }
+                } else {
+                    console.log(`⚠️ No tag_barrel found on ${weaponName}`);
+                }
+
+                // Try to load and attach hand
+                // Some weapons use 'tag_hand', others use 'tag_weapon'
+                const handTag = mainTags[0].find(tag => tag.name === 'tag_hand' || tag.name === 'tag_weapon');
+                if (handTag) {
+                    try {
+                        const handUrl = `${baseUrl}${weaponName}_hand.md3`;
+                        console.log(`🔫 Loading weapon hand: ${handUrl}`);
+                        const hand = await this.load(handUrl, null);
+                        hand.name = 'hand';
+                        this.attachToTag(hand, handTag);
+                        main.add(hand);
+                        console.log(`✅ Attached hand to ${weaponName}`);
+                    } catch (e) {
+                        // Hand not found or failed to load, continue without it
+                        console.log(`⚠️ No hand for ${weaponName}:`, e.message);
+                    }
+                } else {
+                    console.log(`⚠️ No tag_hand found on ${weaponName}`);
+                }
+
+                // Try to load and attach flash
+                const flashTag = mainTags[0].find(tag => tag.name === 'tag_flash');
+                if (flashTag) {
+                    try {
+                        const flashUrl = `${baseUrl}${weaponName}_flash.md3`;
+                        console.log(`🔫 Loading weapon flash: ${flashUrl}`);
+                        const flash = await this.load(flashUrl, null);
+                        flash.name = 'flash';
+                        this.attachToTag(flash, flashTag);
+                        main.add(flash);
+                        // Hide flash by default (it's only shown when firing)
+                        flash.visible = false;
+                        console.log(`✅ Attached flash to ${weaponName} (hidden)`);
+                    } catch (e) {
+                        // Flash not found or failed to load, continue without it
+                        console.log(`⚠️ No flash for ${weaponName}:`, e.message);
+                    }
+                } else {
+                    console.log(`⚠️ No tag_flash found on ${weaponName}`);
+                }
+            }
+
+            return weaponGroup;
+
+        } catch (error) {
+            console.error('Failed to load complete weapon model:', error);
             throw error;
         }
     }

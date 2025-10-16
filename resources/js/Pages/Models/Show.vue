@@ -109,8 +109,26 @@ const isCrouching = ref(false); // PMF_DUCKED
 const isAttacking = ref(false); // BUTTON_ATTACK
 const isGesturing = ref(false); // BUTTON_GESTURE
 
+// Check if this is a weapon model (not a player model)
+const isWeaponModel = computed(() => props.model.category === 'weapon');
+
 // Get the path to the model file (MD3 files for the 3D geometry)
 const modelFilePath = computed(() => {
+    // Weapon models: single MD3 file (e.g., /baseq3/models/weapons2/bfg/bfg.md3)
+    if (isWeaponModel.value) {
+        if (!props.model.file_path) return null;
+
+        // Use main_file if available (for weapons with non-standard filenames like shells -> m_shell.md3)
+        const mainFile = props.model.main_file || `${props.model.base_model || props.model.name}.md3`;
+
+        if (props.model.file_path.startsWith('baseq3/')) {
+            return `/${props.model.file_path}/${mainFile}`;
+        }
+
+        return `/storage/${props.model.file_path}/${mainFile}`;
+    }
+
+    // Player models: composite model (head/upper/lower)
     // For skin/mixed packs, use the base model's file_path (where the MD3 files are)
     if (props.baseModelData && props.baseModelData.file_path) {
         const basePath = props.baseModelData.file_path;
@@ -136,6 +154,9 @@ const modelFilePath = computed(() => {
 
 // Get the path to the skin file
 const skinFilePath = computed(() => {
+    // Weapons don't use skin files - textures are referenced directly in MD3 or shaders
+    if (isWeaponModel.value) return null;
+
     if (!props.model.file_path) return null;
 
     // Check if this is a base Q3 model
@@ -1053,6 +1074,8 @@ const getModelTypeBadgeClass = (type) => {
                                 :skin-path="skinFilePath"
                                 :skin-pack-base-path="skinPackBasePath"
                                 :skin-name="currentSkin"
+                                :load-full-player="!isWeaponModel"
+                                :is-weapon="isWeaponModel"
                                 :auto-rotate="autoRotate"
                                 :show-grid="!isThumbnailMode"
                                 :enable-sounds="true"
