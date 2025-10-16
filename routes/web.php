@@ -17,7 +17,6 @@ use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
 use App\Http\Controllers\ModelsController;
-use App\Http\Controllers\WikiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -189,5 +188,3 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/maps/search', [App\Http\Controllers\MaplistController::class, 'searchMaps'])->name('maps.search');
 });
 
-// Wiki proxy routes - must be at the end to avoid conflicts
-Route::any('/wiki/{path?}', [WikiController::class, 'proxy'])->where('path', '.*')->name('wiki');
