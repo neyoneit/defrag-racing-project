@@ -23,10 +23,24 @@ class ModelsController extends Controller
         $sort = $request->get('sort', 'newest'); // newest or oldest
         $baseModel = $request->get('base_model'); // Filter by base model
         $search = $request->get('search'); // Search query
+        $myUploads = $request->get('my_uploads', false); // Filter by user's uploads
+        $approvalStatus = $request->get('approval_status'); // Filter by approval status (pending, approved, rejected)
 
         $start = microtime(true);
-        $query = PlayerModel::with('user')
-            ->approved();
+        $query = PlayerModel::with('user');
+
+        // If viewing "My Uploads", filter by current user
+        if ($myUploads && Auth::check()) {
+            $query->where('user_id', Auth::id());
+
+            // For "My Uploads", allow filtering by approval status
+            if ($approvalStatus) {
+                $query->approvalStatus($approvalStatus);
+            }
+        } else {
+            // For public view, only show approved models
+            $query->approved()->where('hidden', false);
+        }
 
         if ($category !== 'all') {
             $query->category($category);
@@ -74,6 +88,8 @@ class ModelsController extends Controller
             'sort' => $sort,
             'baseModel' => $baseModel,
             'search' => $search,
+            'myUploads' => $myUploads,
+            'approvalStatus' => $approvalStatus,
             'load_times' => $timings,
         ]);
     }
@@ -224,12 +240,14 @@ class ModelsController extends Controller
                 $this->deleteDirectory($tempExtract);
             } else {
                 // This is a direct PK3 file - check if it has the proper structure
-                // A valid PK3 should have models/players/ or sound/player/ directories
+                // A valid PK3 should have models/players/, models/weapons2/, or sound/player/ directories
                 $hasProperStructure = false;
 
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $filename = $zip->getNameIndex($i);
-                    if (strpos($filename, 'models/players/') === 0 || strpos($filename, 'sound/player/') === 0) {
+                    if (strpos($filename, 'models/players/') === 0 ||
+                        strpos($filename, 'models/weapons2/') === 0 ||
+                        strpos($filename, 'sound/player/') === 0) {
                         $hasProperStructure = true;
                         break;
                     }
@@ -254,11 +272,20 @@ class ModelsController extends Controller
 
             if ($pk3Found) {
                 // Auto-detect ALL model names (PK3 might contain multiple models)
-                $detectedModelNames = $this->detectAllModelNames($extractPath);
+                // Detection method depends on the category selected
+                if ($request->category === 'weapon') {
+                    $detectedModelNames = $this->detectAllWeaponNames($extractPath);
+                    \Log::info('Detected weapon models:', ['names' => $detectedModelNames]);
+                } else {
+                    $detectedModelNames = $this->detectAllModelNames($extractPath);
+                }
 
                 if (empty($detectedModelNames)) {
                     $this->deleteDirectory($extractPath);
-                    return back()->with('error', 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.');
+                    $errorMsg = $request->category === 'weapon'
+                        ? 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.'
+                        : 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.';
+                    return back()->with('error', $errorMsg);
                 }
 
                 $createdModels = [];
@@ -266,66 +293,177 @@ class ModelsController extends Controller
 
                 // Create a separate database entry for each model+skin combination
                 foreach ($detectedModelNames as $detectedModelName) {
-                    // Parse metadata and available skins
-                    $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+                    if ($request->category === 'weapon') {
+                        // WEAPON MODEL PROCESSING
+                        \Log::info('Processing weapon:', ['name' => $detectedModelName]);
+                        $weaponPath = $extractPath . '/models/weapons2/' . $detectedModelName;
 
-                    // Check if this model has MD3 files (complete custom model) or just skins
-                    $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+                        // Find MD3 files for this weapon
+                        $md3Files = glob($weaponPath . '/*.md3');
 
-                    // Determine base_model:
-                    // - If has MD3 files: this IS a base model (use its own name)
-                    // - If no MD3 files: this is a skin for an existing base model
-                    $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
+                        if (empty($md3Files)) {
+                            \Log::warning("Skipping weapon {$detectedModelName}: no MD3 files found");
+                            continue;
+                        }
 
-                    // Determine model type based on content
-                    $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
-
-                    // Get available skins for this model
-                    $availableSkins = $metadata['available_skins'] ?? ['default'];
-
-                    // Determine base model file path for MD3 files
-                    $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
-
-                    // Create a separate entry for each skin
-                    foreach ($availableSkins as $skinName) {
-                        // Determine display name:
-                        // For multi-model packs: use "{ModelName} ({skin})"
-                        // For single-model packs with one skin: use user-provided name
-                        // For single-model packs with multiple skins: use "{user-provided name} ({skin})"
-                        if ($isMultiModelPack) {
-                            $finalModelName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
-                        } else {
-                            // Single model pack
-                            if (count($availableSkins) > 1) {
-                                $finalModelName = $modelName . ' (' . $skinName . ')';
-                            } else {
-                                $finalModelName = $modelName;
+                        // Find the main weapon MD3 file (similar to ImportBaseWeapons command)
+                        $mainMd3 = null;
+                        foreach ($md3Files as $md3File) {
+                            $basename = basename($md3File, '.md3');
+                            // Look for the base file without suffixes like _1, _2, _hand, _flash, _barrel
+                            if ($basename === $detectedModelName) {
+                                $mainMd3 = basename($md3File);
+                                break;
                             }
                         }
 
-                        // Create model record
+                        // If no exact match, use the first MD3 file that's not a variant
+                        if (!$mainMd3) {
+                            foreach ($md3Files as $md3File) {
+                                $basename = basename($md3File, '.md3');
+                                if (!preg_match('/_(hand|flash|barrel|[0-9])$/', $basename)) {
+                                    $mainMd3 = basename($md3File);
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Last resort: use first MD3 file
+                        if (!$mainMd3) {
+                            $mainMd3 = basename($md3Files[0]);
+                        }
+
+                        // Get available skins (if any)
+                        $skinFiles = glob($weaponPath . '/*.skin');
+                        $availableSkins = [];
+
+                        foreach ($skinFiles as $skinFile) {
+                            $skinBasename = basename($skinFile, '.skin');
+                            // Extract skin name (e.g., weapon_red.skin -> red)
+                            if (str_starts_with($skinBasename, $detectedModelName . '_')) {
+                                $skinName = str_replace($detectedModelName . '_', '', $skinBasename);
+                            } else {
+                                $skinName = $skinBasename;
+                            }
+
+                            if (!in_array($skinName, $availableSkins)) {
+                                $availableSkins[] = $skinName;
+                            }
+                        }
+
+                        if (empty($availableSkins)) {
+                            $availableSkins = ['default'];
+                        }
+
+                        // Parse metadata from README if present
+                        $metadata = $this->parseWeaponMetadata($extractPath, $detectedModelName);
+
+                        // Determine final name
+                        $finalModelName = $isMultiModelPack
+                            ? ucfirst($detectedModelName)
+                            : $modelName;
+
+                        // Create weapon model record
+                        \Log::info('Creating weapon model in database:', [
+                            'name' => $finalModelName,
+                            'base_model' => $detectedModelName,
+                            'main_file' => $mainMd3,
+                        ]);
+
                         $model = PlayerModel::create([
                             'user_id' => $userId,
                             'name' => $finalModelName,
-                            'base_model' => $baseModel,
-                            'base_model_file_path' => $baseModelFilePath,
-                            'model_type' => $modelType,
+                            'base_model' => $detectedModelName,
+                            'main_file' => $mainMd3,
+                            'model_type' => 'complete',
                             'description' => $request->description,
-                            'category' => $request->category,
+                            'category' => 'weapon',
                             'author' => $metadata['author'] ?? null,
                             'author_email' => $metadata['author_email'] ?? null,
-                            'file_path' => 'models/extracted/' . $slug,
+                            'file_path' => 'models/extracted/' . $slug . '/models/weapons2/' . $detectedModelName,
                             'zip_path' => $pk3PathForDownload,
                             'poly_count' => $metadata['poly_count'] ?? null,
                             'vert_count' => $metadata['vert_count'] ?? null,
-                            'has_sounds' => $metadata['has_sounds'] ?? false,
-                            'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
-                            'available_skins' => json_encode([$skinName]), // Store only this skin
-                            'approved' => false, // Requires admin approval
+                            'has_sounds' => false,
+                            'has_ctf_skins' => false,
+                            'available_skins' => json_encode($availableSkins),
+                            'approval_status' => 'pending',
                         ]);
 
+                        \Log::info('Weapon model created:', ['id' => $model->id]);
                         $createdModels[] = $model;
+                    } else {
+                        // PLAYER MODEL PROCESSING (existing logic)
+                        // Parse metadata and available skins
+                        $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+
+                        // Check if this model has MD3 files (complete custom model) or just skins
+                        $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+
+                        // Determine base_model:
+                        // - If has MD3 files: this IS a base model (use its own name)
+                        // - If no MD3 files: this is a skin for an existing base model
+                        $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
+
+                        // Determine model type based on content
+                        $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+
+                        // Get available skins for this model
+                        $availableSkins = $metadata['available_skins'] ?? ['default'];
+
+                        // Determine base model file path for MD3 files
+                        $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
+
+                        // Create a separate entry for each skin
+                        foreach ($availableSkins as $skinName) {
+                            // Determine display name:
+                            // For multi-model packs: use "{ModelName} ({skin})"
+                            // For single-model packs with one skin: use user-provided name
+                            // For single-model packs with multiple skins: use "{user-provided name} ({skin})"
+                            if ($isMultiModelPack) {
+                                $finalModelName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
+                            } else {
+                                // Single model pack
+                                if (count($availableSkins) > 1) {
+                                    $finalModelName = $modelName . ' (' . $skinName . ')';
+                                } else {
+                                    $finalModelName = $modelName;
+                                }
+                            }
+
+                            // Create model record
+                            $model = PlayerModel::create([
+                                'user_id' => $userId,
+                                'name' => $finalModelName,
+                                'base_model' => $baseModel,
+                                'base_model_file_path' => $baseModelFilePath,
+                                'model_type' => $modelType,
+                                'description' => $request->description,
+                                'category' => $request->category,
+                                'author' => $metadata['author'] ?? null,
+                                'author_email' => $metadata['author_email'] ?? null,
+                                'file_path' => 'models/extracted/' . $slug,
+                                'zip_path' => $pk3PathForDownload,
+                                'poly_count' => $metadata['poly_count'] ?? null,
+                                'vert_count' => $metadata['vert_count'] ?? null,
+                                'has_sounds' => $metadata['has_sounds'] ?? false,
+                                'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                                'available_skins' => json_encode([$skinName]), // Store only this skin
+                                'approval_status' => 'pending', // Requires admin approval
+                            ]);
+
+                            $createdModels[] = $model;
+                        }
                     }
+                }
+
+                // Check if any models were created
+                if (empty($createdModels)) {
+                    $this->deleteDirectory($extractPath);
+                    $errorMsg = $request->category === 'weapon'
+                        ? 'No valid weapon models found. Make sure the PK3 contains MD3 files in models/weapons2/{name}/ directories.'
+                        : 'No valid models found. Make sure the PK3 contains MD3 files in models/players/{name}/ directories.';
+                    return back()->with('error', $errorMsg);
                 }
 
                 // Return to the first model's page
@@ -543,7 +681,7 @@ class ModelsController extends Controller
                                     'has_sounds' => $metadata['has_sounds'] ?? false,
                                     'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
                                     'available_skins' => json_encode([$skinName]), // Store only this skin
-                                    'approved' => true, // Auto-approve for admin bulk uploads
+                                    'approval_status' => 'approved', // Auto-approve for admin bulk uploads
                                 ]);
 
                                 $createdModels[] = [
@@ -622,6 +760,30 @@ class ModelsController extends Controller
         }
 
         return $modelNames;
+    }
+
+    /**
+     * Detect all weapon directory names in extracted PK3
+     * Returns array of weapon directory names
+     */
+    private function detectAllWeaponNames($extractPath)
+    {
+        $weaponsPath = $extractPath . '/models/weapons2';
+
+        if (!is_dir($weaponsPath)) {
+            return [];
+        }
+
+        $dirs = array_diff(scandir($weaponsPath), ['.', '..']);
+        $weaponNames = [];
+
+        foreach ($dirs as $dir) {
+            if (is_dir($weaponsPath . '/' . $dir)) {
+                $weaponNames[] = $dir;
+            }
+        }
+
+        return $weaponNames;
     }
 
     /**
@@ -709,8 +871,9 @@ class ModelsController extends Controller
         $model = PlayerModel::with('user')->findOrFail($id);
         $timings['model_query'] = round((microtime(true) - $start) * 1000, 2);
 
-        // Only show approved models unless user is the owner or admin
-        if (!$model->approved && (!Auth::check() || (Auth::id() !== $model->user_id && !Auth::user()->is_admin))) {
+        // Only show approved and non-hidden models unless user is the owner or admin
+        $isOwnerOrAdmin = Auth::check() && (Auth::id() === $model->user_id || Auth::user()->is_admin);
+        if (($model->approval_status !== 'approved' || $model->hidden) && !$isOwnerOrAdmin) {
             abort(404);
         }
 
@@ -768,7 +931,7 @@ class ModelsController extends Controller
     {
         $model = PlayerModel::findOrFail($id);
 
-        if (!$model->approved) {
+        if ($model->approval_status !== 'approved') {
             abort(403);
         }
 
@@ -871,6 +1034,54 @@ class ModelsController extends Controller
                 if (in_array('red', $skins) && in_array('blue', $skins)) {
                     $metadata['has_ctf_skins'] = true;
                 }
+            }
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * Parse weapon metadata from README or other files
+     */
+    private function parseWeaponMetadata($extractPath, $weaponName)
+    {
+        $metadata = [
+            'author' => null,
+            'author_email' => null,
+            'poly_count' => null,
+            'vert_count' => null,
+        ];
+
+        // Look for readme/txt files in the weapon directory
+        $weaponPath = $extractPath . '/models/weapons2/' . $weaponName;
+        $files = glob($weaponPath . '/*.{txt,TXT}', GLOB_BRACE);
+
+        // Also check root of PK3
+        if (empty($files)) {
+            $files = glob($extractPath . '/*.{txt,TXT}', GLOB_BRACE);
+        }
+
+        if (!empty($files)) {
+            $content = file_get_contents($files[0]);
+
+            // Parse author
+            if (preg_match('/Author\s*:?\s*(.+)/i', $content, $matches)) {
+                $metadata['author'] = trim($matches[1]);
+            }
+
+            // Parse email
+            if (preg_match('/Email.*?:?\s*(.+@.+\..+)/i', $content, $matches)) {
+                $metadata['author_email'] = trim($matches[1]);
+            }
+
+            // Parse poly count
+            if (preg_match('/Poly Count\s*:?\s*(\d+)/i', $content, $matches)) {
+                $metadata['poly_count'] = (int)$matches[1];
+            }
+
+            // Parse vert count
+            if (preg_match('/Vert Count\s*:?\s*(\d+)/i', $content, $matches)) {
+                $metadata['vert_count'] = (int)$matches[1];
             }
         }
 

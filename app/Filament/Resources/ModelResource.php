@@ -38,6 +38,7 @@ class ModelResource extends Resource
                         'player' => 'Player',
                         'weapon' => 'Weapon',
                         'shadow' => 'Shadow',
+                        'item' => 'Item',
                     ])
                     ->required(),
                 Forms\Components\TextInput::make('author')
@@ -60,6 +61,10 @@ class ModelResource extends Resource
                     ->required()
                     ->label('Approved')
                     ->helperText('Approve this model to make it visible on the site'),
+                Forms\Components\Toggle::make('hidden')
+                    ->label('Hidden')
+                    ->helperText('Hide this model from public listings')
+                    ->default(false),
             ]);
     }
 
@@ -67,12 +72,19 @@ class ModelResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('thumbnail')
+                Tables\Columns\ImageColumn::make('head_icon')
                     ->label('Preview')
                     ->square()
                     ->size(60)
                     ->disk('public')
-                    ->visibility('public'),
+                    ->getStateUsing(function ($record) {
+                        // Use head icon if available, otherwise use placeholder
+                        if ($record->head_icon) {
+                            return $record->head_icon;
+                        }
+                        return null;
+                    })
+                    ->defaultImageUrl('/images/no-image.png'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -86,8 +98,13 @@ class ModelResource extends Resource
                         'player' => 'success',
                         'weapon' => 'warning',
                         'shadow' => 'info',
+                        'item' => 'primary',
+                        default => 'gray',
                     }),
                 Tables\Columns\IconColumn::make('approved')
+                    ->boolean()
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('hidden')
                     ->boolean()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('downloads')
@@ -104,12 +121,18 @@ class ModelResource extends Resource
                         'player' => 'Player',
                         'weapon' => 'Weapon',
                         'shadow' => 'Shadow',
+                        'item' => 'Item',
                     ]),
                 Tables\Filters\TernaryFilter::make('approved')
                     ->label('Approval Status')
                     ->placeholder('All models')
                     ->trueLabel('Approved only')
                     ->falseLabel('Pending approval only'),
+                Tables\Filters\TernaryFilter::make('hidden')
+                    ->label('Visibility')
+                    ->placeholder('All models')
+                    ->trueLabel('Hidden only')
+                    ->falseLabel('Visible only'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -125,6 +148,18 @@ class ModelResource extends Resource
                     ->requiresConfirmation()
                     ->action(fn (PlayerModel $record) => $record->update(['approved' => false]))
                     ->visible(fn (PlayerModel $record) => $record->approved),
+                Tables\Actions\Action::make('hide')
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->action(fn (PlayerModel $record) => $record->update(['hidden' => true]))
+                    ->visible(fn (PlayerModel $record) => !$record->hidden),
+                Tables\Actions\Action::make('show')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->action(fn (PlayerModel $record) => $record->update(['hidden' => false]))
+                    ->visible(fn (PlayerModel $record) => $record->hidden),
                 Tables\Actions\Action::make('generateThumbnail')
                     ->icon('heroicon-o-photo')
                     ->color('warning')

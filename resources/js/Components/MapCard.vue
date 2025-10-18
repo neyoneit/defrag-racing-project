@@ -86,7 +86,7 @@
 
 <template>
     <Link :href="route('maps.map', getRouteData)" class="block group">
-        <div class="bg-white/[0.03] border border-white/10 rounded-lg overflow-hidden hover:border-blue-500/50 transition-all">
+        <div class="backdrop-blur-xl bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
             <!-- Map Thumbnail -->
             <div class="relative w-full aspect-video bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
                 <!-- Physics Badge -->

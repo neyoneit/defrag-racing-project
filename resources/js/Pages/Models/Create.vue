@@ -33,23 +33,46 @@ const submitForm = () => {
 
 <template>
     <Head title="Upload Model" />
-    <div class="min-h-screen py-12">
+    <div class="min-h-screen">
+        <!-- Header Section with Drop Shadow -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- Header -->
-                <div class="mb-8">
-                    <Link :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                        </svg>
-                        Back to Models
-                    </Link>
+                <Link :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    Back to Models
+                </Link>
 
-                    <h1 class="text-4xl font-black text-white mb-2">Upload Model</h1>
-                    <p class="text-gray-400">Share your custom Quake 3 models with the community</p>
+                <h1 class="text-4xl font-black text-white mb-2">Upload Model</h1>
+                <p class="text-gray-400">Share your custom Quake 3 models with the community</p>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 py-6">
+            <!-- Success Message -->
+            <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{{ $page.props.flash.success }}</span>
                 </div>
+            </div>
 
-                <!-- Upload Form -->
-                <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-8">
+            <!-- Error Message -->
+            <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span>{{ $page.props.flash.error }}</span>
+                </div>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 p-8 shadow-2xl">
                     <form @submit.prevent="submitForm" class="space-y-6">
                         <!-- Model Name -->
                         <div>
@@ -75,10 +98,9 @@ const submitForm = () => {
                                 id="category"
                                 v-model="form.category"
                                 required
-                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                                <option value="player">Player Model</option>
-                                <option value="weapon">Weapon Model</option>
-                                <option value="shadow">Shadow Model</option>
+                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [&>option]:bg-gray-900 [&>option]:text-white">
+                                <option value="player">🏃 Player Model</option>
+                                <option value="weapon">🔫 Weapon Model</option>
                             </select>
                             <p v-if="form.errors.category" class="mt-2 text-sm text-red-400">{{ form.errors.category }}</p>
                         </div>
@@ -100,13 +122,13 @@ const submitForm = () => {
                         <!-- File Upload -->
                         <div>
                             <label class="block text-sm font-bold text-white mb-2">
-                                Model File (ZIP) <span class="text-red-400">*</span>
+                                Model File (ZIP or PK3) <span class="text-red-400">*</span>
                             </label>
                             <div class="relative">
                                 <input
                                     ref="fileInput"
                                     type="file"
-                                    accept=".zip"
+                                    accept=".zip,.pk3"
                                     required
                                     @change="handleFileChange"
                                     class="hidden">
@@ -120,7 +142,7 @@ const submitForm = () => {
                                         </svg>
                                         <div>
                                             <p class="text-white font-semibold">
-                                                {{ selectedFileName || 'Click to select ZIP file' }}
+                                                {{ selectedFileName || 'Click to select ZIP or PK3 file' }}
                                             </p>
                                             <p class="text-gray-400 text-sm">Maximum file size: 50MB</p>
                                         </div>
@@ -141,7 +163,7 @@ const submitForm = () => {
                                 <div class="text-sm text-gray-300">
                                     <p class="font-semibold text-white mb-2">Upload Requirements:</p>
                                     <ul class="list-disc list-inside space-y-1">
-                                        <li>ZIP file containing model files (MD3 format for player models)</li>
+                                        <li>ZIP or PK3 file containing model files (MD3 format)</li>
                                         <li>Include textures (TGA/JPG format)</li>
                                         <li>Optional: README.txt with author info and model details</li>
                                         <li>Optional: Custom sounds (WAV format)</li>
@@ -182,5 +204,5 @@ const submitForm = () => {
                     </form>
                 </div>
             </div>
-        </div>
+    </div>
 </template>

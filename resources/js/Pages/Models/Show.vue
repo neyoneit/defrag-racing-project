@@ -1011,25 +1011,61 @@ const getModelTypeBadgeClass = (type) => {
     };
     return classes[type] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
 };
+
+// Get box background and border colors based on model type
+const getBoxClass = (type) => {
+    const classes = {
+        'complete': 'bg-green-500/10 border-green-500/20',
+        'skin': 'bg-blue-500/10 border-blue-500/20',
+        'sound': 'bg-purple-500/10 border-purple-500/20',
+        'mixed': 'bg-orange-500/10 border-orange-500/20'
+    };
+    return classes[type] || 'bg-white/5 border-white/10';
+};
 </script>
 
 <template>
     <Head :title="model.name" />
-    <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen py-12'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
-            <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+    <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
+        <!-- Header Section with Fade Shadow -->
+        <div v-if="!isThumbnailMode" class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+            <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Back Button -->
-                <button v-if="!isThumbnailMode" @click="goBack" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
+                <button @click="goBack" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                     </svg>
                     Back to Models
                 </button>
+            </div>
+        </div>
+
+        <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                <!-- Success Message -->
+                <div v-if="!isThumbnailMode && $page.props.flash?.success" class="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{{ $page.props.flash.success }}</span>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div v-if="!isThumbnailMode && $page.props.flash?.error" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 shrink-0">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        <span>{{ $page.props.flash.error }}</span>
+                    </div>
+                </div>
 
                 <div :class="isThumbnailMode ? 'w-full h-full' : 'grid grid-cols-1 xl:grid-cols-[832px_1fr] gap-8'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                     <!-- Left Column: 3D Viewer / Preview -->
                     <div :class="isThumbnailMode ? 'w-full h-full' : ''" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                         <!-- 3D Viewer Card -->
-                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 pt-4 px-4 pb-4 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 pt-4 px-4 pb-4 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                             <!-- Viewer Controls -->
                             <div v-if="viewerLoaded && !isThumbnailMode" class="flex gap-2 mb-4">
                                 <button @click="autoRotate = !autoRotate" :class="[
@@ -1102,13 +1138,13 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Description -->
-                        <div v-if="model.description" class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                        <div v-if="model.description" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
                             <h3 class="text-lg font-bold text-white mb-3">Description</h3>
                             <p class="text-gray-300 whitespace-pre-line">{{ model.description }}</p>
                         </div>
 
                         <!-- Technical Details -->
-                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                        <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
                             <h3 class="text-lg font-bold text-white mb-4">Technical Details</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div v-if="model.poly_count">
@@ -1171,7 +1207,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- ANIMATION BUTTONS -->
-                        <div v-if="animationsReady" class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 mb-6">
+                        <div v-if="animationsReady" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
                             <h3 class="text-sm font-bold text-white mb-3">Animations</h3>
 
                             <!-- LEGS ANIMATIONS -->
@@ -1231,7 +1267,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Light Controls Card -->
-                        <div v-if="viewerLoaded && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                        <div v-if="viewerLoaded && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Lighting</h4>
                                 <button @click="showLightControls = !showLightControls" class="px-3 py-1 rounded text-xs font-semibold transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30">
@@ -1411,7 +1447,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Animation Controls Card -->
-                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6 mb-6">
+                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Controls</h4>
 
@@ -1443,7 +1479,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Sound Controls Card -->
-                        <div v-if="soundsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-4 mb-6">
+                        <div v-if="soundsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-4 mb-6">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
                                 <button @click="toggleSounds" :class="[
@@ -1487,8 +1523,8 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
                         </div>
 
-                        <!-- Uploader Info -->
-                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                        <!-- Uploader Info (Hidden for id Software, Inc.) -->
+                        <div v-if="model.user.name !== 'id Software, Inc.'" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
                             <h3 class="text-lg font-bold text-white mb-3">Uploaded By</h3>
                             <Link :href="route('profile.index', model.user.id)" class="flex items-center gap-3 hover:bg-white/5 rounded-lg p-2 -m-2 transition-all">
                                 <img :src="model.user.profile_photo_path ? `/storage/${model.user.profile_photo_path}` : '/images/null.jpg'"
@@ -1523,9 +1559,9 @@ const getModelTypeBadgeClass = (type) => {
                             </p>
                         </div>
 
-                        <!-- Generate Thumbnail Button (Admin Only) -->
+                        <!-- Generate Thumbnail Button (Owner or Admin) -->
                         <button
-                            v-if="$page.props.auth?.user?.admin"
+                            v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)"
                             @click="generateGifThumbnail"
                             :disabled="isGeneratingGif || !viewerLoaded"
                             class="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-purple-500/50 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
@@ -1542,27 +1578,6 @@ const getModelTypeBadgeClass = (type) => {
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                                 {{ gifProgress }}
-                            </span>
-                        </button>
-
-                        <!-- Generate Head Icon Button (Admin Only) - SEPARATE from GIF -->
-                        <button
-                            v-if="$page.props.auth?.user?.admin"
-                            @click="generateHeadIcon"
-                            :disabled="isGeneratingHeadIcon || !viewerLoaded"
-                            class="w-full px-6 py-4 mt-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-orange-500/50 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span v-if="!isGeneratingHeadIcon" class="flex items-center justify-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                </svg>
-                                Generate Head Icon
-                            </span>
-                            <span v-else class="flex items-center justify-center gap-3">
-                                <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {{ headIconProgress }}
                             </span>
                         </button>
 

@@ -377,7 +377,7 @@ class ScrapeQ3dfModels extends Command
                                 'has_sounds' => $metadata['has_sounds'] ?? false,
                                 'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
                                 'available_skins' => json_encode([$skinName]), // Store only this skin
-                                'approved' => true, // Auto-approve scraper imports
+                                'approval_status' => 'approved', // Auto-approve scraper imports
                             ]);
 
                             $createdModels[] = [

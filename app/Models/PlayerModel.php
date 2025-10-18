@@ -32,13 +32,15 @@ class PlayerModel extends Model
         'has_sounds',
         'has_ctf_skins',
         'available_skins',
-        'approved',
+        'approval_status',
+        'hidden',
+        'main_file',
     ];
 
     protected $casts = [
         'has_sounds' => 'boolean',
         'has_ctf_skins' => 'boolean',
-        'approved' => 'boolean',
+        'hidden' => 'boolean',
         'downloads' => 'integer',
         'poly_count' => 'integer',
         'vert_count' => 'integer',
@@ -58,7 +60,34 @@ class PlayerModel extends Model
      */
     public function scopeApproved($query)
     {
-        return $query->where('approved', true);
+        return $query->where('approval_status', 'approved');
+    }
+
+    /**
+     * Scope for pending models only
+     */
+    public function scopePending($query)
+    {
+        return $query->where('approval_status', 'pending');
+    }
+
+    /**
+     * Scope for rejected models only
+     */
+    public function scopeRejected($query)
+    {
+        return $query->where('approval_status', 'rejected');
+    }
+
+    /**
+     * Scope for filtering by approval status
+     */
+    public function scopeApprovalStatus($query, $status)
+    {
+        if (in_array($status, ['pending', 'approved', 'rejected'])) {
+            return $query->where('approval_status', $status);
+        }
+        return $query;
     }
 
     /**

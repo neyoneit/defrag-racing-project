@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+// Weapon model viewer with uniform positioning (Y=20)
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MD3Loader } from '@/utils/MD3Loader.js';
@@ -70,6 +71,31 @@ const availableAnimations = ref({ legs: {}, torso: {}, both: {} });
 const soundsEnabled = ref(props.enableSounds);
 const soundsLoaded = ref(false);
 
+// Check if weapon has hit sounds (all weapons except shotgun)
+const hasHitSounds = computed(() => {
+    if (!model || !model.userData || !model.userData.animation) return false;
+    const weaponName = model.userData.animation.weaponName || '';
+    const lowerName = weaponName.toLowerCase();
+    // Shotgun is the only weapon without hit sounds
+    return !(lowerName.includes('shotgun') || lowerName.includes('sg'));
+});
+
+// Weapon view animation state (from Q3 CG_CalculateWeaponPosition)
+const weaponViewState = {
+    bobCycle: 0,
+    bobFracSin: 0,
+    xySpeed: 0,
+    landTime: 0,
+    landChange: 0,
+    kickTime: 0,
+    kickAngles: new THREE.Vector3(0, 0, 0),
+    basePosition: new THREE.Vector3(0, 0, 0),
+    baseRotation: new THREE.Euler(0, 0, 0),
+    simulatedVelocity: new THREE.Vector2(0, 0),
+    targetVelocity: new THREE.Vector2(0, 0),
+    isMoving: false
+};
+
 onMounted(() => {
     initScene();
     loadModel();
@@ -77,10 +103,22 @@ onMounted(() => {
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
+
+    // Add keyboard event listeners for weapon firing (Ctrl key)
+    if (props.isWeapon) {
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+    }
 });
 
 onUnmounted(() => {
     window.removeEventListener('resize', onWindowResize);
+
+    // Remove keyboard event listeners
+    if (props.isWeapon) {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+    }
 
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -89,6 +127,20 @@ onUnmounted(() => {
     // Clean up sound manager
     if (soundManager) {
         soundManager.dispose();
+    }
+
+    // Stop all weapon sounds
+    if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
+        model.userData.animation.sounds.forEach(sound => {
+            if (sound && sound.isPlaying) {
+                sound.stop();
+            }
+            // Disconnect audio nodes
+            if (sound.source) {
+                sound.source.disconnect();
+            }
+        });
+        model.userData.animation.sounds = [];
     }
 
     // Clean up Three.js resources
@@ -121,7 +173,8 @@ function initScene() {
     // Create scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000); // Black background
-    scene.fog = new THREE.Fog(0x000000, 50, 200);
+    // Fog disabled - was causing models and projectiles to darken when zooming out
+    // scene.fog = new THREE.Fog(0x000000, 50, 200);
 
     // Create camera
     camera = new THREE.PerspectiveCamera(
@@ -200,6 +253,19 @@ async function loadModel() {
         loading.value = true;
         error.value = null;
 
+        // Stop and clean up any existing weapon sounds before loading new model
+        if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
+            model.userData.animation.sounds.forEach(sound => {
+                if (sound && sound.isPlaying) {
+                    sound.stop();
+                }
+                if (sound.source) {
+                    sound.source.disconnect();
+                }
+            });
+            model.userData.animation.sounds = [];
+        }
+
         if (props.loadFullPlayer) {
             // Extract base directory from modelPath
             // modelPath is like: /storage/models/extracted/worm-123/models/players/worm/head.md3
@@ -226,6 +292,74 @@ async function loadModel() {
             const weaponName = fileName.replace('.md3', ''); // Get "machinegun"
 
             model = await loader.loadWeaponModel(baseDir, weaponName);
+
+            // Set scene and camera reference for projectile spawning
+            if (model.userData && model.userData.animation) {
+                model.userData.animation.scene = scene;
+                model.userData.animation.camera = camera;
+
+                // Load weapon sounds
+                if (model.userData.animation.soundPaths && model.userData.animation.soundPaths.length > 0) {
+                    try {
+                        const audioLoader = new THREE.AudioLoader();
+                        const listener = new THREE.AudioListener();
+                        camera.add(listener); // Add listener to camera
+
+                        for (const soundPath of model.userData.animation.soundPaths) {
+                            try {
+                                const audio = new THREE.Audio(listener);
+                                await new Promise((resolve) => {
+                                    audioLoader.load(
+                                        soundPath,
+                                        (buffer) => {
+                                            audio.setBuffer(buffer);
+                                            audio.setVolume(0.5);
+                                            model.userData.animation.sounds.push(audio);
+                                            console.log(`🔊 Loaded weapon sound: ${soundPath}`);
+                                            resolve();
+                                        },
+                                        undefined,
+                                        (err) => {
+                                            console.log(`⚠️ Could not load sound ${soundPath}:`, err);
+                                            resolve(); // Don't fail if sound doesn't load
+                                        }
+                                    );
+                                });
+                            } catch (e) {
+                                console.log(`⚠️ Error loading sound ${soundPath}:`, e);
+                            }
+                        }
+
+                        console.log(`🔊 Loaded ${model.userData.animation.sounds.length} weapon sounds`);
+
+                        // Emit soundsReady event for weapons
+                        if (model.userData.animation.sounds.length > 0) {
+                            // Get weapon sound names for display
+                            const soundNames = model.userData.animation.soundPaths.map(path => {
+                                const parts = path.split('/');
+                                return parts[parts.length - 1].replace('.wav', '');
+                            });
+                            emit('soundsReady', soundNames);
+                        }
+
+                        // Start idle sound for lightning gun
+                        const weaponName = model.userData.animation?.weaponName || '';
+                        const lowerName = weaponName.toLowerCase();
+                        const isLightningGun = lowerName.includes('lightning') || lowerName.includes('lg');
+
+                        if (isLightningGun && model.userData.animation.sounds.length >= 3) {
+                            const idleSound = model.userData.animation.sounds[0]; // fsthum.wav
+                            if (idleSound) {
+                                idleSound.setLoop(true);
+                                idleSound.play();
+                                console.log('🔊 Started lightning gun idle sound');
+                            }
+                        }
+                    } catch (e) {
+                        console.log('⚠️ Failed to load weapon sounds:', e);
+                    }
+                }
+            }
         } else {
             // Load single MD3 file (item, etc.) with optional skin file
             model = await loader.load(props.modelPath, props.skinPath);
@@ -251,9 +385,17 @@ async function loadModel() {
         // Force matrix update after scale
         model.updateMatrixWorld(true);
 
-        // Position model based on type
+        // For weapons: center the model at its bounding box center first
+        // This ensures all weapons align consistently regardless of their internal pivot points
         if (props.isWeapon) {
-            // Weapons: center at origin (weapons are smaller, don't need much offset)
+            const centeredBox = new THREE.Box3().setFromObject(model);
+            const center = centeredBox.getCenter(new THREE.Vector3());
+
+            // Offset the model so its bounding box center is at the origin
+            model.position.set(-center.x, -center.y, -center.z);
+            model.updateMatrixWorld(true);
+
+            // Now position all weapons at the same Y height (centered at their bounding box)
             model.position.set(0, props.thumbnailMode ? 10 : 20, 0);
         } else {
             // Player models: position higher for detail view
@@ -343,6 +485,34 @@ async function loadModel() {
     }
 }
 
+// Weapon view animation - only recoil kick
+function updateWeaponViewAnimation(time, deltaTime) {
+    if (!model) return;
+
+    // Store base position/rotation if not set
+    if (weaponViewState.basePosition.length() === 0) {
+        weaponViewState.basePosition.copy(model.position);
+        weaponViewState.baseRotation.copy(model.rotation);
+    }
+
+    // Reset to base position/rotation
+    model.position.copy(weaponViewState.basePosition);
+    model.rotation.copy(weaponViewState.baseRotation);
+
+    // === RECOIL KICK ===
+    // Add weapon kick when firing (decays over time)
+    const kickDelta = time * 1000 - weaponViewState.kickTime;
+    if (kickDelta < 100) {
+        const kickAmount = 1.0 - (kickDelta / 100);
+        model.rotation.x += weaponViewState.kickAngles.x * kickAmount;
+        model.rotation.y += weaponViewState.kickAngles.y * kickAmount;
+        model.rotation.z += weaponViewState.kickAngles.z * kickAmount;
+
+        // Kick position (pull back)
+        model.position.z -= 5 * kickAmount;
+    }
+}
+
 function animate() {
     animationFrameId = requestAnimationFrame(animate);
 
@@ -352,6 +522,16 @@ function animate() {
     // Update animation manager
     if (animationManager) {
         animationManager.update(deltaTime);
+    }
+
+    // Update weapon view animations (Q3-style bobbing, sway, recoil)
+    if (props.isWeapon && model) {
+        updateWeaponViewAnimation(time, deltaTime);
+    }
+
+    // Update weapon animations (barrel spin, muzzle flash)
+    if (model && model.userData && model.userData.updateAnimation) {
+        model.userData.updateAnimation(deltaTime);
     }
 
     // Update shader animations (tcMod)
@@ -551,6 +731,161 @@ function getLightSettings() {
     };
 }
 
+// Weapon firing controls
+let firingInterval = null;
+
+// Get authentic Q3 fire rate based on weapon name
+function getWeaponFireRate(weaponName) {
+    const lowerName = weaponName.toLowerCase();
+
+    // Fire rates from Quake 3 engine (bg_pmove.c)
+    // IMPORTANT: Check 'rail' BEFORE 'lg' because "railgun" contains "lg"!
+    if (lowerName.includes('rail') || lowerName.includes('rg')) {
+        return 1500; // 0.67 shots/second
+    } else if (lowerName.includes('lightning') || lowerName.includes('lg')) {
+        return 50; // 20 shots/second
+    } else if (lowerName.includes('machine') || lowerName.includes('mg')) {
+        return 100; // 10 shots/second
+    } else if (lowerName.includes('plasma') || lowerName.includes('pg')) {
+        return 100; // 10 shots/second
+    } else if (lowerName.includes('shotgun') || lowerName.includes('sg')) {
+        return 1000; // 1 shot/second
+    } else if (lowerName.includes('grenade') || lowerName.includes('gl')) {
+        return 800; // 1.25 shots/second
+    } else if (lowerName.includes('rocket') || lowerName.includes('rl')) {
+        return 800; // 1.25 shots/second
+    } else if (lowerName.includes('bfg')) {
+        return 200; // 5 shots/second
+    } else if (lowerName.includes('grapple') || lowerName.includes('hook')) {
+        return 400; // 2.5 shots/second
+    } else if (lowerName.includes('gauntlet') || lowerName.includes('melee')) {
+        return 400; // 2.5 shots/second
+    }
+
+    return 100; // Default: 10 shots/second
+}
+
+function startFiring() {
+    if (!model || !model.userData || !model.userData.fire) return;
+
+    // Prevent starting a new firing interval if already firing
+    if (firingInterval) return;
+
+    // Fire immediately (first fire - pass true for isFirstFire)
+    model.userData.fire(true);
+
+    // Trigger weapon kick/recoil
+    triggerWeaponKick();
+
+    // Get weapon-specific fire rate
+    const weaponName = model.userData.animation?.weaponName || '';
+    const fireRate = getWeaponFireRate(weaponName);
+
+    console.log(`🔫 Weapon ${weaponName} fire rate: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
+
+    // Continue firing while button is held (automatic fire)
+    firingInterval = setInterval(() => {
+        if (model && model.userData && model.userData.fire) {
+            model.userData.fire(false); // Not first fire - pass false
+            triggerWeaponKick();
+        }
+    }, fireRate);
+}
+
+// Start firing WITH hit sounds (for gauntlet and lightning gun)
+function startFiringWithHit() {
+    if (!model || !model.userData || !model.userData.fireWithHit) return;
+
+    // Prevent starting a new firing interval if already firing
+    if (firingInterval) return;
+
+    // Fire immediately with hit sounds (first fire - pass true for isFirstFire)
+    model.userData.fireWithHit(true);
+
+    // Trigger weapon kick/recoil
+    triggerWeaponKick();
+
+    // Get weapon-specific fire rate
+    const weaponName = model.userData.animation?.weaponName || '';
+    const fireRate = getWeaponFireRate(weaponName);
+
+    console.log(`🔫 Weapon ${weaponName} fire rate WITH HIT: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
+
+    // Continue firing while button is held (automatic fire with hit sounds)
+    firingInterval = setInterval(() => {
+        if (model && model.userData && model.userData.fireWithHit) {
+            model.userData.fireWithHit(false); // Not first fire - pass false
+            triggerWeaponKick();
+        }
+    }, fireRate);
+}
+
+// Trigger weapon recoil kick
+function triggerWeaponKick() {
+    if (!props.isWeapon || !model) return;
+
+    // Set kick angles based on weapon type
+    const weaponName = model.userData.animation?.weaponName || '';
+    const lowerName = weaponName.toLowerCase();
+
+    // Different weapons have different kick amounts
+    if (lowerName.includes('rocket') || lowerName.includes('rl')) {
+        weaponViewState.kickAngles.set(-0.15, 0, 0); // Strong upward kick
+    } else if (lowerName.includes('shotgun') || lowerName.includes('sg')) {
+        weaponViewState.kickAngles.set(-0.12, 0, 0); // Medium-strong upward kick
+    } else if (lowerName.includes('grenade') || lowerName.includes('gl')) {
+        weaponViewState.kickAngles.set(-0.08, 0, 0); // Medium upward kick
+    } else if (lowerName.includes('plasma') || lowerName.includes('pg')) {
+        weaponViewState.kickAngles.set(-0.04, 0, 0); // Light upward kick
+    } else if (lowerName.includes('machine') || lowerName.includes('mg')) {
+        weaponViewState.kickAngles.set(-0.03, Math.random() * 0.02 - 0.01, 0); // Very light kick with horizontal spread
+    } else if (lowerName.includes('lightning') || lowerName.includes('lg')) {
+        weaponViewState.kickAngles.set(-0.02, 0, 0); // Minimal kick
+    } else if (lowerName.includes('rail') || lowerName.includes('rg')) {
+        weaponViewState.kickAngles.set(-0.10, 0, 0); // Strong kick
+    } else {
+        weaponViewState.kickAngles.set(-0.05, 0, 0); // Default kick
+    }
+
+    // Set kick time
+    weaponViewState.kickTime = clock.getElapsedTime() * 1000;
+}
+
+function stopFiring() {
+    if (firingInterval) {
+        clearInterval(firingInterval);
+        firingInterval = null;
+    }
+
+    // Stop barrel spinning
+    if (model && model.userData && model.userData.stopFiring) {
+        model.userData.stopFiring();
+    }
+}
+
+// Keyboard event handlers for firing with Ctrl key
+function handleKeyDown(event) {
+    // Only fire for weapons, and only if Ctrl is pressed
+    if (!props.isWeapon) return;
+
+    // Ignore keyboard repeat events to prevent rapid firing
+    if (event.repeat) return;
+
+    if (event.ctrlKey && !firingInterval) {
+        event.preventDefault();
+        startFiring();
+    }
+}
+
+function handleKeyUp(event) {
+    // Stop firing when Ctrl is released
+    if (!props.isWeapon) return;
+
+    if (!event.ctrlKey) {
+        stopFiring();
+    }
+}
+
 // Expose methods for parent component
 defineExpose({
     getModel: () => model,
@@ -570,10 +905,62 @@ defineExpose({
     stopAnimations: () => animationManager?.stop(),
     resetToIdle: () => animationManager?.resetToIdle(),
     getAvailableAnimations: () => availableAnimations.value,
-    playSound: (name, options) => soundManager?.playSound(name, options),
-    stopSound: (name) => soundManager?.stopSound(name),
-    stopAllSounds: () => soundManager?.stopAllSounds(),
-    setSoundVolume: (volume) => soundManager?.setVolume(volume),
+    playSound: (name, options) => {
+        // For player models, use soundManager
+        if (soundManager) {
+            return soundManager.playSound(name, options);
+        }
+        // For weapons, play the specific sound by name
+        if (model && model.userData && model.userData.animation && model.userData.animation.soundPaths) {
+            const soundIndex = model.userData.animation.soundPaths.findIndex(path => path.includes(name));
+            if (soundIndex >= 0 && model.userData.animation.sounds[soundIndex]) {
+                const sound = model.userData.animation.sounds[soundIndex];
+                if (sound.isPlaying) {
+                    sound.stop();
+                }
+                sound.play();
+            }
+        }
+    },
+    stopSound: (name) => {
+        if (soundManager) {
+            return soundManager.stopSound(name);
+        }
+        // For weapons, stop the specific sound by name
+        if (model && model.userData && model.userData.animation && model.userData.animation.soundPaths) {
+            const soundIndex = model.userData.animation.soundPaths.findIndex(path => path.includes(name));
+            if (soundIndex >= 0 && model.userData.animation.sounds[soundIndex]) {
+                model.userData.animation.sounds[soundIndex].stop();
+            }
+        }
+    },
+    stopAllSounds: () => {
+        if (soundManager) {
+            soundManager.stopAllSounds();
+        }
+        // For weapons, stop all weapon sounds
+        if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
+            model.userData.animation.sounds.forEach(sound => {
+                if (sound && sound.isPlaying) {
+                    sound.stop();
+                }
+            });
+        }
+    },
+    setSoundVolume: (volume) => {
+        // For player models, use soundManager
+        if (soundManager) {
+            soundManager.setVolume(volume);
+        }
+        // For weapons, set volume directly on weapon sounds
+        if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
+            model.userData.animation.sounds.forEach(sound => {
+                if (sound && sound.setVolume) {
+                    sound.setVolume(volume);
+                }
+            });
+        }
+    },
     setSoundsEnabled: (enabled) => {
         soundsEnabled.value = enabled;
         soundManager?.setEnabled(enabled);
@@ -621,6 +1008,34 @@ defineExpose({
                 <span>🖱️</span>
                 <span>Left click: Rotate | Right click: Pan | Scroll: Zoom</span>
             </div>
+        </div>
+
+        <!-- Weapon firing controls -->
+        <div v-if="isWeapon && !loading && !error" class="absolute bottom-4 right-4 flex gap-2">
+            <button
+                @mousedown.prevent="startFiring"
+                @mouseup.prevent="stopFiring"
+                @mouseleave="stopFiring"
+                @touchstart.prevent="startFiring"
+                @touchend.prevent="stopFiring"
+                @contextmenu.prevent
+                class="bg-red-600/80 hover:bg-red-500 backdrop-blur-sm rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-red-500/50 active:scale-95 select-none"
+            >
+                🔫 FIRE
+            </button>
+            <!-- Fire + Hit button (only for gauntlet and lightning gun) -->
+            <button
+                v-if="hasHitSounds"
+                @mousedown.prevent="startFiringWithHit"
+                @mouseup.prevent="stopFiring"
+                @mouseleave="stopFiring"
+                @touchstart.prevent="startFiringWithHit"
+                @touchend.prevent="stopFiring"
+                @contextmenu.prevent
+                class="bg-orange-600/80 hover:bg-orange-500 backdrop-blur-sm rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-orange-500/50 active:scale-95 select-none"
+            >
+                💥 FIRE + HIT
+            </button>
         </div>
     </div>
 </template>

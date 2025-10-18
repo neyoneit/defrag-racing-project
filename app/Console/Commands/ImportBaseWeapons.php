@@ -133,7 +133,7 @@ class ImportBaseWeapons extends Command
                 'has_sounds' => false,
                 'has_ctf_skins' => false,
                 'available_skins' => json_encode($availableSkins ?: ['default']),
-                'approved' => true,
+                'approval_status' => 'approved',
             ]);
 
             $this->info("✓ Imported: {$weaponName} (main file: {$mainMd3})");

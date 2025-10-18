@@ -114,7 +114,7 @@ class ImportBaseModels extends Command
                 'has_sounds' => true, // Base models have sounds
                 'has_ctf_skins' => in_array('red', $availableSkins) || in_array('blue', $availableSkins),
                 'available_skins' => json_encode($availableSkins),
-                'approved' => true, // Auto-approve base models
+                'approval_status' => 'approved', // Auto-approve base models
             ]);
 
             $this->info("✓ Imported: {$modelName}");

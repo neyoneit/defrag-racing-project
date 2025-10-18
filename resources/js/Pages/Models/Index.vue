@@ -9,6 +9,8 @@ const props = defineProps({
     sort: String,
     baseModel: String,
     search: String,
+    myUploads: Boolean,
+    approvalStatus: String,
     load_times: Object,
 });
 
@@ -49,7 +51,6 @@ const categories = [
     { value: 'all', label: 'All Models', icon: '🎨' },
     { value: 'player', label: 'Player Models', icon: '🏃' },
     { value: 'weapon', label: 'Weapon Models', icon: '🔫' },
-    { value: 'shadow', label: 'Shadow Models', icon: '👤' },
 ];
 
 const sortOptions = [
@@ -60,39 +61,70 @@ const sortOptions = [
 const searchQuery = ref(props.search || '');
 
 const switchCategory = (category) => {
-    router.visit(route('models.index', { category, sort: props.sort, base_model: props.baseModel, search: searchQuery.value }), {
+    router.visit(route('models.index', { category, sort: props.sort, base_model: props.baseModel, search: searchQuery.value, my_uploads: props.myUploads, approval_status: props.approvalStatus }), {
         preserveState: true,
         preserveScroll: true,
     });
 };
 
 const changeSort = (newSort) => {
-    router.visit(route('models.index', { category: props.category, sort: newSort, base_model: props.baseModel, search: searchQuery.value }), {
+    router.visit(route('models.index', { category: props.category, sort: newSort, base_model: props.baseModel, search: searchQuery.value, my_uploads: props.myUploads, approval_status: props.approvalStatus }), {
         preserveState: true,
         preserveScroll: true,
     });
 };
 
 const clearBaseModelFilter = () => {
-    router.visit(route('models.index', { category: props.category, sort: props.sort, search: searchQuery.value }), {
+    router.visit(route('models.index', { category: props.category, sort: props.sort, search: searchQuery.value, my_uploads: props.myUploads, approval_status: props.approvalStatus }), {
         preserveState: true,
         preserveScroll: true,
     });
 };
 
-const performSearch = () => {
-    router.visit(route('models.index', { category: props.category, sort: props.sort, base_model: props.baseModel, search: searchQuery.value }), {
+const toggleMyUploads = () => {
+    router.visit(route('models.index', {
+        category: props.category,
+        sort: props.sort,
+        base_model: props.baseModel,
+        search: searchQuery.value,
+        my_uploads: !props.myUploads,
+        approval_status: !props.myUploads ? 'pending' : null, // Default to 'pending' when turning on
+    }), {
         preserveState: true,
-        preserveScroll: false,
+        preserveScroll: true,
     });
 };
 
-const clearSearch = () => {
-    searchQuery.value = '';
-    router.visit(route('models.index', { category: props.category, sort: props.sort, base_model: props.baseModel }), {
+const changeApprovalStatus = (status) => {
+    router.visit(route('models.index', {
+        category: props.category,
+        sort: props.sort,
+        base_model: props.baseModel,
+        search: searchQuery.value,
+        my_uploads: props.myUploads,
+        approval_status: status,
+    }), {
         preserveState: true,
-        preserveScroll: false,
+        preserveScroll: true,
     });
+};
+
+const getApprovalStatusLabel = (status) => {
+    const labels = {
+        'pending': 'Pending Approval',
+        'approved': 'Approved',
+        'rejected': 'Rejected'
+    };
+    return labels[status] || status;
+};
+
+const getApprovalStatusBadgeClass = (status) => {
+    const classes = {
+        'pending': 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+        'approved': 'bg-green-500/20 text-green-400 border border-green-500/30',
+        'rejected': 'bg-red-500/20 text-red-400 border border-red-500/30'
+    };
+    return classes[status] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
 };
 
 const getModelTypeLabel = (type) => {
@@ -118,30 +150,48 @@ const getModelTypeBadgeClass = (type) => {
 
 <template>
     <Head title="Models" />
-    <div class="min-h-screen py-12">
+    <!-- Models Index Page -->
+    <div class="min-h-screen">
+        <!-- Header Section -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
             <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-                <!-- Header -->
-                <div class="mb-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h1 class="text-4xl font-black text-white mb-2">Quake 3 Models</h1>
-                            <p class="text-gray-400">Browse and download custom player, weapon, and shadow models</p>
-                        </div>
-                        <div v-if="$page.props.auth.user" class="flex gap-3">
-                            <!-- Bulk Upload (Admin Only) -->
-                            <Link v-if="$page.props.auth.user.admin" :href="route('models.bulk-upload')"
-                                  class="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-purple-500/50">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 class="text-4xl font-black text-white mb-2">Quake 3 Models</h1>
+                        <p class="text-gray-400">Browse and download custom player, weapon, and shadow models</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <!-- My Uploads Toggle -->
+                        <div class="relative group">
+                            <button @click="$page.props.auth.user ? toggleMyUploads() : null"
+                                    :disabled="!$page.props.auth.user"
+                                    :class="[
+                                        'px-6 py-3 font-bold rounded-xl transition-all shadow-lg',
+                                        !$page.props.auth.user
+                                            ? 'bg-white/5 text-gray-500 cursor-not-allowed'
+                                            : myUploads
+                                                ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 shadow-purple-500/50'
+                                                : 'bg-white/10 text-gray-300 hover:bg-white/15'
+                                    ]">
                                 <span class="flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                     </svg>
-                                    Bulk Upload
+                                    My Uploads
                                 </span>
-                            </Link>
+                            </button>
+                            <!-- Tooltip for non-logged-in users -->
+                            <div v-if="!$page.props.auth.user" class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                To view your uploads, please login
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                        </div>
 
-                            <!-- Single Upload -->
-                            <Link :href="route('models.create')"
-                                  class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-blue-500/50">
+                        <!-- Upload Model -->
+                        <div class="relative group">
+                            <Link v-if="$page.props.auth.user"
+                                  :href="route('models.create')"
+                                  class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-blue-500/50 inline-block">
                                 <span class="flex items-center gap-2">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -149,73 +199,102 @@ const getModelTypeBadgeClass = (type) => {
                                     Upload Model
                                 </span>
                             </Link>
-                        </div>
-                    </div>
-
-                    <!-- Search Bar -->
-                    <div class="mb-4">
-                        <div class="relative max-w-md">
-                            <input
-                                v-model="searchQuery"
-                                @keyup.enter="performSearch"
-                                type="text"
-                                placeholder="Search models by name or author..."
-                                class="w-full px-4 py-3 pl-11 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            />
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                            </svg>
-                            <button
-                                v-if="searchQuery"
-                                @click="clearSearch"
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Category Tabs and Sort -->
-                    <div class="flex items-center justify-between gap-4 flex-wrap">
-                        <div class="flex gap-2 flex-wrap">
-                            <button v-for="cat in categories" :key="cat.value"
-                                    @click="switchCategory(cat.value)"
-                                    :class="[
-                                        'px-4 py-2 rounded-lg font-semibold transition-all',
-                                        category === cat.value
-                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                                    ]">
+                            <button v-else
+                                    disabled
+                                    class="px-6 py-3 bg-white/5 text-gray-500 font-bold rounded-xl cursor-not-allowed shadow-lg">
                                 <span class="flex items-center gap-2">
-                                    <span>{{ cat.icon }}</span>
-                                    <span>{{ cat.label }}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Upload Model
                                 </span>
                             </button>
-                        </div>
-
-                        <!-- Sort Toggle -->
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-400">Sort:</span>
-                            <div class="flex gap-1 bg-white/5 rounded-lg p-1">
-                                <button
-                                    v-for="option in sortOptions"
-                                    :key="option.value"
-                                    @click="changeSort(option.value)"
-                                    :class="[
-                                        'px-3 py-1.5 rounded text-xs font-semibold transition-all',
-                                        (sort || 'newest') === option.value
-                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                            : 'text-gray-400 hover:text-white'
-                                    ]">
-                                    {{ option.label }}
-                                </button>
+                            <!-- Tooltip for non-logged-in users -->
+                            <div v-if="!$page.props.auth.user" class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                To upload a model, please login
+                                <div class="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Approval Status Filters (only visible when "My Uploads" is active) -->
+                <div v-if="myUploads && $page.props.auth.user" class="mt-4 flex gap-2">
+                    <span class="text-sm text-gray-400 self-center">Filter by status:</span>
+                    <button
+                        @click="changeApprovalStatus('pending')"
+                        :class="[
+                            'px-4 py-2 rounded-lg text-xs font-semibold transition-all',
+                            approvalStatus === 'pending'
+                                ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                        ]">
+                        Pending
+                    </button>
+                    <button
+                        @click="changeApprovalStatus('approved')"
+                        :class="[
+                            'px-4 py-2 rounded-lg text-xs font-semibold transition-all',
+                            approvalStatus === 'approved'
+                                ? 'bg-green-500/30 text-green-300 border border-green-500/50'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                        ]">
+                        Approved
+                    </button>
+                    <button
+                        @click="changeApprovalStatus('rejected')"
+                        :class="[
+                            'px-4 py-2 rounded-lg text-xs font-semibold transition-all',
+                            approvalStatus === 'rejected'
+                                ? 'bg-red-500/30 text-red-300 border border-red-500/50'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                        ]">
+                        Rejected
+                    </button>
+                </div>
+
+                <!-- Category Tabs and Sort -->
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div class="flex gap-2 flex-wrap">
+                        <button v-for="cat in categories" :key="cat.value"
+                                @click="switchCategory(cat.value)"
+                                :class="[
+                                    'px-4 py-2 rounded-lg font-semibold transition-all',
+                                    category === cat.value
+                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                ]">
+                            <span class="flex items-center gap-2">
+                                <span>{{ cat.icon }}</span>
+                                <span>{{ cat.label }}</span>
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Sort Toggle -->
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-400">Sort:</span>
+                        <div class="flex gap-1 bg-white/5 rounded-lg p-1">
+                            <button
+                                v-for="option in sortOptions"
+                                :key="option.value"
+                                @click="changeSort(option.value)"
+                                :class="[
+                                    'px-3 py-1.5 rounded text-xs font-semibold transition-all',
+                                    (sort || 'newest') === option.value
+                                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                        : 'text-gray-400 hover:text-white'
+                                ]">
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 py-6">
                 <!-- Base Model Filter Badge -->
                 <div v-if="baseModel" class="mb-6">
                     <div class="inline-flex items-center gap-3 px-4 py-3 bg-blue-500/20 border border-blue-500/30 rounded-xl">
@@ -234,7 +313,7 @@ const getModelTypeBadgeClass = (type) => {
                 <div v-if="models.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <Link v-for="(model, index) in models.data" :key="model.id"
                           :href="route('models.show', model.id)"
-                          class="group backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
+                          class="group backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
                         <!-- Thumbnail -->
                         <div class="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center relative overflow-hidden">
@@ -253,9 +332,17 @@ const getModelTypeBadgeClass = (type) => {
                                 {{ model.category === 'player' ? '🏃' : model.category === 'weapon' ? '🔫' : '👤' }}
                             </div>
 
-                            <!-- Category Badge -->
-                            <div class="absolute top-3 right-3 px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-white/20">
-                                {{ model.category }}
+                            <!-- Badges -->
+                            <div class="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                                <!-- Category Badge -->
+                                <div class="px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-white/20">
+                                    {{ model.category }}
+                                </div>
+
+                                <!-- Approval Status Badge (only for My Uploads) -->
+                                <div v-if="myUploads" :class="getApprovalStatusBadgeClass(model.approval_status)" class="px-3 py-1 backdrop-blur-sm rounded-full text-xs font-bold">
+                                    {{ getApprovalStatusLabel(model.approval_status) }}
+                                </div>
                             </div>
                         </div>
 
@@ -359,5 +446,5 @@ const getModelTypeBadgeClass = (type) => {
                     </div>
                 </div>
             </div>
-        </div>
+    </div>
 </template>

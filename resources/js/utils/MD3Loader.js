@@ -32,9 +32,12 @@ export class MD3Loader {
             await this.loadSkin(skinUrl);
         }
 
+        // Extract base URL for texture loading (everything up to the last /)
+        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+
         const response = await fetch(url);
         const arrayBuffer = await response.arrayBuffer();
-        return this.parse(arrayBuffer);
+        return this.parse(arrayBuffer, baseUrl);
     }
 
     /**
@@ -168,6 +171,73 @@ export class MD3Loader {
     }
 
     /**
+     * Load shader files for a weapon model
+     * @param {string} baseUrl - Base URL to the weapon directory (e.g., /storage/models/extracted/weapon1test-1760789758/models/weapons2/plasma/)
+     * @param {string} weaponName - Name of the weapon (e.g., 'plasma')
+     */
+    async loadShadersForWeapon(baseUrl, weaponName) {
+        try {
+            // Ensure baseUrl ends with /
+            if (!baseUrl.endsWith('/')) {
+                baseUrl += '/';
+            }
+
+            // Get the scripts directory URL
+            // For base Q3 weapons: /baseq3/models/weapons2/plasma/ -> /baseq3/scripts/
+            // For user weapons: /storage/models/extracted/xxx/models/weapons2/plasma/ -> /storage/models/extracted/xxx/scripts/
+            const scriptsUrl = baseUrl.replace(/models\/weapons2\/[^\/]+\/$/, 'scripts/');
+
+            const isBaseQ3 = baseUrl.includes('/baseq3/');
+
+            if (isBaseQ3) {
+                // Base Q3 uses models.shader file with all weapon shaders
+                try {
+                    await this.loadShaderFile(scriptsUrl + 'models.shader');
+                    console.log(`✅ Loaded base Q3 weapon shaders - ${this.shaders.size} shaders total`);
+                } catch (e) {
+                    console.warn('Failed to load base Q3 weapon shaders:', e);
+                }
+            } else {
+                // User-uploaded weapons: try to load ALL .shader and .shaderx files from scripts directory
+                const shaderPatterns = [
+                    `${weaponName}.shader`,
+                    `${weaponName}.shaderx`,
+                    'weapon.shader',
+                    'weapon.shaderx',
+                    'weapons.shader',
+                    'weapons.shaderx',
+                    'model.shader',
+                    'model.shaderx',
+                    'models.shader',
+                    'models.shaderx'
+                ];
+
+                // Also try pattern matching like "zzz-mui_plasma.shaderx"
+                shaderPatterns.push(`zzz-mui_${weaponName}.shaderx`);
+                shaderPatterns.push(`mui_${weaponName}.shaderx`);
+
+                let loadedAny = false;
+                for (const pattern of shaderPatterns) {
+                    try {
+                        await this.loadShaderFile(scriptsUrl + pattern);
+                        console.log(`✅ Loaded weapon shader: ${pattern}`);
+                        loadedAny = true;
+                        // Don't break - load ALL shader files we can find
+                    } catch (e) {
+                        // Silently ignore, try next pattern
+                    }
+                }
+
+                if (!loadedAny) {
+                    console.warn(`⚠️ No shader files found for weapon ${weaponName}`);
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load shaders for weapon:', error);
+        }
+    }
+
+    /**
      * Parse a .skin file content
      * @param {string} content - The skin file text content
      * @param {string} baseUrl - The base URL for resolving relative texture paths
@@ -233,7 +303,7 @@ export class MD3Loader {
      * @param {ArrayBuffer} buffer - The MD3 file data
      * @returns {THREE.Group} - Three.js Group containing the model
      */
-    parse(buffer) {
+    parse(buffer, baseUrl = null) {
         const view = new DataView(buffer);
         const header = this.parseHeader(view);
 
@@ -243,6 +313,9 @@ export class MD3Loader {
 
         const group = new THREE.Group();
         group.name = header.name;
+
+        // Store baseUrl for texture loading
+        const textureBaseUrl = baseUrl;
 
         // Parse frames (animation keyframes)
         const frames = this.parseFrames(view, header);
@@ -348,10 +421,22 @@ export class MD3Loader {
 
                     if (shader) {
                         console.log(`🎨 Found shader for "${shaderName}"`, shader);
-                        // For baseq3 models, prepend /baseq3/ to texture paths
-                        const texturePath = shaderName.startsWith('models/')
-                            ? `/baseq3/${shaderName}.tga`
-                            : `/${shaderName}.tga`;
+                        // Construct texture path based on model type
+                        let texturePath;
+                        if (textureBaseUrl) {
+                            // User-uploaded model - construct full path to main texture
+                            // textureBaseUrl: /storage/models/extracted/weapon1test-1760789758/models/weapons2/plasma/
+                            // shaderName: models/weapons2/plasma/plasma
+                            // Result: /storage/models/extracted/weapon1test-1760789758/models/weapons2/plasma/plasma.tga
+                            const fileName = shaderName.split('/').pop();
+                            texturePath = `${textureBaseUrl}${fileName}.tga`;
+                            console.log(`🔫 Resolved weapon texture path: ${texturePath} (from base: ${textureBaseUrl})`);
+                        } else {
+                            // Base Q3 model - prepend /baseq3/
+                            texturePath = shaderName.startsWith('models/')
+                                ? `/baseq3/${shaderName}.tga`
+                                : `/${shaderName}.tga`;
+                        }
 
                         // Apply shader properties and load texture
                         this.shaderMaterialSystem.createMaterialForShader(
@@ -381,9 +466,15 @@ export class MD3Loader {
                     } else {
                         console.log(`⚠️ No shader found for "${shaderName}" - loading texture directly for surface: ${surface.name}`);
                         // No shader - load texture directly
-                        const texturePath = shaderName.startsWith('models/')
-                            ? `/baseq3/${shaderName}.tga`
-                            : `/${shaderName}.tga`;
+                        let texturePath;
+                        if (shaderName.startsWith('models/')) {
+                            // Extract just the filename from the shader name
+                            const fileName = shaderName.split('/').pop();
+                            // Use the base URL from the model's location
+                            texturePath = textureBaseUrl ? `${textureBaseUrl}${fileName}.tga` : `/baseq3/${shaderName}.tga`;
+                        } else {
+                            texturePath = `/${shaderName}.tga`;
+                        }
 
                         console.log(`🔫 Attempting to load weapon texture: ${texturePath}`);
 
@@ -1066,6 +1157,9 @@ export class MD3Loader {
         const weaponGroup = new THREE.Group();
         weaponGroup.name = `weapon_${weaponName}`;
 
+        // Load shader files for this weapon first (before loading MD3 files)
+        await this.loadShadersForWeapon(baseUrl, weaponName);
+
         try {
             // Load main weapon body
             const mainUrl = `${baseUrl}${weaponName}.md3`;
@@ -1138,6 +1232,1151 @@ export class MD3Loader {
                     console.log(`⚠️ No tag_flash found on ${weaponName}`);
                 }
             }
+
+            // Add animation state to the weapon group
+            weaponGroup.userData.animation = {
+                firing: false,
+                muzzleFlashTime: 0,
+                barrelAngle: 0,
+                barrelSpinning: false,
+                barrelTime: Date.now(),
+                sounds: [], // Will be populated with weapon sounds
+                projectiles: [], // Array of active projectiles
+                scene: null, // Will be set by ModelViewer
+                weaponName: weaponName // Store weapon name for projectile creation
+            };
+
+            // Store sound paths for later loading (will be loaded by ModelViewer with proper AudioListener)
+            weaponGroup.userData.animation.soundPaths = [];
+            const lowerName = weaponName.toLowerCase();
+
+            if (lowerName.includes('plasma') || lowerName.includes('pg')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/plasma/hyprbf1a.wav',  // [0] Fire sound
+                    '/baseq3/sound/weapons/plasma/plasmx1a.wav'   // [1] Hit/impact sound
+                ];
+            } else if (lowerName.includes('rocket') || lowerName.includes('rl')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/rocket/rocklf1a.wav',  // [0] Fire sound
+                    '/baseq3/sound/weapons/rocket/rocklx1a.wav'   // [1] Explosion/hit sound
+                ];
+            } else if (lowerName.includes('rail') || lowerName.includes('rg')) {
+                // CHECK RAILGUN BEFORE LIGHTNING! (railgun contains 'lg')
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/railgun/rg_hum.wav',        // [0] Hum sound
+                    '/baseq3/sound/weapons/railgun/railgf1a.wav',      // [1] Fire sound
+                    '/baseq3/sound/weapons/plasma/plasmx1a.wav'        // [2] Impact sound (same as plasma)
+                ];
+            } else if (lowerName.includes('lightning') || lowerName.includes('lg')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/melee/fsthum.wav',  // [0] Idle sound (plays when not firing)
+                    '/baseq3/sound/weapons/lightning/lg_hum.wav',  // [1] Repeating fire sound (loops while firing)
+                    '/baseq3/sound/weapons/lightning/lg_fire.wav',  // [2] Initial fire sound (plays once on click)
+                    '/baseq3/sound/weapons/lightning/lg_hit.wav',  // [3] Hit sound 1
+                    '/baseq3/sound/weapons/lightning/lg_hit2.wav',  // [4] Hit sound 2
+                    '/baseq3/sound/weapons/lightning/lg_hit3.wav'  // [5] Hit sound 3
+                ];
+            } else if (lowerName.includes('grenade') || lowerName.includes('gl')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/grenade/grenlf1a.wav',  // [0] Fire sound
+                    '/baseq3/sound/weapons/rocket/rocklx1a.wav'    // [1] Explosion sound (same as rocket)
+                ];
+            } else if (lowerName.includes('shotgun') || lowerName.includes('sg')) {
+                weaponGroup.userData.animation.soundPaths = ['/baseq3/sound/weapons/shotgun/sshotf1b.wav'];
+            } else if (lowerName.includes('machine') || lowerName.includes('mg')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/machinegun/machgf1b.wav',  // [0] Fire sound 1
+                    '/baseq3/sound/weapons/machinegun/machgf2b.wav',  // [1] Fire sound 2
+                    '/baseq3/sound/weapons/machinegun/machgf3b.wav',  // [2] Fire sound 3
+                    '/baseq3/sound/weapons/machinegun/machgf4b.wav',  // [3] Fire sound 4
+                    '/baseq3/sound/weapons/machinegun/ric1.wav',      // [4] Ricochet sound 1
+                    '/baseq3/sound/weapons/machinegun/ric2.wav',      // [5] Ricochet sound 2
+                    '/baseq3/sound/weapons/machinegun/ric3.wav'       // [6] Ricochet sound 3
+                ];
+            } else if (lowerName.includes('bfg')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/bfg/bfg_hum.wav',    // [0] Hum sound
+                    '/baseq3/sound/weapons/bfg/bfg_fire.wav',   // [1] Fire sound
+                    '/baseq3/sound/weapons/rocket/rocklx1a.wav' // [2] Explosion sound (same as rocket)
+                ];
+            } else if (lowerName.includes('gauntlet') || lowerName.includes('gt')) {
+                weaponGroup.userData.animation.soundPaths = [
+                    '/baseq3/sound/weapons/melee/fstrun.wav',  // [0] Spinning sound (loops while firing)
+                    '/baseq3/sound/weapons/melee/fstatck.wav'  // [1] Hit/attack sound
+                ];
+            } else if (lowerName.includes('grapple') || lowerName.includes('hook')) {
+                weaponGroup.userData.animation.soundPaths = [];
+            }
+
+            console.log(`🔊 Weapon ${weaponName} will load ${weaponGroup.userData.animation.soundPaths.length} sounds`);
+
+            // Helper function to create weapon-specific projectiles (following Q3 engine logic)
+            const createProjectileForWeapon = (weaponName) => {
+                const projectileGroup = new THREE.Group();
+
+                // Determine projectile type based on weapon name
+                const lowerName = weaponName.toLowerCase();
+
+                if (lowerName.includes('rocket') || lowerName.includes('rl')) {
+                    // Rocket projectile - elongated missile shape (would use rocket.md3 model in real Q3)
+                    const rocketGeom = new THREE.CylinderGeometry(3, 3, 20, 8);
+                    rocketGeom.rotateX(Math.PI / 2);
+                    const rocketMat = new THREE.MeshBasicMaterial({ color: 0x888888 });
+                    const rocket = new THREE.Mesh(rocketGeom, rocketMat);
+                    projectileGroup.add(rocket);
+
+                    // Rocket exhaust flame
+                    const flameGeom = new THREE.ConeGeometry(4, 15, 8);
+                    flameGeom.rotateX(Math.PI / 2);
+                    const flameMat = new THREE.MeshBasicMaterial({
+                        color: 0xff6600,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const flame = new THREE.Mesh(flameGeom, flameMat);
+                    flame.position.z = -12;
+                    projectileGroup.add(flame);
+
+                    const light = new THREE.PointLight(0xff6600, 4, 300);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.rocket = rocket;
+                    projectileGroup.userData.flame = flame;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 1000; // Slower than plasma
+                    projectileGroup.userData.projectileType = 'rocket';
+
+                } else if (lowerName.includes('plasma') || lowerName.includes('pg')) {
+                    // Plasma projectile - sprite-based like Q3 (uses railDisc shader)
+                    // Create circular sprite billboard
+                    const spriteMap = new THREE.TextureLoader().load('data:image/svg+xml;base64,' + btoa(`
+                        <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <radialGradient id="grad">
+                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+                                    <stop offset="40%" stop-color="#88ffff" stop-opacity="0.8"/>
+                                    <stop offset="100%" stop-color="#4488ff" stop-opacity="0"/>
+                                </radialGradient>
+                            </defs>
+                            <circle cx="16" cy="16" r="16" fill="url(#grad)"/>
+                        </svg>
+                    `));
+
+                    const spriteMat = new THREE.SpriteMaterial({
+                        map: spriteMap,
+                        color: 0x88ccff,
+                        transparent: true,
+                        opacity: 0.8,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const sprite = new THREE.Sprite(spriteMat);
+                    sprite.scale.set(16, 16, 1); // radius in Q3 is 0.25 units but scaled for visibility
+                    projectileGroup.add(sprite);
+
+                    const light = new THREE.PointLight(0x6699ff, 3, 300);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.sprite = sprite;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 2000;
+                    projectileGroup.userData.projectileType = 'plasma';
+                    projectileGroup.userData.trailParticles = []; // Will spawn trail sprites
+
+                } else if (lowerName.includes('grenade') || lowerName.includes('gl')) {
+                    // Grenade projectile - darker metallic sphere with orange glow
+                    const grenadeGeom = new THREE.SphereGeometry(5, 12, 12);
+                    const grenadeMat = new THREE.MeshBasicMaterial({
+                        color: 0x444444,
+                        metalness: 0.8
+                    });
+                    const grenade = new THREE.Mesh(grenadeGeom, grenadeMat);
+                    projectileGroup.add(grenade);
+
+                    // Add orange/red warning glow
+                    const glowGeom = new THREE.SphereGeometry(6, 12, 12);
+                    const glowMat = new THREE.MeshBasicMaterial({
+                        color: 0xff4400,
+                        transparent: true,
+                        opacity: 0.4,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const glow = new THREE.Mesh(glowGeom, glowMat);
+                    projectileGroup.add(glow);
+
+                    const light = new THREE.PointLight(0xff6600, 2, 200);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.grenade = grenade;
+                    projectileGroup.userData.glow = glow;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 800;
+                    projectileGroup.userData.hasGravity = true; // Grenades arc
+                    projectileGroup.userData.projectileType = 'grenade';
+
+                } else if (lowerName.includes('lightning') || lowerName.includes('lg')) {
+                    // Lightning gun - continuous beam (hitscan), not a projectile
+                    // Create animated electric beam
+                    const beamGeom = new THREE.CylinderGeometry(2, 2, 1000, 8);
+                    // First translate along Y axis (cylinder's length axis) to move forward
+                    beamGeom.translate(0, 500, 0); // Move forward by half the length along cylinder axis
+                    // Then rotate to align with X axis (forward direction)
+                    beamGeom.rotateX(Math.PI / 2);
+                    const beamMat = new THREE.MeshBasicMaterial({
+                        color: 0x8888ff,
+                        transparent: true,
+                        opacity: 0.6,
+                        wireframe: false
+                    });
+                    const beam = new THREE.Mesh(beamGeom, beamMat);
+                    projectileGroup.add(beam);
+
+                    // Add inner bright core
+                    const coreGeom = new THREE.CylinderGeometry(0.5, 0.5, 1000, 6);
+                    // First translate along Y axis (cylinder's length axis) to move forward
+                    coreGeom.translate(0, 500, 0); // Move forward by half the length along cylinder axis
+                    // Then rotate to align with X axis (forward direction)
+                    coreGeom.rotateX(Math.PI / 2);
+                    const coreMat = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const core = new THREE.Mesh(coreGeom, coreMat);
+                    projectileGroup.add(core);
+
+                    const light = new THREE.PointLight(0x8888ff, 4, 300);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.beam = beam;
+                    projectileGroup.userData.core = core;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 10000; // Instant
+                    projectileGroup.userData.lifetime = 50; // Very short - just visual effect
+                    projectileGroup.userData.projectileType = 'lightning';
+
+                } else if (lowerName.includes('rail') || lowerName.includes('rg')) {
+                    // Railgun - instant beam (no projectile in Q3, just visual trail)
+                    const beamGeom = new THREE.CylinderGeometry(1, 1, 1000, 6);
+                    beamGeom.rotateX(Math.PI / 2);
+                    const beamMat = new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const beam = new THREE.Mesh(beamGeom, beamMat);
+                    projectileGroup.add(beam);
+
+                    projectileGroup.userData.beam = beam;
+                    projectileGroup.userData.velocity = 10000; // Very fast
+                    projectileGroup.userData.lifetime = 100; // Very short lived
+                    projectileGroup.userData.projectileType = 'rail';
+
+                } else if (lowerName.includes('shotgun') || lowerName.includes('sg')) {
+                    // Shotgun - hitscan with bullet tracers (no visible projectile in Q3)
+                    // Create small tracer line for each pellet
+                    const tracerGeom = new THREE.CylinderGeometry(0.3, 0.3, 20, 4);
+                    tracerGeom.rotateX(Math.PI / 2);
+                    const tracerMat = new THREE.MeshBasicMaterial({
+                        color: 0xffaa00,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                    const tracer = new THREE.Mesh(tracerGeom, tracerMat);
+                    projectileGroup.add(tracer);
+
+                    projectileGroup.userData.tracer = tracer;
+                    projectileGroup.userData.velocity = 10000; // Instant hitscan
+                    projectileGroup.userData.lifetime = 30; // Very short visual effect
+                    projectileGroup.userData.projectileType = 'shotgun';
+
+                } else if (lowerName.includes('machine') || lowerName.includes('mg')) {
+                    // Machinegun - hitscan with bullet tracers
+                    const tracerGeom = new THREE.CylinderGeometry(0.4, 0.4, 30, 4);
+                    tracerGeom.rotateX(Math.PI / 2);
+                    const tracerMat = new THREE.MeshBasicMaterial({
+                        color: 0xffff00,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const tracer = new THREE.Mesh(tracerGeom, tracerMat);
+                    projectileGroup.add(tracer);
+
+                    projectileGroup.userData.tracer = tracer;
+                    projectileGroup.userData.velocity = 10000; // Instant hitscan
+                    projectileGroup.userData.lifetime = 40; // Very short visual effect
+                    projectileGroup.userData.projectileType = 'machinegun';
+
+                } else if (lowerName.includes('bfg')) {
+                    // BFG - multi-layered glowing green sphere projectile
+                    // Layer 1: Bright core
+                    const coreGeom = new THREE.SphereGeometry(6, 32, 32);
+                    const coreMat = new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const core = new THREE.Mesh(coreGeom, coreMat);
+                    projectileGroup.add(core);
+
+                    // Layer 2: Inner glow
+                    const innerGlowGeom = new THREE.SphereGeometry(10, 32, 32);
+                    const innerGlowMat = new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        transparent: true,
+                        opacity: 0.4,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    });
+                    const innerGlow = new THREE.Mesh(innerGlowGeom, innerGlowMat);
+                    projectileGroup.add(innerGlow);
+
+                    // Layer 3: Outer glow
+                    const outerGlowGeom = new THREE.SphereGeometry(15, 32, 32);
+                    const outerGlowMat = new THREE.MeshBasicMaterial({
+                        color: 0x00ff00,
+                        transparent: true,
+                        opacity: 0.15,
+                        blending: THREE.AdditiveBlending,
+                        depthWrite: false
+                    });
+                    const outerGlow = new THREE.Mesh(outerGlowGeom, outerGlowMat);
+                    projectileGroup.add(outerGlow);
+
+                    // Strong green point light
+                    const light = new THREE.PointLight(0x00ff00, 12, 600);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.core = core;
+                    projectileGroup.userData.innerGlow = innerGlow;
+                    projectileGroup.userData.outerGlow = outerGlow;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 2000;
+                    projectileGroup.userData.lifetime = 10000; // 10 seconds like Q3
+                    projectileGroup.userData.projectileType = 'bfg';
+
+                } else if (lowerName.includes('grapple') || lowerName.includes('hook')) {
+                    // Grapple - uses rocket model in Q3 (async load)
+                    const loader = new MD3Loader();
+
+                    // Create placeholder while model loads
+                    const placeholderGeom = new THREE.CylinderGeometry(2, 3, 15, 8);
+                    placeholderGeom.rotateX(Math.PI / 2);
+                    const placeholderMat = new THREE.MeshBasicMaterial({
+                        color: 0x888888,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const placeholder = new THREE.Mesh(placeholderGeom, placeholderMat);
+                    projectileGroup.add(placeholder);
+
+                    // Load actual rocket model for grapple
+                    loader.load('/baseq3/models/ammo/rocket/rocket.md3', null)
+                        .then(rocketModel => {
+                            // Remove placeholder
+                            projectileGroup.remove(placeholder);
+
+                            // Scale the rocket model
+                            rocketModel.scale.set(1.2, 1.2, 1.2);
+
+                            // Make it metallic/gray for hook
+                            rocketModel.traverse((child) => {
+                                if (child.isMesh && child.material) {
+                                    child.material.color = new THREE.Color(0x999999);
+                                    child.material.metalness = 0.8;
+                                    child.material.needsUpdate = true;
+                                }
+                            });
+
+                            projectileGroup.add(rocketModel);
+                            projectileGroup.userData.hookModel = rocketModel;
+                        })
+                        .catch(err => {
+                            console.warn('Failed to load grapple model, using placeholder:', err);
+                        });
+
+                    // Orange light (Q3 uses RGB 1, 0.75, 0)
+                    const light = new THREE.PointLight(0xffbf00, 3, 200);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.placeholder = placeholder;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 800; // Q3 speed
+                    projectileGroup.userData.lifetime = 10000; // 10 seconds
+                    projectileGroup.userData.projectileType = 'grapple';
+
+                } else if (lowerName.includes('gauntlet') || lowerName.includes('gt')) {
+                    // Gauntlet - no projectile, melee weapon
+                    // Return empty group (gauntlet doesn't fire projectiles)
+                    projectileGroup.userData.projectileType = 'gauntlet';
+                    projectileGroup.userData.velocity = 0;
+                    return null; // No projectile for gauntlet
+
+                } else {
+                    // Default projectile (for unknown weapons or bullets)
+                    const bulletGeom = new THREE.SphereGeometry(3, 8, 8);
+                    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                    const bullet = new THREE.Mesh(bulletGeom, bulletMat);
+                    projectileGroup.add(bullet);
+
+                    const light = new THREE.PointLight(0xffff00, 1, 100);
+                    projectileGroup.add(light);
+
+                    projectileGroup.userData.bullet = bullet;
+                    projectileGroup.userData.light = light;
+                    projectileGroup.userData.velocity = 1500;
+                    projectileGroup.userData.projectileType = 'bullet';
+                }
+
+                return projectileGroup;
+            };
+
+            // Add method to spawn a projectile
+            weaponGroup.userData.spawnProjectile = function() {
+                if (!this.animation.scene || !this.animation.camera) return;
+
+                // Try to get flash for spawn position, but always use weaponGroup for direction
+                const flash = weaponGroup.getObjectByName('flash');
+                const spawnPosSource = flash || weaponGroup.getObjectByName('weapon') || weaponGroup;
+
+                console.log('🎯 Spawning projectile from:', spawnPosSource.name || 'weaponGroup', 'for weapon:', this.animation.weaponName);
+
+                // Get spawn world position (from muzzle flash or weapon)
+                const spawnWorldPos = new THREE.Vector3();
+                spawnPosSource.getWorldPosition(spawnWorldPos);
+
+                // ALWAYS get the weapon's forward direction from the main weaponGroup (not flash)
+                // This ensures consistent direction across all weapons
+                const spawnWorldQuat = new THREE.Quaternion();
+                weaponGroup.getWorldQuaternion(spawnWorldQuat);
+
+                // Get the local forward direction and rotate it 90 degrees
+                // Start with -Z, rotate around Y-axis to point forward
+                const localForward = new THREE.Vector3(0, 0, -1);
+
+                // Apply -90 degree rotation around Y-axis to point forward in weapon space
+                const rotationQuat = new THREE.Quaternion();
+                rotationQuat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2); // -90 degrees
+
+                const direction = localForward.clone();
+                direction.applyQuaternion(rotationQuat); // First rotate to point forward
+                direction.applyQuaternion(spawnWorldQuat); // Then apply weapon orientation
+                direction.normalize();
+
+                console.log('🎯 Projectile spawn position:', spawnWorldPos);
+                console.log('🎯 Weapon forward direction:', direction);
+                console.log('🎯 WeaponGroup rotation:', weaponGroup.rotation);
+
+                // Create weapon-specific projectile
+                const projectile = createProjectileForWeapon(this.animation.weaponName);
+
+                // Check if projectile was created (gauntlet returns null)
+                if (!projectile) {
+                    console.log('🎯 No projectile for melee weapon');
+                    return;
+                }
+
+                // Position at spawn point with small forward offset
+                projectile.position.copy(spawnWorldPos);
+                const offset = direction.clone().multiplyScalar(20);
+                projectile.position.add(offset);
+
+                // Orient projectile to face the direction of travel
+                projectile.lookAt(projectile.position.clone().add(direction));
+
+                // Get velocity from projectile type or use default
+                const velocityMagnitude = projectile.userData.velocity || 2000;
+                const velocityVector = direction.clone().multiplyScalar(velocityMagnitude);
+
+                // Add projectile data
+                projectile.userData.velocity = velocityVector;
+                projectile.userData.direction = direction;
+                projectile.userData.spawnTime = Date.now();
+                projectile.userData.lifetime = projectile.userData.lifetime || 2000; // Use custom or default
+
+                console.log('🎯 Projectile created at:', projectile.position);
+                console.log('🎯 Projectile will travel in direction:', direction);
+
+                // Add to scene and track
+                this.animation.scene.add(projectile);
+                this.animation.projectiles.push(projectile);
+
+                console.log('🎯 Active projectiles:', this.animation.projectiles.length);
+            };
+
+            // Add method to trigger firing animation
+            weaponGroup.userData.fire = function(isFirstFire = false) {
+                this.animation.firing = true;
+                this.animation.muzzleFlashTime = Date.now();
+
+                // Only spin barrel for weapons that have spinning barrels (chaingun/vulcan/minigun)
+                // Machinegun, plasmagun, and other weapons don't have spinning barrels
+                const lowerName = this.animation.weaponName.toLowerCase();
+                const hasSpinningBarrel = lowerName.includes('chain') ||
+                                         lowerName.includes('vulcan') ||
+                                         lowerName.includes('minigun');
+
+                console.log(`🔫 Weapon: ${this.animation.weaponName}, hasSpinningBarrel: ${hasSpinningBarrel}`);
+
+                if (hasSpinningBarrel) {
+                    this.animation.barrelSpinning = true;
+                    this.animation.barrelTime = Date.now();
+                    console.log('🔄 Barrel spinning started');
+                }
+
+                // Show muzzle flash
+                const flash = weaponGroup.getObjectByName('flash');
+                if (flash) {
+                    flash.visible = true;
+                    // Random rotation for flash
+                    flash.rotation.z = Math.random() * Math.PI * 2;
+                }
+
+                // Spawn projectile
+                this.spawnProjectile();
+
+                // Play fire sounds based on weapon type
+                const isLightningGun = lowerName.includes('lightning') || lowerName.includes('lg');
+                const isGauntlet = lowerName.includes('gauntlet') || lowerName.includes('gt');
+                const isPlasma = lowerName.includes('plasma') || lowerName.includes('pg');
+                const isRocket = lowerName.includes('rocket') || lowerName.includes('rl');
+                const isMachinegun = lowerName.includes('machine') || lowerName.includes('mg');
+                const isGrenade = lowerName.includes('grenade') || lowerName.includes('gl');
+                const isRailgun = lowerName.includes('rail') || lowerName.includes('rg');
+                const isBFG = lowerName.includes('bfg');
+
+                console.log('🔫🔫🔫 WEAPON DETECTION - lowerName:', lowerName, 'isRailgun:', isRailgun, 'isLightningGun:', isLightningGun, 'isPlasma:', isPlasma);
+
+                if (this.animation.sounds.length > 0) {
+                    // IMPORTANT: Check railgun BEFORE lightning gun because "railgun" contains "lg"!
+                    if (isRailgun) {
+                        console.log('🔫🔫🔫 RAILGUN FIRE METHOD CALLED! isFirstFire:', isFirstFire);
+
+                        // Railgun has 3 sounds:
+                        // [0] rg_hum.wav - hum sound (loops CONTINUOUSLY - both idle and firing)
+                        // [1] railgf1a.wav - fire sound
+                        // [2] plasmx1a.wav - impact sound (ONLY in fireWithHit())
+
+                        if (isFirstFire) {
+                            console.log('🔫 Starting hum sound for first fire');
+                            // Start hum sound looping ONCE on first fire
+                            const humSound = this.animation.sounds[0];
+                            if (humSound && !humSound.isPlaying) {
+                                humSound.setLoop(true);
+                                humSound.play();
+                            }
+                        }
+
+                        console.log('🔫 About to play railgun fire sound, sounds array length:', this.animation.sounds.length);
+
+                        // Play fire sound - use Web Audio API directly to bypass THREE.js limitations
+                        const fireSound = this.animation.sounds[1];
+                        console.log('🔫 fireSound exists:', !!fireSound, 'has buffer:', !!fireSound?.buffer);
+
+                        if (fireSound && fireSound.buffer) {
+                            console.log('🔫 INSIDE FIRE SOUND BLOCK!');
+                            // Use Web Audio API directly - creates independent sound source that plays to completion
+                            const audioContext = THREE.AudioContext.getContext();
+
+                            // CRITICAL: Resume audio context in case browser suspended it
+                            if (audioContext.state === 'suspended') {
+                                console.log('⚠️ AudioContext was suspended, resuming...');
+                                audioContext.resume();
+                            }
+
+                            const source = audioContext.createBufferSource();
+                            source.buffer = fireSound.buffer;
+
+                            // Create gain node for volume control
+                            const gainNode = audioContext.createGain();
+                            gainNode.gain.value = 0.5;
+
+                            // Connect: source -> gain -> destination
+                            source.connect(gainNode);
+                            gainNode.connect(audioContext.destination);
+
+                            // Play the sound - it WILL finish no matter what
+                            source.start(0);
+
+                            console.log('🔫 RAILGUN FIRE SOUND STARTED - AudioContext state:', audioContext.state, 'Buffer duration:', fireSound.buffer.duration);
+                        } else {
+                            console.error('❌ RAILGUN FIRE SOUND NOT STARTED - fireSound or buffer missing!');
+                        }
+
+                        // NOTE: Impact sound is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isLightningGun) {
+                        // Lightning gun has 3 sounds (based on Q3 engine cg_weapons.c):
+                        // [0] fsthum.wav - idle hum (loops CONTINUOUSLY - both idle and firing)
+                        // [1] lg_hum.wav - firingSound (loops CONTINUOUSLY while firing)
+                        // [2] lg_fire.wav - flashSound (plays ONLY ONCE on initial press, NOT every shot!)
+
+                        if (isFirstFire && this.animation.sounds.length >= 3) {
+                            // Keep idle sound playing - do NOT stop it
+                            // It should loop continuously throughout
+
+                            // Start continuous firing hum (lg_hum.wav) - loops while firing
+                            const humSound = this.animation.sounds[1];
+                            if (humSound && !humSound.isPlaying) {
+                                humSound.setLoop(true);
+                                humSound.play();
+                            }
+
+                            // Play flash sound (lg_fire.wav) ONLY on first fire
+                            const fireSound = this.animation.sounds[2];
+                            if (fireSound) {
+                                if (fireSound.isPlaying) {
+                                    fireSound.stop();
+                                }
+                                fireSound.play();
+                            }
+                        }
+
+                        // Do NOTHING on continuous firing - just let lg_hum.wav loop
+                    } else if (isGauntlet) {
+                        // Gauntlet has 2 sounds (based on Q3 engine cg_weapons.c):
+                        // [0] fstrun.wav - firingSound (loops CONTINUOUSLY while firing)
+                        // [1] fstatck.wav - flashSound (plays on each attack) - ONLY in fireWithHit()
+
+                        if (isFirstFire && this.animation.sounds.length >= 2) {
+                            // Start continuous running sound (fstrun.wav) - loops while firing
+                            const runSound = this.animation.sounds[0];
+                            if (runSound && !runSound.isPlaying) {
+                                runSound.setLoop(true);
+                                runSound.play();
+                            }
+                        }
+
+                        // NOTE: Attack sound (fstatck.wav) is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isPlasma) {
+                        // Plasma gun has 2 sounds:
+                        // [0] hyprbf1a.wav - fire sound (plays every shot)
+                        // [1] plasmx1a.wav - impact sound (ONLY in fireWithHit())
+
+                        // Play ONLY the fire sound (index 0)
+                        const fireSound = this.animation.sounds[0];
+                        if (fireSound) {
+                            if (fireSound.isPlaying) {
+                                fireSound.stop();
+                            }
+                            fireSound.play();
+                        }
+
+                        // NOTE: Impact sound (plasmx1a.wav) is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isRocket) {
+                        // Rocket launcher has 2 sounds:
+                        // [0] rocklf1a.wav - fire sound (plays every shot)
+                        // [1] rocklx1a.wav - explosion sound (ONLY in fireWithHit())
+
+                        // Play ONLY the fire sound (index 0)
+                        const fireSound = this.animation.sounds[0];
+                        if (fireSound) {
+                            if (fireSound.isPlaying) {
+                                fireSound.stop();
+                            }
+                            fireSound.play();
+                        }
+
+                        // NOTE: Explosion sound (rocklx1a.wav) is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isMachinegun) {
+                        // Machinegun has 7 sounds:
+                        // [0-3] machgf1b-4.wav - fire sounds (randomly pick one)
+                        // [4-6] ric1-3.wav - ricochet sounds (ONLY in fireWithHit())
+
+                        // Play ONE random fire sound from indices 0-3
+                        const fireIndex = Math.floor(Math.random() * 4);
+                        const fireSound = this.animation.sounds[fireIndex];
+                        if (fireSound) {
+                            if (fireSound.isPlaying) {
+                                fireSound.stop();
+                            }
+                            fireSound.play();
+                        }
+
+                        // NOTE: Ricochet sounds are NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isGrenade) {
+                        // Grenade launcher has 2 sounds:
+                        // [0] grenlf1a.wav - fire sound
+                        // [1] rocklx1a.wav - explosion sound (ONLY in fireWithHit())
+
+                        const fireSound = this.animation.sounds[0];
+                        if (fireSound) {
+                            if (fireSound.isPlaying) {
+                                fireSound.stop();
+                            }
+                            fireSound.play();
+                        }
+
+                        // NOTE: Explosion sound is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else if (isBFG) {
+                        // BFG has 3 sounds:
+                        // [0] bfg_hum.wav - hum sound
+                        // [1] bfg_fire.wav - fire sound
+                        // [2] rocklx1a.wav - explosion sound (ONLY in fireWithHit())
+
+                        // Play hum + fire sounds, but not explosion
+                        for (let i = 0; i < 2; i++) {
+                            const sound = this.animation.sounds[i];
+                            if (sound) {
+                                if (sound.isPlaying) {
+                                    sound.stop();
+                                }
+                                sound.play();
+                            }
+                        }
+
+                        // NOTE: Explosion sound is NOT played here
+                        // Use fireWithHit() method to play hit sounds
+                    } else {
+                        // All other weapons: play ALL sounds simultaneously every fire
+                        this.animation.sounds.forEach(sound => {
+                            if (sound) {
+                                // Stop and restart the sound to allow rapid fire overlapping sounds
+                                if (sound.isPlaying) {
+                                    sound.stop();
+                                }
+                                sound.play();
+                            }
+                        });
+                    }
+                }
+            };
+
+            // Add method to trigger firing animation WITH hit sounds
+            weaponGroup.userData.fireWithHit = function(isFirstFire = false) {
+                // Call regular fire first
+                this.fire(isFirstFire);
+
+                // Then play hit sounds for weapons that have them
+                const lowerName = this.animation.weaponName.toLowerCase();
+                const isLightningGun = lowerName.includes('lightning') || lowerName.includes('lg');
+                const isGauntlet = lowerName.includes('gauntlet') || lowerName.includes('gt');
+                const isPlasma = lowerName.includes('plasma') || lowerName.includes('pg');
+                const isRocket = lowerName.includes('rocket') || lowerName.includes('rl');
+                const isMachinegun = lowerName.includes('machine') || lowerName.includes('mg');
+                const isGrenade = lowerName.includes('grenade') || lowerName.includes('gl');
+                const isRailgun = lowerName.includes('rail') || lowerName.includes('rg');
+                const isBFG = lowerName.includes('bfg');
+
+                if (isLightningGun && this.animation.sounds.length >= 6) {
+                    // Lightning gun has 3 hit sounds at indices [3], [4], [5]
+                    // Randomly play one of them
+                    const hitIndex = 3 + Math.floor(Math.random() * 3);
+                    const hitSound = this.animation.sounds[hitIndex];
+                    if (hitSound) {
+                        if (hitSound.isPlaying) {
+                            hitSound.stop();
+                        }
+                        hitSound.play();
+                    }
+                } else if (isGauntlet && this.animation.sounds.length >= 2) {
+                    // Gauntlet has attack sound at index [1]
+                    const attackSound = this.animation.sounds[1];
+                    if (attackSound) {
+                        if (attackSound.isPlaying) {
+                            attackSound.stop();
+                        }
+                        attackSound.play();
+                    }
+                } else if (isPlasma && this.animation.sounds.length >= 2) {
+                    // Plasma gun has impact sound at index [1]
+                    const impactSound = this.animation.sounds[1];
+                    if (impactSound) {
+                        if (impactSound.isPlaying) {
+                            impactSound.stop();
+                        }
+                        impactSound.play();
+                    }
+                } else if (isRocket && this.animation.sounds.length >= 2) {
+                    // Rocket launcher has explosion sound at index [1]
+                    const explosionSound = this.animation.sounds[1];
+                    if (explosionSound) {
+                        if (explosionSound.isPlaying) {
+                            explosionSound.stop();
+                        }
+                        explosionSound.play();
+                    }
+                } else if (isMachinegun && this.animation.sounds.length >= 7) {
+                    // Machinegun has 3 ricochet sounds at indices [4], [5], [6]
+                    // Randomly play one of them
+                    const ricIndex = 4 + Math.floor(Math.random() * 3);
+                    const ricSound = this.animation.sounds[ricIndex];
+                    if (ricSound) {
+                        if (ricSound.isPlaying) {
+                            ricSound.stop();
+                        }
+                        ricSound.play();
+                    }
+                } else if (isGrenade && this.animation.sounds.length >= 2) {
+                    // Grenade launcher has explosion sound at index [1]
+                    const explosionSound = this.animation.sounds[1];
+                    if (explosionSound) {
+                        if (explosionSound.isPlaying) {
+                            explosionSound.stop();
+                        }
+                        explosionSound.play();
+                    }
+                } else if (isRailgun && this.animation.sounds.length >= 3) {
+                    // Railgun has impact sound at index [2]
+                    const impactSound = this.animation.sounds[2];
+                    if (impactSound) {
+                        if (impactSound.isPlaying) {
+                            impactSound.stop();
+                        }
+                        impactSound.play();
+                    }
+                } else if (isBFG && this.animation.sounds.length >= 3) {
+                    // BFG has explosion sound at index [2]
+                    const explosionSound = this.animation.sounds[2];
+                    if (explosionSound) {
+                        if (explosionSound.isPlaying) {
+                            explosionSound.stop();
+                        }
+                        explosionSound.play();
+                    }
+                }
+            };
+
+            // Add method to update weapon animations
+            weaponGroup.userData.updateAnimation = function(deltaTime) {
+                const now = Date.now();
+                const MUZZLE_FLASH_TIME = 20; // milliseconds
+                const SPIN_SPEED = 0.9; // degrees per millisecond
+                const COAST_TIME = 1000; // milliseconds
+
+                // Update muzzle flash visibility
+                if (this.animation.muzzleFlashTime > 0) {
+                    if (now - this.animation.muzzleFlashTime > MUZZLE_FLASH_TIME) {
+                        // Hide flash after duration
+                        const flash = weaponGroup.getObjectByName('flash');
+                        if (flash) {
+                            flash.visible = false;
+                        }
+                        this.animation.muzzleFlashTime = 0;
+                        // DON'T set firing = false here! That's controlled by stopFiring() method
+                        // The firing state needs to persist while the button is held down
+                    }
+                }
+
+                // Update barrel/blade spinning (for weapons with spinning parts)
+                const lowerName = this.animation.weaponName.toLowerCase();
+                const hasSpinningBarrel = lowerName.includes('chain') ||
+                                         lowerName.includes('vulcan') ||
+                                         lowerName.includes('minigun');
+                const hasSpinningBlade = lowerName.includes('gauntlet') || lowerName.includes('gt');
+
+                if (hasSpinningBarrel) {
+                    const barrel = weaponGroup.getObjectByName('barrel');
+                    if (barrel) {
+                        const delta = now - this.animation.barrelTime;
+                        let angle;
+
+                        if (this.animation.barrelSpinning) {
+                            // Spinning
+                            angle = this.animation.barrelAngle + delta * SPIN_SPEED;
+                        } else {
+                            // Coasting to a stop
+                            const coastDelta = Math.min(delta, COAST_TIME);
+                            const speed = 0.5 * (SPIN_SPEED + (COAST_TIME - coastDelta) / COAST_TIME);
+                            angle = this.animation.barrelAngle + coastDelta * speed;
+                        }
+
+                        // Apply rotation to barrel (roll axis)
+                        barrel.rotation.z = (angle * Math.PI) / 180; // Convert to radians
+
+                        // Stop spinning after coast time
+                        if (!this.animation.barrelSpinning && delta > COAST_TIME) {
+                            this.animation.barrelAngle = angle;
+                        } else {
+                            this.animation.barrelAngle = angle;
+                            this.animation.barrelTime = now;
+                        }
+                    }
+                }
+
+                // Update gauntlet blade spinning
+                if (hasSpinningBlade) {
+                    // Find the barrel (in gauntlet, the spinning blade uses barrel tag)
+                    // Need to search recursively since barrel is attached to main body
+                    let blade = null;
+                    weaponGroup.traverse((child) => {
+                        if (child.name === 'barrel' && !blade) {
+                            blade = child;
+                        }
+                    });
+                    if (blade) {
+                        // Store initial quaternion on first access
+                        if (!blade.userData.initialQuaternion) {
+                            blade.userData.initialQuaternion = blade.quaternion.clone();
+                        }
+
+                        const delta = now - this.animation.barrelTime;
+
+                        // Gauntlet blade spins ONLY while firing (no coasting)
+                        if (this.animation.firing) {
+                            // Calculate spin angle
+                            const angle = this.animation.barrelAngle + delta * (SPIN_SPEED * 2);
+
+                            // Start from initial rotation
+                            blade.quaternion.copy(blade.userData.initialQuaternion);
+
+                            // Apply spin around local X axis
+                            const spinQuat = new THREE.Quaternion();
+                            spinQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), (angle * Math.PI) / 180);
+                            blade.quaternion.multiply(spinQuat);
+
+                            this.animation.barrelAngle = angle;
+                            this.animation.barrelTime = now;
+                        } else {
+                            // Reset to initial rotation when not firing
+                            blade.quaternion.copy(blade.userData.initialQuaternion);
+                            this.animation.barrelAngle = 0;
+                        }
+
+                        // Add light effect ONLY when firing
+                        if (this.animation.firing) {
+                            // Add or update point light for blade glow
+                            let bladeLight = blade.getObjectByName('blade_light');
+                            if (!bladeLight) {
+                                bladeLight = new THREE.PointLight(0x6666ff, 2, 50);
+                                bladeLight.name = 'blade_light';
+                                blade.add(bladeLight);
+                            }
+                            bladeLight.intensity = 2 + Math.sin(this.animation.barrelAngle * 0.1) * 0.5; // Pulsing effect
+                        } else {
+                            // Remove light when not firing
+                            const bladeLight = blade.getObjectByName('blade_light');
+                            if (bladeLight) {
+                                blade.remove(bladeLight);
+                            }
+                        }
+                    }
+                }
+
+                // Update projectiles
+                const projectilesToRemove = [];
+                if (this.animation.projectiles.length > 0) {
+                    console.log('🚀 Updating', this.animation.projectiles.length, 'projectiles');
+                }
+                for (let i = 0; i < this.animation.projectiles.length; i++) {
+                    const projectile = this.animation.projectiles[i];
+                    const age = now - projectile.userData.spawnTime;
+
+                    // Remove old projectiles
+                    if (age > projectile.userData.lifetime) {
+                        console.log('💀 Removing projectile', i, 'age:', age);
+                        projectilesToRemove.push(i);
+                        if (this.animation.scene) {
+                            this.animation.scene.remove(projectile);
+                        }
+                        continue;
+                    }
+
+                    // Update position based on velocity
+                    const velocity = projectile.userData.velocity;
+                    const oldPos = projectile.position.clone();
+                    projectile.position.x += velocity.x * deltaTime;
+                    projectile.position.y += velocity.y * deltaTime;
+                    projectile.position.z += velocity.z * deltaTime;
+
+                    if (i === 0) { // Log first projectile only to avoid spam
+                        console.log('🚀 Projectile', i, 'pos:', projectile.position, 'velocity:', velocity);
+                    }
+
+                    // Apply gravity to grenades
+                    if (projectile.userData.hasGravity) {
+                        const gravity = -500; // units/second^2
+                        projectile.userData.velocity.y += gravity * deltaTime;
+                    }
+
+                    // Animate the projectile based on type
+                    const timeInSeconds = age / 1000;
+
+                    // Plasma projectile animation (sprite pulsing like Q3)
+                    if (projectile.userData.projectileType === 'plasma' && projectile.userData.sprite) {
+                        // Pulse the sprite opacity
+                        const pulse = Math.sin(timeInSeconds * 10) * 0.2 + 0.8;
+                        projectile.userData.sprite.material.opacity = 0.8 * pulse;
+
+                        // Pulse the light intensity
+                        projectile.userData.light.intensity = 3 + Math.sin(timeInSeconds * 12) * 1.5;
+
+                        // Rotate sprite slowly
+                        projectile.userData.sprite.material.rotation += deltaTime * 2;
+                    }
+
+                    // Lightning beam animation (flickering electric arc)
+                    if (projectile.userData.projectileType === 'lightning') {
+                        // Rapid flickering like electricity
+                        const flicker = Math.random() * 0.4 + 0.6; // 0.6 to 1.0
+                        projectile.userData.beam.material.opacity = 0.6 * flicker;
+                        projectile.userData.core.material.opacity = 0.9 * flicker;
+
+                        // Pulse the light rapidly
+                        projectile.userData.light.intensity = 4 + Math.random() * 3;
+
+                        // Slight random scale variation for electric arc effect
+                        projectile.userData.beam.scale.x = 1 + (Math.random() - 0.5) * 0.3;
+                        projectile.userData.beam.scale.y = 1 + (Math.random() - 0.5) * 0.3;
+                    }
+
+                    // Rocket projectile animation (flame flicker, rotation)
+                    if (projectile.userData.rocket) {
+                        // Spin the rocket slowly
+                        projectile.userData.rocket.rotation.z += deltaTime * 3;
+
+                        // Flicker the flame
+                        if (projectile.userData.flame) {
+                            const flicker = Math.sin(timeInSeconds * 20) * 0.2 + 0.8;
+                            projectile.userData.flame.material.opacity = 0.8 * flicker;
+                            projectile.userData.flame.scale.y = 1 + Math.sin(timeInSeconds * 15) * 0.3;
+                        }
+
+                        // Pulse the light
+                        projectile.userData.light.intensity = 4 + Math.sin(timeInSeconds * 15) * 2;
+                    }
+
+                    // Grenade projectile animation (tumbling)
+                    if (projectile.userData.grenade) {
+                        projectile.userData.grenade.rotation.x += deltaTime * 5;
+                        projectile.userData.grenade.rotation.y += deltaTime * 3;
+                    }
+
+                    // Grapple hook animation (spinning rocket model)
+                    if (projectile.userData.projectileType === 'grapple') {
+                        // Spin the hook/rocket model if loaded
+                        if (projectile.userData.hookModel) {
+                            projectile.userData.hookModel.rotation.z += deltaTime * 8; // Fast spin like drilling
+                        }
+                    }
+
+                    // BFG projectile animation (pulsing multi-layered spheres)
+                    if (projectile.userData.projectileType === 'bfg') {
+                        // Pulse the core
+                        if (projectile.userData.core) {
+                            const corePulse = Math.sin(timeInSeconds * 10) * 0.1 + 1.0;
+                            projectile.userData.core.scale.setScalar(corePulse);
+                        }
+
+                        // Pulse the inner glow at different rate
+                        if (projectile.userData.innerGlow) {
+                            const innerPulse = Math.sin(timeInSeconds * 7) * 0.15 + 1.0;
+                            projectile.userData.innerGlow.scale.setScalar(innerPulse);
+                            // Rotate inner glow slowly
+                            projectile.userData.innerGlow.rotation.y += deltaTime * 2;
+                            projectile.userData.innerGlow.rotation.x += deltaTime * 1;
+                        }
+
+                        // Pulse the outer glow at different rate
+                        if (projectile.userData.outerGlow) {
+                            const outerPulse = Math.sin(timeInSeconds * 5) * 0.2 + 1.0;
+                            projectile.userData.outerGlow.scale.setScalar(outerPulse);
+                            // Rotate outer glow slowly in opposite direction
+                            projectile.userData.outerGlow.rotation.y -= deltaTime * 1.5;
+                            projectile.userData.outerGlow.rotation.z += deltaTime * 0.8;
+                        }
+
+                        // Pulse the green light intensely
+                        if (projectile.userData.light) {
+                            projectile.userData.light.intensity = 12 + Math.sin(timeInSeconds * 12) * 6;
+                        }
+                    }
+
+                    // Rail beam animation (fade out quickly)
+                    if (projectile.userData.beam) {
+                        const fadeSpeed = age / projectile.userData.lifetime;
+                        projectile.userData.beam.material.opacity = 0.7 * (1 - fadeSpeed);
+                    }
+
+                    // Bullet animation (slight rotation)
+                    if (projectile.userData.bullet) {
+                        projectile.userData.bullet.rotation.x += deltaTime * 20;
+                    }
+
+                    // Fade out near end of lifetime
+                    const lifetimePercent = age / projectile.userData.lifetime;
+                    if (lifetimePercent > 0.7) {
+                        const fadePercent = (lifetimePercent - 0.7) / 0.3;
+
+                        // Fade plasma sprite
+                        if (projectile.userData.sprite) {
+                            projectile.userData.sprite.material.opacity *= (1 - fadePercent);
+                        }
+
+                        // Fade rocket
+                        if (projectile.userData.rocket) {
+                            projectile.userData.rocket.material.opacity = 1.0 * (1 - fadePercent);
+                            projectile.userData.rocket.material.transparent = true;
+                            if (projectile.userData.flame) {
+                                projectile.userData.flame.material.opacity *= (1 - fadePercent);
+                            }
+                        }
+
+                        // Fade others
+                        if (projectile.userData.grenade) {
+                            projectile.userData.grenade.material.opacity = 1.0 * (1 - fadePercent);
+                            projectile.userData.grenade.material.transparent = true;
+                        }
+                        if (projectile.userData.bullet) {
+                            projectile.userData.bullet.material.opacity = 1.0 * (1 - fadePercent);
+                            projectile.userData.bullet.material.transparent = true;
+                        }
+                        if (projectile.userData.beam) {
+                            projectile.userData.beam.material.opacity *= (1 - fadePercent);
+                        }
+
+                        // Fade light for all projectiles
+                        if (projectile.userData.light) {
+                            projectile.userData.light.intensity *= (1 - fadePercent);
+                        }
+                    }
+                }
+
+                // Remove dead projectiles from array (iterate backwards to avoid index issues)
+                for (let i = projectilesToRemove.length - 1; i >= 0; i--) {
+                    this.animation.projectiles.splice(projectilesToRemove[i], 1);
+                }
+            };
+
+            // Add method to stop firing
+            weaponGroup.userData.stopFiring = function() {
+                this.animation.firing = false;
+                this.animation.barrelSpinning = false;
+                this.animation.barrelTime = Date.now();
+
+                const lowerName = this.animation.weaponName.toLowerCase();
+                const isLightningGun = lowerName.includes('lightning') || lowerName.includes('lg');
+                const isGauntlet = lowerName.includes('gauntlet') || lowerName.includes('gt');
+
+                // For lightning gun, restart idle sound when stopping fire
+                if (isLightningGun && this.animation.sounds.length >= 3) {
+                    // Stop the repeating fire hum
+                    const humSound = this.animation.sounds[1];
+                    if (humSound && humSound.isPlaying) {
+                        humSound.stop();
+                    }
+
+                    // Restart idle sound (fsthum.wav)
+                    const idleSound = this.animation.sounds[0];
+                    if (idleSound && !idleSound.isPlaying) {
+                        idleSound.setLoop(true);
+                        idleSound.play();
+                    }
+                }
+
+                // For gauntlet, stop the running sound when stopping fire
+                if (isGauntlet && this.animation.sounds.length >= 2) {
+                    // Stop the running sound (fstrun.wav)
+                    const runSound = this.animation.sounds[0];
+                    if (runSound && runSound.isPlaying) {
+                        runSound.stop();
+                    }
+                }
+            };
 
             return weaponGroup;
 
@@ -1366,5 +2605,63 @@ export class MD3Loader {
         });
 
         return new THREE.AnimationClip(`${prefix}_${animDef.name}`, duration, tracks);
+    }
+
+    /**
+     * Convert AudioBuffer to WAV format
+     * @param {AudioBuffer} buffer - The audio buffer to convert
+     * @returns {ArrayBuffer} - WAV file data
+     */
+    audioBufferToWav(buffer) {
+        const numberOfChannels = buffer.numberOfChannels;
+        const sampleRate = buffer.sampleRate;
+        const format = 1; // PCM
+        const bitDepth = 16;
+
+        const bytesPerSample = bitDepth / 8;
+        const blockAlign = numberOfChannels * bytesPerSample;
+
+        const data = [];
+        for (let i = 0; i < buffer.numberOfChannels; i++) {
+            data.push(buffer.getChannelData(i));
+        }
+
+        const dataLength = buffer.length * numberOfChannels * bytesPerSample;
+        const bufferLength = 44 + dataLength;
+        const arrayBuffer = new ArrayBuffer(bufferLength);
+        const view = new DataView(arrayBuffer);
+
+        // Write WAV header
+        const writeString = (offset, string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + dataLength, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true); // fmt chunk size
+        view.setUint16(20, format, true);
+        view.setUint16(22, numberOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitDepth, true);
+        writeString(36, 'data');
+        view.setUint32(40, dataLength, true);
+
+        // Write audio data
+        let offset = 44;
+        for (let i = 0; i < buffer.length; i++) {
+            for (let channel = 0; channel < numberOfChannels; channel++) {
+                const sample = Math.max(-1, Math.min(1, data[channel][i]));
+                view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                offset += 2;
+            }
+        }
+
+        return arrayBuffer;
     }
 }

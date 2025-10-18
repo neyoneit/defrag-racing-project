@@ -56,7 +56,7 @@ class SearchController extends Controller
         })->toArray());
 
         // Search models by name or author
-        $models = PlayerModel::where('approved', true)
+        $models = PlayerModel::where('approval_status', 'approved')
             ->where(function($query) use ($request) {
                 $query->where('name', 'LIKE', '%' . $request->search . '%')
                       ->orWhere('author', 'LIKE', '%' . $request->search . '%');
