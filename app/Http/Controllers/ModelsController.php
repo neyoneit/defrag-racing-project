@@ -301,36 +301,40 @@ class ModelsController extends Controller
                         // Find MD3 files for this weapon
                         $md3Files = glob($weaponPath . '/*.md3');
 
-                        if (empty($md3Files)) {
-                            \Log::warning("Skipping weapon {$detectedModelName}: no MD3 files found");
-                            continue;
-                        }
-
-                        // Find the main weapon MD3 file (similar to ImportBaseWeapons command)
+                        // MD3 files are OPTIONAL - texture/shader-only packs are valid!
+                        // They will fallback to base Q3 weapon models
                         $mainMd3 = null;
-                        foreach ($md3Files as $md3File) {
-                            $basename = basename($md3File, '.md3');
-                            // Look for the base file without suffixes like _1, _2, _hand, _flash, _barrel
-                            if ($basename === $detectedModelName) {
-                                $mainMd3 = basename($md3File);
-                                break;
-                            }
-                        }
 
-                        // If no exact match, use the first MD3 file that's not a variant
-                        if (!$mainMd3) {
+                        if (!empty($md3Files)) {
+                            // Find the main weapon MD3 file (similar to ImportBaseWeapons command)
                             foreach ($md3Files as $md3File) {
                                 $basename = basename($md3File, '.md3');
-                                if (!preg_match('/_(hand|flash|barrel|[0-9])$/', $basename)) {
+                                // Look for the base file without suffixes like _1, _2, _hand, _flash, _barrel
+                                if ($basename === $detectedModelName) {
                                     $mainMd3 = basename($md3File);
                                     break;
                                 }
                             }
-                        }
 
-                        // Last resort: use first MD3 file
-                        if (!$mainMd3) {
-                            $mainMd3 = basename($md3Files[0]);
+                            // If no exact match, use the first MD3 file that's not a variant
+                            if (!$mainMd3) {
+                                foreach ($md3Files as $md3File) {
+                                    $basename = basename($md3File, '.md3');
+                                    if (!preg_match('/_(hand|flash|barrel|[0-9])$/', $basename)) {
+                                        $mainMd3 = basename($md3File);
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Last resort: use first MD3 file
+                            if (!$mainMd3) {
+                                $mainMd3 = basename($md3Files[0]);
+                            }
+
+                            \Log::info("Found MD3 file for weapon {$detectedModelName}: {$mainMd3}");
+                        } else {
+                            \Log::info("No MD3 files found for weapon {$detectedModelName} - will use fallback to base Q3 model");
                         }
 
                         // Get available skins (if any)
