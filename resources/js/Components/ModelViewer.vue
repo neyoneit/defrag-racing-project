@@ -964,6 +964,25 @@ defineExpose({
     setSoundsEnabled: (enabled) => {
         soundsEnabled.value = enabled;
         soundManager?.setEnabled(enabled);
+
+        // For weapons, mute/unmute all weapon sounds
+        if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
+            model.userData.animation.sounds.forEach(sound => {
+                if (sound) {
+                    if (enabled) {
+                        // Unmute - restore volume
+                        if (sound.setVolume) {
+                            sound.setVolume(soundVolume.value);
+                        }
+                    } else {
+                        // Mute - set volume to 0
+                        if (sound.setVolume) {
+                            sound.setVolume(0);
+                        }
+                    }
+                }
+            });
+        }
     },
     areSoundsLoaded: () => soundsLoaded.value,
     setWireframe: setWireframe,

@@ -939,7 +939,10 @@ class ModelsController extends Controller
     {
         $model = PlayerModel::findOrFail($id);
 
-        if ($model->approval_status !== 'approved') {
+        // Allow download if:
+        // 1. Model is approved (public access)
+        // 2. User owns the model (can download their own uploads regardless of approval status)
+        if ($model->approval_status !== 'approved' && $model->user_id !== Auth::id()) {
             abort(403);
         }
 
