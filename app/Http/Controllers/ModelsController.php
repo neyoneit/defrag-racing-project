@@ -23,7 +23,7 @@ class ModelsController extends Controller
         $sort = $request->get('sort', 'newest'); // newest or oldest
         $baseModel = $request->get('base_model'); // Filter by base model
         $search = $request->get('search'); // Search query
-        $myUploads = $request->get('my_uploads', false); // Filter by user's uploads
+        $myUploads = filter_var($request->get('my_uploads', false), FILTER_VALIDATE_BOOLEAN); // Filter by user's uploads
         $approvalStatus = $request->get('approval_status'); // Filter by approval status (pending, approved, rejected)
 
         $start = microtime(true);
@@ -40,6 +40,10 @@ class ModelsController extends Controller
         } else {
             // For public view, only show approved models
             $query->approved()->where('hidden', false);
+
+            // Clear approval_status from URL if not viewing My Uploads
+            // This prevents confusing URL states like approval_status=rejected with my_uploads=0
+            $approvalStatus = null;
         }
 
         if ($category !== 'all') {
