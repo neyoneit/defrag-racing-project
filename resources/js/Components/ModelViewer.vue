@@ -12,6 +12,10 @@ const props = defineProps({
         type: String,
         required: true
     },
+    modelId: {
+        type: Number,
+        default: null
+    },
     skinPath: {
         type: String,
         default: null
@@ -47,6 +51,10 @@ const props = defineProps({
     thumbnailMode: {
         type: Boolean,
         default: false
+    },
+    baseModelName: {
+        type: String,
+        default: null
     }
 });
 
@@ -70,6 +78,7 @@ const error = ref(null);
 const availableAnimations = ref({ legs: {}, torso: {}, both: {} });
 const soundsEnabled = ref(props.enableSounds);
 const soundsLoaded = ref(false);
+const currentVolume = ref(0.5); // Store current volume for unmuting
 
 // Check if weapon has hit sounds (all weapons except shotgun)
 const hasHitSounds = computed(() => {
@@ -275,7 +284,9 @@ async function loadModel() {
 
             // Load complete player model (head + upper + lower)
             // Pass skinPackBasePath for skin/mixed packs that override base model skins
-            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath);
+            // Pass baseModelName so loader knows what base model to load first
+            // Pass modelId so loader can fetch ALL shader files from the pk3
+            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath, props.baseModelName, props.modelId);
         } else if (props.isWeapon) {
             // Load composite weapon model (main + hand + barrel + flash)
             // For weapons, load shaders from models.shader before loading the model
@@ -291,7 +302,7 @@ async function loadModel() {
             const fileName = props.modelPath.split('/').pop(); // Get "machinegun.md3"
             const weaponName = fileName.replace('.md3', ''); // Get "machinegun"
 
-            model = await loader.loadWeaponModel(baseDir, weaponName);
+            model = await loader.loadWeaponModel(baseDir, weaponName, props.modelId);
 
             // Set scene and camera reference for projectile spawning
             if (model.userData && model.userData.animation) {
@@ -410,45 +421,63 @@ async function loadModel() {
             availableAnimations.value = animationManager.getAvailableAnimations();
 
             // Initialize sound manager
+            // UNIFIED LOGIC: Load from base model first, then override with PK3
             if (soundsEnabled.value) {
                 try {
                     // Extract model name from path
                     const pathParts = props.modelPath.split('/');
                     const modelName = pathParts[pathParts.length - 2]; // Get second-to-last part (model name)
-                    let soundPath;
 
-                    // Check if this is a base Q3 model or user-uploaded model
+                    // List of base Q3 models from pak0-pak8.pk3
+                    const baseQ3Models = [
+                        'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
+                        'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
+                        'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
+                        'bitterman'
+                    ];
+                    const isBaseQ3Model = baseQ3Models.includes(modelName.toLowerCase());
+                    const baseModelIsBaseQ3 = props.baseModelName && baseQ3Models.includes(props.baseModelName.toLowerCase());
+
+                    let pk3SoundPath;
+                    let baseModelSoundPath = null;
+
                     if (props.modelPath.startsWith('/baseq3/')) {
-                        // Base Q3 model: /baseq3/models/players/anarki/head.md3
-                        // Sound path: /baseq3/sound/player/anarki/
-                        soundPath = `/baseq3/sound/player/${modelName}`;
+                        // Pure base Q3 model: /baseq3/models/players/anarki/head.md3
+                        // Only load from baseq3 (no base model, no PK3 override)
+                        pk3SoundPath = `/baseq3/sound/player/${modelName}`;
+                        console.log(`🔊 Loading base Q3 model sounds: ${pk3SoundPath}`);
                     } else {
-                        // User-uploaded model: /storage/models/extracted/worm-123/models/players/worm/head.md3
-                        // For skin packs, try the skin pack's sound directory first, then fall back to base model
-                        if (props.skinPackBasePath) {
-                            // Skin pack: try /storage/models/extracted/scorn-myriane.../sound/player/major/
-                            const skinPackPath = props.skinPackBasePath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
-                            if (skinPackPath) {
-                                const basePath = skinPackPath[1];
-                                soundPath = `${basePath}/sound/player/${modelName}`;
+                        // Custom model from PK3
+                        const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
+                        if (extractedPath) {
+                            const basePath = extractedPath[1];
+                            pk3SoundPath = `${basePath}/sound/player/${modelName}`;
+                        }
+
+                        // If this model has a base model, load base model sounds FIRST
+                        if (props.baseModelName) {
+                            if (baseModelIsBaseQ3) {
+                                // Base model is from baseq3 - load those sounds first
+                                baseModelSoundPath = `/baseq3/sound/player/${props.baseModelName}`;
+                                console.log(`🔊 Will load base model sounds from: ${baseModelSoundPath}, then override with PK3: ${pk3SoundPath}`);
+                            } else {
+                                // Base model is custom (from another PK3) - would need to know its path
+                                // For now, just load from PK3
+                                console.log(`🔊 Loading sounds from PK3: ${pk3SoundPath}`);
                             }
                         } else {
-                            // Complete model: use its own sound directory
-                            const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
-                            if (extractedPath) {
-                                const basePath = extractedPath[1];
-                                soundPath = `${basePath}/sound/player/${modelName}`;
-                            }
+                            // Complete model - load only from PK3
+                            console.log(`🔊 Loading complete model sounds from PK3: ${pk3SoundPath}`);
                         }
                     }
 
-                    if (soundPath) {
-                        soundManager = new MD3SoundManager(soundPath, modelName);
+                    if (pk3SoundPath) {
+                        soundManager = new MD3SoundManager(pk3SoundPath, modelName, baseModelSoundPath, loader);
 
                         // Initialize audio context on first user interaction
                         await soundManager.initialize();
 
-                        // Load sounds
+                        // Load sounds (will load from base model first, then override with PK3)
                         const loaded = await soundManager.loadSounds();
                         soundsLoaded.value = loaded;
 
@@ -540,13 +569,13 @@ function animate() {
     if (controls) {
         controls.update();
 
-        // Log camera position and controls target for weapons (every 60 frames = ~1 second)
-        if (props.isWeapon && !props.thumbnailMode && Math.floor(time * 60) % 60 === 0) {
-            console.log('🎥 Camera:',
-                `position(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
-                `target(${controls.target.x.toFixed(1)}, ${controls.target.y.toFixed(1)}, ${controls.target.z.toFixed(1)})`
-            );
-        }
+        // Camera logging disabled
+        // if (props.isWeapon && !props.thumbnailMode && Math.floor(time * 60) % 60 === 0) {
+        //     console.log('🎥 Camera:',
+        //         `position(${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)})`,
+        //         `target(${controls.target.x.toFixed(1)}, ${controls.target.y.toFixed(1)}, ${controls.target.z.toFixed(1)})`
+        //     );
+        // }
     }
 
     if (renderer && scene && camera) {
@@ -567,6 +596,18 @@ function updateShaderAnimations(time) {
             materials.forEach(material => {
                 // Update animation time
                 shaderSystem.updateMaterialAnimation(material, time);
+
+                // Debug: Log shader uniform updates for materials with scroll (disabled to reduce spam)
+                // if (material.uniforms && material.uniforms.scrollSpeed0 &&
+                //     (material.uniforms.scrollSpeed0.value.x !== 0 || material.uniforms.scrollSpeed0.value.y !== 0)) {
+                //     if (Math.floor(time * 10) % 30 === 0) { // Log every 3 seconds
+                //         console.log(`🔄 Shader animation update for ${child.name}:`,
+                //             `time=${time.toFixed(2)}`,
+                //             `scroll=(${material.uniforms.scrollSpeed0.value.x}, ${material.uniforms.scrollSpeed0.value.y})`
+                //         );
+                //     }
+                // }
+
                 // Update lighting from scene lights
                 shaderSystem.updateLightingFromScene(material, scene);
             });
@@ -948,6 +989,9 @@ defineExpose({
         }
     },
     setSoundVolume: (volume) => {
+        // Store the volume so we can restore it on unmute
+        currentVolume.value = volume;
+
         // For player models, use soundManager
         if (soundManager) {
             soundManager.setVolume(volume);
@@ -970,9 +1014,9 @@ defineExpose({
             model.userData.animation.sounds.forEach(sound => {
                 if (sound) {
                     if (enabled) {
-                        // Unmute - restore volume
+                        // Unmute - restore volume using stored currentVolume
                         if (sound.setVolume) {
-                            sound.setVolume(soundVolume.value);
+                            sound.setVolume(currentVolume.value);
                         }
                     } else {
                         // Mute - set volume to 0

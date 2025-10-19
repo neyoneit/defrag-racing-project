@@ -18,24 +18,44 @@ export class MD3Loader {
         this.shaders = new Map(); // Stores loaded shader definitions
         this.shaderMaterialSystem = new Q3ShaderMaterialSystem(this);
         this.fallbackBaseUrl = null; // Fallback base URL for missing textures (e.g., baseq3 path)
+        this.pathCache = new Map(); // Cache for case-insensitive path resolutions
+    }
+
+    /**
+     * Fetch a file - the server handles case-insensitive resolution
+     * No more trying multiple variations client-side!
+     *
+     * @param {string} url - The URL to fetch
+     * @returns {Promise<Response>} - Fetch response
+     */
+    async fetchCaseInsensitive(url) {
+        // Server-side handles all case-insensitive resolution now
+        // Just fetch once - no more trying multiple variations!
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`File not found: ${url}`);
+        }
+        return response;
     }
 
     /**
      * Load an MD3 file from a URL
      * @param {string} url - The URL to the MD3 file
      * @param {string} skinUrl - Optional URL to the .skin file
+     * @param {string} baseUrlOverride - Optional override for texture base path (for weapon skin packs)
      * @returns {Promise<THREE.Group>} - Promise that resolves to a Three.js Group
      */
-    async load(url, skinUrl = null) {
+    async load(url, skinUrl = null, baseUrlOverride = null) {
         // Load skin file if provided
         if (skinUrl) {
             await this.loadSkin(skinUrl);
         }
 
         // Extract base URL for texture loading (everything up to the last /)
-        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+        // For weapon skin packs: use override to point textures to pk3 even when loading baseq3 MD3
+        const baseUrl = baseUrlOverride || url.substring(0, url.lastIndexOf('/') + 1);
 
-        const response = await fetch(url);
+        const response = await this.fetchCaseInsensitive(url);
         const arrayBuffer = await response.arrayBuffer();
         return this.parse(arrayBuffer, baseUrl);
     }
@@ -46,7 +66,12 @@ export class MD3Loader {
      */
     async loadSkin(url) {
         try {
-            const response = await fetch(url);
+            const response = await this.fetchCaseInsensitive(url);
+            if (!response.ok) {
+                // 404 or other error - no skin file exists
+                this.skinData = null;
+                return;
+            }
             const text = await response.text();
             this.skinData = this.parseSkin(text, url);
         } catch (error) {
@@ -60,13 +85,18 @@ export class MD3Loader {
      * @param {string} url - The URL to the .shader file
      */
     async loadShaderFile(url) {
-        const response = await fetch(url);
+        const response = await this.fetchCaseInsensitive(url);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         const text = await response.text();
         this.shaderParser.parseShaderFile(text);
         this.shaders = this.shaderParser.getAllShaders();
+
+        // Log registered shaders for debugging
+        const shaderNames = Array.from(this.shaders.keys());
+        console.log(`📋 Registered ${shaderNames.length} shader(s) from ${url.split('/').pop()}`);
+
     }
 
     /**
@@ -100,11 +130,55 @@ export class MD3Loader {
     }
 
     /**
+     * Load ALL shader files from a pk3's scripts directory using the API
+     * @param {number} modelId - Model ID to get shaders for
+     * @param {string} scriptsUrl - Scripts directory URL (e.g., /storage/models/extracted/xxx/scripts/)
+     */
+    async loadAllShadersFromPk3(modelId, scriptsUrl) {
+        try {
+            // Get list of ALL shader files from backend API
+            const response = await fetch(`/models/${modelId}/shaders`);
+            if (!response.ok) {
+                console.warn(`⚠️ Failed to get shader list for model ${modelId}`);
+                return 0;
+            }
+
+            const data = await response.json();
+            const shaderFiles = data.shaders || [];
+
+            if (shaderFiles.length === 0) {
+                console.log(`ℹ️ No custom shaders in pk3 for model ${modelId}`);
+                return 0;
+            }
+
+            console.log(`📄 Found ${shaderFiles.length} shader files in pk3:`, shaderFiles);
+
+            // Load ALL shader files
+            let loadedCount = 0;
+            for (const shaderFile of shaderFiles) {
+                try {
+                    await this.loadShaderFile(scriptsUrl + shaderFile);
+                    console.log(`✅ Loaded shader: ${shaderFile}`);
+                    loadedCount++;
+                } catch (e) {
+                    console.warn(`⚠️ Failed to load shader ${shaderFile}:`, e);
+                }
+            }
+
+            return loadedCount;
+        } catch (error) {
+            console.warn('Failed to load shaders from pk3:', error);
+            return 0;
+        }
+    }
+
+    /**
      * Load shader files for a specific model
      * @param {string} baseUrl - Base URL to the model directory (may or may not end with /)
      * @param {string} modelName - Name of the model
+     * @param {number|null} modelId - Model ID for API calls (optional, for pk3 models)
      */
-    async loadShadersForModel(baseUrl, modelName) {
+    async loadShadersForModel(baseUrl, modelName, modelId = null) {
         try {
             // Ensure baseUrl ends with /
             if (!baseUrl.endsWith('/')) {
@@ -116,53 +190,25 @@ export class MD3Loader {
             // For user models: /storage/models/extracted/xxx/models/players/niria/ -> /storage/models/extracted/xxx/scripts/
             const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
 
-            // For base Q3 models, load the bulk models.shader file that contains all model shaders
-            // For user models, try model-specific shader files
             const isBaseQ3 = baseUrl.includes('/baseq3/');
 
-            if (isBaseQ3) {
-                // Base Q3 uses a single models.shader file with all model shaders
-                try {
-                    await this.loadShaderFile(scriptsUrl + 'models.shader');
-                    console.log(`✅ Loaded base Q3 models.shader - ${this.shaders.size} shaders total`);
-                } catch (e) {
-                    console.warn('Failed to load base Q3 models.shader:', e);
-                }
-            } else {
-                // User-uploaded models: try to load ALL .shader files from scripts directory
-                // Since we can't list directories in browsers, try common patterns including:
-                // - modelName.shader (e.g., slash.shader)
-                // - modelName-*.shader (e.g., slash-greensuit.shader)
-                // - model.shader, models.shader, player.shader, players.shader
+            // ALWAYS load baseq3 shaders FIRST as the foundation (like Quake engine does)
+            // This ensures all models have the default Q3 shaders available
+            try {
+                await this.loadShaderFile('/baseq3/scripts/models.shader');
+                console.log(`✅ Loaded baseq3 model shaders (foundation) - ${this.shaders.size} shaders total`);
+            } catch (e) {
+                console.warn('⚠️ Failed to load baseq3 model shaders:', e);
+            }
 
-                const shaderPatterns = [
-                    `${modelName}.shader`,
-                    `${modelName}-*.shader`, // We'll try this as a wildcard later
-                    'model.shader',
-                    'models.shader',
-                    'player.shader',
-                    'players.shader'
-                ];
-
-                // Also try common hyphenated variations for skin packs
-                const commonSuffixes = ['greensuit', 'skin', 'default', 'red', 'blue', 'bright', 'pm'];
-                for (const suffix of commonSuffixes) {
-                    shaderPatterns.push(`${modelName}-${suffix}.shader`);
-                }
-
-                let loadedAny = false;
-                for (const pattern of shaderPatterns) {
-                    try {
-                        await this.loadShaderFile(scriptsUrl + pattern);
-                        loadedAny = true;
-                        // Don't break - load ALL shader files we can find
-                    } catch (e) {
-                        // Silently ignore, try next pattern
-                    }
-                }
-
-                if (loadedAny) {
-                    console.log(`✅ Loaded user model shaders - ${this.shaders.size} shaders total`);
+            // If this is a user-uploaded pk3, load ALL shader files from it
+            if (!isBaseQ3 && modelId) {
+                // Use API to get ALL shader files in the pk3
+                const loadedCount = await this.loadAllShadersFromPk3(modelId, scriptsUrl);
+                if (loadedCount > 0) {
+                    console.log(`✅ Loaded ${loadedCount} custom pk3 shaders (override baseq3)`);
+                } else {
+                    console.log(`ℹ️ No custom shaders in pk3 - using baseq3 shaders for model ${modelName}`);
                 }
             }
         } catch (error) {
@@ -174,8 +220,9 @@ export class MD3Loader {
      * Load shader files for a weapon model
      * @param {string} baseUrl - Base URL to the weapon directory (e.g., /storage/models/extracted/weapon1test-1760789758/models/weapons2/plasma/)
      * @param {string} weaponName - Name of the weapon (e.g., 'plasma')
+     * @param {number|null} modelId - Model ID for fetching shader list from API (null for base Q3 weapons)
      */
-    async loadShadersForWeapon(baseUrl, weaponName) {
+    async loadShadersForWeapon(baseUrl, weaponName, modelId = null) {
         try {
             // Ensure baseUrl ends with /
             if (!baseUrl.endsWith('/')) {
@@ -189,47 +236,49 @@ export class MD3Loader {
 
             const isBaseQ3 = baseUrl.includes('/baseq3/');
 
-            if (isBaseQ3) {
-                // Base Q3 uses models.shader file with all weapon shaders
+            // ALWAYS load baseq3 shaders FIRST as the foundation (like Quake engine does)
+            // This ensures all weapons have the default Q3 shaders available
+            try {
+                await this.loadShaderFile('/baseq3/scripts/models.shader');
+                console.log(`✅ Loaded baseq3 weapon shaders (foundation) - ${this.shaders.size} shaders total`);
+            } catch (e) {
+                console.warn('⚠️ Failed to load baseq3 weapon shaders:', e);
+            }
+
+            // If this is a user-uploaded pk3, load its custom shaders which will OVERRIDE baseq3
+            if (!isBaseQ3 && modelId) {
                 try {
-                    await this.loadShaderFile(scriptsUrl + 'models.shader');
-                    console.log(`✅ Loaded base Q3 weapon shaders - ${this.shaders.size} shaders total`);
-                } catch (e) {
-                    console.warn('Failed to load base Q3 weapon shaders:', e);
-                }
-            } else {
-                // User-uploaded weapons: try to load ALL .shader and .shaderx files from scripts directory
-                const shaderPatterns = [
-                    `${weaponName}.shader`,
-                    `${weaponName}.shaderx`,
-                    'weapon.shader',
-                    'weapon.shaderx',
-                    'weapons.shader',
-                    'weapons.shaderx',
-                    'model.shader',
-                    'model.shaderx',
-                    'models.shader',
-                    'models.shaderx'
-                ];
+                    console.log(`📡 Fetching custom shader list from API for model ${modelId}...`);
+                    const response = await fetch(`/models/${modelId}/shaders`);
 
-                // Also try pattern matching like "zzz-mui_plasma.shaderx"
-                shaderPatterns.push(`zzz-mui_${weaponName}.shaderx`);
-                shaderPatterns.push(`mui_${weaponName}.shaderx`);
-
-                let loadedAny = false;
-                for (const pattern of shaderPatterns) {
-                    try {
-                        await this.loadShaderFile(scriptsUrl + pattern);
-                        console.log(`✅ Loaded weapon shader: ${pattern}`);
-                        loadedAny = true;
-                        // Don't break - load ALL shader files we can find
-                    } catch (e) {
-                        // Silently ignore, try next pattern
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch shader list: ${response.statusText}`);
                     }
-                }
 
-                if (!loadedAny) {
-                    console.warn(`⚠️ No shader files found for weapon ${weaponName}`);
+                    const data = await response.json();
+                    const shaderFiles = data.shaders || [];
+
+                    console.log(`📋 Found ${shaderFiles.length} custom shader file(s) in pk3:`, shaderFiles);
+
+                    if (shaderFiles.length === 0) {
+                        console.log(`ℹ️ No custom shaders in pk3 - using baseq3 shaders for weapon ${weaponName}`);
+                    } else {
+                        // Load each custom shader file which OVERWRITES baseq3 shaders
+                        let loadedCount = 0;
+                        for (const shaderFile of shaderFiles) {
+                            try {
+                                await this.loadShaderFile(scriptsUrl + shaderFile);
+                                console.log(`✅ Loaded custom shader (overrides baseq3): ${shaderFile}`);
+                                loadedCount++;
+                            } catch (e) {
+                                console.warn(`⚠️ Failed to load shader file ${shaderFile}:`, e);
+                            }
+                        }
+
+                        console.log(`✅ Loaded ${loadedCount}/${shaderFiles.length} custom shader(s) - these override baseq3`);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Error loading custom shaders from pk3, using baseq3 shaders:', error);
                 }
             }
         } catch (error) {
@@ -336,7 +385,8 @@ export class MD3Loader {
 
             const mesh = new THREE.Mesh(geometry, material);
             mesh.name = surface.name;
-            mesh.userData.surface = surface;
+            mesh.userData.surface = surface.name; // Store surface name as string
+            mesh.userData.surfaceData = surface; // Store full surface object for animations
             mesh.userData.frames = frames;
 
             // MD3 surfaces often have a _1, _2, etc suffix for LOD (level of detail)
@@ -357,10 +407,12 @@ export class MD3Loader {
                     // Remove extension first
                     let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
 
-                    // Normalize to Q3 format: extract just "models/players/xxx/texture" part
+                    // Normalize to Q3 format: extract just "models/players/xxx/texture" or "models/weapons2/xxx/texture" part
                     // texturePath: /storage/models/extracted/xxx/models/players/niria/slashskate.TGA
                     // shaderName should be: models/players/niria/slashskate
-                    const match = shaderName.match(/models\/players\/[^\/]+\/.+$/);
+                    // texturePath: /storage/models/extracted/xxx/models/weapons2/plasma/plasma.TGA
+                    // shaderName should be: models/weapons2/plasma/plasma
+                    const match = shaderName.match(/models\/(players|weapons2)\/[^\/]+\/.+$/);
                     if (match) {
                         shaderName = match[0];
                     }
@@ -387,11 +439,6 @@ export class MD3Loader {
                             mesh.material = shaderMaterial;
                             material.dispose();
 
-                            if (shaderMaterial.userData.isMultiStage) {
-                                console.log(`✅ Applied multi-stage shader material to ${surface.name} (${shaderMaterial.userData.numStages} stages)`);
-                            } else {
-                                console.log(`✅ Applied shader material to ${surface.name}`);
-                            }
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
                         });
@@ -455,11 +502,6 @@ export class MD3Loader {
                             mesh.material = shaderMaterial;
                             material.dispose();
 
-                            if (shaderMaterial.userData.isMultiStage) {
-                                console.log(`✅ Applied multi-stage shader material to ${surface.name} (${shaderMaterial.userData.numStages} stages)`);
-                            } else {
-                                console.log(`✅ Applied shader material to ${surface.name}`);
-                            }
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
                         });
@@ -860,7 +902,21 @@ export class MD3Loader {
 
         // If original path failed and we have a fallback base URL, try loading from there
         if (fallbackBaseUrl) {
-            const fallbackBasePath = fallbackBaseUrl + filename.substring(0, filename.lastIndexOf('.'));
+            // Extract the relative path from the original URL (everything after /storage/models/extracted/xxx/)
+            // e.g., /storage/models/extracted/xxx/textures/sfx/file.tga -> textures/sfx/file
+            let relativePath = url;
+            if (url.includes('/extracted/')) {
+                // Find the part after /extracted/xxx/
+                const extractedIndex = url.indexOf('/extracted/');
+                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+                // Skip the PK3 folder name (e.g., "anarki-model-skin-mysticsurfer-1760897528-8328/")
+                const firstSlashAfterExtracted = afterExtracted.indexOf('/');
+                if (firstSlashAfterExtracted !== -1) {
+                    relativePath = afterExtracted.substring(firstSlashAfterExtracted + 1);
+                }
+            }
+
+            const fallbackBasePath = fallbackBaseUrl + relativePath.substring(0, relativePath.lastIndexOf('.'));
 
             for (const ext of extensionsToTry) {
                 try {
@@ -877,7 +933,7 @@ export class MD3Loader {
                     // Apply shader effects if available
                     this.applyShaderEffects(material, url);
 
-                    console.log(`✅ Loaded texture from fallback: ${testUrl}`);
+                    console.log(`✅ Image fallback worked`);
                     return texture;
                 } catch (error) {
                     lastError = error;
@@ -891,16 +947,32 @@ export class MD3Loader {
         throw lastError;
     }
 
-    // Helper method to load texture with proper error handling
-    tryLoadTexture(loader, url) {
-        return new Promise((resolve, reject) => {
-            loader.load(
-                url,
-                (texture) => resolve(texture),
-                undefined,
-                (error) => reject(error)
-            );
-        });
+    // Helper method to load texture with proper error handling and case-insensitive path resolution
+    async tryLoadTexture(loader, url) {
+        try {
+            // First verify the file exists with case-insensitive resolution
+            const response = await this.fetchCaseInsensitive(url);
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            // Now load the texture from the blob URL
+            return new Promise((resolve, reject) => {
+                loader.load(
+                    objectUrl,
+                    (texture) => {
+                        URL.revokeObjectURL(objectUrl);
+                        resolve(texture);
+                    },
+                    undefined,
+                    (error) => {
+                        URL.revokeObjectURL(objectUrl);
+                        reject(error);
+                    }
+                );
+            });
+        } catch (error) {
+            throw error;
+        }
     }
 
     /**
@@ -999,13 +1071,98 @@ export class MD3Loader {
     }
 
     /**
+     * Apply skin pack textures to an already-loaded model part
+     * @param {THREE.Group} modelPart - The model part (lower, upper, or head)
+     * @param {string} skinPackBasePath - Base path to skin pack
+     * @param {string} skinFilename - Skin filename (e.g., lower_greensuit.skin)
+     */
+    async applySkinPackTextures(modelPart, skinPackBasePath, skinFilename) {
+        try {
+            const skinFileUrl = `${skinPackBasePath}${skinFilename}`;
+            console.log(`🎨 Loading skin pack skin file: ${skinFileUrl}`);
+
+            // Load and parse the skin file
+            const response = await this.fetchCaseInsensitive(skinFileUrl);
+            if (!response.ok) {
+                console.log(`ℹ️ No skin pack skin file found: ${skinFileUrl}`);
+                return;
+            }
+            const text = await response.text();
+            const skinData = this.parseSkin(text, skinFileUrl);
+
+            if (!skinData || Object.keys(skinData).length === 0) {
+                console.log(`ℹ️ Empty skin pack skin file: ${skinFileUrl}`);
+                return;
+            }
+
+            // Apply textures from skin file to each mesh
+            console.log(`🎨 Skin data contains ${Object.keys(skinData).length} surface mappings:`, skinData);
+
+            modelPart.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    const surfaceName = child.userData.surface || child.name;
+                    const textureMapping = skinData[surfaceName];
+
+                    console.log(`🔍 Checking mesh: ${surfaceName}, has mapping: ${!!textureMapping}, material type: ${child.material.type}`);
+
+                    if (textureMapping) {
+                        // textureMapping is already a resolved path from parseSkin
+                        const texturePath = textureMapping;
+                        console.log(`🎨 Replacing texture on ${surfaceName} with skin pack texture: ${texturePath}`);
+
+                        // Load the new texture
+                        const loader = texturePath.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
+                        loader.load(
+                            texturePath,
+                            (texture) => {
+                                texture.flipY = false;
+                                texture.wrapS = THREE.RepeatWrapping;
+                                texture.wrapT = THREE.RepeatWrapping;
+
+                                // Handle both basic materials and shader materials
+                                if (child.material.uniforms && child.material.uniforms.map0) {
+                                    // Q3 Shader material - replace map0 uniform
+                                    if (child.material.uniforms.map0.value) {
+                                        child.material.uniforms.map0.value.dispose();
+                                    }
+                                    child.material.uniforms.map0.value = texture;
+                                    console.log(`✅ Applied skin pack texture to shader material ${surfaceName} (map0)`);
+                                } else if (child.material.map) {
+                                    // Basic material - replace map property
+                                    child.material.map.dispose();
+                                    child.material.map = texture;
+                                    console.log(`✅ Applied skin pack texture to basic material ${surfaceName} (map)`);
+                                } else {
+                                    // Material has no map property, try to set it
+                                    child.material.map = texture;
+                                    console.log(`✅ Set skin pack texture on material ${surfaceName} (no previous map)`);
+                                }
+
+                                child.material.needsUpdate = true;
+                            },
+                            undefined,
+                            (error) => {
+                                console.warn(`⚠️ Failed to load skin pack texture ${texturePath}:`, error);
+                            }
+                        );
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn(`Failed to apply skin pack textures from ${skinFilename}:`, error);
+        }
+    }
+
+    /**
      * Load a complete player model with all three parts (head, upper, lower)
      * @param {string} baseUrl - Base URL to the model directory
      * @param {string} modelName - Name of the model
      * @param {string} skinName - Skin name (default, blue, red)
+     * @param {string|null} skinPackBasePath - Path to skin pack if using one
+     * @param {string|null} baseModelName - Name of the base model this is based on (from DB)
      * @returns {Promise<THREE.Group>} - Complete player model
      */
-    async loadPlayerModel(baseUrl, modelName, skinName = 'default', skinPackBasePath = null) {
+    async loadPlayerModel(baseUrl, modelName, skinName = 'default', skinPackBasePath = null, baseModelName = null, modelId = null) {
         // Ensure baseUrl ends with /
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
@@ -1016,74 +1173,78 @@ export class MD3Loader {
             skinPackBasePath += '/';
         }
 
-        // Set fallback base URL for missing textures
-        // ALWAYS fallback to the base model in baseq3 if it exists
-        // This handles:
-        // 1. Skin packs that reference base model textures
-        // 2. Incomplete model packs that are missing some textures
-        // 3. Mixed packs that override only some textures
-
-        if (skinPackBasePath && baseUrl.includes('/baseq3/')) {
-            // Skin pack case: baseUrl already points to baseq3 base model
-            this.fallbackBaseUrl = baseUrl;
-        } else if (!baseUrl.includes('/baseq3/')) {
-            // User-uploaded model: try to fall back to baseq3 version
-            // Extract model name from the path
-            // e.g., /storage/models/extracted/xxx/models/players/brandon/
-            // We want to try: /baseq3/models/players/brandon/
-            const modelNameMatch = baseUrl.match(/models\/players\/([^\/]+)\/?$/);
-            if (modelNameMatch) {
-                const modelName = modelNameMatch[1];
-                this.fallbackBaseUrl = `/baseq3/models/players/${modelName}/`;
-            } else {
-                this.fallbackBaseUrl = null;
-            }
-        } else {
-            // Already loading from baseq3, no fallback needed
-            this.fallbackBaseUrl = null;
-        }
-
         const playerGroup = new THREE.Group();
         playerGroup.name = `player_${modelName}`;
 
+        // Determine the base model to load
+        // If baseModelName is provided, load that base model first, then override with PK3
+        // Otherwise, just load from PK3 directly
+        const actualBaseModelName = baseModelName || modelName;
+        const shouldLoadBaseModel = !!baseModelName;
+
         try {
-            // Load shader files with proper priority:
-            // 1. For skin packs: load skin pack shaders FIRST (highest priority)
-            // 2. Then load base model shaders ONLY as fallback if skin pack doesn't have them
-
-            let shadersLoaded = false;
-
-            if (skinPackBasePath) {
-                // Try loading skin pack shaders first
-                const skinPackScriptsUrl = skinPackBasePath.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
-                const beforeCount = this.shaders.size;
-                await this.loadShadersForModel(skinPackScriptsUrl, modelName);
-                const afterCount = this.shaders.size;
-
-                if (afterCount > beforeCount) {
-                    shadersLoaded = true;
-                    console.log(`✅ Loaded ${afterCount - beforeCount} shaders from skin pack`);
-                }
+            // STEP 1: Load ALL shaders (not filtered by model name)
+            // Load baseq3 shaders foundation
+            try {
+                await this.loadShadersForModel('/baseq3/scripts/');
+                console.log(`✅ Loaded baseq3 shaders (foundation)`);
+            } catch (e) {
+                console.warn('⚠️ Failed to load baseq3 shaders:', e);
             }
 
-            // Load base model shaders as fallback (only if skin pack didn't have shaders)
+            // Load PK3 shaders to override (from baseUrl)
+            const pk3ScriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
             const beforeCount = this.shaders.size;
-            await this.loadShadersForModel(baseUrl, modelName);
+            await this.loadShadersForModel(pk3ScriptsUrl, null, modelId);
             const afterCount = this.shaders.size;
-
             if (afterCount > beforeCount) {
-                console.log(`✅ Loaded ${afterCount - beforeCount} shaders from base model`);
+                console.log(`✅ Loaded ${afterCount - beforeCount} PK3 shaders (overrides)`);
             }
 
-            // Determine where to load skin files from
-            const skinBaseUrl = skinPackBasePath || baseUrl;
+            // STEP 2: Determine where to load MD3s from
+            let mainPlayerPath;
+            let skinBasePath;
 
-            // Load lower body (legs)
-            const lowerUrl = `${baseUrl}lower.md3`;
-            const lowerSkinUrl = `${skinBaseUrl}lower_${skinName}.skin`;
+            // List of base Q3 models from pak0-pak8.pk3
+            const baseQ3Models = [
+                'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
+                'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
+                'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
+                'bitterman'
+            ];
+            const isBaseQ3Model = baseQ3Models.includes(actualBaseModelName.toLowerCase());
+
+            if (shouldLoadBaseModel && isBaseQ3Model) {
+                // Base model from baseq3, skins from PK3
+                mainPlayerPath = `/baseq3/models/players/${actualBaseModelName}/`;
+                skinBasePath = baseUrl;
+                // Set fallback URL for shader textures - if texture not found in PK3, try baseq3
+                this.fallbackBaseUrl = '/baseq3/';
+                console.log(`👤 Loading base model from baseq3: ${actualBaseModelName}, will apply PK3 from: ${baseUrl}`);
+            } else if (shouldLoadBaseModel) {
+                // Custom base model (from another PK3) - but it's NOT in baseq3
+                // This means it's actually a complete custom model, so load from PK3
+                mainPlayerPath = baseUrl;
+                skinBasePath = baseUrl;
+                // Set fallback URL for shader textures - if texture not found in PK3, try baseq3
+                this.fallbackBaseUrl = '/baseq3/';
+                console.log(`👤 Loading custom complete model: ${actualBaseModelName} from PK3: ${baseUrl}`);
+            } else {
+                // Complete model - load everything from PK3
+                mainPlayerPath = baseUrl;
+                skinBasePath = baseUrl;
+                // Set fallback URL for shader textures - if texture not found in PK3, try baseq3
+                this.fallbackBaseUrl = '/baseq3/';
+                console.log(`👤 Loading complete model from PK3: ${baseUrl}`);
+            }
+
+            // Load lower body (legs) from base model with specified skin
+            const lowerUrl = `${mainPlayerPath}lower.md3`;
+            const lowerSkinUrl = `${skinBasePath}lower_${skinName}.skin`;
+            console.log(`👤 Loading player lower from: ${lowerUrl} with skin: ${lowerSkinUrl}`);
             const lower = await this.load(lowerUrl, lowerSkinUrl);
             lower.name = 'lower';
-
+            lower.userData.source = 'baseq3';
             playerGroup.add(lower);
 
             // Find the tag_torso on the lower model
@@ -1092,11 +1253,12 @@ export class MD3Loader {
                 const torsoTag = lowerTags[0].find(tag => tag.name === 'tag_torso');
 
                 if (torsoTag) {
-                    // Load upper body (torso)
-                    const upperUrl = `${baseUrl}upper.md3`;
-                    const upperSkinUrl = `${skinBaseUrl}upper_${skinName}.skin`;
+                    // Load upper body (torso) from base model with specified skin
+                    const upperUrl = `${mainPlayerPath}upper.md3`;
+                    const upperSkinUrl = `${skinBasePath}upper_${skinName}.skin`;
                     const upper = await this.load(upperUrl, upperSkinUrl);
                     upper.name = 'upper';
+                    upper.userData.source = mainPlayerPath.includes('/baseq3/') ? 'baseq3' : 'pk3';
 
                     // Position upper body at torso tag
                     this.attachToTag(upper, torsoTag);
@@ -1108,11 +1270,12 @@ export class MD3Loader {
                         const headTag = upperTags[0].find(tag => tag.name === 'tag_head');
 
                         if (headTag) {
-                            // Load head
-                            const headUrl = `${baseUrl}head.md3`;
-                            const headSkinUrl = `${skinBaseUrl}head_${skinName}.skin`;
+                            // Load head from base model with specified skin
+                            const headUrl = `${mainPlayerPath}head.md3`;
+                            const headSkinUrl = `${skinBasePath}head_${skinName}.skin`;
                             const head = await this.load(headUrl, headSkinUrl);
                             head.name = 'head';
+                            head.userData.source = mainPlayerPath.includes('/baseq3/') ? 'baseq3' : 'pk3';
 
                             // Position head at head tag
                             this.attachToTag(head, headTag);
@@ -1122,16 +1285,181 @@ export class MD3Loader {
                 }
             }
 
-            // Store references for animation
-            playerGroup.userData.lower = lower;
-            playerGroup.userData.upper = lower.children.find(c => c.name === 'upper'); // Upper is child of lower now!
-            playerGroup.userData.head = playerGroup.userData.upper?.children.find(c => c.name === 'head');
+            // STEP 2B: If we loaded a base model FROM BASEQ3, NOW try to load from PK3 and replace whatever exists
+            // Skip this step for custom complete models (already loaded from PK3)
+            // Also skip if baseUrl is the same as baseq3 path (no actual PK3 override)
+            const isBaseQ3Path = baseUrl.startsWith('/baseq3/');
+            if (shouldLoadBaseModel && isBaseQ3Model && !isBaseQ3Path) {
+                console.log(`👤 Step 2B: Trying to load PK3 overrides from: ${baseUrl}`);
 
-            // Load animation config
-            const animConfigUrl = `${baseUrl}animation.cfg`;
-            const animations = await this.loadAnimationConfig(animConfigUrl);
-            if (animations) {
-                playerGroup.userData.animations = animations;
+                // Try to replace lower with PK3 version (if exists)
+                try {
+                    const pk3LowerUrl = `${baseUrl}lower.md3`;
+                    const pk3LowerSkinUrl = `${baseUrl}lower_${skinName}.skin`;
+                    const pk3Lower = await this.load(pk3LowerUrl, pk3LowerSkinUrl);
+                    pk3Lower.name = 'lower';
+                    pk3Lower.userData.source = 'pk3';
+
+                    // Find and preserve upper/head before replacing lower
+                    const oldLower = playerGroup.userData.lower;
+                    const oldUpper = oldLower?.children.find(c => c.name === 'upper');
+
+                    // Remove old lower and add new one
+                    playerGroup.remove(oldLower);
+                    playerGroup.add(pk3Lower);
+
+                    // Re-attach upper if it existed
+                    if (oldUpper) {
+                        const torsoTag = pk3Lower.userData.tags?.[0]?.find(tag => tag.name === 'tag_torso');
+                        if (torsoTag) {
+                            this.attachToTag(oldUpper, torsoTag);
+                            pk3Lower.add(oldUpper);
+                        }
+                    }
+
+                    console.log(`✅ Replaced lower with PK3 version`);
+                } catch (e) {
+                    console.log(`ℹ️ No PK3 lower.md3 - using base model lower`);
+                }
+
+                // Try to replace upper with PK3 version (if exists)
+                const currentLower = playerGroup.children.find(c => c.name === 'lower');
+                if (currentLower) {
+                    try {
+                        const pk3UpperUrl = `${baseUrl}upper.md3`;
+                        const pk3UpperSkinUrl = `${baseUrl}upper_${skinName}.skin`;
+                        const pk3Upper = await this.load(pk3UpperUrl, pk3UpperSkinUrl);
+                        pk3Upper.name = 'upper';
+                        pk3Upper.userData.source = 'pk3';
+
+                        // Find and preserve head before replacing upper
+                        const oldUpper = currentLower.children.find(c => c.name === 'upper');
+                        const oldHead = oldUpper?.children.find(c => c.name === 'head');
+
+                        // Remove old upper
+                        if (oldUpper) {
+                            currentLower.remove(oldUpper);
+                        }
+
+                        // Attach new upper to lower
+                        const torsoTag = currentLower.userData.tags?.[0]?.find(tag => tag.name === 'tag_torso');
+                        if (torsoTag) {
+                            this.attachToTag(pk3Upper, torsoTag);
+                            currentLower.add(pk3Upper);
+                        }
+
+                        // Re-attach head if it existed
+                        if (oldHead) {
+                            const headTag = pk3Upper.userData.tags?.[0]?.find(tag => tag.name === 'tag_head');
+                            if (headTag) {
+                                this.attachToTag(oldHead, headTag);
+                                pk3Upper.add(oldHead);
+                            }
+                        }
+
+                        console.log(`✅ Replaced upper with PK3 version`);
+                    } catch (e) {
+                        console.log(`ℹ️ No PK3 upper.md3 - using base model upper`);
+                    }
+                }
+
+                // Try to replace head with PK3 version (if exists)
+                const currentUpper = currentLower?.children.find(c => c.name === 'upper');
+                if (currentUpper) {
+                    try {
+                        const pk3HeadUrl = `${baseUrl}head.md3`;
+                        const pk3HeadSkinUrl = `${baseUrl}head_${skinName}.skin`;
+                        const pk3Head = await this.load(pk3HeadUrl, pk3HeadSkinUrl);
+                        pk3Head.name = 'head';
+                        pk3Head.userData.source = 'pk3';
+
+                        // Remove old head
+                        const oldHead = currentUpper.children.find(c => c.name === 'head');
+                        if (oldHead) {
+                            currentUpper.remove(oldHead);
+                        }
+
+                        // Attach new head to upper
+                        const headTag = currentUpper.userData.tags?.[0]?.find(tag => tag.name === 'tag_head');
+                        if (headTag) {
+                            this.attachToTag(pk3Head, headTag);
+                            currentUpper.add(pk3Head);
+                        }
+
+                        console.log(`✅ Replaced head with PK3 version`);
+                    } catch (e) {
+                        console.log(`ℹ️ No PK3 head.md3 - using base model head`);
+                    }
+                }
+            }
+
+            // Store references for animation
+            playerGroup.userData.lower = playerGroup.children.find(c => c.name === 'lower');
+            console.log(`🔍 Lower reference:`, playerGroup.userData.lower?.name);
+
+            // Find upper - might be direct child or attached to a tag
+            if (playerGroup.userData.lower) {
+                console.log(`🔍 Lower has ${playerGroup.userData.lower.children.length} children:`, playerGroup.userData.lower.children.map(c => c.name));
+                let upper = playerGroup.userData.lower.children.find(c => c.name === 'upper');
+                console.log(`🔍 Upper as direct child:`, upper?.name);
+                // If not found as direct child, search through all descendants
+                if (!upper) {
+                    console.log(`🔍 Searching via traverse...`);
+                    playerGroup.userData.lower.traverse((child) => {
+                        console.log(`  - Found child:`, child.name, child.type);
+                        if (child.name === 'upper' && !upper) {
+                            upper = child;
+                            console.log(`🔍 Upper found via traverse:`, upper.name);
+                        }
+                    });
+                }
+                playerGroup.userData.upper = upper;
+                console.log(`🔍 Final upper reference:`, playerGroup.userData.upper?.name);
+            }
+
+            // Find head - might be direct child of upper or attached to a tag
+            if (playerGroup.userData.upper) {
+                let head = playerGroup.userData.upper.children.find(c => c.name === 'head');
+                console.log(`🔍 Head as direct child:`, head?.name);
+                // If not found as direct child, search through all descendants
+                if (!head) {
+                    playerGroup.userData.upper.traverse((child) => {
+                        if (child.name === 'head' && !head) {
+                            head = child;
+                            console.log(`🔍 Head found via traverse:`, head.name);
+                        }
+                    });
+                }
+                playerGroup.userData.head = head;
+                console.log(`🔍 Final head reference:`, playerGroup.userData.head?.name);
+            }
+
+            // STEP 3: Load animation config
+            // Load from base model first (if loading base model)
+            if (shouldLoadBaseModel) {
+                const animConfigUrl = `${mainPlayerPath}animation.cfg`;
+                console.log(`🎬 STEP 3A: Loading animation.cfg from base model: ${animConfigUrl}`);
+                const animations = await this.loadAnimationConfig(animConfigUrl);
+                if (animations) {
+                    playerGroup.userData.animations = animations;
+                    console.log(`✅ Loaded animation config from base model`);
+                } else {
+                    console.log(`ℹ️ No animation.cfg in base model`);
+                }
+            }
+
+            // ALWAYS try to load from PK3 and override
+            const pk3AnimConfigUrl = `${baseUrl}animation.cfg`;
+            console.log(`🎬 STEP 3B: Loading animation.cfg from PK3: ${pk3AnimConfigUrl}`);
+            const pk3Animations = await this.loadAnimationConfig(pk3AnimConfigUrl);
+            if (pk3Animations) {
+                playerGroup.userData.animations = pk3Animations;
+                console.log(`✅ Loaded animation config from PK3 (override)`);
+            } else {
+                console.log(`ℹ️ No animation.cfg in PK3`);
+                if (!shouldLoadBaseModel && !playerGroup.userData.animations) {
+                    console.warn(`⚠️ No animation config found anywhere!`);
+                }
             }
 
             return playerGroup;
@@ -1146,40 +1474,59 @@ export class MD3Loader {
      * Load a complete weapon model with all parts (main + hand + barrel + flash)
      * @param {string} baseUrl - Base URL to the weapon directory (e.g., /baseq3/models/weapons2/machinegun/)
      * @param {string} weaponName - Name of the weapon (e.g., "machinegun")
+     * @param {number|null} modelId - Model ID for fetching shader list from API (null for base Q3 weapons)
      * @returns {Promise<THREE.Group>} - Complete weapon model
      */
-    async loadWeaponModel(baseUrl, weaponName) {
+    async loadWeaponModel(baseUrl, weaponName, modelId = null) {
         // Ensure baseUrl ends with /
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
         }
 
+        const isBaseQ3 = baseUrl.includes('/baseq3/');
+        const baseq3WeaponPath = `/baseq3/models/weapons2/${weaponName}/`;
+
         const weaponGroup = new THREE.Group();
         weaponGroup.name = `weapon_${weaponName}`;
 
         // Load shader files for this weapon first (before loading MD3 files)
-        await this.loadShadersForWeapon(baseUrl, weaponName);
+        // This already loads baseq3 shaders first, then pk3 overrides
+        await this.loadShadersForWeapon(baseUrl, weaponName, modelId);
+
+        // Like Quake engine: Load baseq3 weapon FIRST (complete working weapon)
+        // Then load pk3 weapon parts to replace/override if they exist
+        let mainWeaponPath = baseq3WeaponPath;
+
+        if (!isBaseQ3) {
+            console.log(`🔄 Loading baseq3 ${weaponName} first, then will apply pk3 overrides from ${baseUrl}`);
+        } else {
+            console.log(`🔫 Loading baseq3 ${weaponName}`);
+        }
 
         try {
-            // Load main weapon body
-            const mainUrl = `${baseUrl}${weaponName}.md3`;
-            console.log(`🔫 Loading weapon main body: ${mainUrl}`);
-            const main = await this.load(mainUrl, null);
+            // Load main weapon body from baseq3
+            // For weapon skin packs: pass pk3 baseUrl so textures resolve to pk3 (where custom textures are)
+            const mainUrl = `${mainWeaponPath}${weaponName}.md3`;
+            console.log(`🔫 Loading weapon main body from baseq3: ${mainUrl}`);
+            const textureBaseUrl = !isBaseQ3 ? baseUrl : null; // Use pk3 path for textures if not pure baseq3
+            const main = await this.load(mainUrl, null, textureBaseUrl);
             main.name = 'main';
+            main.userData.source = 'baseq3';
             weaponGroup.add(main);
 
             // Find tags on the main model for attachments
             const mainTags = main.userData.tags;
             console.log(`🔫 Weapon ${weaponName} tags:`, mainTags && mainTags[0] ? mainTags[0].map(t => t.name) : 'none');
             if (mainTags && mainTags[0]) {
-                // Try to load and attach barrel
+                // Try to load and attach barrel (from baseq3)
                 const barrelTag = mainTags[0].find(tag => tag.name === 'tag_barrel');
                 if (barrelTag) {
                     try {
-                        const barrelUrl = `${baseUrl}${weaponName}_barrel.md3`;
-                        console.log(`🔫 Loading weapon barrel: ${barrelUrl}`);
-                        const barrel = await this.load(barrelUrl, null);
+                        const barrelUrl = `${mainWeaponPath}${weaponName}_barrel.md3`;
+                        console.log(`🔫 Loading weapon barrel from baseq3: ${barrelUrl}`);
+                        const barrel = await this.load(barrelUrl, null, textureBaseUrl);
                         barrel.name = 'barrel';
+                        barrel.userData.source = 'baseq3';
                         this.attachToTag(barrel, barrelTag);
                         main.add(barrel);
                         console.log(`✅ Attached barrel to ${weaponName}`);
@@ -1187,19 +1534,18 @@ export class MD3Loader {
                         // Barrel not found or failed to load, continue without it
                         console.log(`⚠️ No barrel for ${weaponName}:`, e.message);
                     }
-                } else {
-                    console.log(`⚠️ No tag_barrel found on ${weaponName}`);
                 }
 
-                // Try to load and attach hand
+                // Try to load and attach hand (from baseq3)
                 // Some weapons use 'tag_hand', others use 'tag_weapon'
                 const handTag = mainTags[0].find(tag => tag.name === 'tag_hand' || tag.name === 'tag_weapon');
                 if (handTag) {
                     try {
-                        const handUrl = `${baseUrl}${weaponName}_hand.md3`;
-                        console.log(`🔫 Loading weapon hand: ${handUrl}`);
-                        const hand = await this.load(handUrl, null);
+                        const handUrl = `${mainWeaponPath}${weaponName}_hand.md3`;
+                        console.log(`🔫 Loading weapon hand from baseq3: ${handUrl}`);
+                        const hand = await this.load(handUrl, null, textureBaseUrl);
                         hand.name = 'hand';
+                        hand.userData.source = 'baseq3';
                         this.attachToTag(hand, handTag);
                         main.add(hand);
                         console.log(`✅ Attached hand to ${weaponName}`);
@@ -1207,18 +1553,17 @@ export class MD3Loader {
                         // Hand not found or failed to load, continue without it
                         console.log(`⚠️ No hand for ${weaponName}:`, e.message);
                     }
-                } else {
-                    console.log(`⚠️ No tag_hand found on ${weaponName}`);
                 }
 
-                // Try to load and attach flash
+                // Try to load and attach flash (from baseq3)
                 const flashTag = mainTags[0].find(tag => tag.name === 'tag_flash');
                 if (flashTag) {
                     try {
-                        const flashUrl = `${baseUrl}${weaponName}_flash.md3`;
-                        console.log(`🔫 Loading weapon flash: ${flashUrl}`);
-                        const flash = await this.load(flashUrl, null);
+                        const flashUrl = `${mainWeaponPath}${weaponName}_flash.md3`;
+                        console.log(`🔫 Loading weapon flash from baseq3: ${flashUrl}`);
+                        const flash = await this.load(flashUrl, null, textureBaseUrl);
                         flash.name = 'flash';
+                        flash.userData.source = 'baseq3';
                         this.attachToTag(flash, flashTag);
                         main.add(flash);
                         // Hide flash by default (it's only shown when firing)
@@ -1228,8 +1573,98 @@ export class MD3Loader {
                         // Flash not found or failed to load, continue without it
                         console.log(`⚠️ No flash for ${weaponName}:`, e.message);
                     }
-                } else {
-                    console.log(`⚠️ No tag_flash found on ${weaponName}`);
+                }
+            }
+
+            // If this is a pk3 weapon (not baseq3), try to load pk3 overrides
+            if (!isBaseQ3) {
+                console.log(`🔄 Checking for pk3 overrides in ${baseUrl}...`);
+
+                // Try to replace main body with pk3 version
+                try {
+                    const pk3MainUrl = `${baseUrl}${weaponName}.md3`;
+                    console.log(`🔄 Trying to load pk3 main body: ${pk3MainUrl}`);
+                    // Load pk3 main with pk3 textures (baseUrl already points to pk3)
+                    const pk3Main = await this.load(pk3MainUrl, null, baseUrl);
+
+                    // Save baseq3 attachments before removing main
+                    const baseq3Hand = main.children.find(c => c.name === 'hand');
+                    const baseq3Flash = main.children.find(c => c.name === 'flash');
+
+                    // Replace baseq3 main with pk3 main
+                    weaponGroup.remove(main);
+                    pk3Main.name = 'main';
+                    pk3Main.userData.source = 'pk3';
+                    weaponGroup.add(pk3Main);
+                    console.log(`✅ Replaced main body with pk3 version`);
+
+                    // Update reference and reload attachments for pk3 main
+                    const pk3MainTags = pk3Main.userData.tags;
+                    if (pk3MainTags && pk3MainTags[0]) {
+                        // Try pk3 barrel
+                        const pk3BarrelTag = pk3MainTags[0].find(tag => tag.name === 'tag_barrel');
+                        if (pk3BarrelTag) {
+                            try {
+                                const pk3BarrelUrl = `${baseUrl}${weaponName}_barrel.md3`;
+                                const pk3Barrel = await this.load(pk3BarrelUrl, null, baseUrl);
+                                pk3Barrel.name = 'barrel';
+                                pk3Barrel.userData.source = 'pk3';
+                                this.attachToTag(pk3Barrel, pk3BarrelTag);
+                                pk3Main.add(pk3Barrel);
+                                console.log(`✅ Attached pk3 barrel`);
+                            } catch (e) {
+                                console.log(`ℹ️ No pk3 barrel, using baseq3 barrel`);
+                            }
+                        }
+
+                        // Try pk3 hand
+                        const pk3HandTag = pk3MainTags[0].find(tag => tag.name === 'tag_hand' || tag.name === 'tag_weapon');
+                        if (pk3HandTag) {
+                            try {
+                                const pk3HandUrl = `${baseUrl}${weaponName}_hand.md3`;
+                                const pk3Hand = await this.load(pk3HandUrl, null, baseUrl);
+                                pk3Hand.name = 'hand';
+                                pk3Hand.userData.source = 'pk3';
+                                this.attachToTag(pk3Hand, pk3HandTag);
+                                pk3Main.add(pk3Hand);
+                                console.log(`✅ Attached pk3 hand`);
+                            } catch (e) {
+                                console.log(`ℹ️ No pk3 hand found`);
+                                // Fall back to baseq3 hand if available
+                                if (baseq3Hand) {
+                                    this.attachToTag(baseq3Hand, pk3HandTag);
+                                    pk3Main.add(baseq3Hand);
+                                    console.log(`✅ Using baseq3 hand as fallback`);
+                                }
+                            }
+                        }
+
+                        // Try pk3 flash
+                        const pk3FlashTag = pk3MainTags[0].find(tag => tag.name === 'tag_flash');
+                        if (pk3FlashTag) {
+                            try {
+                                const pk3FlashUrl = `${baseUrl}${weaponName}_flash.md3`;
+                                const pk3Flash = await this.load(pk3FlashUrl, null, baseUrl);
+                                pk3Flash.name = 'flash';
+                                pk3Flash.userData.source = 'pk3';
+                                this.attachToTag(pk3Flash, pk3FlashTag);
+                                pk3Main.add(pk3Flash);
+                                pk3Flash.visible = false;
+                                console.log(`✅ Attached pk3 flash`);
+                            } catch (e) {
+                                console.log(`ℹ️ No pk3 flash found`);
+                                // Fall back to baseq3 flash if available
+                                if (baseq3Flash) {
+                                    this.attachToTag(baseq3Flash, pk3FlashTag);
+                                    pk3Main.add(baseq3Flash);
+                                    baseq3Flash.visible = false;
+                                    console.log(`✅ Using baseq3 flash as fallback`);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.log(`ℹ️ No pk3 main body found, using baseq3 weapon: ${e.message}`);
                 }
             }
 
@@ -1311,7 +1746,7 @@ export class MD3Loader {
             console.log(`🔊 Weapon ${weaponName} will load ${weaponGroup.userData.animation.soundPaths.length} sounds`);
 
             // Helper function to create weapon-specific projectiles (following Q3 engine logic)
-            const createProjectileForWeapon = (weaponName) => {
+            const createProjectileForWeapon = async (weaponName) => {
                 const projectileGroup = new THREE.Group();
 
                 // Determine projectile type based on weapon name
@@ -1414,44 +1849,49 @@ export class MD3Loader {
                     projectileGroup.userData.projectileType = 'grenade';
 
                 } else if (lowerName.includes('lightning') || lowerName.includes('lg')) {
-                    // Lightning gun - continuous beam (hitscan), not a projectile
-                    // Create animated electric beam
-                    const beamGeom = new THREE.CylinderGeometry(2, 2, 1000, 8);
-                    // First translate along Y axis (cylinder's length axis) to move forward
-                    beamGeom.translate(0, 500, 0); // Move forward by half the length along cylinder axis
-                    // Then rotate to align with X axis (forward direction)
-                    beamGeom.rotateX(Math.PI / 2);
-                    const beamMat = new THREE.MeshBasicMaterial({
-                        color: 0x8888ff,
-                        transparent: true,
-                        opacity: 0.6,
-                        wireframe: false
-                    });
-                    const beam = new THREE.Mesh(beamGeom, beamMat);
-                    projectileGroup.add(beam);
+                    // Lightning gun - hitscan beam (like Q3 engine)
+                    // Creates a cylindrical beam from muzzle to hit point
+                    // Using procedural geometry like DoRailCore() in Q3
+                    console.log('⚡ Creating lightning beam (hitscan) for:', lowerName);
 
-                    // Add inner bright core
-                    const coreGeom = new THREE.CylinderGeometry(0.5, 0.5, 1000, 6);
-                    // First translate along Y axis (cylinder's length axis) to move forward
-                    coreGeom.translate(0, 500, 0); // Move forward by half the length along cylinder axis
-                    // Then rotate to align with X axis (forward direction)
-                    coreGeom.rotateX(Math.PI / 2);
-                    const coreMat = new THREE.MeshBasicMaterial({
-                        color: 0xffffff,
-                        transparent: true,
-                        opacity: 0.9
-                    });
-                    const core = new THREE.Mesh(coreGeom, coreMat);
-                    projectileGroup.add(core);
+                    // Create 4 beam cylinders rotated at 45° intervals (like Q3's DoRailCore)
+                    const beamGroup = new THREE.Group();
+                    const beamLength = 2000; // Default beam length (will be scaled to target distance)
 
-                    const light = new THREE.PointLight(0x8888ff, 4, 300);
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (i * 45) * (Math.PI / 180);
+
+                        // Create cylinder pointing along Y axis
+                        const beamGeom = new THREE.CylinderGeometry(3, 3, beamLength, 8);
+                        beamGeom.translate(0, beamLength / 2, 0); // Pivot at base
+
+                        const beamMat = new THREE.MeshBasicMaterial({
+                            color: 0x8888ff,
+                            transparent: true,
+                            opacity: 0.6,
+                            blending: THREE.AdditiveBlending,
+                            depthWrite: false
+                        });
+
+                        const beam = new THREE.Mesh(beamGeom, beamMat);
+
+                        // Rotate around Y axis (the beam's own length) to create cross pattern
+                        beam.rotation.y = angle;
+                        beamGroup.add(beam);
+                    }
+
+                    // Rotate entire beam group to point forward along Z axis
+                    beamGroup.rotation.x = Math.PI / 2;
+                    projectileGroup.add(beamGroup);
+
+                    const light = new THREE.PointLight(0x8888ff, 5, 400);
                     projectileGroup.add(light);
 
-                    projectileGroup.userData.beam = beam;
-                    projectileGroup.userData.core = core;
+                    projectileGroup.userData.beamGroup = beamGroup;
                     projectileGroup.userData.light = light;
-                    projectileGroup.userData.velocity = 10000; // Instant
-                    projectileGroup.userData.lifetime = 50; // Very short - just visual effect
+                    projectileGroup.userData.beamLength = beamLength;
+                    projectileGroup.userData.velocity = 10000; // Instant hitscan
+                    projectileGroup.userData.lifetime = 50; // Very short - beam disappears quickly
                     projectileGroup.userData.projectileType = 'lightning';
 
                 } else if (lowerName.includes('rail') || lowerName.includes('rg')) {
@@ -1631,14 +2071,12 @@ export class MD3Loader {
             };
 
             // Add method to spawn a projectile
-            weaponGroup.userData.spawnProjectile = function() {
+            weaponGroup.userData.spawnProjectile = async function() {
                 if (!this.animation.scene || !this.animation.camera) return;
 
                 // Try to get flash for spawn position, but always use weaponGroup for direction
                 const flash = weaponGroup.getObjectByName('flash');
                 const spawnPosSource = flash || weaponGroup.getObjectByName('weapon') || weaponGroup;
-
-                console.log('🎯 Spawning projectile from:', spawnPosSource.name || 'weaponGroup', 'for weapon:', this.animation.weaponName);
 
                 // Get spawn world position (from muzzle flash or weapon)
                 const spawnWorldPos = new THREE.Vector3();
@@ -1662,16 +2100,11 @@ export class MD3Loader {
                 direction.applyQuaternion(spawnWorldQuat); // Then apply weapon orientation
                 direction.normalize();
 
-                console.log('🎯 Projectile spawn position:', spawnWorldPos);
-                console.log('🎯 Weapon forward direction:', direction);
-                console.log('🎯 WeaponGroup rotation:', weaponGroup.rotation);
-
                 // Create weapon-specific projectile
-                const projectile = createProjectileForWeapon(this.animation.weaponName);
+                const projectile = await createProjectileForWeapon(this.animation.weaponName);
 
                 // Check if projectile was created (gauntlet returns null)
                 if (!projectile) {
-                    console.log('🎯 No projectile for melee weapon');
                     return;
                 }
 
@@ -1693,18 +2126,14 @@ export class MD3Loader {
                 projectile.userData.spawnTime = Date.now();
                 projectile.userData.lifetime = projectile.userData.lifetime || 2000; // Use custom or default
 
-                console.log('🎯 Projectile created at:', projectile.position);
-                console.log('🎯 Projectile will travel in direction:', direction);
-
                 // Add to scene and track
                 this.animation.scene.add(projectile);
                 this.animation.projectiles.push(projectile);
-
-                console.log('🎯 Active projectiles:', this.animation.projectiles.length);
             };
 
             // Add method to trigger firing animation
             weaponGroup.userData.fire = function(isFirstFire = false) {
+                console.log('🔫🔫🔫 FIRE() CALLED for weapon:', this.animation.weaponName, 'isFirstFire:', isFirstFire);
                 this.animation.firing = true;
                 this.animation.muzzleFlashTime = Date.now();
 
@@ -2159,16 +2588,12 @@ export class MD3Loader {
 
                 // Update projectiles
                 const projectilesToRemove = [];
-                if (this.animation.projectiles.length > 0) {
-                    console.log('🚀 Updating', this.animation.projectiles.length, 'projectiles');
-                }
                 for (let i = 0; i < this.animation.projectiles.length; i++) {
                     const projectile = this.animation.projectiles[i];
                     const age = now - projectile.userData.spawnTime;
 
                     // Remove old projectiles
                     if (age > projectile.userData.lifetime) {
-                        console.log('💀 Removing projectile', i, 'age:', age);
                         projectilesToRemove.push(i);
                         if (this.animation.scene) {
                             this.animation.scene.remove(projectile);
@@ -2182,10 +2607,6 @@ export class MD3Loader {
                     projectile.position.x += velocity.x * deltaTime;
                     projectile.position.y += velocity.y * deltaTime;
                     projectile.position.z += velocity.z * deltaTime;
-
-                    if (i === 0) { // Log first projectile only to avoid spam
-                        console.log('🚀 Projectile', i, 'pos:', projectile.position, 'velocity:', velocity);
-                    }
 
                     // Apply gravity to grenades
                     if (projectile.userData.hasGravity) {
@@ -2211,17 +2632,25 @@ export class MD3Loader {
 
                     // Lightning beam animation (flickering electric arc)
                     if (projectile.userData.projectileType === 'lightning') {
-                        // Rapid flickering like electricity
-                        const flicker = Math.random() * 0.4 + 0.6; // 0.6 to 1.0
-                        projectile.userData.beam.material.opacity = 0.6 * flicker;
-                        projectile.userData.core.material.opacity = 0.9 * flicker;
-
                         // Pulse the light rapidly
-                        projectile.userData.light.intensity = 4 + Math.random() * 3;
+                        if (projectile.userData.light) {
+                            projectile.userData.light.intensity = 4 + Math.random() * 3;
+                        }
 
-                        // Slight random scale variation for electric arc effect
-                        projectile.userData.beam.scale.x = 1 + (Math.random() - 0.5) * 0.3;
-                        projectile.userData.beam.scale.y = 1 + (Math.random() - 0.5) * 0.3;
+                        // Animate the procedural beam group (4 rotating cylinders)
+                        if (projectile.userData.beamGroup) {
+                            // Flicker each beam cylinder independently for electric arc effect
+                            projectile.userData.beamGroup.children.forEach((beam) => {
+                                if (beam.material) {
+                                    const flicker = Math.random() * 0.4 + 0.6; // 0.6 to 1.0
+                                    beam.material.opacity = 0.7 * flicker;
+
+                                    // Slight random scale variation
+                                    beam.scale.x = 1 + (Math.random() - 0.5) * 0.2;
+                                    beam.scale.z = 1 + (Math.random() - 0.5) * 0.2;
+                                }
+                            });
+                        }
                     }
 
                     // Rocket projectile animation (flame flicker, rotation)
@@ -2416,7 +2845,10 @@ export class MD3Loader {
      */
     async loadAnimationConfig(url) {
         try {
-            const response = await fetch(url);
+            const response = await this.fetchCaseInsensitive(url);
+            if (!response.ok) {
+                return null;
+            }
             const text = await response.text();
             return this.parseAnimationConfig(text);
         } catch (error) {
@@ -2562,7 +2994,7 @@ export class MD3Loader {
      */
     createMD3AnimationClip(animDef, modelPart, prefix) {
         const frames = modelPart.userData.frames;
-        const surfaces = modelPart.children.filter(child => child.userData.surface);
+        const surfaces = modelPart.children.filter(child => child.userData.surfaceData);
 
         if (!frames || surfaces.length === 0) return null;
 
@@ -2572,7 +3004,7 @@ export class MD3Loader {
 
         // Create tracks for each mesh
         surfaces.forEach(mesh => {
-            const surface = mesh.userData.surface;
+            const surface = mesh.userData.surfaceData;
             const numVerts = surface.numVerts;
 
             // Create position and normal tracks

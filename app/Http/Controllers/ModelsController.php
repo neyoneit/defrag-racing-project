@@ -341,6 +341,22 @@ class ModelsController extends Controller
                             \Log::info("No MD3 files found for weapon {$detectedModelName} - will use fallback to base Q3 model");
                         }
 
+                        // Find ALL shader files in scripts directory
+                        $scriptsPath = $extractPath . '/scripts';
+                        $shaderFiles = [];
+                        if (is_dir($scriptsPath)) {
+                            // Get all .shader and .shaderx files
+                            $allShaders = array_merge(
+                                glob($scriptsPath . '/*.shader') ?: [],
+                                glob($scriptsPath . '/*.shaderx') ?: []
+                            );
+                            // Store just the filenames
+                            foreach ($allShaders as $shaderFile) {
+                                $shaderFiles[] = basename($shaderFile);
+                            }
+                            \Log::info("Found shader files for weapon {$detectedModelName}:", $shaderFiles);
+                        }
+
                         // Get available skins (if any)
                         $skinFiles = glob($weaponPath . '/*.skin');
                         $availableSkins = [];
@@ -1341,5 +1357,33 @@ class ModelsController extends Controller
             is_dir($path) ? $this->deleteDirectory($path) : unlink($path);
         }
         rmdir($dir);
+    }
+
+    /**
+     * Get list of shader files for a weapon model
+     */
+    public function getShaders($id)
+    {
+        $model = PlayerModel::findOrFail($id);
+
+        // For weapons, file_path is like: models/extracted/weapon1test-1760789758/models/weapons2/plasma
+        // We need to get to: models/extracted/weapon1test-1760789758/scripts
+        // So we need to extract the "models/extracted/XXX" part (first 3 path segments)
+        $pathParts = explode('/', $model->file_path);
+        $extractPath = storage_path('app/public/' . implode('/', array_slice($pathParts, 0, 3)));
+        $scriptsPath = $extractPath . '/scripts';
+
+        $shaderFiles = [];
+        if (is_dir($scriptsPath)) {
+            $allShaders = array_merge(
+                glob($scriptsPath . '/*.shader') ?: [],
+                glob($scriptsPath . '/*.shaderx') ?: []
+            );
+            foreach ($allShaders as $shaderFile) {
+                $shaderFiles[] = basename($shaderFile);
+            }
+        }
+
+        return response()->json(['shaders' => $shaderFiles]);
     }
 }

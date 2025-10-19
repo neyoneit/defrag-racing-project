@@ -62,7 +62,7 @@ export class Q3ShaderMaterialSystem {
      */
     async createMultiStageMaterial(shader, defaultTexturePath, surfaceName) {
         const stages = shader.stages;
-        const numStages = Math.min(stages.length, 4); // Support up to 4 stages for now
+        const numStages = Math.min(stages.length, 8); // Support up to 8 stages (Quake 3 limit)
 
         // Load textures for all stages
         const textures = [];
@@ -76,11 +76,9 @@ export class Q3ShaderMaterialSystem {
             if (stage.map === '$whiteimage') {
                 // Use solid white texture
                 texture = this.createWhiteTexture();
-                console.log(`✅ Using $whiteimage for stage ${i}`);
             } else if (stage.map === '$lightmap') {
                 // Lightmaps not supported, use white
                 texture = this.createWhiteTexture();
-                console.log(`⚠️ $lightmap not supported for stage ${i}, using white`);
             } else {
                 // Load actual texture
                 let texturePath = defaultTexturePath;
@@ -91,9 +89,7 @@ export class Q3ShaderMaterialSystem {
                 try {
                     // Pass fallback URL from MD3Loader to shader texture loading
                     texture = await this.loadTexture(texturePath, this.loader.fallbackBaseUrl);
-                    console.log(`✅ Loaded texture for stage ${i}: ${texturePath}`);
                 } catch (error) {
-                    console.warn(`Failed to load texture for stage ${i}:`, texturePath, error);
                     // For additive blending stages, use black fallback (so it doesn't add unwanted brightness)
                     // For other stages, use white fallback
                     const isAdditive = stage.blendFunc === 'add' ||
@@ -101,7 +97,6 @@ export class Q3ShaderMaterialSystem {
                                        stage.blendFunc.src === 'GL_ONE' &&
                                        stage.blendFunc.dst === 'GL_ONE');
                     texture = isAdditive ? this.createBlackTexture() : this.createWhiteTexture();
-                    console.log(`⚠️ Using ${isAdditive ? 'black' : 'white'} fallback for stage ${i}`);
                 }
             }
 
@@ -296,17 +291,20 @@ export class Q3ShaderMaterialSystem {
             return false;
         })();
 
-        // Check if base stage uses alpha blending (blend) - also needs transparency
+        // Check if ANY stage uses alpha blending - needs transparency
         const hasAlphaBlending = (() => {
-            const blendFunc = baseStage.blendFunc;
-            if (!blendFunc) return false;
+            // Check all stages, not just the base stage
+            for (const stage of stages) {
+                const blendFunc = stage.blendFunc;
+                if (!blendFunc) continue;
 
-            if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'blend') {
-                return true;
-            }
-            if (typeof blendFunc === 'object' && blendFunc !== null &&
-                blendFunc.src === 'GL_SRC_ALPHA' && blendFunc.dst === 'GL_ONE_MINUS_SRC_ALPHA') {
-                return true;
+                if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'blend') {
+                    return true;
+                }
+                if (typeof blendFunc === 'object' && blendFunc !== null &&
+                    (blendFunc.src === 'GL_SRC_ALPHA' || blendFunc.dst === 'GL_ONE_MINUS_SRC_ALPHA')) {
+                    return true;
+                }
             }
             return false;
         })();
@@ -314,7 +312,8 @@ export class Q3ShaderMaterialSystem {
         // Parse alphaFunc and depthWrite from first stage
         const firstStage = stages[0];
         let alphaTest = 0.0;
-        let depthWrite = !hasAdditiveBlending; // Default: disable depth write for additive
+        // Default: disable depth write for additive OR alpha blending
+        let depthWrite = !hasAdditiveBlending && !hasAlphaBlending;
 
         if (firstStage.alphaFunc) {
             // Convert Q3 alphaFunc to Three.js alphaTest value
@@ -330,8 +329,20 @@ export class Q3ShaderMaterialSystem {
             }
         }
 
+        // Only override depthWrite to true if explicitly set in shader
         if (firstStage.depthWrite) {
+            console.log(`⚠️ Shader has explicit depthWrite, overriding default`);
             depthWrite = true;
+        }
+
+        // Debug logging for lightning2 shader
+        if (surfaceName && surfaceName.includes('lightning2')) {
+            console.log(`🔍 lightning2 depthWrite settings:`, {
+                hasAdditiveBlending,
+                hasAlphaBlending,
+                calculatedDepthWrite: depthWrite,
+                firstStageHasDepthWrite: !!firstStage.depthWrite
+            });
         }
 
         // Check if any stage uses alphaGen effects (requires transparency)
@@ -415,6 +426,10 @@ export class Q3ShaderMaterialSystem {
                 tStage1: { value: textures[1] || null },
                 tStage2: { value: textures[2] || null },
                 tStage3: { value: textures[3] || null },
+                tStage4: { value: textures[4] || null },
+                tStage5: { value: textures[5] || null },
+                tStage6: { value: textures[6] || null },
+                tStage7: { value: textures[7] || null },
 
                 // Number of active stages
                 numStages: { value: numStages },
@@ -427,36 +442,45 @@ export class Q3ShaderMaterialSystem {
                 blendMode1: { value: new THREE.Vector4(...stageData[1]?.blendFunc || [1, 1, 1, 0]) },
                 blendMode2: { value: new THREE.Vector4(...stageData[2]?.blendFunc || [1, 1, 1, 0]) },
                 blendMode3: { value: new THREE.Vector4(...stageData[3]?.blendFunc || [1, 1, 1, 0]) },
+                blendMode4: { value: new THREE.Vector4(...stageData[4]?.blendFunc || [1, 1, 1, 0]) },
+                blendMode5: { value: new THREE.Vector4(...stageData[5]?.blendFunc || [1, 1, 1, 0]) },
+                blendMode6: { value: new THREE.Vector4(...stageData[6]?.blendFunc || [1, 1, 1, 0]) },
+                blendMode7: { value: new THREE.Vector4(...stageData[7]?.blendFunc || [1, 1, 1, 0]) },
 
                 // Scroll speeds for tcMod scroll (vec2: s_speed, t_speed)
                 scrollSpeed0: { value: new THREE.Vector2(...stageData[0]?.scrollSpeed || [0, 0]) },
                 scrollSpeed1: { value: new THREE.Vector2(...stageData[1]?.scrollSpeed || [0, 0]) },
                 scrollSpeed2: { value: new THREE.Vector2(...stageData[2]?.scrollSpeed || [0, 0]) },
                 scrollSpeed3: { value: new THREE.Vector2(...stageData[3]?.scrollSpeed || [0, 0]) },
+                scrollSpeed4: { value: new THREE.Vector2(...stageData[4]?.scrollSpeed || [0, 0]) },
 
                 // Stretch params for tcMod stretch (vec4: base, amplitude, phase, frequency)
                 stretchParams0: { value: new THREE.Vector4(...stageData[0]?.stretchParams || [0, 0, 0, 0]) },
                 stretchParams1: { value: new THREE.Vector4(...stageData[1]?.stretchParams || [0, 0, 0, 0]) },
                 stretchParams2: { value: new THREE.Vector4(...stageData[2]?.stretchParams || [0, 0, 0, 0]) },
                 stretchParams3: { value: new THREE.Vector4(...stageData[3]?.stretchParams || [0, 0, 0, 0]) },
+                stretchParams4: { value: new THREE.Vector4(...stageData[4]?.stretchParams || [0, 0, 0, 0]) },
 
                 // Rotate speeds for tcMod rotate (degrees per second)
                 rotateSpeed0: { value: stageData[0]?.rotateSpeed || 0 },
                 rotateSpeed1: { value: stageData[1]?.rotateSpeed || 0 },
                 rotateSpeed2: { value: stageData[2]?.rotateSpeed || 0 },
                 rotateSpeed3: { value: stageData[3]?.rotateSpeed || 0 },
+                rotateSpeed4: { value: stageData[4]?.rotateSpeed || 0 },
 
                 // Turbulent params for tcMod turbulent (vec4: base, amplitude, phase, frequency)
                 turbulentParams0: { value: new THREE.Vector4(...stageData[0]?.turbulentParams || [0, 0, 0, 0]) },
                 turbulentParams1: { value: new THREE.Vector4(...stageData[1]?.turbulentParams || [0, 0, 0, 0]) },
                 turbulentParams2: { value: new THREE.Vector4(...stageData[2]?.turbulentParams || [0, 0, 0, 0]) },
                 turbulentParams3: { value: new THREE.Vector4(...stageData[3]?.turbulentParams || [0, 0, 0, 0]) },
+                turbulentParams4: { value: new THREE.Vector4(...stageData[4]?.turbulentParams || [0, 0, 0, 0]) },
 
                 // Scale params for tcMod scale (vec2: sScale, tScale)
                 scaleParams0: { value: new THREE.Vector2(...stageData[0]?.scaleParams || [1, 1]) },
                 scaleParams1: { value: new THREE.Vector2(...stageData[1]?.scaleParams || [1, 1]) },
                 scaleParams2: { value: new THREE.Vector2(...stageData[2]?.scaleParams || [1, 1]) },
                 scaleParams3: { value: new THREE.Vector2(...stageData[3]?.scaleParams || [1, 1]) },
+                scaleParams4: { value: new THREE.Vector2(...stageData[4]?.scaleParams || [1, 1]) },
 
                 // Transform params for tcMod transform (vec3: m00,m01,t0 vec3: m10,m11,t1)
                 transformRow0_0: { value: new THREE.Vector3(stageData[0]?.transformParams[0] || 1, stageData[0]?.transformParams[1] || 0, stageData[0]?.transformParams[4] || 0) },
@@ -467,48 +491,57 @@ export class Q3ShaderMaterialSystem {
                 transformRow1_2: { value: new THREE.Vector3(stageData[2]?.transformParams[2] || 0, stageData[2]?.transformParams[3] || 1, stageData[2]?.transformParams[5] || 0) },
                 transformRow0_3: { value: new THREE.Vector3(stageData[3]?.transformParams[0] || 1, stageData[3]?.transformParams[1] || 0, stageData[3]?.transformParams[4] || 0) },
                 transformRow1_3: { value: new THREE.Vector3(stageData[3]?.transformParams[2] || 0, stageData[3]?.transformParams[3] || 1, stageData[3]?.transformParams[5] || 0) },
+                transformRow0_4: { value: new THREE.Vector3(stageData[4]?.transformParams[0] || 1, stageData[4]?.transformParams[1] || 0, stageData[4]?.transformParams[4] || 0) },
+                transformRow1_4: { value: new THREE.Vector3(stageData[4]?.transformParams[2] || 0, stageData[4]?.transformParams[3] || 1, stageData[4]?.transformParams[5] || 0) },
 
                 // tcGen types (0=base, 1=environment)
                 tcGenType0: { value: stageData[0]?.tcGen === 'environment' ? 1 : 0 },
                 tcGenType1: { value: stageData[1]?.tcGen === 'environment' ? 1 : 0 },
                 tcGenType2: { value: stageData[2]?.tcGen === 'environment' ? 1 : 0 },
                 tcGenType3: { value: stageData[3]?.tcGen === 'environment' ? 1 : 0 },
+                tcGenType4: { value: stageData[4]?.tcGen === 'environment' ? 1 : 0 },
 
                 // rgbGen types (0=identity, 1=lightingDiffuse, 2=wave)
                 rgbGenType0: { value: stageData[0]?.rgbGen === 'lightingDiffuse' ? 1 : (stageData[0]?.rgbGen === 'wave' ? 2 : 0) },
                 rgbGenType1: { value: stageData[1]?.rgbGen === 'lightingDiffuse' ? 1 : (stageData[1]?.rgbGen === 'wave' ? 2 : 0) },
                 rgbGenType2: { value: stageData[2]?.rgbGen === 'lightingDiffuse' ? 1 : (stageData[2]?.rgbGen === 'wave' ? 2 : 0) },
                 rgbGenType3: { value: stageData[3]?.rgbGen === 'lightingDiffuse' ? 1 : (stageData[3]?.rgbGen === 'wave' ? 2 : 0) },
+                rgbGenType4: { value: stageData[4]?.rgbGen === 'lightingDiffuse' ? 1 : (stageData[4]?.rgbGen === 'wave' ? 2 : 0) },
 
                 // rgbGen wave params (vec4: base, amplitude, phase, frequency)
                 rgbGenWaveParams0: { value: new THREE.Vector4(...stageData[0]?.rgbGenWaveParams || [0, 0, 0, 0]) },
                 rgbGenWaveParams1: { value: new THREE.Vector4(...stageData[1]?.rgbGenWaveParams || [0, 0, 0, 0]) },
                 rgbGenWaveParams2: { value: new THREE.Vector4(...stageData[2]?.rgbGenWaveParams || [0, 0, 0, 0]) },
                 rgbGenWaveParams3: { value: new THREE.Vector4(...stageData[3]?.rgbGenWaveParams || [0, 0, 0, 0]) },
+                rgbGenWaveParams4: { value: new THREE.Vector4(...stageData[4]?.rgbGenWaveParams || [0, 0, 0, 0]) },
 
                 // rgbGen wave function types (0=sin, 1=triangle, 2=square, 3=sawtooth, 4=inversesawtooth)
                 rgbGenWaveFuncType0: { value: stageData[0]?.rgbGenWaveFuncType || 0 },
                 rgbGenWaveFuncType1: { value: stageData[1]?.rgbGenWaveFuncType || 0 },
                 rgbGenWaveFuncType2: { value: stageData[2]?.rgbGenWaveFuncType || 0 },
                 rgbGenWaveFuncType3: { value: stageData[3]?.rgbGenWaveFuncType || 0 },
+                rgbGenWaveFuncType4: { value: stageData[4]?.rgbGenWaveFuncType || 0 },
 
                 // alphaGen types (0=identity, 1=wave, 2=lightingSpecular, 3=const)
                 alphaGenType0: { value: this.getAlphaGenTypeValue(stageData[0]?.alphaGen) },
                 alphaGenType1: { value: this.getAlphaGenTypeValue(stageData[1]?.alphaGen) },
                 alphaGenType2: { value: this.getAlphaGenTypeValue(stageData[2]?.alphaGen) },
                 alphaGenType3: { value: this.getAlphaGenTypeValue(stageData[3]?.alphaGen) },
+                alphaGenType4: { value: this.getAlphaGenTypeValue(stageData[4]?.alphaGen) },
 
                 // alphaGen wave params (vec4: base, amplitude, phase, frequency)
                 alphaGenWaveParams0: { value: new THREE.Vector4(...stageData[0]?.alphaGenWaveParams || [0, 0, 0, 0]) },
                 alphaGenWaveParams1: { value: new THREE.Vector4(...stageData[1]?.alphaGenWaveParams || [0, 0, 0, 0]) },
                 alphaGenWaveParams2: { value: new THREE.Vector4(...stageData[2]?.alphaGenWaveParams || [0, 0, 0, 0]) },
                 alphaGenWaveParams3: { value: new THREE.Vector4(...stageData[3]?.alphaGenWaveParams || [0, 0, 0, 0]) },
+                alphaGenWaveParams4: { value: new THREE.Vector4(...stageData[4]?.alphaGenWaveParams || [0, 0, 0, 0]) },
 
                 // alphaGen wave function types (0=sin, 1=triangle, 2=square, 3=sawtooth, 4=inversesawtooth)
                 alphaGenWaveFuncType0: { value: stageData[0]?.alphaGenWaveFuncType || 0 },
                 alphaGenWaveFuncType1: { value: stageData[1]?.alphaGenWaveFuncType || 0 },
                 alphaGenWaveFuncType2: { value: stageData[2]?.alphaGenWaveFuncType || 0 },
                 alphaGenWaveFuncType3: { value: stageData[3]?.alphaGenWaveFuncType || 0 },
+                alphaGenWaveFuncType4: { value: stageData[4]?.alphaGenWaveFuncType || 0 },
 
                 // Lighting uniforms (will be updated from scene lights)
                 ambientLightColor: { value: new THREE.Color(0x999999) },  // Default ambient
@@ -546,18 +579,6 @@ export class Q3ShaderMaterialSystem {
             lights: false, // We handle lighting manually
         });
 
-        if (hasAdditiveBlending) {
-            console.log(`✨ Additive blending detected - material will be translucent`);
-        }
-        if (hasAlphaBlending) {
-            console.log(`✨ Alpha blending detected - material will use transparency`);
-        }
-        if (alphaTest > 0) {
-            console.log(`✂️ Alpha test enabled: ${firstStage.alphaFunc} (threshold: ${alphaTest})`);
-        }
-        if (depthWrite && (hasAdditiveBlending || hasAlphaBlending)) {
-            console.log(`📝 Depth write enabled (explicit from shader)`);
-        }
 
         // Store shader data for animation
         material.userData.shader = shader;
@@ -565,6 +586,14 @@ export class Q3ShaderMaterialSystem {
         material.userData.isMultiStage = true;
         material.userData.numStages = numStages;
         material.userData.stageData = stageData;
+
+        // Debug: Log blend modes for lightning2 shader
+        if (surfaceName && surfaceName.includes('lightning2')) {
+            console.log(`🔍 Shader "${surfaceName}" blend modes:`,
+                `Stage0: [${stageData[0]?.blendFunc.join(', ')}]`,
+                stageData[1] ? `Stage1: [${stageData[1]?.blendFunc.join(', ')}]` : 'no stage1'
+            );
+        }
 
         return material;
     }
@@ -590,7 +619,7 @@ export class Q3ShaderMaterialSystem {
         try {
             await this.loader.loadTextureForMesh(texturePath, material);
         } catch (error) {
-            console.warn(`Failed to load texture for single stage:`, texturePath, error);
+            // Silently fail - texture loading errors are not critical
         }
 
         // Apply shader properties
@@ -744,6 +773,7 @@ export class Q3ShaderMaterialSystem {
             uniform sampler2D tStage1;
             uniform sampler2D tStage2;
             uniform sampler2D tStage3;
+            uniform sampler2D tStage4;
 
             uniform int numStages;
             uniform float time;
@@ -752,31 +782,37 @@ export class Q3ShaderMaterialSystem {
             uniform vec4 blendMode1;
             uniform vec4 blendMode2;
             uniform vec4 blendMode3;
+            uniform vec4 blendMode4;
 
             uniform vec2 scrollSpeed0;
             uniform vec2 scrollSpeed1;
             uniform vec2 scrollSpeed2;
             uniform vec2 scrollSpeed3;
+            uniform vec2 scrollSpeed4;
 
             uniform vec4 stretchParams0; // x=base, y=amplitude, z=phase, w=frequency
             uniform vec4 stretchParams1;
             uniform vec4 stretchParams2;
             uniform vec4 stretchParams3;
+            uniform vec4 stretchParams4;
 
             uniform float rotateSpeed0; // degrees per second
             uniform float rotateSpeed1;
             uniform float rotateSpeed2;
             uniform float rotateSpeed3;
+            uniform float rotateSpeed4;
 
             uniform vec4 turbulentParams0; // x=base, y=amplitude, z=phase, w=frequency
             uniform vec4 turbulentParams1;
             uniform vec4 turbulentParams2;
             uniform vec4 turbulentParams3;
+            uniform vec4 turbulentParams4;
 
             uniform vec2 scaleParams0; // x=sScale, y=tScale
             uniform vec2 scaleParams1;
             uniform vec2 scaleParams2;
             uniform vec2 scaleParams3;
+            uniform vec2 scaleParams4;
 
             uniform vec3 transformRow0_0; // x=m00, y=m01, z=t0
             uniform vec3 transformRow1_0; // x=m10, y=m11, z=t1
@@ -786,41 +822,50 @@ export class Q3ShaderMaterialSystem {
             uniform vec3 transformRow1_2;
             uniform vec3 transformRow0_3;
             uniform vec3 transformRow1_3;
+            uniform vec3 transformRow0_4;
+            uniform vec3 transformRow1_4;
 
             uniform int tcGenType0; // 0=base, 1=environment
             uniform int tcGenType1;
             uniform int tcGenType2;
             uniform int tcGenType3;
+            uniform int tcGenType4;
 
             uniform int rgbGenType0; // 0=identity, 1=lightingDiffuse, 2=wave
             uniform int rgbGenType1;
             uniform int rgbGenType2;
             uniform int rgbGenType3;
+            uniform int rgbGenType4;
 
             uniform vec4 rgbGenWaveParams0; // x=base, y=amplitude, z=phase, w=frequency
             uniform vec4 rgbGenWaveParams1;
             uniform vec4 rgbGenWaveParams2;
             uniform vec4 rgbGenWaveParams3;
+            uniform vec4 rgbGenWaveParams4;
 
             uniform int rgbGenWaveFuncType0; // 0=sin, 1=triangle, 2=square, 3=sawtooth, 4=inversesawtooth
             uniform int rgbGenWaveFuncType1;
             uniform int rgbGenWaveFuncType2;
             uniform int rgbGenWaveFuncType3;
+            uniform int rgbGenWaveFuncType4;
 
             uniform int alphaGenType0; // 0=identity, 1=wave, 2=lightingSpecular, 3=const
             uniform int alphaGenType1;
             uniform int alphaGenType2;
             uniform int alphaGenType3;
+            uniform int alphaGenType4;
 
             uniform vec4 alphaGenWaveParams0; // x=base, y=amplitude, z=phase, w=frequency
             uniform vec4 alphaGenWaveParams1;
             uniform vec4 alphaGenWaveParams2;
             uniform vec4 alphaGenWaveParams3;
+            uniform vec4 alphaGenWaveParams4;
 
             uniform int alphaGenWaveFuncType0; // 0=sin, 1=triangle, 2=square, 3=sawtooth, 4=inversesawtooth
             uniform int alphaGenWaveFuncType1;
             uniform int alphaGenWaveFuncType2;
             uniform int alphaGenWaveFuncType3;
+            uniform int alphaGenWaveFuncType4;
 
             uniform vec3 ambientLightColor;
             uniform vec3 directionalLightDirection;
@@ -998,6 +1043,7 @@ export class Q3ShaderMaterialSystem {
                 // 2.0 = GL_SRC_ALPHA
                 // 3.0 = GL_ONE_MINUS_SRC_ALPHA
                 // 4.0 = GL_DST_COLOR
+                // 5.0 = GL_ONE_MINUS_SRC_ALPHA (for dst)
 
                 vec3 srcColor = src.rgb;
                 vec3 dstColor = dst.rgb;
@@ -1026,6 +1072,8 @@ export class Q3ShaderMaterialSystem {
                     dstBlended = dstColor * srcAlpha; // GL_SRC_ALPHA
                 } else if (dstFactor > 2.5 && dstFactor < 3.5) {
                     dstBlended = dstColor * (1.0 - srcAlpha); // GL_ONE_MINUS_SRC_ALPHA
+                } else if (dstFactor > 3.5 && dstFactor < 4.5) {
+                    dstBlended = dstColor * srcColor; // GL_DST_COLOR
                 }
 
                 // Combine
@@ -1072,6 +1120,11 @@ export class Q3ShaderMaterialSystem {
                     // const
                     color.a = alphaGenWaveParams0.x;
                 }
+
+                // Debug: For testing, skip stage 1 blending to see if stage 0 scroll works
+                // (Remove this after testing)
+                // gl_FragColor = color;
+                // return;
 
                 // Blend additional stages on top
                 if (numStages > 1) {
@@ -1161,6 +1214,35 @@ export class Q3ShaderMaterialSystem {
                     color = blendColors(stage3, color, blendMode3);
                 }
 
+                if (numStages > 4) {
+                    vec2 uv4 = (tcGenType4 == 1) ? vEnvUv : vUv;
+                    uv4 += scrollSpeed4 * time;
+                    uv4 = applyScale(uv4, scaleParams4);
+                    uv4 = applyTransform(uv4, transformRow0_4, transformRow1_4);
+                    uv4 = applyTurbulent(uv4, turbulentParams4, vPosition);
+                    uv4 = applyStretch(uv4, stretchParams4);
+                    uv4 = applyRotate(uv4, rotateSpeed4);
+                    vec4 stage4 = texture2D(tStage4, uv4);
+
+                    // Apply rgbGen
+                    if (rgbGenType4 == 1) {
+                        stage4.rgb *= lighting;
+                    } else if (rgbGenType4 == 2) {
+                        stage4.rgb = applyRgbGenWave(stage4.rgb, rgbGenWaveParams4, rgbGenWaveFuncType4);
+                    }
+
+                    // Apply alphaGen
+                    if (alphaGenType4 == 1) {
+                        stage4.a = applyAlphaGenWave(stage4.a, alphaGenWaveParams4, alphaGenWaveFuncType4);
+                    } else if (alphaGenType4 == 2) {
+                        stage4.a = calcSpecularAlpha();
+                    } else if (alphaGenType4 == 3) {
+                        stage4.a = alphaGenWaveParams4.x;
+                    }
+
+                    color = blendColors(stage4, color, blendMode4);
+                }
+
                 gl_FragColor = color;
             }
         `;
@@ -1242,7 +1324,7 @@ export class Q3ShaderMaterialSystem {
             let currentIndex = 0;
             let tryingFallbackPath = false;
 
-            const tryNextExtension = () => {
+            const tryNextExtension = async () => {
                 if (currentIndex >= fallbackExtensions.length) {
                     // If we were trying the original path and fallback is available, switch to fallback
                     if (!tryingFallbackPath && fallbackBaseUrl) {
@@ -1261,24 +1343,105 @@ export class Q3ShaderMaterialSystem {
                 let testUrl;
 
                 if (tryingFallbackPath) {
-                    // Build fallback path: fallbackBaseUrl + filename_without_extension + extension
-                    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
-                    testUrl = fallbackBaseUrl + filenameWithoutExt + '.' + ext;
+                    // Build fallback path with full relative path preserved
+                    // Extract the relative path from the original URL (everything after /storage/models/extracted/xxx/)
+                    // e.g., /storage/models/extracted/xxx/textures/sfx/file.tga -> textures/sfx/file
+                    let relativePath = url;
+                    if (url.includes('/extracted/')) {
+                        // Find the part after /extracted/xxx/
+                        const extractedIndex = url.indexOf('/extracted/');
+                        const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+                        // Skip the PK3 folder name (e.g., "anarki-model-skin-mysticsurfer-1760897528-8328/")
+                        const firstSlashAfterExtracted = afterExtracted.indexOf('/');
+                        if (firstSlashAfterExtracted !== -1) {
+                            relativePath = afterExtracted.substring(firstSlashAfterExtracted + 1);
+                        }
+                    }
+
+                    // Remove extension from relativePath and add new extension
+                    const relativePathWithoutExt = relativePath.substring(0, relativePath.lastIndexOf('.'));
+                    testUrl = fallbackBaseUrl + relativePathWithoutExt + '.' + ext;
                 } else {
                     // Try original path with current extension
                     testUrl = basePath + ext;
                 }
 
+                // Pre-check if file exists using HEAD request to avoid 404 console spam
+                try {
+                    const response = await fetch(testUrl, { method: 'HEAD' });
+                    if (!response.ok) {
+                        // File doesn't exist, try next extension silently
+                        currentIndex++;
+                        tryNextExtension();
+                        return;
+                    }
+                } catch (error) {
+                    // Network error or file doesn't exist, try next extension
+                    currentIndex++;
+                    tryNextExtension();
+                    return;
+                }
+
+                // File exists! Now load it with the appropriate loader
                 const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
 
                 loader.load(
                     testUrl,
                     (texture) => {
                         texture.flipY = false;
-                        if (tryingFallbackPath) {
-                            console.log(`✅ Loaded texture from fallback: ${testUrl}`);
-                        } else if (currentIndex > 0) {
-                            console.log(`📁 Texture fallback: ${url} → ${testUrl}`);
+
+                        // IMPORTANT: Ensure TGA textures with alpha channels use RGBA format
+                        // TGALoader returns RGBA format automatically for 32-bit TGAs
+                        // Just verify and log
+                        if (ext.toLowerCase() === 'tga' && texture.image && texture.image.data) {
+                            // TGALoader creates an object with {data: Uint8Array, width, height}
+                            // Check if it has 4 channels (RGBA) - data length should be width * height * 4
+                            const expectedRGBA = texture.image.width * texture.image.height * 4;
+                            const actualLength = texture.image.data.length;
+
+                            if (actualLength === expectedRGBA) {
+                                // Has alpha channel - check if any pixel has transparency
+                                let hasTransparency = false;
+                                let minAlpha = 255;
+                                let maxAlpha = 0;
+                                let transparentPixels = 0;
+                                let totalPixels = texture.image.width * texture.image.height;
+
+                                for (let i = 3; i < texture.image.data.length; i += 4) {
+                                    const alpha = texture.image.data[i];
+                                    minAlpha = Math.min(minAlpha, alpha);
+                                    maxAlpha = Math.max(maxAlpha, alpha);
+                                    if (alpha < 255) {
+                                        hasTransparency = true;
+                                        transparentPixels++;
+                                    }
+                                }
+
+                                if (hasTransparency || testUrl.includes('lightning2')) {
+                                    console.log(`🔍 TGA texture "${testUrl.split('/').pop()}":`, {
+                                        hasTransparency,
+                                        alphaRange: `${minAlpha}-${maxAlpha}`,
+                                        transparentPixels: `${transparentPixels}/${totalPixels} (${(transparentPixels/totalPixels*100).toFixed(1)}%)`,
+                                        format: texture.format,
+                                        formatName: texture.format === THREE.RGBAFormat ? 'RGBA' : 'RGB'
+                                    });
+                                }
+                            }
+                        }
+
+                        // Debug: Check if lightning2 texture has alpha channel
+                        if (testUrl.includes('lightning2')) {
+                            console.log(`🔍 Loaded lightning2 texture:`, {
+                                url: testUrl,
+                                format: texture.format,
+                                hasAlpha: texture.format === THREE.RGBAFormat,
+                                formatName: texture.format === THREE.RGBAFormat ? 'RGBA' : 'RGB',
+                                image: texture.image
+                            });
+                        }
+
+                        if (tryingFallbackPath || currentIndex > 0) {
+                            console.log(`✅ Image fallback worked`);
                         }
                         // Store in static cache
                         Q3ShaderMaterialSystem.textureCache.set(url, texture);

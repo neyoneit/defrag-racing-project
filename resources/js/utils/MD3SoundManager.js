@@ -3,9 +3,11 @@
  * Handles WAV files using Web Audio API and syncs sounds with animations
  */
 export class MD3SoundManager {
-    constructor(baseSoundPath, modelName) {
-        this.baseSoundPath = baseSoundPath; // e.g., /storage/models/extracted/worm-1760208803/sound/player/worm
+    constructor(baseSoundPath, modelName, baseModelSoundPath = null, loader = null) {
+        this.baseSoundPath = baseSoundPath; // e.g., /storage/models/extracted/worm-1760208803/sound/player/worm (PK3 path)
+        this.baseModelSoundPath = baseModelSoundPath; // e.g., /baseq3/sound/player/grunt (base model path - load first, then override with PK3)
         this.modelName = modelName;
+        this.loader = loader; // MD3Loader instance for case-insensitive fetching
         this.audioContext = null;
         this.soundBuffers = new Map(); // Map of sound name -> AudioBuffer
         this.currentSources = new Map(); // Map of sound name -> AudioBufferSourceNode
@@ -66,6 +68,7 @@ export class MD3SoundManager {
 
     /**
      * Load all sound files for the player model
+     * Follows the pattern: Load from base model first, then override with PK3
      */
     async loadSounds() {
         if (!this.enabled || !this.audioContext) {
@@ -77,47 +80,93 @@ export class MD3SoundManager {
             return;
         }
 
-        const loadPromises = this.soundFiles.map(async (filename) => {
+        let baseModelLoadedCount = 0;
+        let pk3LoadedCount = 0;
+        let pk3OverrideCount = 0;
+
+        // STEP 1: Load sounds from base model (if baseModelSoundPath provided)
+        if (this.baseModelSoundPath) {
+            console.log(`🔊 STEP 1: Loading sounds from base model: ${this.baseModelSoundPath}`);
+            const baseModelPromises = this.soundFiles.map(async (filename) => {
+                try {
+                    const soundName = filename.replace('.wav', '');
+                    const url = `${this.baseModelSoundPath}/${filename}`;
+                    const response = this.loader ? await this.loader.fetchCaseInsensitive(url) : await fetch(url);
+
+                    if (!response.ok) {
+                        return null;
+                    }
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+                    this.soundBuffers.set(soundName, audioBuffer);
+                    return soundName;
+                } catch (error) {
+                    return null;
+                }
+            });
+
+            const baseModelResults = await Promise.all(baseModelPromises);
+            baseModelLoadedCount = baseModelResults.filter(r => r !== null).length;
+            if (baseModelLoadedCount > 0) {
+                console.log(`✅ Loaded ${baseModelLoadedCount}/${this.soundFiles.length} sounds from base model`);
+            }
+        }
+
+        // STEP 2: Load sounds from PK3 and override (if they exist)
+        console.log(`🔊 STEP 2: Loading sounds from PK3: ${this.baseSoundPath}`);
+        const pk3Promises = this.soundFiles.map(async (filename) => {
             try {
                 const soundName = filename.replace('.wav', '');
                 const url = `${this.baseSoundPath}/${filename}`;
-
-                // Try primary sound path first
-                let response = await fetch(url);
-                let finalUrl = url;
-
-                // If not found and we have a fallback path, try fallback
-                if (!response.ok && this.fallbackSoundPath) {
-                    const fallbackUrl = `${this.fallbackSoundPath}/${filename}`;
-                    response = await fetch(fallbackUrl);
-                    if (response.ok) {
-                        finalUrl = fallbackUrl;
-                        console.log(`🔊 Sound fallback: ${soundName} → ${fallbackUrl}`);
-                    }
-                }
+                const response = this.loader ? await this.loader.fetchCaseInsensitive(url) : await fetch(url);
 
                 if (!response.ok) {
+                    // If not found in PK3 and we have a fallback path (for pure baseq3 models), try fallback
+                    if (this.fallbackSoundPath && !this.baseModelSoundPath) {
+                        const fallbackUrl = `${this.fallbackSoundPath}/${filename}`;
+                        const fallbackResponse = this.loader ? await this.loader.fetchCaseInsensitive(fallbackUrl) : await fetch(fallbackUrl);
+                        if (fallbackResponse.ok) {
+                            const arrayBuffer = await fallbackResponse.arrayBuffer();
+                            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                            this.soundBuffers.set(soundName, audioBuffer);
+                            console.log(`🔊 Sound fallback: ${soundName} → ${fallbackUrl}`);
+                            return { soundName, override: false };
+                        }
+                    }
                     return null;
                 }
 
                 const arrayBuffer = await response.arrayBuffer();
                 const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
+                const wasOverride = this.soundBuffers.has(soundName);
                 this.soundBuffers.set(soundName, audioBuffer);
-                return soundName;
+
+                return { soundName, override: wasOverride };
             } catch (error) {
                 return null;
             }
         });
 
-        const results = await Promise.all(loadPromises);
-        const loadedCount = results.filter(r => r !== null).length;
+        const pk3Results = await Promise.all(pk3Promises);
+        const validPk3Results = pk3Results.filter(r => r !== null);
+        pk3LoadedCount = validPk3Results.length;
+        pk3OverrideCount = validPk3Results.filter(r => r.override).length;
 
-        if (loadedCount > 0) {
-            console.log(`✅ Loaded ${loadedCount}/${this.soundFiles.length} sounds for ${this.modelName}`);
+        if (pk3OverrideCount > 0) {
+            console.log(`✅ Loaded ${pk3LoadedCount} sounds from PK3 (${pk3OverrideCount} overrides)`);
+        } else if (pk3LoadedCount > 0) {
+            console.log(`✅ Loaded ${pk3LoadedCount} sounds from PK3`);
         }
 
-        return loadedCount > 0;
+        const totalLoadedCount = this.soundBuffers.size;
+        if (totalLoadedCount > 0) {
+            console.log(`✅ Total sounds loaded: ${totalLoadedCount}/${this.soundFiles.length}`);
+        }
+
+        return totalLoadedCount > 0;
     }
 
     /**

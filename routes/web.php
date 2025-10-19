@@ -17,6 +17,7 @@ use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
 use App\Http\Controllers\ModelsController;
+use App\Http\Controllers\FileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,8 +56,9 @@ Route::get('/models/create', [ModelsController::class, 'create'])->middleware('a
 Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
 Route::get('/models/bulk-upload', [ModelsController::class, 'bulkUploadForm'])->middleware('auth')->name('models.bulk-upload');
 Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->middleware('auth')->name('models.bulk-upload.store');
-Route::get('/models/{id}', [ModelsController::class, 'show'])->name('models.show');
-Route::get('/models/{id}/download', [ModelsController::class, 'download'])->name('models.download');
+Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->where('id', '[0-9]+')->name('models.shaders');
+Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
+Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
 Route::post('/models/{id}/generate-thumbnail', [ModelsController::class, 'generateThumbnail'])->middleware('auth')->name('models.generateThumbnail');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
 Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
@@ -165,6 +167,12 @@ Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('prof
 Route::get('/images/flags/{flag}', [WebController::class, 'flags'])->name('images.flags');
 Route::get('/storage/thumbs/{image}', [WebController::class, 'thumbs'])->name('images.thumbs');
 
+// Case-insensitive file serving for all storage files
+Route::get('/storage/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
+
+// Case-insensitive file serving for baseq3 files
+Route::get('/baseq3/{path}', [FileController::class, 'serveBaseq3File'])->where('path', '.*');
+
 Route::get('/announcements', [ChangelogController::class, 'announcements'])->name('announcements');
 
 Route::get('/privacy-policy', [PagesController::class, 'privacypolicy'])->name('pages.privacy-policy');
@@ -187,4 +195,3 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/maplists/{id}/favorite', [App\Http\Controllers\MaplistController::class, 'toggleFavorite'])->name('maplists.toggleFavorite');
     Route::get('/api/maps/search', [App\Http\Controllers\MaplistController::class, 'searchMaps'])->name('maps.search');
 });
-

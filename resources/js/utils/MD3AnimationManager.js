@@ -69,8 +69,8 @@ export class MD3AnimationManager {
 
         // VALIDATE ANIMATION FITS IN MODEL
         const lower = this.playerModel.userData.lower;
-        if (lower && lower.children[0] && lower.children[0].userData.surface) {
-            const totalFrames = lower.children[0].userData.surface.vertices.length;
+        if (lower && lower.children[0] && lower.children[0].userData.surfaceData) {
+            const totalFrames = lower.children[0].userData.surfaceData.vertices.length;
             const lastFrame = anim.firstFrame + anim.numFrames - 1;
 
             if (anim.firstFrame >= totalFrames) {
@@ -237,7 +237,7 @@ export class MD3AnimationManager {
 
         // Update all meshes in this model part
         modelPart.children.forEach(child => {
-            if (child.userData.surface) {
+            if (child.userData.surfaceData) {
                 this.updateMeshFrame(child, anim, frame);
             }
         });
@@ -314,7 +314,7 @@ export class MD3AnimationManager {
      * @param {number} frame - Frame number
      */
     updateMeshFrame(mesh, anim, frame) {
-        const surface = mesh.userData.surface;
+        const surface = mesh.userData.surfaceData;
         if (!surface || !surface.vertices) {
             return;
         }
@@ -403,7 +403,7 @@ export class MD3AnimationManager {
 
             // Update leg meshes
             lower.children.forEach(child => {
-                if (child.userData.surface) {
+                if (child.userData.surfaceData) {
                     this.updateMeshFrame(child, this.currentLegsAnim, clampedFrame);
                 }
             });
@@ -450,7 +450,7 @@ export class MD3AnimationManager {
             const upper = this.playerModel.userData.upper;
 
             upper.children.forEach(child => {
-                if (child.userData.surface) {
+                if (child.userData.surfaceData) {
                     this.updateMeshFrame(child, this.currentTorsoAnim, clampedFrame);
                 }
             });

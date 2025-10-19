@@ -129,25 +129,19 @@ const modelFilePath = computed(() => {
     }
 
     // Player models: composite model (head/upper/lower)
-    // For skin/mixed packs, use the base model's file_path (where the MD3 files are)
-    if (props.baseModelData && props.baseModelData.file_path) {
-        const basePath = props.baseModelData.file_path;
-        const modelName = props.baseModelData.name;
-
-        if (basePath.startsWith('baseq3/')) {
-            return `/${basePath}/head.md3`;
-        }
-
-        return `/storage/${basePath}/models/players/${modelName}/head.md3`;
-    }
-
-    // For complete models, use the model's own file_path
+    // ALWAYS use model.file_path - MD3Loader will handle loading base model first if baseModelName is provided
     if (!props.model.file_path) return null;
 
     if (props.model.file_path.startsWith('baseq3/')) {
         return `/${props.model.file_path}/head.md3`;
     }
 
+    // Check if file_path includes full path (new format with case-sensitive folders)
+    if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+        return `/storage/${props.model.file_path}/head.md3`;
+    }
+
+    // Old format - append model folder
     const modelName = props.model.base_model || props.model.name;
     return `/storage/${props.model.file_path}/models/players/${modelName}/head.md3`;
 });
@@ -506,10 +500,6 @@ const logCameraPosition = () => {
     if (!viewer3D.value) return;
     const camera = viewer3D.value.getCamera();
     const controls = viewer3D.value.getControls();
-    console.log('=== CURRENT CAMERA POSITION ===');
-    console.log('Camera Position:', { x: camera.position.x, y: camera.position.y, z: camera.position.z });
-    console.log('Target Position:', { x: controls.target.x, y: controls.target.y, z: controls.target.z });
-    console.log('================================');
 };
 
 // Expose to window so you can call it from console
@@ -700,9 +690,6 @@ const generateGifThumbnail = async () => {
         // Get the controls target (what the camera is looking at - the model center)
         const controls = viewer3D.value.getControls();
         const target = controls?.target ? { x: controls.target.x, y: controls.target.y, z: controls.target.z } : { x: 0, y: 30, z: 0 };
-
-        console.log('Camera position:', originalPosition);
-        console.log('Target:', target);
 
         // Calculate camera distance from the target (not from origin)
         const dx = originalPosition.x - target.x;
@@ -1107,9 +1094,11 @@ const getBoxClass = (type) => {
                                 v-if="modelFilePath"
                                 ref="viewer3D"
                                 :model-path="modelFilePath"
+                                :model-id="model.id"
                                 :skin-path="skinFilePath"
                                 :skin-pack-base-path="skinPackBasePath"
                                 :skin-name="currentSkin"
+                                :base-model-name="model.base_model"
                                 :load-full-player="!isWeaponModel"
                                 :is-weapon="isWeaponModel"
                                 :auto-rotate="autoRotate"

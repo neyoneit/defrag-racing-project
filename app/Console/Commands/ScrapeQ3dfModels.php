@@ -77,6 +77,9 @@ class ScrapeQ3dfModels extends Command
             $imported = 0;
             $skipped = 0;
             $failed = 0;
+            $failedModels = []; // Track failed models for summary
+
+            $this->info("\n🔍 Processing " . count($models) . " models (limit: {$limit})...\n");
 
             foreach ($models as $modelData) {
                 if ($imported >= $limit) {
@@ -90,9 +93,10 @@ class ScrapeQ3dfModels extends Command
                     continue;
                 }
 
-                // Skip if already downloaded in previous runs
+                // Skip if already downloaded in previous runs (check history file only)
+                // Note: This is just an optimization - actual duplicate detection happens at model+skin level
                 if (isset($downloadedHistory[$modelData['pk3_file']])) {
-                    $this->line("Already imported: {$modelData['pk3_file']}");
+                    $this->line("Already imported (history): {$modelData['pk3_file']}");
                     $skipped++;
                     continue;
                 }
@@ -108,7 +112,7 @@ class ScrapeQ3dfModels extends Command
                 $processed++;
 
                 $importCount = $imported + 1;
-                $this->info("Processing [{$importCount}/{$limit}]: {$modelData['pk3_file']}");
+                $this->info("[{$importCount}/{$limit}] Processing: {$modelData['pk3_file']}");
 
                 // Download and import the PK3 file
                 try {
@@ -128,22 +132,58 @@ class ScrapeQ3dfModels extends Command
                         $this->info("  ✓ Imported: {$result['model_name']} (ID: {$result['model_id']})");
                     } else {
                         $failed++;
+                        $failedModels[] = ['pk3' => $modelData['pk3_file'], 'error' => $result['error']];
                         $this->error("  ✗ Failed: {$result['error']}");
                     }
                 } catch (\Exception $e) {
                     $failed++;
-                    $this->error("  ✗ Error: " . $e->getMessage());
+                    $errorMsg = $e->getMessage();
+                    // Log full error for debugging
+                    \Log::error("Scraper error for {$modelData['pk3_file']}", [
+                        'error' => $errorMsg,
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    $failedModels[] = ['pk3' => $modelData['pk3_file'], 'error' => $errorMsg];
+                    $this->error("  ✗ Error: " . $errorMsg);
                 }
             }
 
             // Save downloaded history
             Storage::put($downloadedHistoryPath, json_encode($downloadedHistory, JSON_PRETTY_PRINT));
 
+            // Append failed models to persistent log file
+            if (!empty($failedModels)) {
+                $failedLogPath = 'bulk-upload/failed_models.log';
+                $timestamp = now()->format('Y-m-d H:i:s');
+                $logEntries = [];
+
+                foreach ($failedModels as $failedModel) {
+                    $logEntries[] = "[{$timestamp}] {$failedModel['pk3']}: {$failedModel['error']}";
+                }
+
+                // Append to existing log file
+                if (Storage::exists($failedLogPath)) {
+                    $existingLog = Storage::get($failedLogPath);
+                    Storage::put($failedLogPath, $existingLog . "\n" . implode("\n", $logEntries));
+                } else {
+                    Storage::put($failedLogPath, implode("\n", $logEntries));
+                }
+            }
+
             $this->info("\n=== Import Summary ===");
-            $this->info("Successfully imported: {$imported} models");
-            $this->info("Failed: {$failed} models");
-            $this->info("Skipped: {$skipped} files (already imported or duplicates)");
-            $this->info("Total in history: " . count($downloadedHistory) . " files");
+            $this->info("✅ Successfully imported: {$imported} models");
+            $this->info("⏭️  Skipped: {$skipped} files (already imported or duplicates)");
+            $this->info("❌ Failed: {$failed} models");
+            $this->info("📊 Total in history: " . count($downloadedHistory) . " files");
+
+            // Show failed models for debugging
+            if (!empty($failedModels)) {
+                $this->error("\n=== Failed Models (for debugging) ===");
+                foreach ($failedModels as $failedModel) {
+                    $this->error("❌ {$failedModel['pk3']}: {$failedModel['error']}");
+                }
+                $this->info("\n💾 Failed models logged to: storage/app/{$failedLogPath}");
+            }
 
             return 0;
         } catch (\Exception $e) {
@@ -210,11 +250,26 @@ class ScrapeQ3dfModels extends Command
     private function downloadAndImportPk3($modelData, $userId)
     {
         try {
-            // Download the PK3 file
-            $response = Http::timeout(60)->get($modelData['pk3_url']);
+            // Download the PK3 file (3 minute timeout for large files, 3 retries)
+            $response = Http::timeout(180)
+                ->retry(3, 1000) // Retry 3 times with 1 second delay
+                ->withOptions(['verify' => false]) // Skip SSL verification for ws.q3df.org
+                ->get($modelData['pk3_url']);
 
             if (!$response->successful()) {
-                return ['success' => false, 'error' => 'Failed to download PK3 file'];
+                $statusCode = $response->status();
+                $errorBody = substr($response->body(), 0, 200); // First 200 chars of error
+                \Log::error("Download failed for {$modelData['pk3_file']}", [
+                    'url' => $modelData['pk3_url'],
+                    'status' => $statusCode,
+                    'error_body' => $errorBody
+                ]);
+                return ['success' => false, 'error' => "Failed to download PK3 file (HTTP {$statusCode})"];
+            }
+
+            // Verify we got actual content
+            if ($response->body() === null || strlen($response->body()) === 0) {
+                return ['success' => false, 'error' => 'Downloaded file is empty'];
             }
 
             $originalName = $modelData['pk3_file'];
@@ -252,9 +307,9 @@ class ScrapeQ3dfModels extends Command
                     $filename = $zip->getNameIndex($i);
                     $basename = basename($filename);
                     $ext = pathinfo($basename, PATHINFO_EXTENSION);
-                    $hasSlash = strpos($filename, '/');
 
-                    if ($ext === 'pk3' && $hasSlash === false) {
+                    // Accept PK3 files even if they're in subdirectories (e.g., baseq3/model.pk3)
+                    if ($ext === 'pk3') {
                         $containsPK3 = true;
                         $pk3FileName = $filename;
                         break;
@@ -293,7 +348,8 @@ class ScrapeQ3dfModels extends Command
 
                     for ($i = 0; $i < $zip->numFiles; $i++) {
                         $filename = $zip->getNameIndex($i);
-                        if (strpos($filename, 'models/players/') === 0 || strpos($filename, 'sound/player/') === 0) {
+                        $filenameLower = strtolower($filename);
+                        if (strpos($filenameLower, 'models/players/') === 0 || strpos($filenameLower, 'sound/player/') === 0) {
                             $hasProperStructure = true;
                             break;
                         }
@@ -327,6 +383,8 @@ class ScrapeQ3dfModels extends Command
 
                     // Create a separate database entry for each model+skin combination
                     foreach ($detectedModelNames as $detectedModelName) {
+                        // Note: detectAllModelNames() already filtered out empty folders
+
                         // Parse metadata
                         $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
                         $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
@@ -344,6 +402,21 @@ class ScrapeQ3dfModels extends Command
 
                         // Create a separate entry for each skin
                         foreach ($availableSkins as $skinName) {
+                            // Skip skins without actual texture files
+                            if (!$this->skinHasTextures($extractPath, $detectedModelName, $skinName)) {
+                                $this->line("  Skipping empty skin: {$detectedModelName} ({$skinName})");
+                                continue;
+                            }
+
+                            // Check if this base_model + skin combination already exists in database
+                            $existingModel = PlayerModel::where('base_model', strtolower($baseModel))
+                                ->whereRaw("JSON_CONTAINS(available_skins, '\"" . $skinName . "\"')")
+                                ->first();
+
+                            if ($existingModel) {
+                                $this->line("  Skipping duplicate: {$baseModel} ({$skinName}) - already exists as ID {$existingModel->id}");
+                                continue;
+                            }
                             // Determine display name:
                             // For multi-model packs: use "{ModelName} ({skin})"
                             // For single-model packs with one skin: use name from ws.q3df.org
@@ -359,6 +432,12 @@ class ScrapeQ3dfModels extends Command
                                 }
                             }
 
+                            // Construct file_path with actual case-sensitive folder names
+                            // This allows the frontend to correctly locate files in folders like "Models/Players" vs "models/players"
+                            $actualModelsFolder = $metadata['actual_models_folder'] ?? 'models';
+                            $actualPlayersFolder = $metadata['actual_players_folder'] ?? 'players';
+                            $filePathWithCase = 'models/extracted/' . $slug . '/' . $actualModelsFolder . '/' . $actualPlayersFolder . '/' . $baseModel;
+
                             // Create model record
                             $model = PlayerModel::create([
                                 'user_id' => $userId,
@@ -370,7 +449,7 @@ class ScrapeQ3dfModels extends Command
                                 'category' => 'player', // Default to player
                                 'author' => $author,
                                 'author_email' => $metadata['author_email'] ?? null,
-                                'file_path' => 'models/extracted/' . $slug,
+                                'file_path' => $filePathWithCase,
                                 'zip_path' => $pk3PathForDownload,
                                 'poly_count' => $metadata['poly_count'] ?? null,
                                 'vert_count' => $metadata['vert_count'] ?? null,
@@ -385,6 +464,11 @@ class ScrapeQ3dfModels extends Command
                                 'name' => $model->name,
                             ];
                         }
+                    }
+
+                    // Check if any models were actually created
+                    if (empty($createdModels)) {
+                        return ['success' => false, 'error' => 'No valid models/skins found in PK3 (all were empty or duplicates)'];
                     }
 
                     return [
@@ -428,18 +512,59 @@ class ScrapeQ3dfModels extends Command
      */
     private function detectAllModelNames($extractPath)
     {
-        $playersPath = $extractPath . '/models/players';
+        // Find models/players folder (case-insensitive)
+        $playersPath = null;
+        $modelsPath = null;
 
-        if (!is_dir($playersPath)) {
+        // Check for models folder (case-insensitive)
+        if (is_dir($extractPath)) {
+            $dirs = array_diff(scandir($extractPath), ['.', '..']);
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, 'models') === 0 && is_dir($extractPath . '/' . $dir)) {
+                    $modelsPath = $extractPath . '/' . $dir;
+                    break;
+                }
+            }
+        }
+
+        if (!$modelsPath) {
+            return [];
+        }
+
+        // Check for players folder (case-insensitive)
+        $playersDirs = array_diff(scandir($modelsPath), ['.', '..']);
+        foreach ($playersDirs as $dir) {
+            if (strcasecmp($dir, 'players') === 0 && is_dir($modelsPath . '/' . $dir)) {
+                $playersPath = $modelsPath . '/' . $dir;
+                break;
+            }
+        }
+
+        if (!$playersPath) {
             return [];
         }
 
         $dirs = array_diff(scandir($playersPath), ['.', '..']);
         $modelNames = [];
+        $seenLowercase = []; // Track lowercase versions to avoid case-insensitive duplicates
 
         foreach ($dirs as $dir) {
             if (is_dir($playersPath . '/' . $dir)) {
-                $modelNames[] = $dir;
+                $lowerDir = strtolower($dir);
+
+                // Skip if we've already seen this name (case-insensitive)
+                if (in_array($lowerDir, $seenLowercase)) {
+                    continue;
+                }
+
+                // Check if this folder has any actual content before adding it
+                // This filters out empty placeholder folders
+                $files = glob($playersPath . '/' . $dir . '/*.{skin,tga,jpg,png,md3,MD3,TGA,JPG,PNG,shader,shaderx}', GLOB_BRACE);
+
+                if (!empty($files)) {
+                    $modelNames[] = $dir;
+                    $seenLowercase[] = $lowerDir;
+                }
             }
         }
 
@@ -448,15 +573,67 @@ class ScrapeQ3dfModels extends Command
 
     private function checkForMd3Files($extractPath, $modelName)
     {
-        $modelPath = $extractPath . '/models/players/' . $modelName;
+        // Find model path (case-insensitive)
+        $modelPath = null;
 
-        if (!is_dir($modelPath)) {
+        // First find models folder
+        $modelsPath = null;
+        if (is_dir($extractPath)) {
+            $dirs = array_diff(scandir($extractPath), ['.', '..']);
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, 'models') === 0 && is_dir($extractPath . '/' . $dir)) {
+                    $modelsPath = $extractPath . '/' . $dir;
+                    break;
+                }
+            }
+        }
+
+        if (!$modelsPath) {
             return false;
         }
 
-        $hasHead = file_exists($modelPath . '/head.md3');
-        $hasUpper = file_exists($modelPath . '/upper.md3');
-        $hasLower = file_exists($modelPath . '/lower.md3');
+        // Then find players folder
+        $playersPath = null;
+        $playersDirs = array_diff(scandir($modelsPath), ['.', '..']);
+        foreach ($playersDirs as $dir) {
+            if (strcasecmp($dir, 'players') === 0 && is_dir($modelsPath . '/' . $dir)) {
+                $playersPath = $modelsPath . '/' . $dir;
+                break;
+            }
+        }
+
+        if (!$playersPath) {
+            return false;
+        }
+
+        // Find actual model folder (case-insensitive)
+        $modelDirs = array_diff(scandir($playersPath), ['.', '..']);
+        foreach ($modelDirs as $dir) {
+            if (strcasecmp($dir, $modelName) === 0 && is_dir($playersPath . '/' . $dir)) {
+                $modelPath = $playersPath . '/' . $dir;
+                break;
+            }
+        }
+
+        if (!$modelPath || !is_dir($modelPath)) {
+            return false;
+        }
+
+        // Check for MD3 files (case-insensitive)
+        $files = array_diff(scandir($modelPath), ['.', '..']);
+        $hasHead = false;
+        $hasUpper = false;
+        $hasLower = false;
+
+        foreach ($files as $file) {
+            if (strcasecmp($file, 'head.md3') === 0) {
+                $hasHead = true;
+            } elseif (strcasecmp($file, 'upper.md3') === 0) {
+                $hasUpper = true;
+            } elseif (strcasecmp($file, 'lower.md3') === 0) {
+                $hasLower = true;
+            }
+        }
 
         return $hasHead && $hasUpper && $hasLower;
     }
@@ -471,8 +648,45 @@ class ScrapeQ3dfModels extends Command
         $hasSounds = $metadata['has_sounds'] ?? false;
         $hasShaders = false;
 
-        $modelPath = $extractPath . '/models/players/' . $modelName;
-        if (is_dir($modelPath)) {
+        // Find model path (case-insensitive)
+        $modelPath = null;
+
+        // First find models folder
+        $modelsPath = null;
+        if (is_dir($extractPath)) {
+            $dirs = array_diff(scandir($extractPath), ['.', '..']);
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, 'models') === 0 && is_dir($extractPath . '/' . $dir)) {
+                    $modelsPath = $extractPath . '/' . $dir;
+                    break;
+                }
+            }
+        }
+
+        if ($modelsPath) {
+            // Then find players folder
+            $playersPath = null;
+            $playersDirs = array_diff(scandir($modelsPath), ['.', '..']);
+            foreach ($playersDirs as $dir) {
+                if (strcasecmp($dir, 'players') === 0 && is_dir($modelsPath . '/' . $dir)) {
+                    $playersPath = $modelsPath . '/' . $dir;
+                    break;
+                }
+            }
+
+            if ($playersPath) {
+                // Find actual model folder (case-insensitive)
+                $modelDirs = array_diff(scandir($playersPath), ['.', '..']);
+                foreach ($modelDirs as $dir) {
+                    if (strcasecmp($dir, $modelName) === 0 && is_dir($playersPath . '/' . $dir)) {
+                        $modelPath = $playersPath . '/' . $dir;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($modelPath && is_dir($modelPath)) {
             $skinFiles = glob($modelPath . '/*.skin');
             $textureFiles = array_merge(
                 glob($modelPath . '/*.tga') ?: [],
@@ -485,7 +699,10 @@ class ScrapeQ3dfModels extends Command
 
         $scriptsPath = $extractPath . '/scripts';
         if (is_dir($scriptsPath)) {
-            $shaderFiles = glob($scriptsPath . '/*.shader');
+            $shaderFiles = array_merge(
+                glob($scriptsPath . '/*.shader') ?: [],
+                glob($scriptsPath . '/*.shaderx') ?: []
+            );
             $hasShaders = !empty($shaderFiles);
         }
 
@@ -508,6 +725,8 @@ class ScrapeQ3dfModels extends Command
             'has_sounds' => false,
             'has_ctf_skins' => false,
             'available_skins' => ['default'],
+            'actual_models_folder' => null, // Store actual case-sensitive folder name (e.g., "Models" or "models")
+            'actual_players_folder' => null, // Store actual case-sensitive folder name (e.g., "Players" or "players")
         ];
 
         $files = glob($extractPath . '/*.{txt,TXT}', GLOB_BRACE);
@@ -543,15 +762,88 @@ class ScrapeQ3dfModels extends Command
             $metadata['has_sounds'] = true;
         }
 
-        $modelPath = $extractPath . '/models/players/' . $modelName;
+        // Find model path (case-insensitive), prioritize non-empty folders
+        // First find models folder
+        $modelsPath = null;
+        $actualModelsFolder = null;
+        if (is_dir($extractPath)) {
+            $dirs = array_diff(scandir($extractPath), ['.', '..']);
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, 'models') === 0 && is_dir($extractPath . '/' . $dir)) {
+                    $modelsPath = $extractPath . '/' . $dir;
+                    $actualModelsFolder = $dir; // Store actual case (e.g., "Models" or "models")
+                    break;
+                }
+            }
+        }
+
+        if (!$modelsPath) {
+            return $metadata; // No models folder found
+        }
+
+        // Then find players folder
+        $playersPath = null;
+        $actualPlayersFolder = null;
+        $playersDirs = array_diff(scandir($modelsPath), ['.', '..']);
+        foreach ($playersDirs as $dir) {
+            if (strcasecmp($dir, 'players') === 0 && is_dir($modelsPath . '/' . $dir)) {
+                $playersPath = $modelsPath . '/' . $dir;
+                $actualPlayersFolder = $dir; // Store actual case (e.g., "Players" or "players")
+                break;
+            }
+        }
+
+        // Store the actual folder names
+        $metadata['actual_models_folder'] = $actualModelsFolder;
+        $metadata['actual_players_folder'] = $actualPlayersFolder;
+
+        $actualModelName = null;
+
+        if ($playersPath) {
+            $dirs = array_diff(scandir($playersPath), ['.', '..']);
+            $candidates = [];
+
+            // Find all case-insensitive matches
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, $modelName) === 0 && is_dir($playersPath . '/' . $dir)) {
+                    $candidates[] = $dir;
+                }
+            }
+
+            // If multiple matches, choose the one with actual files
+            if (count($candidates) > 1) {
+                foreach ($candidates as $candidate) {
+                    $files = glob($playersPath . '/' . $candidate . '/*.{skin,tga,jpg,png,md3,shader,shaderx}', GLOB_BRACE);
+                    if (!empty($files)) {
+                        $actualModelName = $candidate;
+                        break;
+                    }
+                }
+            } elseif (count($candidates) === 1) {
+                $actualModelName = $candidates[0];
+            }
+        }
+
+        $modelPath = $actualModelName ? ($playersPath . '/' . $actualModelName) : ($extractPath . '/models/players/' . $modelName);
+
         if (is_dir($modelPath)) {
-            $skinFiles = glob($modelPath . '/*_*.skin');
+            $skinFiles = glob($modelPath . '/*.skin');
             $skins = [];
 
             foreach ($skinFiles as $skinFile) {
                 $filename = basename($skinFile, '.skin');
+
+                // Match either:
+                // 1. modelname_skinname.skin (e.g., anarki_default.skin)
+                // 2. lower_/upper_/head_skinname.skin (e.g., lower_Mystic_Surfer.skin)
                 if (preg_match('/_(.+)$/', $filename, $matches)) {
                     $skinName = $matches[1];
+
+                    // Skip if it's just "lower", "upper", or "head" alone (base model files)
+                    if (in_array(strtolower($skinName), ['lower', 'upper', 'head'])) {
+                        continue;
+                    }
+
                     if (!in_array($skinName, $skins)) {
                         $skins[] = $skinName;
                     }
@@ -625,6 +917,141 @@ class ScrapeQ3dfModels extends Command
 
         // Fallback: return null (will need to be resolved at runtime)
         return null;
+    }
+
+    /**
+     * Check if a model folder has actual content (not empty)
+     * A valid model folder should have at least one of: .skin files, texture files, .md3 files, or shaders
+     */
+    private function hasActualModelContent($extractPath, $modelName)
+    {
+        // Try both original case and lowercase (PK3s can have inconsistent casing)
+        $playersPath = $extractPath . '/models/players';
+
+        if (!is_dir($playersPath)) {
+            return false;
+        }
+
+        // Find the actual folder name (case-insensitive match)
+        $dirs = array_diff(scandir($playersPath), ['.', '..']);
+        $actualModelName = null;
+
+        foreach ($dirs as $dir) {
+            if (strcasecmp($dir, $modelName) === 0 && is_dir($playersPath . '/' . $dir)) {
+                $actualModelName = $dir;
+                break;
+            }
+        }
+
+        if (!$actualModelName) {
+            return false;
+        }
+
+        $modelPath = $playersPath . '/' . $actualModelName;
+
+        // Check for any .skin, texture, .md3, or shader files
+        $files = glob($modelPath . '/*.{skin,tga,jpg,png,md3,MD3,TGA,JPG,PNG,shader,shaderx}', GLOB_BRACE);
+
+        return !empty($files);
+    }
+
+    /**
+     * Check if a specific skin has actual content
+     * For 'default' skin: must have texture files (not just .skin file)
+     * For custom skins: must have .skin file OR texture files OR shader files
+     */
+    private function skinHasTextures($extractPath, $modelName, $skinName)
+    {
+        // Find the actual folder name (case-insensitive), prioritize non-empty folders
+        // First find models folder
+        $modelsPath = null;
+        if (is_dir($extractPath)) {
+            $dirs = array_diff(scandir($extractPath), ['.', '..']);
+            foreach ($dirs as $dir) {
+                if (strcasecmp($dir, 'models') === 0 && is_dir($extractPath . '/' . $dir)) {
+                    $modelsPath = $extractPath . '/' . $dir;
+                    break;
+                }
+            }
+        }
+
+        if (!$modelsPath) {
+            return false;
+        }
+
+        // Then find players folder
+        $playersPath = null;
+        $playersDirs = array_diff(scandir($modelsPath), ['.', '..']);
+        foreach ($playersDirs as $dir) {
+            if (strcasecmp($dir, 'players') === 0 && is_dir($modelsPath . '/' . $dir)) {
+                $playersPath = $modelsPath . '/' . $dir;
+                break;
+            }
+        }
+
+        if (!$playersPath) {
+            return false;
+        }
+
+        $dirs = array_diff(scandir($playersPath), ['.', '..']);
+        $actualModelName = null;
+        $candidates = [];
+
+        // Find all case-insensitive matches
+        foreach ($dirs as $dir) {
+            if (strcasecmp($dir, $modelName) === 0 && is_dir($playersPath . '/' . $dir)) {
+                $candidates[] = $dir;
+            }
+        }
+
+        // If multiple matches, choose the one with actual files
+        if (count($candidates) > 1) {
+            foreach ($candidates as $candidate) {
+                $files = glob($playersPath . '/' . $candidate . '/*.{skin,tga,jpg,png,md3,shader,shaderx}', GLOB_BRACE);
+                if (!empty($files)) {
+                    $actualModelName = $candidate;
+                    break;
+                }
+            }
+        } elseif (count($candidates) === 1) {
+            $actualModelName = $candidates[0];
+        }
+
+        if (!$actualModelName) {
+            return false;
+        }
+
+        $modelPath = $playersPath . '/' . $actualModelName;
+
+        // For 'default' skin, it must have actual textures (not just a .skin file reference)
+        if ($skinName === 'default') {
+            $textures = glob($modelPath . '/*.{tga,jpg,png,TGA,JPG,PNG}', GLOB_BRACE);
+            return count($textures) > 0;
+        }
+
+        // For custom skins, accept if they have:
+        // 1. A .skin file (matching either modelname_skinname.skin OR lower_/upper_/head_skinname.skin), OR
+        // 2. Texture files, OR
+        // 3. Shader files
+        // This allows skin-only packs that override textures
+
+        // Try to find .skin file with case-insensitive name matching
+        $skinFiles = glob($modelPath . '/*.skin', GLOB_BRACE);
+        $hasSkinFile = false;
+        foreach ($skinFiles as $skinFile) {
+            $basename = basename($skinFile, '.skin');
+            // Match either: modelname_skinname.skin OR lower_/upper_/head_skinname.skin
+            if (strcasecmp($basename, $actualModelName . '_' . $skinName) === 0 ||
+                stripos($basename, '_' . $skinName) !== false) {
+                $hasSkinFile = true;
+                break;
+            }
+        }
+
+        $hasTextures = count(glob($modelPath . '/*.{tga,jpg,png,TGA,JPG,PNG}', GLOB_BRACE)) > 0;
+        $hasShaders = count(glob($modelPath . '/*.{shader,shaderx}', GLOB_BRACE)) > 0;
+
+        return $hasSkinFile || $hasTextures || $hasShaders;
     }
 
     private function deleteDirectory($dir)
