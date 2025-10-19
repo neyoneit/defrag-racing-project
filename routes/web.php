@@ -186,12 +186,26 @@ Route::get('/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'sh
 // Authenticated maplist routes
 Route::middleware('auth')->group(function () {
     Route::get('/api/maplists/user', [App\Http\Controllers\MaplistController::class, 'getUserMaplists'])->name('maplists.user');
-    Route::post('/api/maplists', [App\Http\Controllers\MaplistController::class, 'store'])->name('maplists.store');
-    Route::put('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'update'])->name('maplists.update');
-    Route::delete('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'destroy'])->name('maplists.destroy');
+    Route::get('/api/maplists/drafts', [App\Http\Controllers\MaplistController::class, 'getDrafts'])->name('maplists.drafts');
+    Route::post('/api/maplists/save-draft', [App\Http\Controllers\MaplistController::class, 'saveDraft'])->name('maplists.saveDraft');
+    Route::delete('/api/maplists/draft/{id}', [App\Http\Controllers\MaplistController::class, 'deleteDraft'])->name('maplists.deleteDraft');
+    Route::post('/api/maplists/create-with-maps', [App\Http\Controllers\MaplistController::class, 'createWithMaps'])->name('maplists.createWithMaps');
+    Route::post('/api/maplists/{id}/reorder', [App\Http\Controllers\MaplistController::class, 'reorderMaps'])->name('maplists.reorder');
     Route::post('/api/maplists/{id}/maps', [App\Http\Controllers\MaplistController::class, 'addMap'])->name('maplists.addMap');
-    Route::delete('/api/maplists/{maplistId}/maps/{mapId}', [App\Http\Controllers\MaplistController::class, 'removeMap'])->name('maplists.removeMap');
     Route::post('/api/maplists/{id}/like', [App\Http\Controllers\MaplistController::class, 'toggleLike'])->name('maplists.toggleLike');
     Route::post('/api/maplists/{id}/favorite', [App\Http\Controllers\MaplistController::class, 'toggleFavorite'])->name('maplists.toggleFavorite');
+    Route::post('/api/maplists', [App\Http\Controllers\MaplistController::class, 'store'])->name('maplists.store');
+    Route::put('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'update'])->where('id', '[0-9]+')->name('maplists.update');
+    Route::delete('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'destroy'])->where('id', '[0-9]+')->name('maplists.destroy');
+    Route::delete('/api/maplists/{maplistId}/maps/{mapId}', [App\Http\Controllers\MaplistController::class, 'removeMap'])->name('maplists.removeMap');
     Route::get('/api/maps/search', [App\Http\Controllers\MaplistController::class, 'searchMaps'])->name('maps.search');
+
+    // Tag routes
+    Route::post('/api/maps/{id}/tags', [App\Http\Controllers\TagController::class, 'addToMap'])->name('tags.addToMap');
+    Route::delete('/api/maps/{mapId}/tags/{tagId}', [App\Http\Controllers\TagController::class, 'removeFromMap'])->name('tags.removeFromMap');
+    Route::post('/api/maplists/{id}/tags', [App\Http\Controllers\TagController::class, 'addToMaplist'])->name('tags.addToMaplist');
+    Route::delete('/api/maplists/{maplistId}/tags/{tagId}', [App\Http\Controllers\TagController::class, 'removeFromMaplist'])->name('tags.removeFromMaplist');
 });
+
+// Public tag routes
+Route::get('/api/tags', [App\Http\Controllers\TagController::class, 'index'])->name('tags.index');

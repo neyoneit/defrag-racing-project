@@ -21,16 +21,47 @@ class MaplistController extends Controller
     {
         $sort = $request->get('sort', 'likes'); // 'likes' or 'favorites'
         $userId = $request->get('user'); // Filter by user
+        $view = $request->get('view', 'public'); // 'public', 'mine', or 'favorites'
 
         $query = Maplist::with(['user', 'maps']);
+        $playLater = null;
 
-        // If filtering by user, show their maplists (public and private if it's the current user)
-        if ($userId) {
+        // If viewing "favorites", show maplists the user has favorited
+        if ($view === 'favorites' && Auth::check()) {
+            $favoriteMaplistIds = \DB::table('maplist_favorites')
+                ->where('user_id', Auth::id())
+                ->pluck('maplist_id');
+
+            $query->whereIn('id', $favoriteMaplistIds)
+                  ->where('is_play_later', false);
+        }
+        // If viewing "mine", show user's own maplists
+        elseif ($view === 'mine' && Auth::check()) {
+            $query->where('user_id', Auth::id());
+
+            // Get Play Later separately to show it first
+            $playLater = Maplist::where('user_id', Auth::id())
+                ->where('is_play_later', true)
+                ->with(['user', 'maps'])
+                ->first();
+
+            // Exclude Play Later from main query since we'll prepend it
+            $query->where('is_play_later', false);
+        } elseif ($userId) {
+            // If filtering by specific user
             $query->where('user_id', $userId);
 
             // Only show public maplists unless it's the current user viewing their own
             if (!Auth::check() || Auth::id() != $userId) {
-                $query->where('is_public', true);
+                $query->where('is_public', true)
+                      ->where('is_play_later', false);
+            } else {
+                // Get Play Later separately
+                $playLater = Maplist::where('user_id', $userId)
+                    ->where('is_play_later', true)
+                    ->with(['user', 'maps'])
+                    ->first();
+                $query->where('is_play_later', false);
             }
         } else {
             // Public browse mode - hide Play Later maplists
@@ -46,6 +77,11 @@ class MaplistController extends Controller
 
         $maplists = $query->paginate(20);
 
+        // Prepend Play Later to the collection if it exists
+        if ($playLater) {
+            $maplists->getCollection()->prepend($playLater);
+        }
+
         // Add user interaction status if authenticated
         if (Auth::check()) {
             $maplists->getCollection()->transform(function ($maplist) {
@@ -59,6 +95,7 @@ class MaplistController extends Controller
             'maplists' => $maplists,
             'sort' => $sort,
             'user_id' => $userId,
+            'view' => $view,
         ]);
     }
 
@@ -67,7 +104,7 @@ class MaplistController extends Controller
      */
     public function show($id)
     {
-        $maplist = Maplist::with(['user', 'maps'])->findOrFail($id);
+        $maplist = Maplist::with(['user', 'maps', 'tags'])->findOrFail($id);
 
         // Check if user can view this maplist
         if (!$maplist->is_public && (!Auth::check() || Auth::id() !== $maplist->user_id)) {
@@ -208,6 +245,17 @@ class MaplistController extends Controller
         // Don't allow deleting "Play Later" maplist
         if ($maplist->is_play_later) {
             return response()->json(['error' => 'Cannot delete Play Later maplist'], 400);
+        }
+
+        // Don't allow deleting if maplist has been favorited by anyone
+        $favoritesCount = \DB::table('maplist_favorites')
+            ->where('maplist_id', $maplist->id)
+            ->count();
+
+        if ($favoritesCount > 0) {
+            return response()->json([
+                'error' => 'Cannot delete maplist that has been favorited by users. This maplist has ' . $favoritesCount . ' favorite(s).'
+            ], 400);
         }
 
         $maplist->delete();
@@ -382,5 +430,218 @@ class MaplistController extends Controller
             ->get(['id', 'name', 'author', 'thumbnail']);
 
         return response()->json($maps);
+    }
+
+    /**
+     * Create maplist with maps in bulk
+     */
+    public function createWithMaps(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'is_public' => 'boolean',
+            'map_names' => 'array',
+            'map_names.*' => 'string',
+        ]);
+
+        // Validate all map names first
+        $mapNames = $validated['map_names'] ?? [];
+        $errors = [];
+        $validMapIds = [];
+
+        if (!empty($mapNames)) {
+            foreach ($mapNames as $mapName) {
+                $map = Map::where('name', $mapName)->first();
+
+                if (!$map) {
+                    // Find suggestions (similar map names)
+                    $suggestions = Map::where('name', 'LIKE', '%' . $mapName . '%')
+                        ->orWhere('name', 'LIKE', str_replace(' ', '%', $mapName) . '%')
+                        ->limit(5)
+                        ->pluck('name')
+                        ->toArray();
+
+                    $errors[] = [
+                        'map_name' => $mapName,
+                        'message' => 'Map not found',
+                        'suggestions' => $suggestions,
+                    ];
+                } else {
+                    $validMapIds[] = $map->id;
+                }
+            }
+        }
+
+        // If any maps not found, return errors and don't create maplist
+        if (!empty($errors)) {
+            return response()->json(['errors' => $errors], 422);
+        }
+
+        // Create the maplist
+        $maplist = Maplist::create([
+            'user_id' => Auth::id(),
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? '',
+            'is_public' => $validated['is_public'] ?? true,
+            'is_play_later' => false,
+        ]);
+
+        // Add maps to maplist with positions
+        foreach ($validMapIds as $position => $mapId) {
+            MaplistMap::create([
+                'maplist_id' => $maplist->id,
+                'map_id' => $mapId,
+                'position' => $position,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Maplist created successfully',
+            'maplist' => $maplist,
+        ]);
+    }
+
+    /**
+     * Reorder maps in a maplist
+     */
+    public function reorderMaps(Request $request, $id)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $maplist = Maplist::findOrFail($id);
+
+        // Check ownership
+        if ($maplist->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'map_ids' => 'required|array',
+            'map_ids.*' => 'exists:maps,id',
+        ]);
+
+        // Update positions
+        foreach ($validated['map_ids'] as $position => $mapId) {
+            MaplistMap::where('maplist_id', $id)
+                ->where('map_id', $mapId)
+                ->update(['position' => $position]);
+        }
+
+        return response()->json(['message' => 'Order updated successfully']);
+    }
+
+    /**
+     * Save or update a draft maplist
+     */
+    public function saveDraft(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $validated = $request->validate([
+            'id' => 'nullable|exists:maplists,id',
+            'name' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+            'map_names' => 'nullable|string',
+        ]);
+
+        // If draft ID provided, update existing draft
+        if (!empty($validated['id'])) {
+            $maplist = Maplist::findOrFail($validated['id']);
+
+            // Check ownership
+            if ($maplist->user_id !== Auth::id()) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+
+            // Only update if it's a draft
+            if (!$maplist->is_draft) {
+                return response()->json(['error' => 'Cannot update non-draft maplist'], 403);
+            }
+
+            $maplist->update([
+                'name' => $validated['name'] ?? $maplist->name,
+                'description' => $validated['description'] ?? $maplist->description,
+            ]);
+
+            // Store map names in description temporarily (we'll parse them on publish)
+            // For now, just store the raw text
+            if (isset($validated['map_names'])) {
+                // Store map_names in a JSON field or separate table if needed
+                // For simplicity, we'll just return success
+            }
+
+            return response()->json([
+                'message' => 'Draft updated',
+                'maplist' => $maplist,
+            ]);
+        }
+
+        // Create new draft
+        $maplist = Maplist::create([
+            'user_id' => Auth::id(),
+            'name' => $validated['name'] ?? 'Untitled Draft',
+            'description' => $validated['description'] ?? '',
+            'is_public' => false,
+            'is_play_later' => false,
+            'is_draft' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'Draft created',
+            'maplist' => $maplist,
+        ]);
+    }
+
+    /**
+     * Get user's draft maplists
+     */
+    public function getDrafts(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $drafts = Maplist::where('user_id', Auth::id())
+            ->where('is_draft', true)
+            ->with(['user', 'maps'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return response()->json(['drafts' => $drafts]);
+    }
+
+    /**
+     * Delete a draft
+     */
+    public function deleteDraft($id)
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $maplist = Maplist::findOrFail($id);
+
+        // Check ownership
+        if ($maplist->user_id !== Auth::id()) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Only delete if it's a draft
+        if (!$maplist->is_draft) {
+            return response()->json(['error' => 'Cannot delete non-draft maplist'], 403);
+        }
+
+        $maplist->delete();
+
+        return response()->json(['message' => 'Draft deleted']);
     }
 }

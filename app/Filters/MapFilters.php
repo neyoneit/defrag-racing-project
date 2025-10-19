@@ -17,6 +17,7 @@ class MapFilters {
 
         $maps = $this->search($request, $maps);
         $maps = $this->author($request, $maps);
+        $maps = $this->tags($request, $maps);
 
         $maps = $this->physics($request, $maps);
         $maps = $this->gametype($request, $maps);
@@ -59,6 +60,25 @@ class MapFilters {
         if ($request->filled('author')) {
             $maps = $maps->where('author', 'LIKE', '%' . $request->author . '%');
             $this->queries['author'] = $request->author;
+        }
+
+        return $maps;
+    }
+
+    public function tags(Request $request, $maps) {
+        if ($request->filled('tags')) {
+            $tagNames = explode(',', $request->tags);
+            $tagNames = array_map('trim', $tagNames);
+            $tagNames = array_map('strtolower', $tagNames);
+
+            // Filter maps that have ALL specified tags
+            foreach ($tagNames as $tagName) {
+                $maps = $maps->whereHas('tags', function (Builder $query) use ($tagName) {
+                    $query->where('name', $tagName);
+                });
+            }
+
+            $this->queries['tags'] = $request->tags;
         }
 
         return $maps;

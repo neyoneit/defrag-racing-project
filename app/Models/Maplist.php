@@ -132,4 +132,14 @@ class Maplist extends Model
             ->orderBy('favorites_count', 'desc')
             ->limit($limit);
     }
+
+    /**
+     * Tags associated with this maplist
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'maplist_tag')
+            ->withPivot('user_id')
+            ->withTimestamps();
+    }
 }

@@ -210,10 +210,6 @@
                                         <DropdownLink :href="route('tournaments.index')">
                                             Tournaments
                                         </DropdownLink>
-                                        <div class="border-t border-white/5 my-1"></div>
-                                        <DropdownLink href="/wiki">
-                                            Wiki
-                                        </DropdownLink>
                                     </template>
                                 </Dropdown>
                             </div>
@@ -271,9 +267,6 @@
                                     <div class="border-t border-white/5 my-1"></div>
                                     <DropdownLink href="/models">
                                         Models
-                                    </DropdownLink>
-                                    <DropdownLink href="/wiki">
-                                        Wiki
                                     </DropdownLink>
                                 </template>
                             </Dropdown>

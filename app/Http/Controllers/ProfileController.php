@@ -289,13 +289,35 @@ class ProfileController extends Controller {
             'count' => count($unplayedMaps->items())
         ]);
 
-        // Get user's most favorited public maplists
+        // Get user's maplists
         $start = microtime(true);
-        $userMaplists = \App\Models\Maplist::where('user_id', $user->id)
-            ->where('is_public', true)
-            ->orderBy('favorites_count', 'desc')
-            ->limit(3)
-            ->get();
+        $isOwnProfile = auth()->check() && auth()->id() === $user->id;
+
+        if ($isOwnProfile) {
+            // For own profile: show Play Later first, then top 3 public maplists
+            $playLater = \App\Models\Maplist::where('user_id', $user->id)
+                ->where('is_play_later', true)
+                ->first();
+
+            $publicMaplists = \App\Models\Maplist::where('user_id', $user->id)
+                ->where('is_public', true)
+                ->orderBy('favorites_count', 'desc')
+                ->limit(3)
+                ->get();
+
+            $userMaplists = collect();
+            if ($playLater) {
+                $userMaplists->push($playLater);
+            }
+            $userMaplists = $userMaplists->merge($publicMaplists);
+        } else {
+            // For other users' profiles: show only public maplists
+            $userMaplists = \App\Models\Maplist::where('user_id', $user->id)
+                ->where('is_public', true)
+                ->orderBy('favorites_count', 'desc')
+                ->limit(3)
+                ->get();
+        }
         $timings['maplists'] = round((microtime(true) - $start) * 1000, 2);
 
         $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);

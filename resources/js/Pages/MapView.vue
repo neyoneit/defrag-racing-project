@@ -9,8 +9,15 @@
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
     import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
+    import axios from 'axios';
 
     const showAddToMaplistModal = ref(false);
+    const tags = ref([]);
+    const availableTags = ref([]);
+    const newTagInput = ref('');
+    const showTagSuggestions = ref(false);
+    const showAllTags = ref(false);
+    const addingTag = ref(false);
 
     const props = defineProps({
         map: Object,
@@ -22,6 +29,10 @@
         my_vq3_record: Object,
         gametypeStats: Object,
         servers: Array,
+        publicMaplists: {
+            type: Array,
+            default: () => []
+        },
         showOldtop: {
             type: Boolean,
             default: false
@@ -125,6 +136,85 @@
             }
         })
     }
+
+    // Initialize tags from map data
+    onMounted(async () => {
+        if (props.map.tags) {
+            tags.value = props.map.tags;
+        }
+        // Fetch all tags and sort alphabetically
+        try {
+            const response = await axios.get('/api/tags');
+            availableTags.value = response.data.tags.sort((a, b) =>
+                a.display_name.localeCompare(b.display_name)
+            );
+        } catch (error) {
+            console.error('Error fetching tags:', error);
+        }
+    });
+
+    const filteredTags = computed(() => {
+        if (!newTagInput.value) return availableTags.value.slice(0, 20);
+        const search = newTagInput.value.toLowerCase();
+        return availableTags.value.filter(tag =>
+            tag.name.includes(search) || tag.display_name.toLowerCase().includes(search)
+        ).slice(0, 20);
+    });
+
+    const addTag = async (tagName) => {
+        if (!page.props.auth.user) {
+            alert('Please login to add tags');
+            return;
+        }
+
+        if (addingTag.value) return;
+
+        try {
+            addingTag.value = true;
+            const response = await axios.post(`/api/maps/${props.map.id}/tags`, {
+                tag_name: tagName
+            });
+            tags.value.push(response.data.tag);
+            newTagInput.value = '';
+            showTagSuggestions.value = false;
+        } catch (error) {
+            if (error.response?.data?.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Failed to add tag');
+            }
+        } finally {
+            addingTag.value = false;
+        }
+    };
+
+    const removeTag = async (tagId) => {
+        if (!page.props.auth.user) return;
+
+        try {
+            await axios.delete(`/api/maps/${props.map.id}/tags/${tagId}`);
+            tags.value = tags.value.filter(tag => tag.id !== tagId);
+        } catch (error) {
+            console.error('Error removing tag:', error);
+            alert('Failed to remove tag');
+        }
+    };
+
+    const handleTagInput = () => {
+        showTagSuggestions.value = newTagInput.value.length > 0;
+    };
+
+    const addCustomTag = () => {
+        if (newTagInput.value.trim()) {
+            addTag(newTagInput.value.trim());
+        }
+    };
+
+    const handleTagInputBlur = () => {
+        setTimeout(() => {
+            showAllTags.value = false;
+        }, 200);
+    };
 
     const getVq3Records = computed(() => {
         if (! props.showOldtop ) {
@@ -346,7 +436,7 @@
                     <!-- Map Title -->
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">{{ map.name }}</h1>
                     <p class="text-gray-300 text-center mb-4">
-                        <Link v-if="map.author" :href="`/maps?author=${encodeURIComponent(map.author)}`" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
+                        <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
                         <span v-if="map.date_added" class="text-gray-400"> • {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                     </p>
 
@@ -395,6 +485,73 @@
                         </div>
                     </div>
 
+                    <!-- Tags Section -->
+                    <div class="mb-4 pt-3 border-t border-white/10">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
+                        </div>
+
+                        <!-- Display existing tags -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span
+                                v-for="tag in tags"
+                                :key="tag.id"
+                                class="group flex items-center gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 px-2.5 py-1 rounded-full text-xs font-medium hover:bg-purple-600/30 transition-colors"
+                            >
+                                {{ tag.display_name }}
+                                <button
+                                    v-if="$page.props.auth.user"
+                                    @click="removeTag(tag.id)"
+                                    class="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
+                                    title="Remove tag"
+                                >
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </span>
+                            <span v-if="tags.length === 0" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
+                        </div>
+
+                        <!-- Add tag input (for logged in users) -->
+                        <div v-if="$page.props.auth.user" class="relative">
+                            <div class="flex gap-2">
+                                <input
+                                    v-model="newTagInput"
+                                    @input="handleTagInput"
+                                    @keyup.enter="addCustomTag"
+                                    @focus="showAllTags = true"
+                                    @blur="handleTagInputBlur"
+                                    type="text"
+                                    placeholder="Add a tag..."
+                                    class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10"
+                                />
+                                <button
+                                    @click="addCustomTag"
+                                    :disabled="!newTagInput.trim() || addingTag"
+                                    class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    {{ addingTag ? 'Adding...' : 'Add' }}
+                                </button>
+                            </div>
+
+                            <!-- Available tags dropdown (shown below when focused) -->
+                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-xl p-3 z-[9999]">
+                                <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
+                                <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
+                                    <button
+                                        v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
+                                        :key="availableTag.id"
+                                        @click="addTag(availableTag.display_name)"
+                                        class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
+                                    >
+                                        {{ availableTag.display_name }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Map Features: Weapons, Items, Functions -->
                     <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="mb-4 pt-3 border-t border-white/10">
                         <div class="grid grid-cols-3 gap-4">
@@ -433,6 +590,49 @@
                                          class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Public Maplists featuring this map -->
+                    <div v-if="publicMaplists && publicMaplists.length > 0" class="mb-4 pt-3 border-t border-white/10">
+                        <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                            </svg>
+                            Featured in {{ publicMaplists.length }} Public Maplist{{ publicMaplists.length !== 1 ? 's' : '' }}
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Link
+                                v-for="maplist in publicMaplists"
+                                :key="maplist.id"
+                                :href="`/maplists/${maplist.id}`"
+                                class="bg-white/5 hover:bg-white/10 rounded-lg p-3 border border-white/10 hover:border-blue-500/50 transition group"
+                            >
+                                <div class="flex items-start justify-between mb-1">
+                                    <h4 class="text-white font-semibold text-sm group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
+                                    <div class="text-xs text-green-400 px-2 py-0.5 bg-green-400/10 rounded shrink-0">Public</div>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs text-gray-400">
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                        </svg>
+                                        <span>{{ maplist.maps_count || 0 }} maps</span>
+                                    </div>
+                                    <div v-if="maplist.user" class="flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span>by {{ maplist.user.name }}</span>
+                                    </div>
+                                    <div v-if="maplist.favorites_count > 0" class="flex items-center gap-1 text-yellow-400">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                        <span>{{ maplist.favorites_count }}</span>
+                                    </div>
+                                </div>
+                            </Link>
                         </div>
                     </div>
 

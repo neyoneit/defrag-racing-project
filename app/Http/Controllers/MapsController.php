@@ -16,6 +16,12 @@ use App\Filters\MapFilters;
 class MapsController extends Controller
 {
     public function index(Request $request) {
+        // If there are any filter parameters (except page), redirect to filters route
+        $filterParams = $request->except(['page']);
+        if (!empty($filterParams)) {
+            return redirect()->route('maps.filters', $request->all());
+        }
+
         $mddProfiles = MddProfile::orderBy('id', 'DESC')
             ->with('user:id,name,plain_name,country')
             ->get(['id', 'user_id', 'name', 'country', 'plain_name']);
@@ -63,7 +69,7 @@ class MapsController extends Controller
         $column = $request->input('sort', 'time');
         $order = $request->input('order', 'ASC');
 
-        $map = Map::where('name', $mapname)->firstOrFail();
+        $map = Map::where('name', $mapname)->with('tags')->firstOrFail();
 
         // Auto-detect most populated gametype if not specified
         $gametype = $request->input('gametype');
@@ -188,6 +194,18 @@ class MapsController extends Controller
             ->with('onlinePlayers')
             ->get();
 
+        // Get public maplists that include this map
+        $publicMaplists = \App\Models\Maplist::whereHas('maps', function($query) use ($map) {
+                $query->where('map_id', $map->id);
+            })
+            ->where('is_public', true)
+            ->where('is_play_later', false)
+            ->withCount('maps')
+            ->with('user:id,name')
+            ->orderBy('favorites_count', 'desc')
+            ->limit(10)
+            ->get();
+
         return Inertia::render('MapView')
             ->with('map', $map)
             ->with('cpmRecords', $cpmRecords)
@@ -198,7 +216,8 @@ class MapsController extends Controller
             ->with('vq3OldRecords', $vq3OldRecords)
             ->with('gametypeStats', $gametypeStats)
             ->with('showOldtop', ($showOldtop === 'true'))
-            ->with('servers', $servers);
+            ->with('servers', $servers)
+            ->with('publicMaplists', $publicMaplists);
 
     }
 }

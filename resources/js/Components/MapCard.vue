@@ -1,10 +1,13 @@
 <script setup>
     import moment from 'moment';
-    import { computed } from 'vue';
-    import { Link } from '@inertiajs/vue3';
+    import { computed, ref } from 'vue';
+    import { Link, usePage } from '@inertiajs/vue3';
     import { useClipboard } from '@/Composables/useClipboard';
-    
+    import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
+
     const { copy, copyState } = useClipboard();
+    const page = usePage();
+    const showMaplistModal = ref(false);
 
     const props = defineProps({
         map: Object,
@@ -58,7 +61,7 @@
 
         const result = props.map.date_added.split(' ')[0] + ' ' + time;
 
-        return moment(result).fromNow();
+        return moment(result).format('DD.MM.YY');
     });
 
     const getGametype = computed(() => {
@@ -136,6 +139,18 @@
                             </template>
                         </Popper>
 
+                        <!-- Add to Maplist Button (only if logged in) -->
+                        <button
+                            v-if="page.props.auth.user"
+                            @click.prevent.stop="showMaplistModal = true"
+                            class="p-0.5 text-gray-400 hover:text-purple-400 rounded transition-colors"
+                            title="Add to Maplist"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        </button>
+
                         <!-- Download Button -->
                         <a
                             @click.stop
@@ -160,4 +175,11 @@
             </div>
         </div>
     </Link>
+
+    <!-- Add to Maplist Modal -->
+    <AddToMaplistModal
+        :show="showMaplistModal"
+        :map-id="map.id"
+        @close="showMaplistModal = false"
+    />
 </template>

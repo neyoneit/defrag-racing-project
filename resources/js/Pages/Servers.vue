@@ -1,12 +1,16 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref, computed } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import { useClipboard } from '@/Composables/useClipboard';
+import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
 
 const { copy } = useClipboard();
+const page = usePage();
 const copiedIP = ref(null);
+const showMaplistModal = ref(false);
+const selectedMapId = ref(null);
 
 const props = defineProps({
     servers: Array,
@@ -111,6 +115,11 @@ const toggleLayout = () => {
     const expires = new Date();
     expires.setFullYear(expires.getFullYear() + 1);
     document.cookie = `servers_layout=${layout.value}; expires=${expires.toUTCString()}; path=/`;
+}
+
+const openAddToMaplist = (mapId) => {
+    selectedMapId.value = mapId;
+    showMaplistModal.value = true;
 }
 
 const toggleSort = (type) => {
@@ -474,6 +483,17 @@ const getFunctionName = (abbr) => {
                                         <div class="flex items-center gap-2">
                                             <span class="text-gray-300 text-base font-semibold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Map:</span>
                                             <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <!-- Add to Maplist button (only if logged in and map has ID) -->
+                                            <button
+                                                v-if="page.props.auth.user && server.mapdata?.id"
+                                                @click.stop="openAddToMaplist(server.mapdata.id)"
+                                                class="p-1 text-gray-400 hover:text-purple-400 rounded transition-colors"
+                                                title="Add to Maplist"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <!-- Expand Indicator - only show if map has features -->
                                         <div v-if="(server.mapdata?.weapons && server.mapdata.weapons.length > 0) || (server.mapdata?.items && server.mapdata.items.length > 0) || (server.mapdata?.functions && server.mapdata.functions.length > 0)" class="map-expand-indicator">
@@ -796,6 +816,13 @@ const getFunctionName = (abbr) => {
             </div>
         </div>
     </div>
+
+    <!-- Add to Maplist Modal -->
+    <AddToMaplistModal
+        :show="showMaplistModal"
+        :map-id="selectedMapId"
+        @close="showMaplistModal = false"
+    />
 </template>
 
 <style scoped>

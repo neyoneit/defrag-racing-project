@@ -1245,8 +1245,15 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <Link v-for="maplist in user_maplists" :key="maplist.id" :href="`/maplists/${maplist.id}`" class="bg-white/5 hover:bg-white/10 rounded-lg p-4 border border-white/10 hover:border-blue-500/50 transition group">
                         <div class="flex items-start justify-between mb-2">
-                            <h4 class="text-white font-bold group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-white font-bold group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
+                                <svg v-if="maplist.is_play_later" class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Play Later">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
                             <div v-if="maplist.is_public" class="text-xs text-green-400 px-2 py-1 bg-green-400/10 rounded">Public</div>
+                            <div v-else-if="maplist.is_play_later" class="text-xs text-blue-400 px-2 py-1 bg-blue-400/10 rounded">Play Later</div>
+                            <div v-else class="text-xs text-gray-500 px-2 py-1 bg-gray-500/10 rounded">Private</div>
                         </div>
 
                         <p v-if="maplist.description" class="text-sm text-gray-400 mb-3 line-clamp-2">

@@ -7,7 +7,7 @@
                     <div v-for="(map, index) in maplist.maps.slice(0, 4)" :key="index" class="relative bg-gray-800">
                         <img
                             v-if="map.thumbnail"
-                            :src="`/images/thumbs/${map.thumbnail}`"
+                            :src="`/storage/${map.thumbnail}`"
                             :alt="map.name"
                             class="w-full h-full object-cover"
                             @error="(e) => e.target.style.display = 'none'">
@@ -52,7 +52,7 @@
                 <div class="flex items-center space-x-2 mb-3">
                     <img
                         v-if="maplist.user?.profile_photo_path"
-                        :src="maplist.user.profile_photo_path"
+                        :src="`/storage/${maplist.user.profile_photo_path}`"
                         :alt="maplist.user?.plain_name || maplist.user?.name"
                         class="w-6 h-6 rounded-full">
                     <div v-else class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
@@ -60,7 +60,7 @@
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                         </svg>
                     </div>
-                    <span class="text-sm text-gray-400" v-html="$q3tohtml(maplist.user?.name || 'Unknown')"></span>
+                    <span class="text-sm text-gray-400">{{ maplist.user?.plain_name || maplist.user?.name || 'Unknown' }}</span>
                 </div>
 
                 <!-- Stats -->
