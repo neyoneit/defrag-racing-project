@@ -181,7 +181,8 @@ Route::get('/pages/{slug}', [PagesController::class, 'index'])->name('pages.show
 
 // Maplist routes
 Route::get('/maplists', [App\Http\Controllers\MaplistController::class, 'index'])->name('maplists.index');
-Route::get('/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'show'])->name('maplists.show');
+Route::get('/maplists/play-later', [App\Http\Controllers\MaplistController::class, 'showPlayLater'])->middleware('auth')->name('maplists.playLater');
+Route::get('/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'show'])->where('id', '[0-9]+')->name('maplists.show');
 
 // Authenticated maplist routes
 Route::middleware('auth')->group(function () {
@@ -199,6 +200,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'destroy'])->where('id', '[0-9]+')->name('maplists.destroy');
     Route::delete('/api/maplists/{maplistId}/maps/{mapId}', [App\Http\Controllers\MaplistController::class, 'removeMap'])->name('maplists.removeMap');
     Route::get('/api/maps/search', [App\Http\Controllers\MaplistController::class, 'searchMaps'])->name('maps.search');
+    Route::get('/api/maps/{mapId}/suggested-tags', [App\Http\Controllers\MaplistController::class, 'getSuggestedTagsForMap'])->name('maps.suggestedTags');
 
     // Tag routes
     Route::post('/api/maps/{id}/tags', [App\Http\Controllers\TagController::class, 'addToMap'])->name('tags.addToMap');

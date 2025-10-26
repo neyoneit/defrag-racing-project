@@ -438,7 +438,7 @@ watch(selectedPhysics, () => {
         <Head title="Demo Upload" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-start flex-wrap gap-4">
                     <div>
@@ -454,7 +454,7 @@ watch(selectedPhysics, () => {
             </div>
         </div>
 
-        <div class="overflow-x-hidden -mt-10">
+        <div class="overflow-x-hidden" style="margin-top: -22rem;">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->

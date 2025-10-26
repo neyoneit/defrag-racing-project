@@ -73,7 +73,7 @@
         <Head title="Maps" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-4">
@@ -121,7 +121,7 @@
         </div>
 
         <!-- Content -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8 py-6">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
             <Transition
                 enter-active-class="transition-all duration-500 ease-out"
                 leave-active-class="transition-all duration-300 ease-in"

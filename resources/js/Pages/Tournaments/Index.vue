@@ -61,12 +61,10 @@
         <Head title="Tournaments" />
 
         <!-- Top Shadow Gradient -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16"></div>
-
-        <!-- Modern Tournaments Container -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-            <!-- Header -->
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-4xl font-black text-white mb-2 flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-10 h-10 text-yellow-400">
@@ -100,7 +98,11 @@
                     Create Tournament
                 </div>
             </div>
+            </div>
+        </div>
 
+        <!-- Modern Tournaments Container -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- Warning Message -->
             <div v-if="records < 50" class="backdrop-blur-xl bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
                 <div class="flex items-start gap-3">

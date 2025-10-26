@@ -114,17 +114,6 @@ class TagController extends Controller
         $maplist->tags()->attach($tag->id, ['user_id' => Auth::id()]);
         $tag->incrementUsage();
 
-        // If maplist is public, also add tag to all maps in the maplist
-        if ($maplist->is_public && $maplist->maps) {
-            foreach ($maplist->maps as $map) {
-                // Only add if tag doesn't already exist on the map
-                if (!$map->tags()->where('tag_id', $tag->id)->exists()) {
-                    $map->tags()->attach($tag->id, ['user_id' => Auth::id()]);
-                    $tag->incrementUsage();
-                }
-            }
-        }
-
         return response()->json([
             'message' => 'Tag added successfully',
             'tag' => $tag,

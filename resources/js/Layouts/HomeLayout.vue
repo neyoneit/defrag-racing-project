@@ -149,50 +149,17 @@
             <!-- Modern Compact Header -->
             <nav class="backdrop-blur-xl bg-black/60 border-b border-white/5 sticky top-0 z-50 shadow-2xl">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
-                    <div class="flex items-center justify-between h-14">
-                        <!-- Left: Logo + Navigation -->
-                        <div class="flex items-center gap-6">
-                            <!-- Logo -->
-                            <Link :href="route('home')" class="shrink-0 flex items-center">
-                                <ApplicationMark class="block h-7 w-auto transition-transform hover:scale-105" />
-                            </Link>
+                    <!-- First Row: Logo + Search + Profile -->
+                    <div class="flex items-center justify-between h-14 border-b border-white/5">
+                        <!-- Logo -->
+                        <Link :href="route('home')" class="shrink-0 flex items-center">
+                            <ApplicationMark class="block h-7 w-auto transition-transform hover:scale-105" />
+                        </Link>
 
-                            <!-- Progressive Navigation Links (hide from RIGHT) -->
-                            <div class="flex items-center gap-1">
-                                <NavLink :href="route('announcements')" :active="route().current('announcements')" class="hidden md:block">
-                                    News
-                                </NavLink>
-                                <NavLink :href="route('servers')" :active="route().current('servers')" class="hidden md:block">
-                                    Servers
-                                </NavLink>
-                                <NavLink :href="route('maps')" :active="route().current('maps')" class="hidden md:block">
-                                    Maps
-                                </NavLink>
-                                <NavLink :href="route('ranking')" :active="route().current('ranking')" class="hidden lg:block">
-                                    Ranking
-                                </NavLink>
-                                <NavLink :href="route('records')" :active="route().current('records')" class="hidden lg:block">
-                                    Records
-                                </NavLink>
-                                <NavLink :href="route('demos.index')" :active="route().current('demos.*')" class="hidden xl:block">
-                                    Demos
-                                </NavLink>
-                                <NavLink :href="route('bundles')" :active="route().current('bundles')" class="hidden xl:block">
-                                    Bundles
-                                </NavLink>
-                                <NavLink :href="route('clans.index')" :active="route().current('clans.index')" class="hidden min-[1400px]:block">
-                                    Clans
-                                </NavLink>
-                                <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.index')" class="hidden min-[1280px]:block">
-                                    Tournaments
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <!-- Right: More Menu + Search + Notifications + Profile -->
+                        <!-- Right: Search + Notifications + Profile -->
                         <div class="flex items-center gap-2">
-                            <!-- More Menu Dropdown (shows hidden items) -->
-                            <Dropdown align="right" width="48" class="min-[1400px]:hidden">
+                            <!-- Mobile Menu Dropdown (shows all items on small screens) -->
+                            <Dropdown align="right" width="48" class="lg:hidden">
                                 <template #trigger>
                                     <button class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-all">
                                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -204,33 +171,43 @@
                                     <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
                                         Menu
                                     </div>
-                                    <!-- Show items hidden on current breakpoint -->
-                                    <DropdownLink :href="route('tournaments.index')" class="min-[1280px]:hidden">
-                                        Tournaments
+                                    <!-- Main items (hidden on smaller screens) -->
+                                    <DropdownLink :href="route('maps')" class="lg:hidden">
+                                        Maps
                                     </DropdownLink>
-                                    <DropdownLink :href="route('clans.index')" class="min-[1400px]:hidden">
-                                        Clans
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('bundles')" class="xl:hidden">
-                                        Bundles
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('demos.index')" class="xl:hidden">
-                                        Demos
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('records')" class="lg:hidden">
-                                        Records
+                                    <DropdownLink :href="route('maplists.index')" class="lg:hidden">
+                                        Maplists
                                     </DropdownLink>
                                     <DropdownLink :href="route('ranking')" class="lg:hidden">
                                         Ranking
                                     </DropdownLink>
-                                    <DropdownLink :href="route('maps')" class="md:hidden">
-                                        Maps
-                                    </DropdownLink>
                                     <DropdownLink :href="route('servers')" class="md:hidden">
                                         Servers
                                     </DropdownLink>
-                                    <DropdownLink :href="route('announcements')" class="md:hidden">
+                                    <DropdownLink href="/announcements" class="md:hidden">
                                         News
+                                    </DropdownLink>
+                                    <!-- Divider -->
+                                    <div class="border-t border-white/5 my-1"></div>
+                                    <!-- More items (always shown in mobile menu) -->
+                                    <DropdownLink :href="route('records')">
+                                        Records
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('demos.index')">
+                                        Demos
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('bundles')">
+                                        Bundles
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('clans.index')">
+                                        Clans
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('tournaments.index')">
+                                        Tournaments
+                                    </DropdownLink>
+                                    <div class="border-t border-white/5 my-1"></div>
+                                    <DropdownLink href="/models">
+                                        Models
                                     </DropdownLink>
                                 </template>
                             </Dropdown>
@@ -448,8 +425,58 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
+                    <!-- Second Row: Navigation Links -->
+                    <div class="hidden md:flex items-center gap-1 h-12 px-2">
+                        <NavLink href="/announcements" :active="route().current('announcements.*')">
+                            News
+                        </NavLink>
+                        <NavLink :href="route('servers')" :active="route().current('servers')">
+                            Servers
+                        </NavLink>
+                        <NavLink :href="route('ranking')" :active="route().current('ranking')">
+                            Ranking
+                        </NavLink>
+                        <NavLink :href="route('maps')" :active="route().current('maps')">
+                            Maps
+                        </NavLink>
+                        <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')">
+                            Maplists
+                        </NavLink>
+                        <NavLink href="/models" :active="route().current('models.*')">
+                            Models
+                        </NavLink>
+
+                        <!-- More Menu Dropdown -->
+                        <Dropdown align="left" width="48">
+                            <template #trigger>
+                                <button class="px-3 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all flex items-center gap-1">
+                                    More
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('records')">
+                                    Records
+                                </DropdownLink>
+                                <DropdownLink :href="route('demos.index')">
+                                    Demos
+                                </DropdownLink>
+                                <DropdownLink :href="route('bundles')">
+                                    Bundles
+                                </DropdownLink>
+                                <DropdownLink :href="route('clans.index')">
+                                    Clans
+                                </DropdownLink>
+                                <DropdownLink :href="route('tournaments.index')">
+                                    Tournaments
+                                </DropdownLink>
+                            </template>
+                        </Dropdown>
+                    </div>
+                </div>
             </nav>
 
             <!-- Page Heading -->

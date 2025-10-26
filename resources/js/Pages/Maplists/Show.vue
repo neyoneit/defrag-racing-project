@@ -45,6 +45,8 @@ const editForm = ref({
 });
 const saving = ref(false);
 const showPublicConfirmation = ref(false);
+const copiedMapId = ref(null);
+const showServerDropdown = ref(false);
 
 const isPlayLater = computed(() => props.maplist.is_play_later);
 
@@ -328,18 +330,60 @@ const saveEdits = async () => {
         saving.value = false;
     }
 };
+
+const copyMapCommand = async (mapId, mapName) => {
+    try {
+        await navigator.clipboard.writeText(`/cv map ${mapName}`);
+        copiedMapId.value = mapId;
+        setTimeout(() => {
+            copiedMapId.value = null;
+        }, 2000);
+    } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+    }
+};
+
+const closeServerDropdown = () => {
+    showServerDropdown.value = false;
+};
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="min-h-screen relative" @click="closeServerDropdown">
         <Head :title="maplist.name" />
 
+        <!-- Animated Background Pattern -->
+        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute inset-0 opacity-20">
+                <div class="absolute inset-0" style="background-image:
+                    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px),
+                    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px),
+                    repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(139, 92, 246, 0.02) 10px, rgba(139, 92, 246, 0.02) 20px),
+                    repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(236, 72, 153, 0.02) 10px, rgba(236, 72, 153, 0.02) 20px),
+                    radial-gradient(ellipse at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 70%, rgba(139, 92, 246, 0.15) 0%, transparent 50%);
+                    animation: bgShift 20s ease-in-out infinite;">
+                </div>
+            </div>
+            <div class="absolute top-0 left-0 w-full h-full opacity-30">
+                <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style="animation-duration: 8s;"></div>
+                <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style="animation-duration: 12s; animation-delay: 2s;"></div>
+                <div class="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style="animation-duration: 10s; animation-delay: 4s;"></div>
+            </div>
+        </div>
+
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-20">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm text-gray-400 mb-6">
                     <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
+                    <template v-if="is_owner && !isPlayLater">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <Link href="/maplists?view=mine" class="hover:text-white transition">My Maplists</Link>
+                    </template>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
@@ -347,7 +391,7 @@ const saveEdits = async () => {
                 </div>
 
                 <!-- Maplist Header Card -->
-                <div class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl border border-white/20 p-6 md:p-8 shadow-2xl">
+                <div class="backdrop-blur-xl bg-black/40 rounded-2xl border border-white/5 p-6 md:p-8 shadow-2xl">
                     <!-- Edit Mode -->
                     <div v-if="isEditing">
                         <div class="mb-6">
@@ -543,7 +587,7 @@ const saveEdits = async () => {
                                 </div>
                                 <div>
                                     <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider">Created by</div>
-                                    <div class="font-bold text-white group-hover:text-purple-300 transition">{{ maplist.user?.plain_name || maplist.user?.name || 'Unknown' }}</div>
+                                    <div :class="'name-effect-' + (maplist.user?.name_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}`" class="font-bold text-white group-hover:text-purple-300 transition" v-html="q3tohtml(maplist.user?.name || 'Unknown')"></div>
                                 </div>
                             </Link>
                         </div>
@@ -554,7 +598,7 @@ const saveEdits = async () => {
                         </p>
 
                         <!-- Tags Section (for owner to manage) -->
-                        <div v-if="is_owner" class="mt-6 pt-6 border-t border-white/10">
+                        <div v-if="is_owner && !isPlayLater" class="mt-6 pt-6 border-t border-white/10">
                             <div class="mb-3">
                                 <span class="text-gray-400 font-bold text-xs uppercase tracking-wider">Manage Tags</span>
                             </div>
@@ -588,7 +632,7 @@ const saveEdits = async () => {
                                         @blur="handleTagInputBlur"
                                         type="text"
                                         placeholder="Add custom tag..."
-                                        class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="flex-1 px-4 py-2 backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         :disabled="addingTag" />
                                     <button
                                         @click="addCustomTag"
@@ -603,14 +647,14 @@ const saveEdits = async () => {
                                     <div
                                         v-if="showAllTags && allTags.length > 0"
                                         :style="dropdownStyle"
-                                        class="fixed bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-3 z-[99999]">
+                                        class="fixed backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg shadow-xl p-3 z-[99999]">
                                         <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
                                         <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto">
                                             <button
                                                 v-for="availableTag in allTags.filter(t => !tags.some(tag => tag.id === t.id))"
                                                 :key="availableTag.id"
                                                 @click="addTag(availableTag.display_name)"
-                                                class="px-3 py-1.5 rounded-full text-sm font-semibold transition bg-gray-700 text-gray-300 hover:bg-gray-600">
+                                                class="px-3 py-1.5 rounded-full text-sm font-semibold transition bg-white/10 text-gray-300 hover:bg-white/20">
                                                 {{ availableTag.display_name }}
                                             </button>
                                         </div>
@@ -651,25 +695,40 @@ const saveEdits = async () => {
                 </div>
 
                 <!-- Server Selection (for Play Later only) -->
-                <div v-if="isPlayLater && servers && servers.length > 0" class="bg-white/5 border border-white/10 rounded-lg p-4 mb-4">
+                <div v-if="isPlayLater && servers && servers.length > 0" class="backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg p-4 mb-4 relative z-30" @click.stop>
                     <label class="block text-sm font-semibold text-gray-300 mb-2">Select Server to Play:</label>
-                    <select
-                        v-model="selectedServer"
-                        class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option :value="null">Choose a server...</option>
-                        <option v-for="server in servers" :key="server.id" :value="server">
-                            {{ server.name }} ({{ server.players_current }}/{{ server.players_max }}) - {{ server.location }}
-                        </option>
-                    </select>
+                    <div class="relative">
+                        <div
+                            @click="showServerDropdown = !showServerDropdown"
+                            class="w-full backdrop-blur-xl bg-black/60 border border-white/10 text-white rounded-lg px-4 py-2 cursor-pointer hover:border-white/20 transition">
+                            <div v-if="!selectedServer" class="text-gray-400">Choose a server...</div>
+                            <div v-else class="flex items-center gap-2">
+                                <span v-html="q3tohtml(selectedServer.name)"></span>
+                                <span class="text-gray-400">({{ selectedServer.players_current }}/{{ selectedServer.players_max }}) - {{ selectedServer.location }}</span>
+                            </div>
+                        </div>
+                        <div v-if="showServerDropdown" class="absolute z-50 w-full mt-1 backdrop-blur-xl bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
+                            <div
+                                v-for="server in servers"
+                                :key="server.id"
+                                @click="selectedServer = server; showServerDropdown = false"
+                                class="px-4 py-2 hover:bg-white/10 cursor-pointer transition border-b border-white/5 last:border-0">
+                                <div class="flex items-center gap-2">
+                                    <span v-html="q3tohtml(server.name)"></span>
+                                    <span class="text-gray-400 text-sm">({{ server.players_current }}/{{ server.players_max }}) - {{ server.location }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <p v-if="selectedServer" class="text-xs text-gray-400 mt-2">
-                        Click the "Play" button on any map below to connect to {{ selectedServer.name }} and start a vote for that map
+                        Click the "Play" button on any map below to connect to <span v-html="q3tohtml(selectedServer.name)"></span> and start a vote for that map
                     </p>
                 </div>
             </div>
         </div>
 
         <!-- Maps Grid -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6 -mt-8">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
             <!-- Reordering Instructions -->
             <div v-if="isReordering" class="mb-4 p-4 bg-purple-600/20 border border-purple-500/50 rounded-lg text-purple-200 text-center">
                 <p class="font-semibold">Drag and drop maps to reorder them</p>
@@ -690,14 +749,20 @@ const saveEdits = async () => {
                     <!-- Play Button (for Play Later with server selected) -->
                     <a
                         v-if="isPlayLater && selectedServer"
-                        :href="`defrag://${selectedServer.address}:${selectedServer.port}`"
-                        @click="() => navigator.clipboard.writeText(`cv map ${map.name}`)"
+                        :href="`defrag://${selectedServer.ip}:${selectedServer.port}`"
+                        @click="copyMapCommand(map.id, map.name)"
                         :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'play-button-cpm' : 'play-button-vq3'"
-                        class="play-button absolute top-2 right-2 text-white p-2.5 rounded-lg transition z-10 flex items-center justify-center"
-                        :title="`Connect to server (cv map ${map.name} copied to clipboard)`">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
+                        class="play-button absolute top-2 right-0 text-white p-2.5 rounded-lg transition z-10 flex items-center justify-center gap-1.5"
+                        :title="`Connect to ${selectedServer.ip}:${selectedServer.port} (/cv map ${map.name} copied to clipboard)`">
+                        <svg v-if="copiedMapId !== map.id" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                         </svg>
+                        <template v-else>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            <span class="text-xs font-bold whitespace-nowrap">Copied callvote!</span>
+                        </template>
                     </a>
 
                     <!-- Remove Button (for owner) -->
@@ -818,6 +883,22 @@ const saveEdits = async () => {
 </template>
 
 <style scoped>
+/* Background Animation */
+@keyframes bgShift {
+    0%, 100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 0.2;
+    }
+    33% {
+        transform: translate(-10px, 10px) scale(1.05);
+        opacity: 0.25;
+    }
+    66% {
+        transform: translate(10px, -10px) scale(0.95);
+        opacity: 0.15;
+    }
+}
+
 /* Play Button - Glass Morphism Effect */
 .play-button {
     position: relative;

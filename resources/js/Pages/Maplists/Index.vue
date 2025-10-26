@@ -12,6 +12,22 @@ const page = usePage();
 
 const props = defineProps({
     maplists: Object,
+    myMaplists: {
+        type: Array,
+        default: () => []
+    },
+    myFavoriteMaplists: {
+        type: Array,
+        default: () => []
+    },
+    myLikedMaplists: {
+        type: Array,
+        default: () => []
+    },
+    myPlayLater: {
+        type: Object,
+        default: null
+    },
     sort: {
         type: String,
         default: 'likes'
@@ -51,11 +67,6 @@ onMounted(async () => {
 const changeSort = (newSort) => {
     currentSort.value = newSort;
     router.get('/maplists', { sort: newSort, view: currentView.value }, { preserveState: true });
-};
-
-const changeView = (newView) => {
-    currentView.value = newView;
-    router.get('/maplists', { sort: currentSort.value, view: newView }, { preserveState: true });
 };
 
 // Watch for changes to mark as unsaved
@@ -222,95 +233,32 @@ const createMaplist = async () => {
         <Head title="Maplists" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Maplists</h1>
-                        <span class="text-sm text-gray-400">{{ maplists.total }} total</span>
-                    </div>
+                <!-- Breadcrumb (only show on filtered views) -->
+                <div v-if="currentView !== 'public'" class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+                    <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span class="text-white">
+                        <template v-if="currentView === 'mine'">My Maplists</template>
+                        <template v-else-if="currentView === 'favorites'">My Favourites</template>
+                        <template v-else-if="currentView === 'likes'">My Likes</template>
+                    </span>
                 </div>
 
-                <!-- Description -->
-                <p class="text-gray-300 text-lg mb-6 max-w-3xl">
-                    Discover community-curated collections of maps. Like playlists for your favorite maps!
-                </p>
-
-                <!-- Combined Tabs (View + Sort) + Create Button -->
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex flex-wrap gap-2">
-                    <!-- View Toggle (if logged in) -->
-                    <template v-if="page.props.auth.user">
-                        <button
-                            @click="changeView('public')"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold transition-all',
-                                currentView === 'public'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                            ]">
-                            Public Maplists
-                        </button>
-                        <button
-                            @click="changeView('mine')"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold transition-all',
-                                currentView === 'mine'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                            ]">
-                            My Maplists
-                        </button>
-                        <button
-                            @click="changeView('favorites')"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2',
-                                currentView === 'favorites'
-                                    ? 'bg-yellow-600 text-white'
-                                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                            ]">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            My Favourites
-                        </button>
-                        <div class="border-l border-white/20 mx-1"></div>
-                    </template>
-
-                    <!-- Sort Tabs -->
-                    <button
-                        @click="changeSort('likes')"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-semibold transition-all',
-                            currentSort === 'likes'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                        ]">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
-                            </svg>
-                            Most Liked
-                        </div>
-                    </button>
-                    <button
-                        @click="changeSort('favorites')"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-semibold transition-all',
-                            currentSort === 'favorites'
-                                ? 'bg-yellow-600 text-white'
-                                : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                        ]">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                            Most Favorited
-                        </div>
-                    </button>
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">
+                            <template v-if="currentView === 'mine'">My Maplists</template>
+                            <template v-else-if="currentView === 'favorites'">My Favourites</template>
+                            <template v-else-if="currentView === 'likes'">My Likes</template>
+                            <template v-else>Maplists</template>
+                        </h1>
+                        <span class="text-sm text-gray-400">{{ maplists.total }} total</span>
                     </div>
-
-                    <!-- Create Maplist Button (if logged in) -->
+                    <!-- Create Maplist Button -->
                     <button v-if="page.props.auth.user" @click="openCreateModal" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -318,11 +266,88 @@ const createMaplist = async () => {
                         Create Maplist
                     </button>
                 </div>
+
+                <!-- Description -->
+                <p class="text-gray-300 text-lg mb-6 max-w-3xl">
+                    <template v-if="currentView === 'mine'">Manage and organize your personal map collections.</template>
+                    <template v-else-if="currentView === 'favorites'">Your favorited maplists from the community.</template>
+                    <template v-else-if="currentView === 'likes'">Your liked maplists from the community.</template>
+                    <template v-else>Discover community-curated collections of maps. Like playlists for your favorite maps!</template>
+                </p>
             </div>
         </div>
 
         <!-- Content -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8 py-6">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
+            <!-- Quick Access Buttons (only on public view) -->
+            <div v-if="page.props.auth.user && currentView === 'public'" class="mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Play Later Button -->
+                    <Link v-if="myPlayLater" href="/maplists/play-later" class="backdrop-blur-xl bg-gradient-to-br from-green-600/20 to-green-800/20 border border-green-500/30 rounded-lg p-3 hover:from-green-600/30 hover:to-green-800/30 hover:border-green-500/50 transition-all group">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <h3 class="text-base font-bold text-white">Play Later</h3>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <p class="text-lg font-black text-green-400">{{ myPlayLater.maps_count || 0 }}</p>
+                                <p class="text-xs text-gray-400">maps</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <!-- My Favourites Button -->
+                    <Link v-if="myFavoriteMaplists.length > 0" href="/maplists?view=favorites" class="backdrop-blur-xl bg-gradient-to-br from-yellow-600/20 to-yellow-800/20 border border-yellow-500/30 rounded-lg p-3 hover:from-yellow-600/30 hover:to-yellow-800/30 hover:border-yellow-500/50 transition-all group">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                <h3 class="text-base font-bold text-white">My Favourites</h3>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <p class="text-lg font-black text-yellow-400">{{ myFavoriteMaplists.length }}</p>
+                                <p class="text-xs text-gray-400">lists</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <!-- My Likes Button -->
+                    <Link v-if="myLikedMaplists.length > 0" href="/maplists?view=likes" class="backdrop-blur-xl bg-gradient-to-br from-red-600/20 to-red-800/20 border border-red-500/30 rounded-lg p-3 hover:from-red-600/30 hover:to-red-800/30 hover:border-red-500/50 transition-all group">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                                </svg>
+                                <h3 class="text-base font-bold text-white">My Likes</h3>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <p class="text-lg font-black text-red-400">{{ myLikedMaplists.length }}</p>
+                                <p class="text-xs text-gray-400">lists</p>
+                            </div>
+                        </div>
+                    </Link>
+
+                    <!-- My Maplists Button -->
+                    <Link v-if="myMaplists.length > 0" href="/maplists?view=mine" class="backdrop-blur-xl bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 rounded-lg p-3 hover:from-blue-600/30 hover:to-blue-800/30 hover:border-blue-500/50 transition-all group">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                                </svg>
+                                <h3 class="text-base font-bold text-white">My Maplists</h3>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <p class="text-lg font-black text-blue-400">{{ myMaplists.length }}</p>
+                                <p class="text-xs text-gray-400">lists</p>
+                            </div>
+                        </div>
+                    </Link>
+                </div>
+            </div>
+
             <!-- Drafts Section (only show if user has drafts) -->
             <div v-if="page.props.auth.user && drafts.length > 0" class="mb-8">
                 <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
@@ -333,7 +358,7 @@ const createMaplist = async () => {
                     <span class="text-sm font-normal text-gray-400">({{ drafts.length }})</span>
                 </h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div v-for="draft in drafts" :key="draft.id" class="bg-white/5 border border-yellow-500/30 rounded-lg p-4 hover:bg-white/10 transition-all">
+                    <div v-for="draft in drafts" :key="draft.id" class="backdrop-blur-xl bg-gray-800/90 border border-yellow-500/30 rounded-lg p-4 hover:bg-gray-700/90 transition-all">
                         <div class="flex justify-between items-start mb-2">
                             <h3 class="font-bold text-white">{{ draft.name }}</h3>
                             <span class="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded-full">Draft</span>
@@ -351,6 +376,84 @@ const createMaplist = async () => {
                         </div>
                         <p class="text-xs text-gray-500 mt-2">Last edited: {{ new Date(draft.updated_at).toLocaleString() }}</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Maplists Section Title (only show on public view) -->
+            <div v-if="maplists.data && maplists.data.length > 0 && currentView === 'public'" class="mb-6">
+                <div class="backdrop-blur-xl rounded-lg p-4 border bg-gradient-to-r from-purple-600/20 to-purple-800/20 border-purple-500/30">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-purple-500">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                        </svg>
+                        Public Maplists
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Sort Tabs (show for all views) -->
+            <div class="mb-4">
+                <div class="flex flex-wrap gap-2">
+                    <button
+                        @click="changeSort('likes')"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-semibold transition-all backdrop-blur-xl',
+                            currentSort === 'likes'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-white/10'
+                        ]">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                            </svg>
+                            Most Liked
+                        </div>
+                    </button>
+                    <button
+                        @click="changeSort('favorites')"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-semibold transition-all backdrop-blur-xl',
+                            currentSort === 'favorites'
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-white/10'
+                        ]">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            Most Favorited
+                        </div>
+                    </button>
+                    <button
+                        @click="changeSort('newest')"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-semibold transition-all backdrop-blur-xl',
+                            currentSort === 'newest'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-white/10'
+                        ]">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Newest
+                        </div>
+                    </button>
+                    <button
+                        @click="changeSort('oldest')"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-semibold transition-all backdrop-blur-xl',
+                            currentSort === 'oldest'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-gray-800/90 text-gray-300 hover:bg-gray-700/90 border border-white/10'
+                        ]">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Oldest
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -376,7 +479,7 @@ const createMaplist = async () => {
                 <Link
                     v-for="page in Array.from({ length: maplists.last_page }, (_, i) => i + 1)"
                     :key="page"
-                    :href="`/maplists?page=${page}&sort=${currentSort}`"
+                    :href="`/maplists?page=${page}&sort=${currentSort}&view=${currentView}`"
                     :class="[
                         'px-4 py-2 rounded-lg font-semibold transition',
                         page === maplists.current_page

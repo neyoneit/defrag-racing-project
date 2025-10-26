@@ -131,7 +131,7 @@ const getModelTypeBadgeClass = (type) => {
     <!-- Models Index Page -->
     <div class="min-h-screen">
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between mb-6">
                     <div>
@@ -170,7 +170,7 @@ const getModelTypeBadgeClass = (type) => {
         </div>
 
         <!-- Main Content with Sidebar -->
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 py-6">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
             <div class="flex gap-6">
                 <!-- Left Sidebar - Filters -->
                 <aside class="w-64 flex-shrink-0">

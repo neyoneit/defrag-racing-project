@@ -364,7 +364,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         <Head title="Clans" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>
@@ -404,7 +404,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
             </div>
         </div>
 
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-10">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- My Clan Section -->
             <div v-if="myClan" class="mb-12">
                 <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">

@@ -331,7 +331,7 @@ const getFunctionName = (abbr) => {
         <Head title="Servers" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-6">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
@@ -370,12 +370,10 @@ const getFunctionName = (abbr) => {
                         </div>
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Filters & Controls -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-3">
-            <div class="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 p-4 shadow-2xl">
+                <!-- Filters & Controls -->
+                <div class="mt-6">
+                    <div class="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 p-4 shadow-2xl">
                 <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
                     <!-- Gametype Filter -->
                     <div class="flex items-center gap-2">
@@ -445,11 +443,13 @@ const getFunctionName = (abbr) => {
                         </button>
                     </div>
                 </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Servers Grid/List -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
             <!-- Large Card Layout -->
             <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">

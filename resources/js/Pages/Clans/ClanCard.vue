@@ -49,8 +49,8 @@
 
 <template>
     <div
-        class="group relative overflow-visible rounded-xl transition-all duration-300 hover:scale-[1.01]"
-        :class="highlighted ? 'bg-gradient-to-br from-blue-600/10 to-blue-800/10 border-2 border-blue-500/30' : 'bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-blue-500/30'"
+        class="group relative overflow-visible rounded-xl transition-all duration-300 hover:scale-[1.01] backdrop-blur-xl"
+        :class="highlighted ? 'bg-gradient-to-br from-blue-600/20 to-blue-800/20 border-2 border-blue-500/30' : 'bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/30'"
     >
         <!-- Background Image -->
         <div v-if="clan.background" class="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity duration-500 overflow-hidden rounded-xl">

@@ -1,9 +1,9 @@
 <script>
-    import HomeLayout from '@/Layouts/HomeLayout.vue'
+    import MainLayout from '@/Layouts/MainLayout.vue'
     import { Link } from '@inertiajs/vue3';
 
     export default {
-        layout: HomeLayout,
+        layout: MainLayout,
     }
 </script>
 

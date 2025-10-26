@@ -47,7 +47,7 @@
         <Head title="Records" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
@@ -122,7 +122,7 @@
         </div>
 
         <!-- Records List - Two Tables -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-10">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Records -->
                 <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">

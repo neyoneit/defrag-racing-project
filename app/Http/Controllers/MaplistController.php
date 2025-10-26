@@ -19,20 +19,34 @@ class MaplistController extends Controller
      */
     public function index(Request $request)
     {
-        $sort = $request->get('sort', 'likes'); // 'likes' or 'favorites'
+        $sort = $request->get('sort', 'likes'); // 'likes', 'favorites', 'newest', or 'oldest'
         $userId = $request->get('user'); // Filter by user
-        $view = $request->get('view', 'public'); // 'public', 'mine', or 'favorites'
+        $view = $request->get('view', 'public'); // 'public', 'mine', 'favorites', or 'likes'
 
-        $query = Maplist::with(['user', 'maps']);
+        $query = Maplist::with(['user', 'maps'])->withCount(['maps', 'likes', 'favorites']);
         $playLater = null;
+        $myMaplists = collect();
+        $myFavoriteMaplists = collect();
+        $myLikedMaplists = collect();
 
+        // If viewing "likes", show maplists the user has liked
+        if ($view === 'likes' && Auth::check()) {
+            $likedMaplistIds = \DB::table('maplist_likes')
+                ->where('user_id', Auth::id())
+                ->pluck('maplist_id');
+
+            $query->whereIn('id', $likedMaplistIds)
+                  ->where('is_public', true)
+                  ->where('is_play_later', false);
+        }
         // If viewing "favorites", show maplists the user has favorited
-        if ($view === 'favorites' && Auth::check()) {
+        elseif ($view === 'favorites' && Auth::check()) {
             $favoriteMaplistIds = \DB::table('maplist_favorites')
                 ->where('user_id', Auth::id())
                 ->pluck('maplist_id');
 
             $query->whereIn('id', $favoriteMaplistIds)
+                  ->where('is_public', true)
                   ->where('is_play_later', false);
         }
         // If viewing "mine", show user's own maplists
@@ -69,13 +83,18 @@ class MaplistController extends Controller
                   ->where('is_play_later', false);
         }
 
+        // Apply sorting
         if ($sort === 'favorites') {
             $query->orderBy('favorites_count', 'desc');
+        } elseif ($sort === 'newest') {
+            $query->orderBy('created_at', 'desc');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
         } else {
             $query->orderBy('likes_count', 'desc');
         }
 
-        $maplists = $query->paginate(20);
+        $maplists = $query->paginate(12);
 
         // Prepend Play Later to the collection if it exists
         if ($playLater) {
@@ -89,13 +108,111 @@ class MaplistController extends Controller
                 $maplist->is_favorited = $maplist->isFavoritedBy(Auth::id());
                 return $maplist;
             });
+
+            // Fetch user's own maplists (limited to 10, newest first) when viewing public
+            if ($view === 'public') {
+                $myMaplists = Maplist::where('user_id', Auth::id())
+                    ->where('is_play_later', false)
+                    ->with(['maps', 'user'])
+                    ->withCount(['maps', 'likes', 'favorites'])
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10)
+                    ->get();
+
+                // Fetch user's favorited maplists (limited to 10)
+                $favoriteMaplistIds = \DB::table('maplist_favorites')
+                    ->where('user_id', Auth::id())
+                    ->pluck('maplist_id');
+
+                $myFavoriteMaplists = Maplist::whereIn('id', $favoriteMaplistIds)
+                    ->where('is_public', true)
+                    ->where('is_play_later', false)
+                    ->with(['maps', 'user'])
+                    ->withCount(['maps', 'likes', 'favorites'])
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10)
+                    ->get();
+
+                // Fetch or create user's Play Later maplist
+                $playLater = Maplist::firstOrCreate(
+                    [
+                        'user_id' => Auth::id(),
+                        'is_play_later' => true
+                    ],
+                    [
+                        'name' => 'Play Later',
+                        'description' => 'Maps you want to play later',
+                        'is_public' => false
+                    ]
+                );
+                $playLater->load(['maps', 'user']);
+                $playLater->loadCount(['maps', 'likes', 'favorites']);
+
+                // Fetch user's liked maplists (limited to 10)
+                $likedMaplistIds = \DB::table('maplist_likes')
+                    ->where('user_id', Auth::id())
+                    ->pluck('maplist_id');
+
+                $myLikedMaplists = Maplist::whereIn('id', $likedMaplistIds)
+                    ->where('is_public', true)
+                    ->where('is_play_later', false)
+                    ->with(['maps', 'user'])
+                    ->withCount(['maps', 'likes', 'favorites'])
+                    ->orderBy('created_at', 'desc')
+                    ->limit(10)
+                    ->get();
+            }
         }
 
         return Inertia::render('Maplists/Index', [
             'maplists' => $maplists,
+            'myMaplists' => $myMaplists,
+            'myFavoriteMaplists' => $myFavoriteMaplists,
+            'myLikedMaplists' => $myLikedMaplists ?? collect(),
+            'myPlayLater' => $playLater ?? null,
             'sort' => $sort,
             'user_id' => $userId,
             'view' => $view,
+        ]);
+    }
+
+    /**
+     * Show the authenticated user's Play Later maplist
+     */
+    public function showPlayLater()
+    {
+        $playLater = Maplist::where('user_id', Auth::id())
+            ->where('is_play_later', true)
+            ->with(['user', 'maps', 'tags'])
+            ->first();
+
+        // Create Play Later if it doesn't exist
+        if (!$playLater) {
+            $playLater = Maplist::create([
+                'user_id' => Auth::id(),
+                'name' => 'Play Later',
+                'description' => 'Maps you want to play later',
+                'is_public' => false,
+                'is_play_later' => true,
+            ]);
+            $playLater->load(['user', 'maps', 'tags']);
+        }
+
+        $isLiked = false;
+        $isFavorited = false;
+
+        // Fetch servers for Play Later functionality
+        $servers = \App\Models\Server::where('online', true)
+            ->where('visible', true)
+            ->with('onlinePlayers')
+            ->get();
+
+        return Inertia::render('Maplists/Show', [
+            'maplist' => $playLater,
+            'is_liked' => $isLiked,
+            'is_favorited' => $isFavorited,
+            'is_owner' => true,
+            'servers' => $servers,
         ]);
     }
 
@@ -109,6 +226,11 @@ class MaplistController extends Controller
         // Check if user can view this maplist
         if (!$maplist->is_public && (!Auth::check() || Auth::id() !== $maplist->user_id)) {
             abort(403, 'This maplist is private');
+        }
+
+        // Redirect Play Later to the friendly URL
+        if ($maplist->is_play_later && Auth::check() && Auth::id() === $maplist->user_id) {
+            return redirect()->route('maplists.playLater');
         }
 
         $isLiked = Auth::check() ? $maplist->isLikedBy(Auth::id()) : false;
@@ -344,8 +466,8 @@ class MaplistController extends Controller
 
         $maplist = Maplist::findOrFail($id);
 
-        // Check if maplist is public
-        if (!$maplist->is_public) {
+        // Check if maplist is public (allow if user is the owner)
+        if (!$maplist->is_public && $maplist->user_id !== Auth::id()) {
             return response()->json(['error' => 'Cannot like private maplists'], 400);
         }
 
@@ -386,8 +508,8 @@ class MaplistController extends Controller
 
         $maplist = Maplist::findOrFail($id);
 
-        // Check if maplist is public
-        if (!$maplist->is_public) {
+        // Check if maplist is public (allow if user is the owner)
+        if (!$maplist->is_public && $maplist->user_id !== Auth::id()) {
             return response()->json(['error' => 'Cannot favorite private maplists'], 400);
         }
 
@@ -643,5 +765,50 @@ class MaplistController extends Controller
         $maplist->delete();
 
         return response()->json(['message' => 'Draft deleted']);
+    }
+
+    /**
+     * Get suggested tags for a map from maplists containing it
+     */
+    public function getSuggestedTagsForMap($mapId)
+    {
+        $map = Map::with('tags')->findOrFail($mapId);
+
+        // Get all PUBLIC maplists that contain this map
+        $maplistsWithTags = Maplist::whereHas('maps', function($query) use ($mapId) {
+            $query->where('maps.id', $mapId);
+        })
+        ->where('is_public', true)
+        ->with('tags')
+        ->get();
+
+        // Collect all unique tags from these maplists
+        $suggestedTags = collect();
+        foreach ($maplistsWithTags as $maplist) {
+            foreach ($maplist->tags as $tag) {
+                // Check if map already has this tag
+                $alreadyHas = $map->tags->contains('id', $tag->id);
+
+                // Add tag info with adoption status
+                $existingTag = $suggestedTags->firstWhere('id', $tag->id);
+                if (!$existingTag) {
+                    $suggestedTags->push([
+                        'id' => $tag->id,
+                        'name' => $tag->name,
+                        'display_name' => $tag->display_name,
+                        'already_adopted' => $alreadyHas,
+                        'maplist_names' => [$maplist->name]
+                    ]);
+                } else {
+                    // Tag appears in multiple maplists, add this maplist name
+                    $index = $suggestedTags->search(fn($t) => $t['id'] === $tag->id);
+                    $suggestedTags[$index]['maplist_names'][] = $maplist->name;
+                }
+            }
+        }
+
+        return response()->json([
+            'suggested_tags' => $suggestedTags->values()
+        ]);
     }
 }

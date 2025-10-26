@@ -139,7 +139,7 @@
         <Head title="Ranking" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     <!-- Left: Title -->
@@ -209,7 +209,7 @@
         </div>
 
         <!-- Content Section -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- My Ratings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- My VQ3 Rating -->

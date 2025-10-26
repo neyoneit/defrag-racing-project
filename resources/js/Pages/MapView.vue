@@ -14,10 +14,12 @@
     const showAddToMaplistModal = ref(false);
     const tags = ref([]);
     const availableTags = ref([]);
+    const suggestedTags = ref([]);
     const newTagInput = ref('');
     const showTagSuggestions = ref(false);
     const showAllTags = ref(false);
     const addingTag = ref(false);
+    const adoptingTag = ref(false);
 
     const props = defineProps({
         map: Object,
@@ -151,6 +153,14 @@
         } catch (error) {
             console.error('Error fetching tags:', error);
         }
+
+        // Fetch suggested tags from maplists
+        try {
+            const response = await axios.get(`/api/maps/${props.map.id}/suggested-tags`);
+            suggestedTags.value = response.data.suggested_tags;
+        } catch (error) {
+            console.error('Error fetching suggested tags:', error);
+        }
     });
 
     const filteredTags = computed(() => {
@@ -194,9 +204,46 @@
         try {
             await axios.delete(`/api/maps/${props.map.id}/tags/${tagId}`);
             tags.value = tags.value.filter(tag => tag.id !== tagId);
+
+            // Update suggested tags to reflect this tag is no longer adopted
+            const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
+            if (suggestedIndex !== -1) {
+                suggestedTags.value[suggestedIndex].already_adopted = false;
+            }
         } catch (error) {
             console.error('Error removing tag:', error);
             alert('Failed to remove tag');
+        }
+    };
+
+    const adoptTag = async (tagId, tagDisplayName) => {
+        if (!page.props.auth.user) {
+            alert('Please login to adopt tags');
+            return;
+        }
+
+        if (adoptingTag.value) return;
+
+        try {
+            adoptingTag.value = true;
+            const response = await axios.post(`/api/maps/${props.map.id}/tags`, {
+                tag_name: tagDisplayName
+            });
+            tags.value.push(response.data.tag);
+
+            // Update suggested tags to mark as adopted
+            const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
+            if (suggestedIndex !== -1) {
+                suggestedTags.value[suggestedIndex].already_adopted = true;
+            }
+        } catch (error) {
+            if (error.response?.data?.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Failed to adopt tag');
+            }
+        } finally {
+            adoptingTag.value = false;
         }
     };
 
@@ -418,21 +465,24 @@
     <div>
         <Head :title="map.name" />
 
-        <!-- Extended Background with Map Image -->
-        <div class="relative pb-10 min-h-[1200px]">
-            <!-- Map thumbnail background - responsive height -->
-            <div class="absolute top-0 left-0 right-0 bottom-0 max-h-[1200px] pointer-events-none overflow-hidden flex justify-center">
-                <div v-if="map.thumbnail" class="relative w-full max-w-[1920px] h-full bg-top bg-no-repeat blur-sm" :style="`background-image: url('/storage/${map.thumbnail}'); background-size: 1920px auto;`">
-                    <!-- Fade effect on the actual image edges -->
-                    <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0) 92%, rgba(17, 24, 39, 0.5) 97%, rgba(17, 24, 39, 1) 100%), linear-gradient(to right, rgba(17, 24, 39, 1) 0%, rgba(17, 24, 39, 0) 10%, rgba(17, 24, 39, 0) 90%, rgba(17, 24, 39, 1) 100%);"></div>
-                </div>
-            </div>
-            <!-- Dark overlay for readability on top portion only -->
-            <div class="absolute top-0 left-0 right-0 h-[600px] bg-gradient-to-b from-black/50 via-black/60 via-40% to-transparent pointer-events-none"></div>
+        <!-- Cleaner page with card background -->
+        <div class="relative pb-10">
+            <!-- Fade shadow at top -->
+            <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 400px; z-index: 0;"></div>
 
             <!-- Hero Content (compact) -->
-            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6">
-                <div class="w-full max-w-4xl mx-auto backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative overflow-hidden border border-white/10">
+                    <!-- Map thumbnail as card background -->
+                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                        <!-- Dark overlay for readability -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95"></div>
+                    </div>
+                    <!-- Fallback solid background if no thumbnail -->
+                    <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
+
+                    <!-- Content layer (on top of background) -->
+                    <div class="relative z-10">
                     <!-- Map Title -->
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">{{ map.name }}</h1>
                     <p class="text-gray-300 text-center mb-4">
@@ -486,7 +536,7 @@
                     </div>
 
                     <!-- Tags Section -->
-                    <div class="mb-4 pt-3 border-t border-white/10">
+                    <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
                         <div class="flex items-center justify-between mb-3">
                             <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
                         </div>
@@ -513,8 +563,42 @@
                             <span v-if="tags.length === 0" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
                         </div>
 
+                        <!-- Suggested tags from maplists -->
+                        <div v-if="suggestedTags.length > 0" class="mb-4 pb-4 border-b border-white/10">
+                            <div class="text-xs text-gray-400 uppercase mb-2 font-bold">Suggested tags from maplists</div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    v-for="suggestedTag in suggestedTags"
+                                    :key="suggestedTag.id"
+                                    :class="[
+                                        'group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
+                                        suggestedTag.already_adopted
+                                            ? 'bg-green-600/20 border border-green-500/30 text-green-300'
+                                            : 'bg-blue-600/20 border border-blue-500/30 text-blue-300 cursor-pointer hover:bg-blue-600/30'
+                                    ]"
+                                    :title="suggestedTag.already_adopted ? 'Already adopted' : 'From: ' + suggestedTag.maplist_names.join(', ')"
+                                >
+                                    {{ suggestedTag.display_name }}
+                                    <button
+                                        v-if="$page.props.auth.user && !suggestedTag.already_adopted"
+                                        @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
+                                        class="ml-0.5 hover:text-green-400 transition-colors"
+                                        title="Adopt this tag"
+                                        :disabled="adoptingTag"
+                                    >
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </button>
+                                    <svg v-else-if="suggestedTag.already_adopted" class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+
                         <!-- Add tag input (for logged in users) -->
-                        <div v-if="$page.props.auth.user" class="relative">
+                        <div v-if="$page.props.auth.user" class="relative z-[70]">
                             <div class="flex gap-2">
                                 <input
                                     v-model="newTagInput"
@@ -536,7 +620,7 @@
                             </div>
 
                             <!-- Available tags dropdown (shown below when focused) -->
-                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-xl p-3 z-[9999]">
+                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-2xl p-3 z-[200]">
                                 <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
                                 <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
                                     <button
@@ -677,11 +761,12 @@
                             <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
                         </div>
                     </div>
+                    </div> <!-- Close content layer -->
                 </div>
             </div>
 
             <!-- Leaderboards Section (on top of background) -->
-            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 z-10">
                 <!-- Mobile Physics Toggle (only on small screens) -->
                 <div class="md:hidden flex gap-2 justify-center mb-4">
                     <button
@@ -809,10 +894,10 @@
                     <div class="border-t border-white/5 bg-transparent p-3" v-if="getCpmRecords.total > getCpmRecords.per_page">
                         <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" />
                     </div>
-                </div>
-                </div>
-            </div>
-        </div>
+                </div> <!-- Close CPM Leaderboard -->
+                </div> <!-- Close md:flex container -->
+            </div> <!-- Close Leaderboards Section -->
+        </div> <!-- Close page wrapper -->
 
         <!-- Add to Maplist Modal -->
         <AddToMaplistModal

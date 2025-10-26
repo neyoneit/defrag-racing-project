@@ -1013,9 +1013,12 @@ const getBoxClass = (type) => {
 
 <template>
     <Head :title="model.name" />
-    <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
-        <!-- Header Section with Fade Shadow -->
-        <div v-if="!isThumbnailMode" class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+    <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen relative'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
+        <!-- Fade shadow at top (absolute positioned behind everything) -->
+        <div v-if="!isThumbnailMode" class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
+
+        <!-- Header Section -->
+        <div v-if="!isThumbnailMode" class="relative pt-6 pb-8" style="z-index: 10;">
             <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Back Button -->
                 <button @click="goBack" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors">
@@ -1027,7 +1030,7 @@ const getBoxClass = (type) => {
             </div>
         </div>
 
-        <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+        <div :class="isThumbnailMode ? 'w-full h-full' : 'max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative'" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : 'z-index: 10;'">
                 <!-- Success Message -->
                 <div v-if="!isThumbnailMode && $page.props.flash?.success" class="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400">
                     <div class="flex items-center gap-3">

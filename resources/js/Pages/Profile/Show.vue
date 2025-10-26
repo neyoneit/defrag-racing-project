@@ -241,11 +241,14 @@ const updateNotifications = () => {
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="min-h-screen pb-20 relative">
         <Head title="Settings" />
 
+        <!-- Fade shadow at top (absolute positioned behind everything) -->
+        <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
+
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-20">
+        <div class="relative pt-6 pb-8" style="z-index: 10;">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div>
                     <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Settings</h1>
@@ -254,11 +257,11 @@ const updateNotifications = () => {
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 space-y-4 pb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 pb-6 relative" style="z-index: 10;">
             <!-- Profile, MDD & Social Media Grid -->
             <div class="grid grid-cols-3 gap-4">
                 <!-- Profile Card -->
-                <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
+                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -326,18 +329,18 @@ const updateNotifications = () => {
                 </div>
 
                 <!-- MDD Verification -->
-                <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                     <VerifyMddProfile :user="user" />
                 </div>
 
                 <!-- Social Media -->
-                <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
             </div>
 
             <!-- Profile Images Card -->
-            <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
+            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -440,7 +443,7 @@ const updateNotifications = () => {
             </div>
 
             <!-- Preferences Card -->
-            <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
+            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -549,7 +552,7 @@ const updateNotifications = () => {
             <!-- Notifications & Security Grid -->
             <div class="grid grid-cols-2 gap-4">
                 <!-- Notifications Card -->
-                <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10">
+                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -635,17 +638,17 @@ const updateNotifications = () => {
 
                 <!-- Security Cards Stacked -->
                 <div class="space-y-4">
-                    <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+                    <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                         <UpdatePasswordForm />
                     </div>
-                    <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+                    <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                         <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
                     </div>
                 </div>
             </div>
 
             <!-- Sessions -->
-            <div class="rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 overflow-hidden">
+            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                 <LogoutOtherBrowserSessionsForm :sessions="sessions" />
             </div>
 
