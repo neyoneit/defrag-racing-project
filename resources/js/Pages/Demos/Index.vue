@@ -747,7 +747,10 @@ watch(selectedPhysics, () => {
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-300">
-                                        {{ demo.map_name || '-' }}
+                                        <Link v-if="demo.map_name" :href="route('maps.map', demo.map_name)" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200">
+                                            {{ demo.map_name }}
+                                        </Link>
+                                        <span v-else class="text-gray-500">-</span>
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-300">
                                         <span v-if="demo.physics" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">

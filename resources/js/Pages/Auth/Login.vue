@@ -23,16 +23,22 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div>
         <Head title="Login" />
 
-        <!-- Modern Login Card -->
-        <div class="w-full max-w-md">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-white mb-2">Welcome Back</h1>
-                <p class="text-gray-400">Sign in to your account to continue</p>
+        <!-- Header Section with Gradient Shadow -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
+            <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h1 class="text-4xl font-black text-white mb-2">Welcome Back</h1>
+                    <p class="text-gray-400">Sign in to your account to continue</p>
+                </div>
             </div>
+        </div>
+
+        <div class="flex justify-center px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
+            <!-- Modern Login Card -->
+            <div class="w-full max-w-md">
 
             <!-- Login Card -->
             <div class="backdrop-blur-xl bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
@@ -130,11 +136,12 @@ const submit = () => {
                 </Link>
             </div>
 
-            <!-- Footer Links -->
-            <div class="mt-8 text-center">
-                <Link :href="route('home')" class="text-sm text-gray-400 hover:text-white transition">
-                    ← Back to Home
-                </Link>
+                <!-- Footer Links -->
+                <div class="mt-8 text-center">
+                    <Link :href="route('home')" class="text-sm text-gray-400 hover:text-white transition">
+                        ← Back to Home
+                    </Link>
+                </div>
             </div>
         </div>
     </div>

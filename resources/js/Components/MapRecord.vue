@@ -15,7 +15,13 @@
 
     const page = usePage();
     const showTooltip = ref(false);
+    const showUploaderTooltip = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
+
+    // Check if this is an offline record (has demo_id instead of record_id)
+    const isOfflineRecord = computed(() => {
+        return !!props.record.demo_id && !props.record.record_id;
+    });
 
     const isMyRecord = computed(() => {
         const userId = page.props.auth?.user?.id;
@@ -23,9 +29,20 @@
         return props.record.user?.id === userId;
     });
 
-    const bestrecordCountry = computed(() => {
-        let country = props.record.user?.country ?? props.record.country;
+    // For offline records, show player_name from demo. For online records, use user name.
+    const displayName = computed(() => {
+        if (isOfflineRecord.value) {
+            return props.record.player_name || props.record.name;
+        }
+        return props.record.user?.name ?? props.record.name;
+    });
 
+    const bestrecordCountry = computed(() => {
+        // For offline records, we don't have a country - show generic flag
+        if (isOfflineRecord.value) {
+            return '_404'; // Unknown/generic flag
+        }
+        let country = props.record.user?.country ?? props.record.country;
         return (country == 'XX') ? '_404' : country;
     });
 
@@ -38,6 +55,11 @@
     });
 
     const getRoute = computed(() => {
+        // Offline records should never link to profiles
+        if (isOfflineRecord.value) {
+            return null;
+        }
+
         // Only link to registered users with full profiles
         if (props.record.user) {
             return route('profile.index', props.record.user.id);
@@ -95,34 +117,41 @@
             :href="getRoute"
             :class="[
                 'flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1',
-                !getRoute && isLoggedIn ? 'cursor-default opacity-70' : !getRoute ? 'cursor-help opacity-70' : 'cursor-pointer'
+                !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
-            @mouseenter="!getRoute && (showTooltip = true)"
-            @mouseleave="!getRoute && (showTooltip = false)"
+            @mouseenter="!getRoute && !isOfflineRecord && (showTooltip = true); isOfflineRecord && (showUploaderTooltip = true)"
+            @mouseleave="!getRoute && !isOfflineRecord && (showTooltip = false); isOfflineRecord && (showUploaderTooltip = false)"
         >
-            <img
-                class="h-7 w-7 rounded-full object-cover flex-shrink-0 ring-1"
-                :class="{
-                    'ring-amber-400': record.oldtop,
-                    'ring-emerald-400': isMyRecord && !record.oldtop,
-                    'ring-gray-700': !isMyRecord && !record.oldtop
-                }"
-                :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
-                :alt="record.user?.name ?? record.name"
-            >
+            <div class="overflow-visible flex-shrink-0">
+                <!-- For offline records, use plain avatar with no effects -->
+                <div
+                    :class="isOfflineRecord ? 'avatar-effect-none' : ('avatar-effect-' + (record.user?.avatar_effect || 'none'))"
+                    :style="isOfflineRecord ? '--border-color: #6b7280; --orbit-radius: 16px' : `--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`"
+                >
+                    <img
+                        class="h-7 w-7 rounded-full object-cover border-2 relative"
+                        :style="isOfflineRecord ? 'border-color: #6b7280' : `border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
+                        :src="isOfflineRecord ? '/images/null.jpg' : (record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg')"
+                        :alt="displayName"
+                    />
+                </div>
+            </div>
             <img
                 :src="`/images/flags/${bestrecordCountry}.png`"
                 class="w-5 h-4 flex-shrink-0"
                 onerror="this.src='/images/flags/_404.png'"
             >
             <span
-                class="text-sm font-semibold truncate group-hover/player:text-blue-400 transition-colors"
-                :class="{
-                    'text-amber-200': record.oldtop,
-                    'text-emerald-200': isMyRecord && !record.oldtop,
-                    'text-gray-200': !isMyRecord && !record.oldtop
-                }"
-                v-html="q3tohtml(record.user?.name ?? record.name)"
+                :class="[
+                    isOfflineRecord ? 'name-effect-none' : ('name-effect-' + (record.user?.name_effect || 'none')),
+                    'text-sm font-semibold truncate group-hover/player:text-blue-400 transition-colors', {
+                        'text-amber-200': record.oldtop,
+                        'text-emerald-200': isMyRecord && !record.oldtop,
+                        'text-gray-200': !isMyRecord && !record.oldtop
+                    }
+                ]"
+                :style="isOfflineRecord ? '' : `--effect-color: ${record.user?.color || '#ffffff'}`"
+                v-html="q3tohtml(displayName)"
             ></span>
         </component>
 
@@ -145,10 +174,19 @@
         </Teleport>
 
         <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn">
+        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn && !isOfflineRecord">
             <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
                 <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
                     Not linked account
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Offline record uploader tooltip - TELEPORTED -->
+        <Teleport to="body" v-if="isOfflineRecord && showUploaderTooltip && record.user">
+            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+                <div class="bg-gray-900 border-2 border-blue-500 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
+                    Uploaded by: <span class="text-blue-400" v-html="q3tohtml(record.user.name)"></span>
                 </div>
             </div>
         </Teleport>
@@ -180,8 +218,8 @@
             </div>
 
             <a
-                v-if="record.uploaded_demos && record.uploaded_demos.length > 0"
-                :href="`/demos/${record.uploaded_demos[0].id}/download`"
+                v-if="(record.uploaded_demos && record.uploaded_demos.length > 0) || (isOfflineRecord && record.demo)"
+                :href="isOfflineRecord ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
                 class="p-1 rounded transition-all hover:scale-110"
                 :class="{
                     'bg-amber-500/20 text-amber-400': record.oldtop,

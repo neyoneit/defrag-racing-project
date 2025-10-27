@@ -74,7 +74,7 @@
             </div>
         </Teleport>
         <!-- Background Profile Photo (always visible, blurred) -->
-        <div class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+        <div class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img
                 :src="rating.user?.profile_photo_path ? '/storage/' + rating.user?.profile_photo_path : '/images/null.jpg'"
                 class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
@@ -94,18 +94,21 @@
             </div>
 
             <!-- Profile Photo -->
-            <div class="flex-shrink-0">
-                <img
-                    :src="rating.user?.profile_photo_path ? '/storage/' + rating.user?.profile_photo_path : '/images/null.jpg'"
-                    class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover ring-1 ring-white/10 group-hover:ring-blue-500/60 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
-                    :alt="rating.user?.name ?? rating.name"
-                />
+            <div class="flex-shrink-0 overflow-visible">
+                <div :class="'avatar-effect-' + (rating.user?.avatar_effect || 'none')" :style="`--effect-color: ${rating.user?.color || '#ffffff'}; --border-color: ${rating.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 14px`">
+                    <img
+                        :src="rating.user?.profile_photo_path ? '/storage/' + rating.user?.profile_photo_path : '/images/null.jpg'"
+                        class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover border-2 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] relative"
+                        :style="`border-color: ${rating.user?.avatar_border_color || '#6b7280'}`"
+                        :alt="rating.user?.name ?? rating.name"
+                    />
+                </div>
             </div>
 
             <!-- Player Info -->
             <div class="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
                 <img :src="`/images/flags/${bestratingCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestratingCountry">
-                <span class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(rating.user?.name ?? rating.name)"></span>
+                <span :class="'name-effect-' + (rating.user?.name_effect || 'none')" :style="`--effect-color: ${rating.user?.color || '#ffffff'}`" class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(rating.user?.name ?? rating.name)"></span>
             </div>
 
             <!-- Rating Score -->

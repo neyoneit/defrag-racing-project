@@ -167,6 +167,9 @@ Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('prof
 Route::get('/images/flags/{flag}', [WebController::class, 'flags'])->name('images.flags');
 Route::get('/storage/thumbs/{image}', [WebController::class, 'thumbs'])->name('images.thumbs');
 
+// Test Map Viewer API - MUST be before wildcard routes
+Route::get('/api/test-map-data', [\App\Http\Controllers\TestMapViewerController::class, 'getMapData']);
+
 // Case-insensitive file serving for all storage files
 Route::get('/storage/{path}', [FileController::class, 'serveFile'])->where('path', '.*');
 

@@ -233,7 +233,7 @@ const createMaplist = async () => {
         <Head title="Maplists" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-64">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <!-- Breadcrumb (only show on filtered views) -->
                 <div v-if="currentView !== 'public'" class="flex items-center gap-2 text-sm text-gray-400 mb-6">
@@ -278,7 +278,7 @@ const createMaplist = async () => {
         </div>
 
         <!-- Content -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -18rem;">
             <!-- Quick Access Buttons (only on public view) -->
             <div v-if="page.props.auth.user && currentView === 'public'" class="mb-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

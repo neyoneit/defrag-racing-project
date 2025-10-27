@@ -6,19 +6,21 @@ use App\Models\UploadedDemo;
 use App\Services\DemoProcessorService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
-class ProcessDemoJob implements ShouldQueue
+class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300; // 5 minutes timeout per demo
     public $tries = 3; // Retry 3 times on failure
     public $backoff = [10, 30, 60]; // Backoff delays in seconds
+    public $uniqueFor = 600; // Prevent duplicate jobs for 10 minutes
 
     protected $demo;
 
@@ -30,6 +32,14 @@ class ProcessDemoJob implements ShouldQueue
         $this->demo = $demo;
         // Set the queue connection and queue name
         $this->onQueue('demos');
+    }
+
+    /**
+     * Get the unique ID for the job.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->demo->id;
     }
 
     /**

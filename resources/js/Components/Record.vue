@@ -28,9 +28,9 @@
 </script>
 
 <template>
-    <Link :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
-        <!-- Background Map Thumbnail (always visible, blurred) - extends to edges -->
-        <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+    <Link :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px]">
+        <!-- Background Map Thumbnail (always visible, blurred) - extends to edges with overflow-hidden -->
+        <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img
                 :src="`/storage/${record.map.thumbnail}`"
                 class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
@@ -67,14 +67,19 @@
                 @mouseenter="!getRoute && (showTooltip = true)"
                 @mouseleave="!getRoute && (showTooltip = false)"
             >
-                <img
-                    :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
-                    class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover ring-1 ring-white/10 group-hover/player:ring-blue-500/60 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]"
-                    :alt="record.user?.name ?? record.name"
-                />
+                <div class="overflow-visible flex-shrink-0">
+                    <div :class="'avatar-effect-' + (record.user?.avatar_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 14px`">
+                        <img
+                            :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
+                            class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover border-2 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] relative"
+                            :style="`border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
+                            :alt="record.user?.name ?? record.name"
+                        />
+                    </div>
+                </div>
                 <div class="flex items-center gap-1 sm:gap-1.5 min-w-0">
                     <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
-                    <span class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover/player:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
+                    <span :class="'name-effect-' + (record.user?.name_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}`" class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover/player:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
                 </div>
             </component>
 

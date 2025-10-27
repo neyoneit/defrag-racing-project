@@ -19,8 +19,10 @@ class UploadedDemo extends Model
         'record_id',
         'map_name',
         'physics',
+        'gametype',
         'time_ms',
         'player_name',
+        'record_date',
         'status',
         'processing_output',
     ];
@@ -28,6 +30,7 @@ class UploadedDemo extends Model
     protected $casts = [
         'file_size' => 'integer',
         'time_ms' => 'integer',
+        'record_date' => 'datetime',
     ];
 
     /**
@@ -39,11 +42,19 @@ class UploadedDemo extends Model
     }
 
     /**
-     * Associated record
+     * Associated online record
      */
     public function record()
     {
         return $this->belongsTo(Record::class);
+    }
+
+    /**
+     * Associated offline record
+     */
+    public function offlineRecord()
+    {
+        return $this->hasOne(OfflineRecord::class, 'demo_id');
     }
 
     /**
@@ -68,5 +79,23 @@ class UploadedDemo extends Model
         $milliseconds = $this->time_ms % 1000;
 
         return sprintf('%d:%02d.%03d', $minutes, $seconds, $milliseconds);
+    }
+
+    /**
+     * Check if demo is from online/multiplayer run
+     */
+    public function getIsOnlineAttribute()
+    {
+        // Online gametypes start with 'm': mdf, mfs, mfc
+        return $this->gametype && str_starts_with($this->gametype, 'm');
+    }
+
+    /**
+     * Check if demo is from offline run
+     */
+    public function getIsOfflineAttribute()
+    {
+        // Offline gametypes: df, fs, fc
+        return $this->gametype && !str_starts_with($this->gametype, 'm');
     }
 }

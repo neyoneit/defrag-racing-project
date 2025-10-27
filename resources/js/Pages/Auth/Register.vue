@@ -24,16 +24,22 @@
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div>
         <Head title="Register" />
 
-        <!-- Modern Register Card -->
-        <div class="w-full max-w-lg">
-            <!-- Header -->
-            <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-white mb-2">Create Account</h1>
-                <p class="text-gray-400">Join the defrag racing community</p>
+        <!-- Header Section with Gradient Shadow -->
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
+            <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h1 class="text-4xl font-black text-white mb-2">Create Account</h1>
+                    <p class="text-gray-400">Join the defrag racing community</p>
+                </div>
             </div>
+        </div>
+
+        <div class="flex justify-center px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
+            <!-- Modern Register Card -->
+            <div class="w-full max-w-lg">
 
             <!-- Register Card -->
             <div class="backdrop-blur-xl bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
@@ -186,11 +192,12 @@
                 </Link>
             </div>
 
-            <!-- Footer Links -->
-            <div class="mt-8 text-center">
-                <Link :href="route('home')" class="text-sm text-gray-400 hover:text-white transition">
-                    ← Back to Home
-                </Link>
+                <!-- Footer Links -->
+                <div class="mt-8 text-center">
+                    <Link :href="route('home')" class="text-sm text-gray-400 hover:text-white transition">
+                        ← Back to Home
+                    </Link>
+                </div>
             </div>
         </div>
     </div>

@@ -53,12 +53,12 @@
         :class="highlighted ? 'bg-gradient-to-br from-blue-600/20 to-blue-800/20 border-2 border-blue-500/30' : 'bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/30'"
     >
         <!-- Background Image -->
-        <div v-if="clan.background" class="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity duration-500 overflow-hidden rounded-xl">
+        <div v-if="clan.background" class="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity duration-500 overflow-hidden rounded-xl pointer-events-none">
             <img :src="`/storage/${clan.background}`" class="w-full h-full object-cover" alt="Clan Background" />
         </div>
 
         <!-- Hover Glow Effect -->
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-800/0 group-hover:from-blue-600/5 group-hover:to-blue-800/5 transition-all duration-500"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-800/0 group-hover:from-blue-600/5 group-hover:to-blue-800/5 transition-all duration-500 pointer-events-none"></div>
 
         <!-- Content -->
         <div class="relative p-6">
@@ -68,29 +68,29 @@
                     <!-- Clan Avatar with Effects -->
                     <div class="relative flex-shrink-0">
                         <!-- Default hover glow (when no effect) -->
-                        <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-lg opacity-0 group-hover/link:opacity-40 transition-opacity duration-500 rounded-full"></div>
+                        <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-lg opacity-0 group-hover/link:opacity-40 transition-opacity duration-500 rounded-full pointer-events-none"></div>
 
                         <!-- Glow Effect -->
-                        <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+                        <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75 pointer-events-none" :style="`background-color: ${avatarEffectColor};`"></div>
 
                         <!-- Pulse Effect -->
-                        <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+                        <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75 pointer-events-none" :style="`background-color: ${avatarEffectColor};`"></div>
 
                         <!-- Ring Effect -->
-                        <div v-if="clan.avatar_effect === 'ring'" class="absolute -inset-2">
+                        <div v-if="clan.avatar_effect === 'ring'" class="absolute -inset-2 pointer-events-none">
                             <div class="w-full h-full rounded-full border-4 border-t-transparent animate-spin" :style="`border-color: ${avatarEffectColor}; border-top-color: transparent;`"></div>
                         </div>
 
                         <!-- Shine Effect -->
-                        <div v-if="clan.avatar_effect === 'shine'" class="absolute inset-0 rounded-full overflow-hidden">
+                        <div v-if="clan.avatar_effect === 'shine'" class="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
                             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-shine"></div>
                         </div>
 
                         <!-- Animated Border -->
-                        <div v-if="clan.avatar_effect === 'border'" class="absolute -inset-1 rounded-full opacity-75 animate-pulse" :style="`background: linear-gradient(45deg, ${avatarEffectColor}, transparent, ${avatarEffectColor}); background-size: 200% 200%; animation: gradient-shift 3s ease infinite;`"></div>
+                        <div v-if="clan.avatar_effect === 'border'" class="absolute -inset-1 rounded-full opacity-75 animate-pulse pointer-events-none" :style="`background: linear-gradient(45deg, ${avatarEffectColor}, transparent, ${avatarEffectColor}); background-size: 200% 200%; animation: gradient-shift 3s ease infinite;`"></div>
 
                         <!-- Particle Orbit -->
-                        <div v-if="clan.avatar_effect === 'particles'" class="absolute -inset-4">
+                        <div v-if="clan.avatar_effect === 'particles'" class="absolute -inset-4 pointer-events-none">
                             <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-1" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
                             <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-2" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
                             <div class="absolute top-0 left-1/2 w-1.5 h-1.5 rounded-full animate-orbit-3" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 8px ${avatarEffectColor};`"></div>
@@ -227,7 +227,7 @@
                     <div v-if="!manage" class="flex items-center">
                         <div class="flex -space-x-3">
                             <div v-for="(player, index) in clan.players" :key="player.id" class="relative z-50">
-                                <Popper placement="bottom" arrow hover :offsetDistance="12" :zIndex="9999">
+                                <Popper placement="bottom" arrow hover offsetDistance="12" :zIndex="9999">
                                     <Link
                                         :href="route('profile.index', player.user_id)"
                                         @click.stop

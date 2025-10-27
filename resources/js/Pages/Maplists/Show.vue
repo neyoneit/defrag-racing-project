@@ -574,16 +574,15 @@ const closeServerDropdown = () => {
                             </div>
 
                             <!-- Creator Info (only for non-Play Later) -->
-                            <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-xl border border-purple-500/30 backdrop-blur-sm hover:border-purple-400/50 transition-all group">
-                                <img
-                                    v-if="maplist.user?.profile_photo_path"
-                                    :src="`/storage/${maplist.user.profile_photo_path}`"
-                                    :alt="maplist.user?.plain_name"
-                                    class="w-10 h-10 rounded-full ring-2 ring-purple-400/20 group-hover:ring-purple-400/40 transition">
-                                <div v-else class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                    </svg>
+                            <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-xl border border-purple-500/30 backdrop-blur-sm hover:border-purple-400/50 transition-all group overflow-visible">
+                                <div class="relative w-14 h-14 flex-shrink-0">
+                                    <div :class="'avatar-effect-' + (maplist.user?.avatar_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}; --border-color: ${maplist.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 24px`">
+                                        <img
+                                            :src="maplist.user?.profile_photo_path ? `/storage/${maplist.user.profile_photo_path}` : '/images/null.jpg'"
+                                            :alt="maplist.user?.plain_name"
+                                            class="w-10 h-10 rounded-full object-cover border-2 relative"
+                                            :style="`border-color: ${maplist.user?.avatar_border_color || '#6b7280'}`">
+                                    </div>
                                 </div>
                                 <div>
                                     <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider">Created by</div>

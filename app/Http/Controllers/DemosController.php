@@ -184,7 +184,8 @@ class DemosController extends Controller
                                 $fileHash = md5_file($extractedPath);
                                 $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
                                 if ($existingDemo) {
-                                    $errors[] = basename($extractedPath) . ': Duplicate file content (already uploaded as: ' . $existingDemo->original_filename . ')';
+                                    $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
+                                    $errors[] = basename($extractedPath) . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
                                     @unlink($extractedPath);
                                     continue;
                                 }
@@ -199,17 +200,25 @@ class DemosController extends Controller
                                     continue;
                                 }
 
-                                // Store the extracted file into the canonical storage location
-                                $storedPath = Storage::putFileAs($this->storageDirForToday(), new \Illuminate\Http\UploadedFile($extractedPath, $originalName, null, null, true), $originalName);
-
-                                            $demo = UploadedDemo::create([
+                                // Create database record first to get the ID
+                                $demo = UploadedDemo::create([
                                     'original_filename' => $originalName,
-                                    'file_path' => $storedPath,
+                                    'file_path' => '', // Will be set after moving file
                                     'file_size' => filesize($extractedPath),
                                     'file_hash' => $fileHash,
-                                                'user_id' => $userId,
-                                    'status' => 'queued',
+                                    'user_id' => $userId,
+                                    'status' => 'uploaded',
                                 ]);
+
+                                // Move extracted file to temp directory using demo ID
+                                $directory = storage_path("app/demos/temp/{$demo->id}");
+                                if (!is_dir($directory)) {
+                                    mkdir($directory, 0755, true);
+                                }
+                                $destPath = $directory . '/' . $originalName;
+                                rename($extractedPath, $destPath);
+                                $storedPath = "demos/temp/{$demo->id}/{$originalName}";
+                                $demo->update(['file_path' => $storedPath]);
 
                                 // Dispatch for immediate processing (no long delay)
                                 ProcessDemoJob::dispatch($demo);
@@ -256,7 +265,8 @@ class DemosController extends Controller
                     // Check for duplicate file content (MD5 hash)
                     $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
                     if ($existingDemo) {
-                        $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $existingDemo->original_filename . ')';
+                        $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
+                        $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
                         continue;
                     }
 
@@ -270,18 +280,19 @@ class DemosController extends Controller
                         continue;
                     }
 
-                    // Store the uploaded file with hierarchical directory structure
-                    $path = $this->storeUploadedDemo($demoFile);
-
-                    // Create database record
+                    // Create database record first to get the ID
                     $demo = UploadedDemo::create([
                         'original_filename' => $demoFile->getClientOriginalName(),
-                        'file_path' => $path,
+                        'file_path' => '', // Will be set after moving file
                         'file_size' => $demoFile->getSize(),
                         'file_hash' => $fileHash,
                         'user_id' => $userId,
-                        'status' => 'queued',
+                        'status' => 'uploaded',
                     ]);
+
+                    // Store the uploaded file locally in temp directory using demo ID
+                    $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);
+                    $demo->update(['file_path' => $path]);
 
                     // Dispatch immediately for processing
                     ProcessDemoJob::dispatch($demo);
@@ -332,41 +343,62 @@ class DemosController extends Controller
      */
     public function download(UploadedDemo $demo)
     {
-        // Allow download for owner, admins, or if the demo is assigned to a public record
+        // Allow download for owner, admins, or if the demo is assigned to a public record (online or offline)
         $currentUser = Auth::user();
         $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
-        if ($demo->user_id !== optional($currentUser)->id && !$demo->record && !$isAdmin) {
+        // Allow download if: user is owner, user is admin, demo has online record, or demo has offline record
+        $hasPublicRecord = $demo->record || $demo->offlineRecord;
+
+        if ($demo->user_id !== optional($currentUser)->id && !$hasPublicRecord && !$isAdmin) {
             abort(403, 'Unauthorized');
         }
 
         $filename = $demo->processed_filename ?: $demo->original_filename;
 
+        // Check if demo is stored locally (failed or temp demos) or in Backblaze (processed demos)
+        $isLocal = str_starts_with($demo->file_path, 'demos/temp/') ||
+                   str_starts_with($demo->file_path, 'demos/failed/');
+
+        if ($isLocal) {
+            // Download from local storage
+            $fullPath = storage_path("app/{$demo->file_path}");
+            if (file_exists($fullPath)) {
+                return response()->download($fullPath, $filename);
+            } else {
+                abort(404, 'Demo file not found');
+            }
+        }
+
         try {
-            // Primary path: use the Storage facade which will stream from configured disk
-            return Storage::download($demo->file_path, $filename);
-        } catch (\League\Flysystem\UnableToRetrieveMetadata $e) {
-            // Some filesystem adapters (local) can intermittently fail to report metadata
-            // for files with special characters in their names. Fall back to direct file
-            // access using the storage path and PHP's response()->download which relies
-            // on native file functions.
-            Log::warning('Storage metadata retrieval failed during download, falling back to direct download', [
+            // Download from Backblaze (processed demos)
+            // Use get() instead of download() to avoid size() metadata check that fails on Backblaze
+            $fileContents = Storage::get($demo->file_path);
+
+            return response()->streamDownload(function() use ($fileContents) {
+                echo $fileContents;
+            }, $filename, [
+                'Content-Type' => 'application/octet-stream',
+            ]);
+        } catch (\Exception $e) {
+            // Fallback: try local storage
+            Log::warning('Storage retrieval failed, trying local storage', [
                 'demo_id' => $demo->id,
                 'file_path' => $demo->file_path,
                 'error' => $e->getMessage(),
             ]);
 
-            $fullPath = Storage::path($demo->file_path);
+            $fullPath = storage_path("app/{$demo->file_path}");
             if (file_exists($fullPath)) {
                 return response()->download($fullPath, $filename);
             }
 
-            // If the file does not exist on disk, return 404
-            abort(404, 'File not found');
-        } catch (\Exception $e) {
-            // Generic fallback for other unexpected errors during download
-            Log::error('Demo download failed', ['demo_id' => $demo->id, 'error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Failed to download file: ' . $e->getMessage()], 500);
+            // If the file does not exist anywhere, return 404
+            Log::error('Demo file not found in Backblaze or local storage', [
+                'demo_id' => $demo->id,
+                'file_path' => $demo->file_path,
+            ]);
+            abort(404, 'Demo file not found');
         }
     }
 
@@ -382,24 +414,114 @@ class DemosController extends Controller
         }
 
         try {
-            // Reset demo status
+            // Prepare demo for reprocessing
+            // We need to ensure the original demo file exists in temp directory
+
+            // First, check if we have the original file in failed directory
+            $failedPath = storage_path("app/demos/failed/{$demo->id}/{$demo->original_filename}");
+            $tempDir = storage_path("app/demos/temp/{$demo->id}");
+            $tempPath = "{$tempDir}/{$demo->original_filename}";
+
+            // Create temp directory
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            if (file_exists($failedPath)) {
+                // Copy from failed directory
+                copy($failedPath, $tempPath);
+            } else {
+                // Check if file exists in local storage
+                $currentPath = storage_path("app/{$demo->file_path}");
+
+                if (file_exists($currentPath)) {
+                    // If it's a .7z file, we need to extract it first
+                    if (str_ends_with($currentPath, '.7z')) {
+                        // Extract the .7z file
+                        $extractCmd = "7z x " . escapeshellarg($currentPath) . " -o" . escapeshellarg($tempDir) . " -y";
+                        exec($extractCmd, $extractOutput, $extractReturnVar);
+
+                        if ($extractReturnVar !== 0) {
+                            throw new \Exception('Failed to extract compressed demo file for reprocessing');
+                        }
+
+                        // Find the extracted .dm_* file
+                        $extractedFiles = glob($tempDir . '/*.dm_*');
+                        if (empty($extractedFiles)) {
+                            throw new \Exception('No demo file found after extraction');
+                        }
+
+                        // Rename to original filename if different
+                        if (basename($extractedFiles[0]) !== $demo->original_filename) {
+                            rename($extractedFiles[0], $tempPath);
+                        }
+                    } else {
+                        // Copy the file
+                        copy($currentPath, $tempPath);
+                    }
+                } else {
+                    // File not found locally, try to download from Backblaze
+                    try {
+                        $compressedPath = "{$tempDir}/" . basename($demo->file_path);
+
+                        // Download from Backblaze B2
+                        $fileContents = Storage::get($demo->file_path);
+                        file_put_contents($compressedPath, $fileContents);
+
+                        // Extract the downloaded .7z file
+                        if (str_ends_with($compressedPath, '.7z')) {
+                            $extractCmd = "7z x " . escapeshellarg($compressedPath) . " -o" . escapeshellarg($tempDir) . " -y";
+                            exec($extractCmd, $extractOutput, $extractReturnVar);
+
+                            if ($extractReturnVar !== 0) {
+                                throw new \Exception('Failed to extract compressed demo file from Backblaze');
+                            }
+
+                            // Find the extracted .dm_* file
+                            $extractedFiles = glob($tempDir . '/*.dm_*');
+                            if (empty($extractedFiles)) {
+                                throw new \Exception('No demo file found after extraction from Backblaze');
+                            }
+
+                            // Rename to original filename if different
+                            if (basename($extractedFiles[0]) !== $demo->original_filename) {
+                                rename($extractedFiles[0], $tempPath);
+                            }
+
+                            // Remove the compressed file
+                            unlink($compressedPath);
+                        }
+                    } catch (\Exception $e) {
+                        throw new \Exception('Failed to download demo from Backblaze for reprocessing: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // Delete any existing offline record (will be recreated during reprocessing)
+            if ($demo->offlineRecord) {
+                $demo->offlineRecord->delete();
+            }
+
+            // Reset demo status and metadata, update file_path to temp location
             $demo->update([
-                'status' => 'pending',
+                'status' => 'uploaded',
+                'file_path' => "demos/temp/{$demo->id}/{$demo->original_filename}",
                 'processed_filename' => null,
                 'map_name' => null,
                 'physics' => null,
+                'gametype' => null,
                 'player_name' => null,
                 'time_ms' => null,
                 'processing_output' => null,
                 'record_id' => null,
             ]);
 
-            // Reprocess the demo
-            $this->demoProcessor->processDemo($demo);
+            // Queue the demo for reprocessing (don't process synchronously)
+            \App\Jobs\ProcessDemoJob::dispatch($demo);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Demo reprocessed successfully',
+                'message' => 'Demo queued for reprocessing',
                 'demo' => $demo->fresh()->load('record.user'),
             ]);
         } catch (\Exception $e) {
@@ -689,55 +811,26 @@ class DemosController extends Controller
     }
 
     /**
-     * Store uploaded demo with hierarchical directory structure for performance
+     * Store uploaded demo LOCALLY in temp directory for processing
+     * After processing, the compressed file will be uploaded to Backblaze
      */
-    private function storeUploadedDemo($file)
+    private function storeUploadedDemoLocally($file, $demoId)
     {
         $filename = $file->getClientOriginalName();
-        $date = now();
-        $year = $date->format('Y');
-        $month = $date->format('m');
-        $day = $date->format('d');
 
-        // Use filename hash to distribute files evenly
-        $hashPrefix = substr(md5($filename), 0, 2);
+        // Store locally in temp directory using demo ID
+        $directory = storage_path("app/demos/temp/{$demoId}");
 
-        // Create hierarchical path: demos/uploaded/2024/03/15/a7/filename.dm_68
-        $directory = "demos/uploaded/{$year}/{$month}/{$day}/{$hashPrefix}";
-
-        // Ensure directory exists. Use a file lock to serialize creation so concurrent
-        // requests don't race when creating the same nested directories.
-        $fullPath = storage_path('app/' . $directory);
-        $lockPath = storage_path('app/demos/.mkdir_create_lock');
-
-        // Ensure lock directory exists (should already exist) and open lock file
-        if (!is_dir(dirname($lockPath))) {
-            @mkdir(dirname($lockPath), 0775, true);
+        // Create directory
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
         }
 
-        $lockFp = @fopen($lockPath, 'c');
-        if ($lockFp === false) {
-            // Fallback: attempt to create without lock but with retries
-            $this->attemptMkDirWithRetries($fullPath);
-        } else {
-            try {
-                if (!flock($lockFp, LOCK_EX)) {
-                    // If locking fails, fallback to retry approach
-                    $this->attemptMkDirWithRetries($fullPath);
-                } else {
-                    // Inside critical section
-                    if (!is_dir($fullPath)) {
-                        $this->attemptMkDirWithRetries($fullPath);
-                    }
-                    // release lock
-                    flock($lockFp, LOCK_UN);
-                }
-            } finally {
-                @fclose($lockFp);
-            }
-        }
+        // Move uploaded file to temp directory
+        $file->move($directory, $filename);
 
-        return $file->storeAs($directory, $filename);
+        // Return relative path from storage/app/
+        return "demos/temp/{$demoId}/{$filename}";
     }
 
     /**

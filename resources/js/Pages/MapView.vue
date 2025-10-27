@@ -27,6 +27,8 @@
         vq3Records: Object,
         cpmOldRecords: Object,
         vq3OldRecords: Object,
+        cpmOfflineRecords: Object,
+        vq3OfflineRecords: Object,
         my_cpm_record: Object,
         my_vq3_record: Object,
         gametypeStats: Object,
@@ -36,6 +38,10 @@
             default: () => []
         },
         showOldtop: {
+            type: Boolean,
+            default: false
+        },
+        showOffline: {
             type: Boolean,
             default: false
         }
@@ -62,6 +68,9 @@
 
     // Initialize oldtop state from props (server/URL state is source of truth)
     const showOldtopLocal = ref(props.showOldtop);
+
+    // Initialize offline demos state from props
+    const showOfflineLocal = ref(props.showOffline);
 
     // Mobile physics toggle - 'both', 'VQ3', or 'CPM'
     const mobilePhysics = ref('both');
@@ -125,6 +134,13 @@
         localStorage.setItem('mapview_show_oldtop', newValue ? '1' : '0');
     }, { immediate: true });
 
+    // Watch for changes to showOffline prop and sync with local state
+    watch(() => props.showOffline, (newValue) => {
+        showOfflineLocal.value = newValue;
+        localStorage.setItem('mapview_show_offline', newValue ? '1' : '0');
+    }, { immediate: true });
+
+
     const resizeScreen = () => {
         screenWidth.value = window.innerWidth
     };
@@ -135,6 +151,21 @@
         router.reload({
             data: {
                 showOldtop: value
+            }
+        })
+    }
+
+    const onChangeOffline = (value) => {
+        // If turning on offline, turn off oldtop
+        if (value) {
+            showOldtopLocal.value = false;
+        }
+        showOfflineLocal.value = value;
+        localStorage.setItem('mapview_show_offline', value ? '1' : '0');
+        router.reload({
+            data: {
+                showOffline: value,
+                showOldtop: false
             }
         })
     }
@@ -264,53 +295,63 @@
     };
 
     const getVq3Records = computed(() => {
-        if (! props.showOldtop ) {
-            return props.vq3Records
+        // Show offline records if toggle is on
+        if (props.showOffline && props.vq3OfflineRecords) {
+            return props.vq3OfflineRecords
         }
 
-        let oldtop_data = props.vq3OldRecords.data.map((item) => {
-            item['oldtop'] = true
+        // Show oldtop records if toggle is on
+        if (props.showOldtop) {
+            let oldtop_data = props.vq3OldRecords.data.map((item) => {
+                item['oldtop'] = true
+                return item
+            });
 
-            return item
-        });
+            let result = {
+                total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
+                data: [...props.vq3Records.data, ...oldtop_data],
+                first_page_url: props.vq3Records.first_page_url,
+                current_page: props.vq3Records.current_page,
+                last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
+                per_page: props.vq3Records.per_page
+            }
 
-        let result = {
-            total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
-            data: [...props.vq3Records.data, ...oldtop_data],
-            first_page_url: props.vq3Records.first_page_url,
-            current_page: props.vq3Records.current_page,
-            last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
-            per_page: props.vq3Records.per_page
+            result.data.sort((a, b) => a.time - b.time)
+            return result
         }
 
-        result.data.sort((a, b) => a.time - b.time)
-
-        return result
+        // Default: show online records
+        return props.vq3Records
     })
 
     const getCpmRecords = computed(() => {
-        if (! props.showOldtop ) {
-            return props.cpmRecords
+        // Show offline records if toggle is on
+        if (props.showOffline && props.cpmOfflineRecords) {
+            return props.cpmOfflineRecords
         }
 
-        let oldtop_data = props.cpmOldRecords.data.map((item) => {
-            item['oldtop'] = true
+        // Show oldtop records if toggle is on
+        if (props.showOldtop) {
+            let oldtop_data = props.cpmOldRecords.data.map((item) => {
+                item['oldtop'] = true
+                return item
+            });
 
-            return item
-        });
+            let result = {
+                total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
+                data: [...props.cpmRecords.data, ...oldtop_data],
+                first_page_url: props.cpmRecords.first_page_url,
+                current_page: props.cpmRecords.current_page,
+                last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
+                per_page: props.cpmRecords.per_page
+            }
 
-        let result = {
-            total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
-            data: [...props.cpmRecords.data, ...oldtop_data],
-            first_page_url: props.cpmRecords.first_page_url,
-            current_page: props.cpmRecords.current_page,
-            last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
-            per_page: props.cpmRecords.per_page
+            result.data.sort((a, b) => a.time - b.time)
+            return result
         }
 
-        result.data.sort((a, b) => a.time - b.time)
-
-        return result
+        // Default: show online records
+        return props.cpmRecords
     })
 
     // Helper functions for weapon/item/function icons and names
@@ -760,8 +801,13 @@
                             <span class="text-gray-300">Old Top:</span>
                             <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
                         </div>
+                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                            <span class="text-gray-300">Offline Demos:</span>
+                            <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
+                        </div>
                     </div>
-                    </div> <!-- Close content layer -->
+
+</div> <!-- Close content layer -->
                 </div>
             </div>
 

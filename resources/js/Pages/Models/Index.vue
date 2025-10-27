@@ -389,19 +389,22 @@ const getModelTypeBadgeClass = (type) => {
 
                     <!-- Pagination -->
                     <div v-if="models.data.length > 0 && (models.links.length > 3)" class="mt-8 flex justify-center gap-2 flex-wrap">
-                        <Link v-for="link in models.links" :key="link.label"
-                              :href="link.url"
-                              :class="[
-                                  'px-4 py-2 rounded-lg font-medium transition-all',
-                                  link.active
-                                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                      : link.url
-                                          ? 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
-                                          : 'bg-white/5 text-gray-600 cursor-not-allowed'
-                              ]"
-                              :disabled="!link.url"
-                              v-html="link.label">
-                        </Link>
+                        <template v-for="link in models.links" :key="link.label">
+                            <Link v-if="link.url"
+                                  :href="link.url"
+                                  :class="[
+                                      'px-4 py-2 rounded-lg font-medium transition-all',
+                                      link.active
+                                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                          : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                                  ]"
+                                  v-html="link.label">
+                            </Link>
+                            <span v-else
+                                  class="px-4 py-2 rounded-lg font-medium transition-all bg-white/5 text-gray-600 cursor-not-allowed"
+                                  v-html="link.label">
+                            </span>
+                        </template>
                     </div>
 
                     <!-- Performance Metrics Panel (only visible to admin neyoneit) -->

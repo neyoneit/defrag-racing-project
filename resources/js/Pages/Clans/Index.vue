@@ -364,8 +364,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         <Head title="Clans" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Clans</h1>
@@ -414,7 +414,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     My Clan
                 </h2>
                 <div class="relative">
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-700/10 blur-xl"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-700/10 blur-xl pointer-events-none"></div>
                     <div class="relative">
                         <ClanCard
                             :clan="myClan"
@@ -1162,7 +1162,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     <h2 class="text-2xl font-bold text-white">All Clans</h2>
 
                     <!-- Sorting Controls -->
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-wrap gap-2 relative z-10">
                         <button
                             @click="sortClans('name')"
                             :class="[

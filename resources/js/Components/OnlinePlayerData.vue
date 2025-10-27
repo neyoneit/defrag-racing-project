@@ -24,7 +24,8 @@
 <template>
     <div>
         <Popper arrow hover :disabled="player.profile == null" style="z-index: 100;">
-            <Link :href="getProfile" v-if="player.mdd_id">
+            <Link :href="getProfile" v-if="player.mdd_id" class="inline-flex items-center gap-1.5">
+                <img v-if="player.country && player.country !== 'XX'" :src="`/images/flags/${player.country}.png`" class="w-4 h-3 rounded shadow-md flex-shrink-0" :title="player.country" onerror="this.src='/images/flags/_404.png'" />
                 <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.95), -1px -1px 2px rgba(0,0,0,0.95), 1px -1px 2px rgba(0,0,0,0.95), -1px 1px 2px rgba(0,0,0,0.95);" v-html="q3tohtml(player.name)"></div>
 
                 <svg v-if="player.profile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="mb-0.5 ml-1 text-green-500 w-4 h-4 inline">
@@ -32,7 +33,8 @@
                 </svg>
             </Link>
 
-            <div v-else>
+            <div v-else class="inline-flex items-center gap-1.5">
+                <img v-if="player.country && player.country !== 'XX'" :src="`/images/flags/${player.country}.png`" class="w-4 h-3 rounded shadow-md flex-shrink-0" :title="player.country" onerror="this.src='/images/flags/_404.png'" />
                 <div :class="{'opacity-70 group-hover:opacity-90': spectator}" class="font-bold inline online-player-name-text" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.95), -1px -1px 2px rgba(0,0,0,0.95), 1px -1px 2px rgba(0,0,0,0.95), -1px 1px 2px rgba(0,0,0,0.95);" v-html="q3tohtml(player.name)"></div>
 
                 <svg v-if="player.profile" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="mb-0.5 ml-1 text-green-500 w-4 h-4 inline">

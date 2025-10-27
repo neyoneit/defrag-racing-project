@@ -27,6 +27,7 @@
         "@ckeditor/ckeditor5-vue": "^5.1.0",
         "canvas": "^2.11.2",
         "gif-encoder-2": "^1.0.5",
+        "gif.js": "^0.2.0",
         "gifencoder": "^2.0.1",
         "gl": "^8.1.6",
         "moment": "^2.30.1",

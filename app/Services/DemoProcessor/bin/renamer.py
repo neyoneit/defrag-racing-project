@@ -181,6 +181,33 @@ def suggest_name(file_path: Path) -> Optional[str]:
     return Path(demo.demoNewName).name
 
 
+def parse_demo_metadata(file_path: Path) -> Optional[dict]:
+    """
+    Parse demo file and return metadata including record date.
+    Returns dict with: suggested_filename, record_date (ISO format)
+    """
+    try:
+        parser = Q3DemoParser(str(file_path))
+        raw = parser.parse_config()
+        demo = Demo.GetDemoFromRawInfo(raw)
+    except Exception:
+        return None
+
+    if demo.hasError:
+        return None
+
+    metadata = {
+        "suggested_filename": Path(demo.demoNewName).name,
+        "record_date": demo.recordTime.isoformat() if demo.recordTime else None,
+        "map_name": demo.mapName,
+        "player_name": demo.playerName,
+        "physics": demo.modphysic,
+        "time_seconds": demo.time.total_seconds() if demo.time else None,
+    }
+
+    return metadata
+
+
 def _build_cli() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Rename a file using DemoCleaner3 rules.")
     parser.add_argument("file", type=Path, help="Path to the demo file to rename")

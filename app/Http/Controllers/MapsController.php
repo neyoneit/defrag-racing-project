@@ -7,6 +7,7 @@ use Inertia\Inertia;
 
 use App\Models\Record;
 use App\Models\OldtopRecord;
+use App\Models\OfflineRecord;
 use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
@@ -175,6 +176,72 @@ class MapsController extends Controller
             $vq3OldRecords = null;
         }
 
+        // Offline demos
+        $showOffline = $request->input('showOffline', false);
+
+        if ($showOffline === 'true') {
+            // Determine offline gametype based on map name (same logic as online records)
+            // fc (fast caps) maps start with "actf" or "ctf", otherwise df (defrag)
+            $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
+
+            // For fast caps with CTF modes, filter by physics field containing the CTF mode
+            // Physics format: "CPM.2.TR" or "VQ3.1" where the number is the CTF mode
+            // $gametype from URL contains: run, ctf1, ctf2, etc.
+            if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
+                // Specific CTF mode selected - filter by physics LIKE pattern
+                // Extract CTF number from gametype (e.g., "ctf2" -> "2")
+                $ctfNumber = substr($gametype, 3, 1);
+
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', "CPM.{$ctfNumber}%")
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', "VQ3.{$ctfNumber}%")
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+            } elseif ($offlineGametype === 'fc') {
+                // Fast caps map but no specific CTF mode selected (on "run" gametype)
+                // Show all offline fast caps records regardless of CTF mode
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'CPM%')
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'VQ3%')
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+            } else {
+                // For df (defrag), physics is just "CPM" or "VQ3" (no CTF mode)
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'CPM')
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'VQ3')
+                    ->with(['demo', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+            }
+        } else {
+            $cpmOfflineRecords = null;
+            $vq3OfflineRecords = null;
+        }
+
         $cpmPage = ($request->has('cpmPage')) ? min($request->cpmPage, $cpmRecords->lastPage()) : 1;
 
         $vq3Page = ($request->has('vq3Page')) ? min($request->vq3Page, $vq3Records->lastPage()) : 1;
@@ -214,8 +281,11 @@ class MapsController extends Controller
             ->with('my_vq3_record', $my_vq3_record)
             ->with('cpmOldRecords', $cpmOldRecords)
             ->with('vq3OldRecords', $vq3OldRecords)
+            ->with('cpmOfflineRecords', $cpmOfflineRecords)
+            ->with('vq3OfflineRecords', $vq3OfflineRecords)
             ->with('gametypeStats', $gametypeStats)
             ->with('showOldtop', ($showOldtop === 'true'))
+            ->with('showOffline', ($showOffline === 'true'))
             ->with('servers', $servers)
             ->with('publicMaplists', $publicMaplists);
 

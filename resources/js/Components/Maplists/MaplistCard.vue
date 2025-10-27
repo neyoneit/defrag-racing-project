@@ -34,7 +34,7 @@
             </div>
 
             <!-- Maplist Info -->
-            <div class="p-4">
+            <div class="p-4 overflow-visible">
                 <div class="flex items-start justify-between mb-2">
                     <h3 class="text-lg font-bold text-white line-clamp-1">{{ maplist.name }}</h3>
                     <div v-if="maplist.is_play_later" class="ml-2">
@@ -49,16 +49,15 @@
                 </p>
 
                 <!-- Creator Info -->
-                <div class="flex items-center space-x-2 mb-3">
-                    <img
-                        v-if="maplist.user?.profile_photo_path"
-                        :src="`/storage/${maplist.user.profile_photo_path}`"
-                        :alt="maplist.user?.plain_name || maplist.user?.name"
-                        class="w-6 h-6 rounded-full">
-                    <div v-else class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                        </svg>
+                <div class="flex items-center space-x-2 mb-3 overflow-visible">
+                    <div class="relative w-8 h-8 flex-shrink-0">
+                        <div :class="'avatar-effect-' + (maplist.user?.avatar_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}; --border-color: ${maplist.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 14px`">
+                            <img
+                                :src="maplist.user?.profile_photo_path ? `/storage/${maplist.user.profile_photo_path}` : '/images/null.jpg'"
+                                :alt="maplist.user?.plain_name || maplist.user?.name"
+                                class="w-6 h-6 rounded-full object-cover border-2 relative"
+                                :style="`border-color: ${maplist.user?.avatar_border_color || '#6b7280'}`">
+                        </div>
                     </div>
                     <span :class="'name-effect-' + (maplist.user?.name_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}`" class="text-sm text-gray-400" v-html="q3tohtml(maplist.user?.name || 'Unknown')"></span>
                 </div>

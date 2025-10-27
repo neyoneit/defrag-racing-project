@@ -176,43 +176,67 @@
                                         Menu
                                     </div>
                                     <!-- Main items (hidden on smaller screens) -->
+                                    <!-- Community/Info (mobile only) -->
+                                    <DropdownLink href="/announcements" class="md:hidden">
+                                        News
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('servers')" class="md:hidden">
+                                        Servers
+                                    </DropdownLink>
+
+                                    <!-- Competition/Rankings (mobile only) -->
+                                    <DropdownLink :href="route('ranking')" class="lg:hidden">
+                                        Ranking
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('records')">
+                                        Records
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('tournaments.index')">
+                                        Tournaments
+                                    </DropdownLink>
+
+                                    <!-- Divider -->
+                                    <div class="border-t border-white/5 my-1"></div>
+
+                                    <!-- Maps/Content -->
                                     <DropdownLink :href="route('maps')" class="lg:hidden">
                                         Maps
                                     </DropdownLink>
                                     <DropdownLink :href="route('maplists.index')" class="lg:hidden">
                                         Maplists
                                     </DropdownLink>
-                                    <DropdownLink :href="route('ranking')" class="lg:hidden">
-                                        Ranking
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('servers')" class="md:hidden">
-                                        Servers
-                                    </DropdownLink>
-                                    <DropdownLink href="/announcements" class="md:hidden">
-                                        News
-                                    </DropdownLink>
-                                    <!-- Divider -->
-                                    <div class="border-t border-white/5 my-1"></div>
-                                    <!-- More items (always shown in mobile menu) -->
-                                    <DropdownLink :href="route('records')">
-                                        Records
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('demos.index')">
-                                        Demos
-                                    </DropdownLink>
                                     <DropdownLink :href="route('bundles')">
                                         Bundles
                                     </DropdownLink>
+
+                                    <!-- Divider -->
+                                    <div class="border-t border-white/5 my-1"></div>
+
+                                    <!-- Players/Teams -->
                                     <DropdownLink :href="route('clans.index')">
                                         Clans
                                     </DropdownLink>
-                                    <DropdownLink :href="route('tournaments.index')">
-                                        Tournaments
-                                    </DropdownLink>
-                                    <div class="border-t border-white/5 my-1"></div>
                                     <DropdownLink href="/models">
                                         Models
                                     </DropdownLink>
+
+                                    <!-- Divider -->
+                                    <div class="border-t border-white/5 my-1"></div>
+
+                                    <!-- Replays -->
+                                    <DropdownLink :href="route('demos.index')">
+                                        Demos
+                                    </DropdownLink>
+                                    <div class="border-t border-white/5 my-1"></div>
+                                    <div class="px-4 py-2 text-xs text-gray-400">
+                                        Beta - 3D Map Viewer
+                                    </div>
+                                    <a href="/test-map-viewer.html?map=pornstar-cpmrun" target="_blank" class="block px-3 py-2 text-sm leading-5 text-gray-300 hover:text-white hover:bg-white/5 focus:outline-none focus:bg-white/5 transition-all rounded-lg">
+                                        pornstar-cpmrun
+                                    </a>
+                                    <a href="/test-map-viewer.html?map=pado" target="_blank" class="block px-3 py-2 text-sm leading-5 text-gray-300 hover:text-white hover:bg-white/5 focus:outline-none focus:bg-white/5 transition-all rounded-lg">
+                                        pado
+                                    </a>
                                 </template>
                             </Dropdown>
 
@@ -478,39 +502,76 @@
 
                     <!-- Second Row: Navigation Links -->
                     <div class="hidden md:flex items-center gap-1 h-12 px-2">
+                        <!-- Community/Info -->
                         <NavLink href="/announcements" :active="route().current('announcements.*')">
                             News
                         </NavLink>
                         <NavLink :href="route('servers')" :active="route().current('servers')">
                             Servers
                         </NavLink>
+
+                        <!-- Competition/Rankings -->
                         <NavLink :href="route('ranking')" :active="route().current('ranking')">
                             Ranking
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
+                        <NavLink :href="route('records')" :active="route().current('records')">
+                            Records
+                        </NavLink>
+                        <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.*')">
+                            Tournaments
+                        </NavLink>
+
+                        <!-- Maps/Content -->
                         <NavLink :href="route('maps')" :active="route().current('maps')">
                             Maps
                         </NavLink>
                         <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')">
                             Maplists
-                        </NavLink>
-                        <NavLink href="/models" :active="route().current('models.*')">
-                            Models
-                        </NavLink>
-                        <NavLink :href="route('records')" :active="route().current('records')">
-                            Records
-                        </NavLink>
-                        <NavLink :href="route('demos.index')" :active="route().current('demos.*')">
-                            Demos
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink :href="route('bundles')" :active="route().current('bundles')">
                             Bundles
                         </NavLink>
+
+                        <!-- Players/Teams -->
                         <NavLink :href="route('clans.index')" :active="route().current('clans.*')">
                             Clans
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
-                        <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.*')">
-                            Tournaments
+                        <NavLink href="/models" :active="route().current('models.*')">
+                            Models
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
+
+                        <!-- Replays -->
+                        <NavLink :href="route('demos.index')" :active="route().current('demos.*')">
+                            Demos
+                        </NavLink>
+
+                        <!-- Beta Dropdown -->
+                        <Dropdown align="left" width="48">
+                            <template #trigger>
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                                    <span>Beta</span>
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                </button>
+                            </template>
+                            <template #content>
+                                <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
+                                    3D Map Viewer
+                                </div>
+                                <a href="/test-map-viewer.html?map=pornstar-cpmrun" target="_blank" class="block px-3 py-2 text-sm leading-5 text-gray-300 hover:text-white hover:bg-white/5 focus:outline-none focus:bg-white/5 transition-all rounded-lg">
+                                    pornstar-cpmrun
+                                </a>
+                                <a href="/test-map-viewer.html?map=pado" target="_blank" class="block px-3 py-2 text-sm leading-5 text-gray-300 hover:text-white hover:bg-white/5 focus:outline-none focus:bg-white/5 transition-all rounded-lg">
+                                    pado
+                                </a>
+                            </template>
+                        </Dropdown>
                     </div>
                 </div>
             </nav>

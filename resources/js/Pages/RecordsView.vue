@@ -137,7 +137,7 @@
                     </div>
                     <!-- VQ3 Pagination -->
                     <div v-if="vq3Records.total > vq3Records.per_page" class="border-t border-blue-500/20 bg-transparent p-4">
-                        <Pagination :last_page="vq3Records.last_page" :current_page="vq3Records.current_page" :link="vq3Records.first_page_url" />
+                        <Pagination :last_page="vq3Records.last_page" :current_page="vq3Records.current_page" :link="vq3Records.first_page_url" pageName="vq3_page" />
                     </div>
                 </div>
 
@@ -154,7 +154,7 @@
                     </div>
                     <!-- CPM Pagination -->
                     <div v-if="cpmRecords.total > cpmRecords.per_page" class="border-t border-purple-500/20 bg-transparent p-4">
-                        <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" />
+                        <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" pageName="cpm_page" />
                     </div>
                 </div>
             </div>

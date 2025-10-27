@@ -356,7 +356,7 @@
 
                         <!-- Avatar -->
                         <div class="relative backdrop-blur-md bg-black/20 p-1.5 rounded-full">
-                            <div :class="'avatar-effect-' + (user?.avatar_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}; --border-color: ${user?.avatar_border_color || '#6b7280'}`">
+                            <div :class="'avatar-effect-' + (user?.avatar_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}; --border-color: ${user?.avatar_border_color || '#6b7280'}; --orbit-radius: 52px`">
                                 <img class="h-24 w-24 rounded-full border-4 object-cover relative" :style="`border-color: ${user?.avatar_border_color || '#6b7280'}`" :src="user?.profile_photo_path ? '/storage/' + user.profile_photo_path : '/images/null.jpg'" :alt="user?.name ?? profile.name">
                             </div>
                         </div>

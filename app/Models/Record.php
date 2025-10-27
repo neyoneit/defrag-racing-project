@@ -28,7 +28,7 @@ class Record extends Model
     ];
 
     public function user () {
-        return $this->belongsTo(User::class, 'mdd_id', 'mdd_id')->select('id', 'name', 'profile_photo_path', 'country', 'mdd_id', 'model');
+        return $this->belongsTo(User::class, 'mdd_id', 'mdd_id')->select('id', 'name', 'profile_photo_path', 'country', 'mdd_id', 'model', 'avatar_effect', 'name_effect', 'color', 'avatar_border_color');
     }
 
     public function map () {

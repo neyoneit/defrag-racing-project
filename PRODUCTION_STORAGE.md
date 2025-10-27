@@ -347,6 +347,152 @@ Monitor S3 metrics:
 
 ---
 
+## Demo Upload and Storage Flow
+
+### How Demo Processing Works
+
+**Upload Flow:**
+1. User uploads demo file(s) via `/demos` page (supports .dm_68 files and .zip/.rar/.7z archives)
+2. Raw demo files stored LOCALLY in `storage/app/demos/temp/{demo_id}/`
+3. Demo record created in database with `status='queued'`
+4. Processing job dispatched to queue
+
+**Processing Flow:**
+1. Python script (`BatchDemoRenamer.py`) extracts metadata:
+   - Map name
+   - Physics (VQ3/CPM)
+   - Gametype (df/mdf/fs/mfs/fc/mfc - offline vs online)
+   - Time (milliseconds)
+   - Player name
+2. Demo compressed to .7z format
+3. **Compressed .7z uploaded to Backblaze** at simple path: `demos/{filename}.7z`
+4. Metadata saved to database
+5. Local temp files cleaned up
+6. Demo status updated to `processed`
+7. **Auto-assignment logic:**
+   - **Online demos** (mdf, mfs, mfc) → Can be assigned to records from q3df.org
+   - **Offline demos** (df, fs, fc) → NOT assigned to records (will have separate offline leaderboards)
+
+**Success:** Demo exists in Backblaze, local temp deleted
+**Failure (after 3 retries):** Raw demo moved to `storage/app/demos/failed/{demo_id}/` for admin review
+
+### Storage Locations
+
+| Status | Location | Example |
+|--------|----------|---------|
+| **Queued** | Local temp | `storage/app/demos/temp/123/mapname.dm_68` |
+| **Processing** | Local temp | `storage/app/demos/temp/123/mapname.dm_68` |
+| **Processed** | Backblaze B2 | `demos/mapname[df.vq3]01.23.456(player).7z` |
+| **Failed** | Local failed | `storage/app/demos/failed/123/mapname.dm_68` |
+
+### Why This Design?
+
+- ✅ **Cost Efficient**: Only upload processed/compressed demos to Backblaze (not raw files)
+- ✅ **Fast Processing**: Work with local files during processing
+- ✅ **No Wasted Storage**: Failed demos don't waste Backblaze storage
+- ✅ **Admin Review**: Failed demos kept locally for investigation
+- ✅ **Simple Paths**: Backblaze uses flat structure `demos/{filename}` - no hierarchical paths needed
+
+### Offline vs Online Demos
+
+**Gametype Field:**
+- `df` - Offline Defrag
+- `fs` - Offline Freestyle
+- `fc` - Offline Fast Caps
+- `mdf` - Multiplayer/Online Defrag
+- `mfs` - Multiplayer/Online Freestyle
+- `mfc` - Multiplayer/Online Fast Caps
+
+**Usage:**
+```php
+// Check if demo is online
+$demo->is_online; // true if gametype starts with 'm'
+
+// Check if demo is offline
+$demo->is_offline; // true if gametype is df/fs/fc
+
+// Get offline demos for a map
+$offlineDemos = UploadedDemo::where('map_name', 'wcp15')
+    ->where('gametype', 'df')
+    ->where('physics', 'VQ3')
+    ->orderBy('time_ms', 'asc')
+    ->get();
+```
+
+**Offline Leaderboards:**
+- Offline demos are NOT assigned to records from q3df.org (which are all online records)
+- Offline demos create separate leaderboards per map
+- Can be displayed in map details page
+- Useful for practice runs and local competitions
+
+---
+
+## Demo Reassignment After Records Repopulation
+
+If you need to delete and repopulate records (e.g., rescraping from source), demos will NOT be deleted. They remain in Backblaze with their metadata in the database.
+
+### How It Works
+
+When demos are uploaded and processed:
+1. **Demo file** is stored in Backblaze B2 (compressed .7z)
+2. **Metadata** is extracted and stored in `uploaded_demos` table:
+   - `map_name` - extracted from demo
+   - `physics` - VQ3 or CPM
+   - `time_ms` - time in milliseconds
+   - `user_id` - who uploaded it
+   - `processing_output` - full XML output with detailed info
+
+When you delete records:
+- Foreign key is set to `nullOnDelete()`
+- Demos remain in database with `record_id = NULL`
+- Demo files stay in Backblaze untouched
+
+### Reassign Demos to New Records
+
+After repopulating records, run the reassignment command:
+
+```bash
+# Dry run first to see what will be matched
+php artisan demos:reassign --dry-run
+
+# Reassign all demos
+php artisan demos:reassign
+
+# Only reassign unassigned demos (record_id = NULL)
+php artisan demos:reassign --unassigned-only
+```
+
+**Matching Logic:**
+- Matches `demo.map_name` to `record.mapname`
+- Matches `demo.physics` (VQ3/CPM) to `record.gametype` (run_vq3/run_cpm)
+- Matches `demo.time_ms` to `record.time`
+- If demo has `user_id`, also matches to `record.user_id`
+
+**Benefits:**
+- ✅ No need to download/reupload demos
+- ✅ All metadata already in database
+- ✅ Demos stay in Backblaze permanently
+- ✅ Can repopulate records as many times as needed
+- ✅ Fast - just database queries
+
+**Example Workflow:**
+```bash
+# 1. Upload demos (they get processed and stored in Backblaze)
+# Users upload via /demos
+
+# 2. Delete records and repopulate from source
+php artisan records:delete-all
+php artisan records:scrape-from-source
+
+# 3. Reassign demos to new records
+php artisan demos:reassign --dry-run  # Check first
+php artisan demos:reassign            # Apply changes
+
+# Done! Demos are now assigned to the new records
+```
+
+---
+
 ## Rollback Plan
 
 If S3 has issues, quickly switch back to local storage:
