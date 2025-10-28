@@ -230,10 +230,24 @@ const notifsForm = useForm({
     _method: 'POST',
     defrag_news: user.value.defrag_news ? true : false,
     tournament_news: user.value.tournament_news ? true : false,
+    clan_notifications: user.value.clan_notifications ? true : false,
     invitations: true,
     records_vq3: user.value.records_vq3 || 'all',
-    records_cpm: user.value.records_cpm || 'all'
+    records_cpm: user.value.records_cpm || 'all',
+    preview_records: user.value.preview_records || 'all',
+    preview_system: user.value.preview_system || ['announcement', 'clan', 'tournament']
 });
+
+const togglePreviewSystem = (type) => {
+    if (type === 'announcement') return; // Announcement is mandatory
+
+    const index = notifsForm.preview_system.indexOf(type);
+    if (index > -1) {
+        notifsForm.preview_system.splice(index, 1);
+    } else {
+        notifsForm.preview_system.push(type);
+    }
+};
 
 const updateNotifications = () => {
     notifsForm.post(route('settings.notifications'), { preserveScroll: true });
@@ -594,13 +608,66 @@ const updateNotifications = () => {
                                     </div>
                                 </label>
 
+                                <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
+                                    <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
+                                        <p class="text-xs text-gray-400">Invites, kicks, transfers</p>
+                                    </div>
+                                </label>
+
                                 <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 opacity-50 cursor-not-allowed">
                                     <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20" />
                                     <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-300">Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
-                                        <p class="text-xs text-gray-400">Clan & team invites</p>
+                                        <p class="text-sm font-medium text-gray-300">Team Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
+                                        <p class="text-xs text-gray-400">Team invites</p>
                                     </div>
                                 </label>
+                            </div>
+
+                            <div class="pt-3 border-t border-white/10">
+                                <p class="text-sm font-bold text-white mb-2">Header Preview Settings</p>
+                                <p class="text-xs text-gray-400 mb-3">Control what appears in notification previews</p>
+
+                                <div class="space-y-3">
+                                    <!-- System Preview -->
+                                    <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                                        <p class="text-xs font-bold text-blue-400 mb-2">System Preview</p>
+                                        <div class="space-y-1.5">
+                                            <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
+                                                <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded" />
+                                                <span class="text-xs text-gray-300">Announcements <span class="text-yellow-400">(Required)</span></span>
+                                            </label>
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded" />
+                                                <span class="text-xs text-gray-300">Clan Notifications</span>
+                                            </label>
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded" />
+                                                <span class="text-xs text-gray-300">Tournament Notifications</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Record Preview -->
+                                    <div class="p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                                        <p class="text-xs font-bold text-orange-400 mb-2">Record Preview</p>
+                                        <div class="space-y-1.5">
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5" />
+                                                <span class="text-xs text-gray-300">Show All Records</span>
+                                            </label>
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5" />
+                                                <span class="text-xs text-gray-300">World Records Only</span>
+                                            </label>
+                                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                                <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5" />
+                                                <span class="text-xs text-gray-300">Don't Show Preview</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2">

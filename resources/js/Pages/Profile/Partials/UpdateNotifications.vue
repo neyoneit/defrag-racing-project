@@ -11,15 +11,29 @@
         _method: 'POST',
         defrag_news: props.user.defrag_news ? true : false,
         tournament_news: props.user.tournament_news ? true : false,
+        clan_notifications: props.user.clan_notifications ? true : false,
         invitations: true,
         records_vq3: props.user.records_vq3,
-        records_cpm: props.user.records_cpm
+        records_cpm: props.user.records_cpm,
+        preview_records: props.user.preview_records || 'all',
+        preview_system: props.user.preview_system || ['announcement', 'clan', 'tournament']
     });
 
     const updateSocialMediaInformation = () => {
         form.post(route('settings.notifications'), {
             preserveScroll: true
         });
+    };
+
+    const togglePreviewSystem = (type) => {
+        if (type === 'announcement') return; // Announcement is mandatory
+
+        const index = form.preview_system.indexOf(type);
+        if (index > -1) {
+            form.preview_system.splice(index, 1);
+        } else {
+            form.preview_system.push(type);
+        }
     };
 </script>
 
@@ -68,11 +82,69 @@
                     </label>
 
                     <label class="flex items-center cursor-pointer">
-                        <Checkbox :checked="true" name="invitations" disabled class="text-gray-500" />
+                        <Checkbox v-model:checked="form.clan_notifications" name="clan_notifications" />
                         <span class="ms-2 text-xs text-gray-400">
-                            Invitations (Clan invites, Team invites, etc...) [Mandatory]
+                            Clan Notifications (Clan invites, kicks, accepts, leaves, transfers)
                         </span>
                     </label>
+
+                    <label class="flex items-center cursor-pointer">
+                        <Checkbox :checked="true" name="invitations" disabled class="text-gray-500" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            Team Invitations (Team invites, etc...) [Mandatory]
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <div class="text-sm text-white font-bold">Header Preview Settings</div>
+                <div class="text-xs text-gray-400 mb-2">Configure what notifications appear in the header preview</div>
+
+                <!-- System Notification Preview -->
+                <div class="mb-3">
+                    <div class="text-blue-400 font-bold text-xs mb-2">System Notification Preview</div>
+
+                    <label class="flex items-center cursor-pointer mb-2">
+                        <Checkbox :checked="true" disabled class="text-gray-500" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            Announcements [Always Shown]
+                        </span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer mb-2">
+                        <Checkbox :checked="form.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            Clan Notifications
+                        </span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer mb-2">
+                        <Checkbox :checked="form.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            Tournament Notifications
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Record Notification Preview -->
+                <div>
+                    <div class="text-orange-400 font-bold text-xs mb-2">Record Notification Preview</div>
+
+                    <div class="flex items-center mb-2">
+                        <input id="preview_all" type="radio" v-model="form.preview_records" value="all" name="preview_records" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
+                        <label for="preview_all" class="ms-2 text-xs font-medium text-gray-300">Show All Records</label>
+                    </div>
+
+                    <div class="flex items-center mb-2">
+                        <input id="preview_wr" type="radio" v-model="form.preview_records" value="wr" name="preview_records" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
+                        <label for="preview_wr" class="ms-2 text-xs font-medium text-gray-300">Show World Records Only</label>
+                    </div>
+
+                    <div class="flex items-center mb-2">
+                        <input id="preview_none" type="radio" v-model="form.preview_records" value="none" name="preview_records" class="w-4 h-4 text-blue-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2 bg-gray-700 border-gray-600">
+                        <label for="preview_none" class="ms-2 text-xs font-medium text-gray-300">Don't Show Preview</label>
+                    </div>
                 </div>
             </div>
 

@@ -11,12 +11,40 @@ use App\Models\Notification;
 class NotificationsController extends Controller
 {
     public function records (Request $request) {
-        $notifications = RecordNotification::query()
+        // Get only the 30 most recent record notifications
+        $recordNotificationsPage = RecordNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->limit(30)
+            ->get()
+            ->values()
+            ->toArray();
+
+        // Delete any record notifications older than the 30 most recent
+        $oldestKeptId = RecordNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->limit(1)
+            ->offset(29)
+            ->value('id');
+
+        if ($oldestKeptId) {
+            RecordNotification::query()
+                ->where('user_id', $request->user()->id)
+                ->where('id', '<', $oldestKeptId)
+                ->delete();
+        }
+
+        $systemNotificationsPage = Notification::query()
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'DESC')
             ->paginate(30);
 
-        return Inertia::render('NotificationsView')->with('notifications', $notifications);
+        return Inertia::render('NotificationsView')->with([
+            'recordNotificationsPage' => $recordNotificationsPage,
+            'systemNotificationsPage' => $systemNotificationsPage,
+            'activeTab' => 'records'
+        ]);
     }
 
     public function recordsclear (Request $request) {
@@ -26,12 +54,40 @@ class NotificationsController extends Controller
     }
 
     public function system (Request $request) {
-        $notifications = Notification::query()
+        // Get only the 30 most recent record notifications
+        $recordNotificationsPage = RecordNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->limit(30)
+            ->get()
+            ->values()
+            ->toArray();
+
+        // Delete any record notifications older than the 30 most recent
+        $oldestKeptId = RecordNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'DESC')
+            ->limit(1)
+            ->offset(29)
+            ->value('id');
+
+        if ($oldestKeptId) {
+            RecordNotification::query()
+                ->where('user_id', $request->user()->id)
+                ->where('id', '<', $oldestKeptId)
+                ->delete();
+        }
+
+        $systemNotificationsPage = Notification::query()
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'DESC')
             ->paginate(30);
 
-        return Inertia::render('SystemNotificationsView')->with('notifications', $notifications);
+        return Inertia::render('NotificationsView')->with([
+            'recordNotificationsPage' => $recordNotificationsPage,
+            'systemNotificationsPage' => $systemNotificationsPage,
+            'activeTab' => 'system'
+        ]);
     }
 
     public function systemclear (Request $request) {

@@ -21,6 +21,7 @@ class RecordNotification extends Model
         'mapname',
         'date_set',
         'read',
-        'my_time'
+        'my_time',
+        'worldrecord'
     ];
 }

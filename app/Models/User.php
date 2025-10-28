@@ -54,8 +54,11 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'avatar_border_color',
         'defrag_news',
         'tournament_news',
+        'clan_notifications',
         'records_vq3',
         'records_cpm',
+        'preview_records',
+        'preview_system',
         'discord_id',
         'discord_token',
         'discord_refresh_token',
@@ -95,6 +98,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'preview_system' => 'array',
     ];
 
     /**

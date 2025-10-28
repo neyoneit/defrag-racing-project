@@ -18,6 +18,8 @@ use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
 use App\Http\Controllers\ModelsController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\DonationController;
+use App\Http\Controllers\DefragHQ\DonationManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -214,3 +216,24 @@ Route::middleware('auth')->group(function () {
 
 // Public tag routes
 Route::get('/api/tags', [App\Http\Controllers\TagController::class, 'index'])->name('tags.index');
+
+// Donation routes
+Route::get('/donations', [DonationController::class, 'index'])->name('donations.index');
+Route::get('/api/donations/progress', [DonationController::class, 'getProgress'])->name('donations.progress');
+
+// PayPal webhook (no CSRF protection needed for webhooks)
+Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookController::class, 'handleWebhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// DefragHQ Admin - Donation Management (requires authentication)
+// Note: All donation management is now handled by Filament admin panel
+// Route::middleware('auth')->prefix('defraghq')->group(function () {
+//     Route::post('/donations', [DonationManagementController::class, 'storeDonation'])->name('defraghq.donations.store');
+//     Route::put('/donations/{donation}', [DonationManagementController::class, 'updateDonation'])->name('defraghq.donations.update');
+//     Route::delete('/donations/{donation}', [DonationManagementController::class, 'deleteDonation'])->name('defraghq.donations.delete');
+//
+//     Route::post('/self-raised', [DonationManagementController::class, 'storeSelfRaised'])->name('defraghq.selfraised.store');
+//     Route::put('/self-raised/{selfRaised}', [DonationManagementController::class, 'updateSelfRaised'])->name('defraghq.selfraised.update');
+//     Route::delete('/self-raised/{selfRaised}', [DonationManagementController::class, 'deleteSelfRaised'])->name('defraghq.selfraised.delete');
+//
+//     Route::post('/donation-goal', [DonationManagementController::class, 'updateGoal'])->name('defraghq.goal.update');
+// });

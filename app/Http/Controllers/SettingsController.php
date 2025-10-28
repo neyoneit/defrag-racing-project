@@ -38,19 +38,32 @@ class SettingsController extends Controller
     public function notifications(Request $request) {
         $request->validate([
             'records_vq3'       =>      ['required', 'string', 'in:all,wr'],
-            'records_cpm'       =>      ['required', 'string', 'in:all,wr']
+            'records_cpm'       =>      ['required', 'string', 'in:all,wr'],
+            'preview_records'   =>      ['required', 'string', 'in:all,wr,none'],
+            'preview_system'    =>      ['required', 'array'],
+            'preview_system.*'  =>      ['string', 'in:announcement,clan,tournament']
         ]);
 
         $user = $request->user();
 
         $defrag_news = $request->input('defrag_news', false);
         $tournament_news = $request->input('tournament_news', false);
+        $clan_notifications = $request->input('clan_notifications', false);
 
         $user->defrag_news = $defrag_news;
         $user->tournament_news = $tournament_news;
+        $user->clan_notifications = $clan_notifications;
 
         $user->records_vq3 = $request->records_vq3;
         $user->records_cpm = $request->records_cpm;
+
+        // Ensure announcement is always in preview_system
+        $preview_system = $request->preview_system;
+        if (!in_array('announcement', $preview_system)) {
+            $preview_system[] = 'announcement';
+        }
+        $user->preview_system = $preview_system;
+        $user->preview_records = $request->preview_records;
 
         $user->save();
     }
