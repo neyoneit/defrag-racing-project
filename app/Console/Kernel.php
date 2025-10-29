@@ -36,6 +36,9 @@ class Kernel extends ConsoleKernel
 
         // Check Twitch live status every 2 minutes
         $schedule->command('twitch:check-live-status')->withoutOverlapping()->everyTwoMinutes();
+
+        // Process overdue Headhunter challenge disputes and auto-ban creators
+        $schedule->command('headhunter:process-disputes')->withoutOverlapping()->daily();
     }
 
     /**
