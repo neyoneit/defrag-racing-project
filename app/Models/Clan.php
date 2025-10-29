@@ -13,7 +13,9 @@ class Clan extends Model
         'name',
         'plain_name',
         'image',
-        'admin_id'
+        'admin_id',
+        'hidden',
+        'banned'
     ];
 
     protected $casts = [
@@ -23,6 +25,19 @@ class Clan extends Model
     protected $attributes = [
         'featured_stats' => '[]'
     ];
+
+    /**
+     * Boot method to automatically generate plain_name from name
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($clan) {
+            // Automatically strip Quake 3 color codes from name to generate plain_name
+            $clan->plain_name = preg_replace('/\^[0-9]/', '', $clan->name);
+        });
+    }
 
     public function players()
     {

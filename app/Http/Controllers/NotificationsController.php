@@ -53,6 +53,24 @@ class NotificationsController extends Controller
         ]);
     }
 
+    public function recordsMarkAllUnread (Request $request) {
+        RecordNotification::where('user_id', $request->user()->id)->update([
+            'read'  =>  false
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    public function recordsToggle (Request $request, $id) {
+        $notification = RecordNotification::where('user_id', $request->user()->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->read = !$notification->read;
+        $notification->save();
+
+        return response()->json(['success' => true, 'read' => $notification->read]);
+    }
+
     public function system (Request $request) {
         // Get only the 30 most recent record notifications
         $recordNotificationsPage = RecordNotification::query()
@@ -94,5 +112,23 @@ class NotificationsController extends Controller
         $notifications = Notification::where('user_id', $request->user()->id)->update([
             'read'  =>  true
         ]);
+    }
+
+    public function systemMarkAllUnread (Request $request) {
+        Notification::where('user_id', $request->user()->id)->update([
+            'read'  =>  false
+        ]);
+        return response()->json(['success' => true]);
+    }
+
+    public function systemToggle (Request $request, $id) {
+        $notification = Notification::where('user_id', $request->user()->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->read = !$notification->read;
+        $notification->save();
+
+        return response()->json(['success' => true, 'read' => $notification->read]);
     }
 }

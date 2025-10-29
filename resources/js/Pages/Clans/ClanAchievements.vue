@@ -64,7 +64,7 @@ const formatNumber = (num) => {
         <!-- Featured Stats Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <!-- Total Records -->
-            <div class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of records held by clan members across all maps and modes">
+            <div class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of records held by clan members across all maps and modes">
                 <div class="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-600/0 group-hover:from-blue-500/10 group-hover:to-blue-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400 flex-shrink-0">
@@ -76,7 +76,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Top 1 Positions -->
-            <div class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-yellow-600/20 to-orange-800/20 border border-yellow-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of #1 world record positions held by clan members">
+            <div class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-yellow-600/20 to-orange-800/20 border border-yellow-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of #1 world record positions held by clan members">
                 <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-orange-600/0 group-hover:from-yellow-500/10 group-hover:to-orange-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 flex-shrink-0">
@@ -88,7 +88,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Top 3 Positions -->
-            <div class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-600/20 to-pink-800/20 border border-purple-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of top 3 podium finishes (1st, 2nd, or 3rd place) held by clan members">
+            <div class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-purple-600/20 to-pink-800/20 border border-purple-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of top 3 podium finishes (1st, 2nd, or 3rd place) held by clan members">
                 <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-600/0 group-hover:from-purple-500/10 group-hover:to-pink-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-purple-400 flex-shrink-0">
@@ -100,7 +100,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Longest Streak -->
-            <div class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-green-600/20 to-emerald-800/20 border border-green-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Longest consecutive days with at least one record set by clan members">
+            <div class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-green-600/20 to-emerald-800/20 border border-green-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Longest consecutive days with at least one record set by clan members">
                 <div class="absolute inset-0 bg-gradient-to-br from-green-500/0 to-emerald-600/0 group-hover:from-green-500/10 group-hover:to-emerald-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-green-400 flex-shrink-0">
@@ -114,7 +114,7 @@ const formatNumber = (num) => {
         </div>
 
         <!-- Hall of Fame -->
-        <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl p-8">
+        <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
             <h2 class="text-3xl font-black text-white mb-6 flex items-center gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-yellow-400">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
@@ -209,7 +209,7 @@ const formatNumber = (num) => {
         <!-- Leaderboards - Two Column Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Left Column - Player Leaderboards -->
-            <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl overflow-hidden">
+            <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl overflow-hidden">
                 <!-- Tabs -->
                 <div class="flex border-b border-white/10 overflow-x-auto">
                     <button
@@ -444,7 +444,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Right Column - Untouched WRs -->
-            <div class="bg-gradient-to-br from-black/40 to-black/20 border border-white/10 rounded-2xl overflow-hidden">
+            <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl overflow-hidden">
                 <!-- Header -->
                 <div class="border-b border-white/10 px-4 py-3 bg-gradient-to-r from-purple-600/10 to-purple-800/10">
                     <h3 class="text-lg font-black text-white flex items-center gap-2">
@@ -510,7 +510,7 @@ const formatNumber = (num) => {
         <!-- Additional Stats Grid -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <!-- Top 10 Density -->
-            <div v-if="statistics.overview.top10_count !== undefined" class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600/20 to-indigo-800/20 border border-indigo-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of top 10 leaderboard positions (1st through 10th place) held by clan members">
+            <div v-if="statistics.overview.top10_count !== undefined" class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-indigo-600/20 to-indigo-800/20 border border-indigo-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Total number of top 10 leaderboard positions (1st through 10th place) held by clan members">
                 <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-600/0 group-hover:from-indigo-500/10 group-hover:to-indigo-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-indigo-400 flex-shrink-0">
@@ -522,7 +522,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Average WR Age -->
-            <div v-if="statistics.overview.avg_wr_age_days !== undefined" class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Average age (in days) of all world records held by clan members - how fresh or old the records are">
+            <div v-if="statistics.overview.avg_wr_age_days !== undefined" class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-amber-600/20 to-amber-800/20 border border-amber-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Average age (in days) of all world records held by clan members - how fresh or old the records are">
                 <div class="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-600/0 group-hover:from-amber-500/10 group-hover:to-amber-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-amber-400 flex-shrink-0">
@@ -534,7 +534,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Completion Rate -->
-            <div v-if="statistics.overview.completion_rate !== undefined" class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-teal-600/20 to-teal-800/20 border border-teal-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Percentage of all available maps that clan members have set records on - shows map diversity and coverage">
+            <div v-if="statistics.overview.completion_rate !== undefined" class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-teal-600/20 to-teal-800/20 border border-teal-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Percentage of all available maps that clan members have set records on - shows map diversity and coverage">
                 <div class="absolute inset-0 bg-gradient-to-br from-teal-500/0 to-teal-600/0 group-hover:from-teal-500/10 group-hover:to-teal-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-teal-400 flex-shrink-0">
@@ -546,7 +546,7 @@ const formatNumber = (num) => {
             </div>
 
             <!-- Physics Split -->
-            <div v-if="statistics.overview.vq3_count !== undefined && statistics.overview.cpm_count !== undefined" class="group relative overflow-hidden rounded-xl bg-gradient-to-br from-pink-600/20 to-rose-800/20 border border-pink-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Distribution of records between VQ3 and CPM physics modes - shows which physics style the clan prefers">
+            <div v-if="statistics.overview.vq3_count !== undefined && statistics.overview.cpm_count !== undefined" class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br from-pink-600/20 to-rose-800/20 border border-pink-500/30 p-3 hover:scale-105 transition-transform duration-300" title="Distribution of records between VQ3 and CPM physics modes - shows which physics style the clan prefers">
                 <div class="absolute inset-0 bg-gradient-to-br from-pink-500/0 to-rose-600/0 group-hover:from-pink-500/10 group-hover:to-rose-600/10 transition-all duration-500"></div>
                 <div class="relative flex items-center justify-center gap-2">
                     <img src="/images/modes/vq3-icon.svg" class="w-6 h-6" alt="VQ3" />
@@ -560,7 +560,7 @@ const formatNumber = (num) => {
         </div>
 
         <!-- Podium Sweeps -->
-        <div v-if="statistics.special_sections && statistics.special_sections.podium_sweeps && statistics.special_sections.podium_sweeps.length > 0" class="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8">
+        <div v-if="statistics.special_sections && statistics.special_sections.podium_sweeps && statistics.special_sections.podium_sweeps.length > 0" class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
             <h2 class="text-3xl font-black text-white mb-6 flex items-center gap-3">
                 <img src="/images/powerups/quad.svg" class="w-8 h-8" alt="Podium Sweeps" />
                 Podium Sweeps
@@ -579,7 +579,7 @@ const formatNumber = (num) => {
         </div>
 
         <!-- Contested Positions -->
-        <div v-if="statistics.special_sections && statistics.special_sections.contested_positions && statistics.special_sections.contested_positions.length > 0" class="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8">
+        <div v-if="statistics.special_sections && statistics.special_sections.contested_positions && statistics.special_sections.contested_positions.length > 0" class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
             <h2 class="text-3xl font-black text-white mb-6 flex items-center gap-3">
                 <img src="/images/weapons/iconw_gauntlet.svg" class="w-8 h-8" alt="Contested" />
                 Contested Positions

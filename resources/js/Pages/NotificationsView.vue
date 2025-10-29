@@ -2,6 +2,7 @@
     import { Head, Link } from '@inertiajs/vue3';
     import { ref, computed } from 'vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
+    import axios from 'axios';
 
     const props = defineProps({
         recordNotificationsPage: Object,
@@ -22,6 +23,49 @@
     const totalCount = computed(() => {
         return (props.recordNotificationsPage?.length || 0) + (props.systemNotificationsPage?.total || 0);
     });
+
+    const toggleNotificationRead = (notificationId) => {
+        axios.post(route('notifications.toggle', notificationId)).then((response) => {
+            const notification = props.recordNotificationsPage.find(n => n.id === notificationId);
+            if (notification) {
+                notification.read = response.data.read;
+            }
+        });
+    };
+
+    const markAllAsRead = () => {
+        axios.post(route('notifications.clear')).then(() => {
+            props.recordNotificationsPage.forEach(n => n.read = true);
+        });
+    };
+
+    const markAllAsUnread = () => {
+        axios.post(route('notifications.mark.unread')).then(() => {
+            props.recordNotificationsPage.forEach(n => n.read = false);
+        });
+    };
+
+    // System notifications functions
+    const toggleSystemNotificationRead = (notificationId) => {
+        axios.post(route('notifications.system.toggle', notificationId)).then((response) => {
+            const notification = props.systemNotificationsPage.data.find(n => n.id === notificationId);
+            if (notification) {
+                notification.read = response.data.read;
+            }
+        });
+    };
+
+    const markAllSystemAsRead = () => {
+        axios.post(route('notifications.system.clear')).then(() => {
+            props.systemNotificationsPage.data.forEach(n => n.read = true);
+        });
+    };
+
+    const markAllSystemAsUnread = () => {
+        axios.post(route('notifications.system.mark.unread')).then(() => {
+            props.systemNotificationsPage.data.forEach(n => n.read = false);
+        });
+    };
 
     // Filter record notifications by sub-tab category
     const filteredRecordNotifications = computed(() => {
@@ -282,9 +326,25 @@
                         </button>
                     </div>
 
+                    <!-- Bulk Actions -->
+                    <div class="flex items-center justify-end gap-2 p-4 bg-black/20 border-b border-white/10">
+                        <button @click="markAllAsRead" class="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-sm transition-all flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            Mark All as Read
+                        </button>
+                        <button @click="markAllAsUnread" class="px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-sm transition-all flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                            </svg>
+                            Mark All as Unread
+                        </button>
+                    </div>
+
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" class="group p-2 hover:bg-white/5 transition-all">
+                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" class="group p-2 hover:bg-white/5 transition-all" :class="{'opacity-50': notification.read}">
                             <div class="flex items-center gap-3">
                                 <!-- Icon -->
                                 <div class="shrink-0">
@@ -308,6 +368,16 @@
                                     <span class="font-bold text-white">{{ formatTime(notification.time) }}</span>
                                     <span class="text-green-400 font-semibold">(+{{ formatTime(timeDiff(notification.my_time, notification.time)) }})</span>
                                 </div>
+
+                                <!-- Read/Unread Toggle -->
+                                <button @click="toggleNotificationRead(notification.id)" class="shrink-0 p-2 rounded-lg hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -387,9 +457,25 @@
                         </button>
                     </div>
 
+                    <!-- Bulk Actions -->
+                    <div class="flex items-center justify-end gap-2 p-4 bg-black/20 border-b border-white/10">
+                        <button @click="markAllSystemAsRead" class="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-sm transition-all flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            Mark All as Read
+                        </button>
+                        <button @click="markAllSystemAsUnread" class="px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-sm transition-all flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                            </svg>
+                            Mark All as Unread
+                        </button>
+                    </div>
+
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" class="group p-4 hover:bg-white/5 transition-all">
+                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" class="group p-4 hover:bg-white/5 transition-all" :class="{'opacity-50': notification.read}">
                             <div class="flex items-center gap-4">
                                 <!-- Icon -->
                                 <div class="shrink-0">
@@ -407,6 +493,16 @@
                                     <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
                                     <span v-if="notification.type !== 'announcement'"> {{ notification.after }}</span>
                                 </div>
+
+                                <!-- Read/Unread Toggle -->
+                                <button @click="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-2 rounded-lg hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>

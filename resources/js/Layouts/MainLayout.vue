@@ -481,6 +481,10 @@
                             Clans
                             <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
+                        <NavLink :href="route('headhunter.index')" :active="route().current('headhunter.*')" class="hidden lg:inline-flex">
+                            Headhunter
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                        </NavLink>
                         <NavLink href="/models" :active="route().current('models.*')" class="hidden lg:inline-flex">
                             Models
                             <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
@@ -526,6 +530,10 @@
                                     </DropdownLink>
                                     <DropdownLink :href="route('clans.index')">
                                         Clans
+                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('headhunter.index')">
+                                        Headhunter
                                         <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                 </div>

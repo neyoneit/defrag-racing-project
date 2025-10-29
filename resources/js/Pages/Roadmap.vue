@@ -815,247 +815,935 @@ const commitItems = [
 
         <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
 
-            <!-- Version Selector -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5">
-                <div class="flex gap-4 justify-center flex-wrap">
-                    <button @click="activeVersion = 1" :class="activeVersion === 1 ? 'bg-green-600' : 'bg-gray-700'" class="px-6 py-2 rounded-lg text-white font-semibold transition-colors hover:bg-green-500">
-                        Version 1: Grouped by Features
+            <!-- Version Selector (Hidden - versions 2 & 3 moved to Ongoing) -->
+            <!-- <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5">
+                <div class="flex gap-3 justify-center items-center flex-wrap">
+                    <button @click="activeVersion = 1" :class="activeVersion === 1 ? 'bg-green-600' : 'bg-gray-700'" class="px-8 py-3 rounded-lg text-white font-bold text-lg transition-colors hover:bg-green-500 shadow-lg">
+                        Roadmap
                     </button>
-                    <button @click="activeVersion = 2" :class="activeVersion === 2 ? 'bg-blue-600' : 'bg-gray-700'" class="px-6 py-2 rounded-lg text-white font-semibold transition-colors hover:bg-blue-500">
-                        Version 2: All Items Flat
+                    <span class="text-gray-400 text-sm">or view as:</span>
+                    <button @click="activeVersion = 2" :class="activeVersion === 2 ? 'bg-blue-600' : 'bg-gray-700'" class="px-4 py-1.5 rounded text-white text-xs transition-colors hover:bg-blue-500">
+                        740 Points
                     </button>
-                    <button @click="activeVersion = 3" :class="activeVersion === 3 ? 'bg-purple-600' : 'bg-gray-700'" class="px-6 py-2 rounded-lg text-white font-semibold transition-colors hover:bg-purple-500">
-                        Version 3: By 55 Commits
+                    <button @click="activeVersion = 3" :class="activeVersion === 3 ? 'bg-purple-600' : 'bg-gray-700'" class="px-4 py-1.5 rounded text-white text-xs transition-colors hover:bg-purple-500">
+                        55 GitHub Commits
                     </button>
                 </div>
-            </div>
+            </div> -->
 
-            <!-- VERSION 1: Grouped by Major Features -->
+            <!-- VERSION 1: Future / Ongoing / Done -->
             <div v-show="activeVersion === 1" class="backdrop-blur-xl bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-8">
-                <h2 class="text-2xl font-bold text-green-400 mb-6">Version 1: Grouped by Major Features</h2>
-
-                <div class="ml-8 space-y-6">
-                    <!-- Donations System -->
-                    <div class="relative pl-6 border-l-2 border-green-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-green-300">Donations & Transparency System</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• Full system with SiteDonation, SelfRaisedMoney, DonationGoal models</p>
-                                <p>• Database migrations and approval workflow (pending/approved/rejected)</p>
-                                <p>• Currency conversion (EUR/USD/CZK) with live rates</p>
-                                <p>• Admin panel (DonationResource, DonationGoalResource, SelfRaisedMoneyResource) with CRUD</p>
-                                <p>• Public /donations page with currency selector</p>
-                                <p>• Progress bar showing crowd-raised (green) vs self-raised (purple) split</p>
-                                <p>• "Where Your Support Goes" section (~€1,200/year costs)</p>
-                                <p>• "A Brief History" explaining development since 2021</p>
-                                <p>• Interactive year-by-year history with collapsible sections</p>
-                                <p>• Global footer DonationProgressBar on all pages except /donations</p>
-                                <p>• API endpoints (index, getProgress)</p>
-                                <p>• World record notification toggle and preview settings</p>
-                            </div>
-                        </div>
+                <!-- FUTURE PLANNED -->
+                <div class="mb-12">
+                    <h3 class="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2">
+                        <span class="text-2xl">🔮</span> Future Planned
+                    </h3>
+                    <div class="ml-8 text-sm text-gray-400 italic">
+                        <p>Future features will be determined based on community feedback, priorities, and available development time</p>
                     </div>
-
-                    <!-- Offline Records -->
-                    <div class="relative pl-6 border-l-2 border-green-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-green-300">Offline Records System</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• OfflineRecord model with ranking for df/fs/fc gametypes (separate from online)</p>
-                                <p>• offline_records table with optimized composite indexes</p>
-                                <p>• Automatic rank calculation and updates</p>
-                                <p>• Gametype field in uploaded_demos and record date tracking</p>
-                                <p>• OFFLINE_RECORDS.md documentation</p>
-                                <p>• Enhanced DemoProcessorService for offline/online differentiation</p>
-                                <p>• createOfflineRecord() auto-creation method</p>
-                                <p>• Three.js BSP map renderer with WASD navigation and skybox support</p>
-                                <p>• Texture extraction scripts for map viewing</p>
-                                <p>• Enhanced UI components across the site</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Q3 Models System (HUGE) -->
-                    <div class="relative pl-6 border-l-2 border-blue-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-blue-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-blue-300">Complete Q3 Models System (Player Models & Weapons)</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• MD3 binary parser for frames/tags/surfaces with TGA texture loading</p>
-                                <p>• Composite model assembly (head+upper+lower) via TAG attachments</p>
-                                <p>• animation.cfg parser with frame-by-frame vertex animation</p>
-                                <p>• Independent legs/torso animations with Q3-accurate frame offsets</p>
-                                <p>• Web Audio API for 13 character sounds with animation-to-sound mapping</p>
-                                <p>• Idle animation system (LEGS_IDLE + TORSO_STAND) continuous play like Q3</p>
-                                <p>• Event-based sound triggering researched from ioq3 cg_event.c</p>
-                                <p>• Q3ShaderParser with advanced rendering (additive/alpha/multiply blending)</p>
-                                <p>• Live 3D thumbnails with idle animations in model listing</p>
-                                <p>• GLSL shader system rewrite with single ShaderMaterial (up to 4 stages)</p>
-                                <p>• Dynamic lighting controls (ambient/directional/back) with real-time adjustment</p>
-                                <p>• GIF thumbnail generation (300x300, 36 frames) using gif.js Web Workers</p>
-                                <p>• 64x64 PNG head icon with FOV-based camera positioning</p>
-                                <p>• Complete weapon system with sounds/projectiles/firing for all 10 Q3 weapons</p>
-                                <p>• Composite weapon loading (barrel/hand/flash parts via TAGs)</p>
-                                <p>• Approval workflow (pending/approved/rejected/hidden)</p>
-                                <p>• Case-insensitive file serving eliminating 404 spam</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tagging System -->
-                    <div class="relative pl-6 border-l-2 border-purple-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-purple-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-purple-300">Comprehensive Tagging System</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• Tag model with categories (Difficulty, Movement, Weapons, Items, Environment, Functions)</p>
-                                <p>• TagController CRUD and TagSeeder for comprehensive tags</p>
-                                <p>• Tag filtering with backend support in MapFilters class</p>
-                                <p>• Tag adoption - PUBLIC maplists auto-propagate tags to all maps</p>
-                                <p>• Tags persist after maplist deletion</p>
-                                <p>• Alphabetically sorted dropdown with search and click-to-add</p>
-                                <p>• Public/private maplist visibility control with confirmation dialog</p>
-                                <p>• Full tag CRUD on maplist detail with real-time updates</p>
-                                <p>• Vue Teleport for dropdown positioning (no z-index issues)</p>
-                                <p>• Responsive design with mobile support</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- YouTube-Style Maplists -->
-                    <div class="relative pl-6 border-l-2 border-purple-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-purple-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-purple-300">YouTube-Style Maplists & Play Later</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• Complete maplist system with public/private visibility and Play Later functionality</p>
-                                <p>• User auto-creates Play Later on registration (660 existing users via command)</p>
-                                <p>• MaplistController full REST API with all CRUD operations</p>
-                                <p>• Play Later hidden from public, always private, owner-only, non-deletable</p>
-                                <p>• AddToMaplistModal with quick "Add to Play Later" shortcut</p>
-                                <p>• MaplistCard with 2x2 thumbnail preview and Q3 color-coded usernames</p>
-                                <p>• Server selection dropdown for Play Later (online servers only)</p>
-                                <p>• Play button copying connect command with map vote</p>
-                                <p>• Like/favorite system with counter caching</p>
-                                <p>• Profile integration showing top 3 most favorited maplists</p>
-                                <p>• Navigation links in MainLayout and user dropdown</p>
-                                <p>• Performance: eager loading, database indexes, pagination</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Clan System Overhaul -->
-                    <div class="relative pl-6 border-l-2 border-yellow-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-yellow-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-yellow-300">Complete Clan System Overhaul</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• ClanStatisticsController with comprehensive stats calculation</p>
-                                <p>• ClanAchievements component with leaderboards and hall of fame</p>
-                                <p>• Filterable Untouchable WR section (All/Solo/Tied tabs)</p>
-                                <p>• UpdatePlayerRankingsCache command caching WR/top3 counts every 20min</p>
-                                <p>• 10 animated clan name effects (particles/orbs/lines/matrix/glitch/wave/neon/rgb split/flicker/hologram)</p>
-                                <p>• Effect color picker with hex color support</p>
-                                <p>• Clan sorting by name/members/world records/top 3</p>
-                                <p>• Clan background upload with image cropper</p>
-                                <p>• Member config file (.cfg) upload/download/delete</p>
-                                <p>• MemberNoteEditor with rich text for "Member Details"</p>
-                                <p>• Q3 color code support in clan tags</p>
-                                <p>• File limits: 1MB avatars, 5MB backgrounds</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Profile Customization -->
-                    <div class="relative pl-6 border-l-2 border-yellow-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-yellow-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-yellow-300">Profile Customization & Redesign</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• Background upload with vue-advanced-cropper (4.8 aspect, 1920x400)</p>
-                                <p>• CSS effects system for animated avatars/names with color picker</p>
-                                <p>• Avatar border color selection</p>
-                                <p>• Redesigned profile header compact 280px horizontal layout</p>
-                                <p>• Floating transparent glassmorphism elements</p>
-                                <p>• Compact stats grid showing both CPM and VQ3 values</p>
-                                <p>• Sidebar navigation tabs (sticky, 1/4 width)</p>
-                                <p>• Records table redesign with inline Record component</p>
-                                <p>• Epic hover effects with gradient glows and animations</p>
-                                <p>• Map Completionist section with unplayed maps pagination</p>
-                                <p>• Modern settings UI with glassmorphism effects</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- UI/UX Complete Redesign -->
-                    <div class="relative pl-6 border-l-2 border-orange-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-orange-300">Complete UI/UX Modernization (All Pages)</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p><strong class="text-orange-300">Header:</strong> Two-row responsive layout • Progressive hiding into "More" dropdown • Teleport pattern for all dropdowns • Modern glassmorphism styling</p>
-                                <p><strong class="text-orange-300">Maps:</strong> Exponential slider scaling • Visual grid selector with click cycling • Smooth expand/collapse animations • Modern filter controls</p>
-                                <p><strong class="text-orange-300">Records:</strong> Complete rewrite ultra-compact • Map thumbnail backgrounds • Top 3 medals • Gamemode filtering • Horizontal layout</p>
-                                <p><strong class="text-orange-300">Map Detail:</strong> Hero section with full-width background • Smart gametype tabs • Quake icons for weapons/items/functions • Mobile physics toggle • Active server display</p>
-                                <p><strong class="text-orange-300">Ranking:</strong> Inline button groups • Category filters with weapon icons • Medal emojis for top 3 • Improved mobile responsiveness</p>
-                                <p><strong class="text-orange-300">Servers:</strong> Dual-layout system (cards/list) • Personal best times • Map features hover-to-expand • Subtler animations • Fixed black Q3 text visibility</p>
-                                <p><strong class="text-orange-300">Site-wide:</strong> Shadow gradient fades on all pages • backdrop-blur-xl bg-black/60 consistent • Better spacing/padding • Enhanced transitions</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Performance & Infrastructure -->
-                    <div class="relative pl-6 border-l-2 border-red-500/30">
-                        <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
-                        <div>
-                            <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
-                                <div class="w-2 h-2 bg-red-400 rounded-full"></div>
-                                <span class="text-sm font-semibold text-red-300">Performance & Infrastructure (400x Faster)</span>
-                            </div>
-                            <div class="ml-3 text-xs text-gray-300 space-y-1">
-                                <p>• Rust rating service for ELO calculations (60s→0.15s, 400x faster)</p>
-                                <p>• Composite database indexes on records table for query optimization</p>
-                                <p>• Optimized ProfileController queries removing correlated subqueries</p>
-                                <p>• Switched queue driver from database to Redis for better performance</p>
-                                <p>• 7z compression for demos (10-20% better than ZIP)</p>
-                                <p>• Backblaze B2 S3-compatible cloud storage integration</p>
-                                <p>• Typesense search integration for Maps/Players/Demos</p>
-                                <p>• Laravel Scout with auto-indexing on deploy</p>
-                                <p>• OAuthController for third-party auth (Twitch/Steam/Twitter)</p>
-                                <p>• TwitchService API integration with live status checking</p>
-                                <p>• Updated all controllers/models for OAuth and category-based ranking</p>
-                                <p>• Complete production deployment automation with deploy.py</p>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
+
+                <!-- ONGOING -->
+                <div class="mb-12">
+                    <h3 class="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+                        <span class="text-2xl">⚡</span> Ongoing
+                    </h3>
+                    <div class="ml-8 space-y-6">
+                        <!-- Beta 3D Map Preview -->
+                        <div class="relative pl-6 border-l-2 border-yellow-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-yellow-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-yellow-300">Beta 3D Map Preview</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Built test-map-viewer.html with Three.js-based BSP map renderer</p>
+                                    <p>• Implemented real-time 3D navigation with WASD controls and mouse look</p>
+                                    <p>• Added texture extraction scripts (export_textures.py, parse_bsp_to_json.py)</p>
+                                    <p>• Included textures for pado and pornstar-cpmrun maps with skybox support</p>
+                                    <p>• Created TestMapViewerController for serving map viewer</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Demos Integration with Leaderboards -->
+                        <div class="relative pl-6 border-l-2 border-yellow-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-yellow-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-yellow-300">Demos Integration with Leaderboards</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Created OfflineRecord model with ranking for practice/offline demos (df/fs/fc gametypes)</p>
+                                    <p>• Added offline_records table with optimized composite indexes for leaderboard queries</p>
+                                    <p>• Implemented automatic rank calculation and updates on new record creation</p>
+                                    <p>• Added gametype field to uploaded_demos to distinguish online vs offline</p>
+                                    <p>• Created ReassignDemosToRecords command for re-linking demos after record repopulation</p>
+                                    <p>• Enhanced DemoProcessorService to differentiate offline vs online demos</p>
+                                    <p>• Improved Python demo processor for better metadata extraction</p>
+                                    <p>• Added 7z compression for demos (10-20% better than ZIP)</p>
+                                    <p>• Enhanced MapRecord component with improved time display and demo download links</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Finish Connecting GitHub Repo with Roadmap -->
+                        <div class="relative pl-6 border-l-2 border-yellow-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-yellow-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-yellow-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-yellow-300">Finish Connecting GitHub Repo with Roadmap</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Alternative view showing all 740 individual achievement points in flat tree structure</p>
+                                    <p>• Alternative view organizing development by 55 GitHub commits with full descriptions</p>
+                                    <p>• Interactive toggle between grouped roadmap view and detailed breakdowns</p>
+                                    <p>• Hover tooltips showing commit details and implementation specifics</p>
+                                    <p>• Full coverage of all development work from September-October 2025</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DONE -->
+                <div>
+                    <h3 class="text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
+                        <span class="text-2xl">✅</span> Done
+                    </h3>
+                    <div class="ml-8 space-y-6">
+
+                        <!-- Ranking System Reworked -->
+                        <div class="relative pl-6 border-l-2 border-green-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-green-300">Ranking System Reworked Drastically</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added Rust rating service (60s→0.15s, 400x faster ELO calculations)</p>
+                                    <p>• Created CalculateRatingsRust, CalculateRatingsFast, UpdateRatingsActivity commands</p>
+                                    <p>• Added indexes to player_ratings for performance</p>
+                                    <p>• Added category column to player_ratings for weapon/function-specific rankings</p>
+                                    <p>• Redesigned filter system replacing dropdowns with inline button groups</p>
+                                    <p>• Separated ranking type filters (Active/All Players) with dedicated larger buttons</p>
+                                    <p>• Added category filters with Quake icons/colors (All/Strafe/Slick/Tele/RL/PG/GL/LG/BFG)</p>
+                                    <p>• Grouped gametypes into Run/CTF blocks with visual separation</p>
+                                    <p>• Glassmorphism design with backdrop blur/gradients/borders</p>
+                                    <p>• Modernized page header with gradient/typography</p>
+                                    <p>• Moved player counts to table headers "VQ3 Rankings (X)"</p>
+                                    <p>• Fixed "My VQ3/CPM Rating" heights with min-height 60px flex center</p>
+                                    <p>• Color-coded borders (blue VQ3/purple CPM)</p>
+                                    <p>• Redesigned Rating component to list-style interactive rows</p>
+                                    <p>• Added hover effects with blurred/sharpened profile photos</p>
+                                    <p>• Medal emojis for top 3 (🥇🥈🥉)</p>
+                                    <p>• Improved mobile responsiveness with adaptive fonts/spacing</p>
+                                    <p>• Visual hierarchy with physics icons/compact dd/mm/yy dates</p>
+                                    <p>• Drop shadows for text readability over dynamic backgrounds</p>
+                                    <p>• Added category param to ranking queries supporting weapon/function rankings</p>
+                                    <p>• Removed Dropdown dependency for cleaner code</p>
+                                    <p>• Improved state management with proper watchEffect route params</p>
+                                    <p>• Better semantic HTML with flex layouts/responsive breakpoints</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maplists Function -->
+                        <div class="relative pl-6 border-l-2 border-green-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-green-300">Maplists Function</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Created maplists table with public/private, Play Later flag, social counters</p>
+                                    <p>• Created maplist_maps pivot table for many-to-many with ordering</p>
+                                    <p>• Created maplist_likes and maplist_favorites tables</p>
+                                    <p>• Built Maplist model with relationships and social helpers</p>
+                                    <p>• Updated User model to auto-create Play Later on registration</p>
+                                    <p>• Created CreatePlayLaterMaplists command for 660 existing users</p>
+                                    <p>• Built full REST API in MaplistController</p>
+                                    <p>• Enforced privacy (Play Later hidden, always private, owner-only, non-deletable)</p>
+                                    <p>• Created AddToMaplistModal.vue with quick "Add to Play Later" shortcut</p>
+                                    <p>• Listed user's maplists in modal with counts and on-the-fly creation</p>
+                                    <p>• Added real-time search in AddToMaplistModal</p>
+                                    <p>• Built MaplistCard.vue with 2x2 thumbnail preview of first 4 maps</p>
+                                    <p>• Added Q3 color-coded usernames using $q3tohtml()</p>
+                                    <p>• Displayed social stats (likes, favorites, map count)</p>
+                                    <p>• Added Play Later badge in MaplistCard</p>
+                                    <p>• Created Maplists/Index.vue with public browser grid, sort by likes/favorites</p>
+                                    <p>• Redesigned Maplists/Show.vue with card-based grid using MapCard</p>
+                                    <p>• Added breadcrumb navigation to Maplists/Show</p>
+                                    <p>• Conditional UI for Play Later vs regular (hide social for Play Later)</p>
+                                    <p>• Added server selection dropdown for Play Later owners (online servers only)</p>
+                                    <p>• Added play button per map copying connect command with callvote</p>
+                                    <p>• Added remove button for map owners</p>
+                                    <p>• Integrated "Add to Maplist" button in MapView</p>
+                                    <p>• Displayed top 3 favorited public maplists in Profile.vue grid</p>
+                                    <p>• Added "Maplists" link to MainLayout navigation</p>
+                                    <p>• Added "Play Later" and "All My Maplists" to user dropdown</p>
+                                    <p>• Performance: eager loading, counter caching, database indexes, pagination</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tag System -->
+                        <div class="relative pl-6 border-l-2 border-green-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-green-300">Tag System</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Created Tag model and migration with name, display_name, category, usage_count</p>
+                                    <p>• Built TagController with full CRUD for tags on maps and maplists</p>
+                                    <p>• Added TagSeeder populating categories (Difficulty, Movement, Weapons, Items, Environment, Functions)</p>
+                                    <p>• Implemented tag filtering for maps with backend support</p>
+                                    <p>• Enabled tag adoption where public maplist tags propagate to all maps</p>
+                                    <p>• Ensured tag persistence on maps after maplist deletion</p>
+                                    <p>• Created tag dropdown UI with alphabetical sort, search, click-to-add</p>
+                                    <p>• Added visibility control for maplists with public/private toggle</p>
+                                    <p>• Implemented public warning modal noting permanent public status</p>
+                                    <p>• Added visibility badge (green "Public" or gray "Private")</p>
+                                    <p>• Moved reorder button to top-right below Edit/Delete</p>
+                                    <p>• Added full tag CRUD on maplist detail page with real-time updates</p>
+                                    <p>• Used Vue Teleport for tag dropdown positioning (no z-index issues)</p>
+                                    <p>• Filtered tags in dropdown to show only unadded ones</p>
+                                    <p>• Removed category labels from tag buttons for cleaner UI</p>
+                                    <p>• Ensured responsive design for all screens</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clans Reworked Drastically -->
+                        <div class="relative pl-6 border-l-2 border-green-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-green-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-green-300">Clans Reworked Drastically</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added ClanStatisticsController with comprehensive stats calculation</p>
+                                    <p>• Added ClanAchievements component with leaderboards/hall of fame/special sections</p>
+                                    <p>• Added filterable Untouchable WR section (All/Solo/Tied tabs)</p>
+                                    <p>• Added tooltips to all stats boxes explaining metrics</p>
+                                    <p>• Compacted all sections/tables for better space usage</p>
+                                    <p>• Added UpdatePlayerRankingsCache command caching WR/top3 counts</p>
+                                    <p>• Fixed WR count calculation to only count rank #1 positions</p>
+                                    <p>• Added rankings:cache scheduled task every 20 minutes</p>
+                                    <p>• Added cached_wr_count/cached_top3_count columns to users</p>
+                                    <p>• Added 10 animated clan name effects (particles/orbs/lines/matrix/glitch/wave/neon/rgb split/flicker/hologram)</p>
+                                    <p>• Added effect color picker with hex color support</p>
+                                    <p>• Added effects to clan list cards/detail page/edit modal preview</p>
+                                    <p>• Added CSS keyframe animations for all effects in app.css</p>
+                                    <p>• Added clan sorting by name/members/world records/top 3</p>
+                                    <p>• Added WR/top3 count badges on clan cards using cached statistics</p>
+                                    <p>• Added clan tag field to clans table/management</p>
+                                    <p>• Displayed clan name effects on clan cards list</p>
+                                    <p>• Kept edit clan modal open after saving changes (preserve state)</p>
+                                    <p>• Compacted Featured Stats Cards with horizontal layout</p>
+                                    <p>• Compacted Hall of Fame boxes and fix layout distribution</p>
+                                    <p>• Compacted Additional Stats Grid boxes (Top 10/Avg WR Age/Map Coverage/Physics)</p>
+                                    <p>• Added icons and improved spacing throughout statistics sections</p>
+                                    <p>• Migrations for indexes, tag/name_effect/effect_color columns, cached rankings</p>
+                                    <p>• Added clan background image upload with image cropper</p>
+                                    <p>• Changed "Member Notes" to "Member Details" throughout UI</p>
+                                    <p>• Added member config file (.cfg) upload/download/delete functionality</p>
+                                    <p>• Added MemberNoteEditor component with rich text editor</p>
+                                    <p>• Modernized pagination component with ultra-sleek design</p>
+                                    <p>• Enhanced player select dropdowns with modern styling</p>
+                                    <p>• Fixed clan statistics to exclude soft-deleted members</p>
+                                    <p>• Fixed member name tooltips overflow on clan cards</p>
+                                    <p>• Replaced missing jumppad icon with push.svg</p>
+                                    <p>• Reorganized Hall of Fame weapon masters to same row</p>
+                                    <p>• Added default text for empty member notes in roster</p>
+                                    <p>• Improved roster box expansion with smooth max-height animation</p>
+                                    <p>• Fixed clan name effects alignment after tag addition</p>
+                                    <p>• Added Q3 color code support to clan tags</p>
+                                    <p>• Removed brackets from clan tag display</p>
+                                    <p>• Added "Save Changes" button at top of Edit Clan form</p>
+                                    <p>• Implemented file size limits (1MB avatars/5MB backgrounds)</p>
+                                    <p>• Added ShareInertiaData middleware for Jetstream features</p>
+                                    <p>• avatar_effect/name_effect/avatar_effect_color to clans</p>
+                                    <p>• Changed featured_stat to array for multiple statistics</p>
+                                    <p>• Added avatar effect rendering for clan avatars</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Models with 3D Preview -->
+                        <div class="relative pl-6 border-l-2 border-blue-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-blue-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-blue-300">Models with 3D Preview</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Implemented full MD3 viewer with Three.js 3D visualization</p>
+                                    <p>• Parsed MD3 binary format (frames/tags/surfaces)</p>
+                                    <p>• Loaded TGA textures with UV mapping</p>
+                                    <p>• Parsed skin files for texture-to-surface mapping</p>
+                                    <p>• Assembled full player models (head+upper+lower) via TAG attachments</p>
+                                    <p>• Added interactive camera (rotate/pan/zoom)</p>
+                                    <p>• Parsed animation.cfg for frame-by-frame vertex animation</p>
+                                    <p>• Implemented independent leg/torso animations with timing</p>
+                                    <p>• Added looping animation support</p>
+                                    <p>• UI controls for Walk/Run/Jump/Crouch/Gesture/Idle</p>
+                                    <p>• Web Audio API for 13 character sounds (jump/taunt/death/pain/fall)</p>
+                                    <p>• Automatic sound-to-animation mapping/playback</p>
+                                    <p>• Volume slider and enable/disable toggle</p>
+                                    <p>• Individual sound test buttons</p>
+                                    <p>• PK3 upload support with automatic extraction/organization</p>
+                                    <p>• Model CRUD with categories and public browsing/download</p>
+                                    <p>• Implemented Q3-accurate frame offsets matching cg_players.c:210-214</p>
+                                    <p>• Applied -63 offset to LEGS animations for lower.md3 local frames</p>
+                                    <p>• Added playBothAnimation() for deaths on both legs/torso simultaneously</p>
+                                    <p>• Implemented Q3 idle animation system (LEGS_IDLE + TORSO_STAND)</p>
+                                    <p>• Researched bg_pmove.c:PM_Footsteps() and PM_TorsoAnimation() logic</p>
+                                    <p>• Animations ALWAYS play (animMgr.playing = true, never stop)</p>
+                                    <p>• Implemented Q3-style animation-to-sound event system</p>
+                                    <p>• Researched ioq3 cg_event.c/cg_players.c for event-based sound triggering</p>
+                                    <p>• Mapped LEGS_JUMP/LEGS_JUMPB→jump1 (EV_JUMP)</p>
+                                    <p>• Mapped TORSO_GESTURE→taunt (EV_TAUNT)</p>
+                                    <p>• Mapped BOTH_DEATH1/2/3→death1/2/3 (EV_DEATH)</p>
+                                    <p>• Added Q3ShaderParser for .shader files</p>
+                                    <p>• Added Q3ShaderMaterial system for advanced rendering</p>
+                                    <p>• Integrated shader loading/application in MD3Loader</p>
+                                    <p>• Fixed default cull mode (removed back, use null)</p>
+                                    <p>• Supported additive/subtractive/multiply blending, texture animations, environment mapping</p>
+                                    <p>• Fixed head see-through issue (DoubleSide default)</p>
+                                    <p>• Fixed skateboard alpha channel (proper transparent cutout)</p>
+                                    <p>• Replaced static image thumbnails with live 3D ModelViewer</p>
+                                    <p>• Displayed animated idle poses (LEGS_IDLE, TORSO_STAND) in thumbnails</p>
+                                    <p>• Added thumbnailMode prop to ModelViewer</p>
+                                    <p>• Configured separate camera positions for thumbnail vs detail view</p>
+                                    <p>• Removed grid floor from 3D viewer</p>
+                                    <p>• Zoomed and centered models properly</p>
+                                    <p>• Replaced multiple-material approach with single THREE.ShaderMaterial</p>
+                                    <p>• Implemented multi-stage shader blending in fragment shader (fixes flickering)</p>
+                                    <p>• Supported up to 4 stages with blend functions</p>
+                                    <p>• Added tcGen environment mapping and tcMod scroll animations</p>
+                                    <p>• Added rgbGen lightingDiffuse</p>
+                                    <p>• Added static texture cache shared across surfaces</p>
+                                    <p>• Implemented smart fallback (black for additive, white for opaque)</p>
+                                    <p>• Fixed transparency detection (base stage only)</p>
+                                    <p>• Supported texture format fallback (.tga→.TGA→.jpg→.png)</p>
+                                    <p>• Added automatic sarge sound fallback</p>
+                                    <p>• Eliminated 404 console spam for missing sounds</p>
+                                    <p>• Fixed rendering issues (brandon's glowing hat, mynx's shiny surfaces, bones' cyan hologram)</p>
+                                    <p>• Significant performance improvement via shader rewrite</p>
+                                    <p>• Added dynamic lighting controls (ambient/directional/back intensity/color/position)</p>
+                                    <p>• Added updateLightingFromScene() in Q3ShaderMaterial</p>
+                                    <p>• Exposed light control methods via ModelViewer API</p>
+                                    <p>• Adjusted default lighting (ambient 0.9, directional 0.65, back 0.2)</p>
+                                    <p>• Reorganized layout (Description/Technical Details left, Animation/Sound/Light controls right)</p>
+                                    <p>• Made animation/sound buttons compact with flexbox wrap</p>
+                                    <p>• Added collapsible light controls panel with 8 control methods</p>
+                                    <p>• Implemented real-time shader uniform updates</p>
+                                    <p>• Extended loadTexture() with fallbackBaseUrl</p>
+                                    <p>• Auto-fallback shader textures to baseq3 when missing from PK3</p>
+                                    <p>• Enhanced loadTextureForMesh() with multi-extension fallback (TGA/JPG/JPEG/PNG)</p>
+                                    <p>• Updated ModelsController to detect/create separate entries per model in PK3</p>
+                                    <p>• Added pagination support to scraper (--pages, --start-page, --reverse)</p>
+                                    <p>• Implemented download history tracking</p>
+                                    <p>• Added sort functionality (newest/oldest) to model index</p>
+                                    <p>• Improved model type badge styling</p>
+                                    <p>• Added single-click 64x64 PNG head icon generation with FOV-based camera</p>
+                                    <p>• Added browser-based 300x300 GIF generation (36 frames, 360° rotation) using gif.js Web Workers</p>
+                                    <p>• Added progress tracking and combined upload</p>
+                                    <p>• Added head_icon/thumbnail_path/base_model_file_path columns</p>
+                                    <p>• Added base model detection (sarge/klesk/etc.)</p>
+                                    <p>• Classified model types (complete/skin pack/sound pack/mixed)</p>
+                                    <p>• Built bulk upload interface for admins</p>
+                                    <p>• Auto-extracted metadata</p>
+                                    <p>• Supported base Q3 files extracting pak0.pk3 & pak2.pk3 to public/baseq3/</p>
+                                    <p>• Added base_model and model_type columns</p>
+                                    <p>• Created SetupBaseModels.php command</p>
+                                    <p>• Created BaseQuake3ModelsSeeder for 23 base Q3 models</p>
+                                    <p>• Created ImportBaseWeapons artisan command</p>
+                                    <p>• Implemented loadWeaponModel() in MD3Loader for composite weapons</p>
+                                    <p>• Loaded main weapon body and auto-attached parts (barrel/hand/flash via TAGs)</p>
+                                    <p>• Added main_file column for non-standard filenames</p>
+                                    <p>• Added 'item' category to model category enum</p>
+                                    <p>• Implemented separate camera positioning for weapons</p>
+                                    <p>• Skipped skin file loading for weapons</p>
+                                    <p>• Loaded shaders from models.shader before model loading</p>
+                                    <p>• Added complete weapon system with sounds/projectiles/firing for all 10 Q3 weapons</p>
+                                    <p>• Implemented weapon-specific fire rates</p>
+                                    <p>• Added keyboard (Ctrl) and mouse controls for firing</p>
+                                    <p>• Enabled continuous firing for automatic weapons</p>
+                                    <p>• Added weapon kick/recoil animation on fire</p>
+                                    <p>• Created projectiles: plasma sprites with trail, rocket with exhaust, railgun beam, lightning beam, grenade with gravity, BFG glow, bullet tracers, grapple</p>
+                                    <p>• Spawned projectiles from muzzle flash with proper direction</p>
+                                    <p>• Added automatic projectile cleanup and lifetime management</p>
+                                    <p>• Fixed railgun fire sound bug (reordered isRailgun before isLightningGun check)</p>
+                                    <p>• Model approval workflow (pending/approved/rejected/hidden)</p>
+                                    <p>• Allowed texture/shader-only weapon uploads without MD3 files</p>
+                                    <p>• Fixed weapon mute button handling weapon sounds properly</p>
+                                    <p>• Allowed users to download own uploads regardless of approval status</p>
+                                    <p>• FileController.php for case-insensitive file serving eliminating 404 spam</p>
+                                    <p>• Created ModelsController.php, PlayerModel.php, ModelViewer.vue, MD3Loader.js, MD3AnimationManager.js, MD3SoundManager.js</p>
+                                    <p>• Added Models pages: Index, Create, Show</p>
+                                    <p>• Migration for player_models table</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Demos Integration and Upload -->
+                        <div class="relative pl-6 border-l-2 border-blue-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-blue-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-blue-300">Demos Integration and Upload</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added gametype field to uploaded_demos to distinguish online (mdf/mfs/mfc) vs offline (df/fs/fc)</p>
+                                    <p>• Included record_date tracking in uploaded_demos for accurate timestamps</p>
+                                    <p>• Wrote comprehensive OFFLINE_RECORDS.md documentation</p>
+                                    <p>• Enhanced DemoProcessorService to differentiate offline vs online demos</p>
+                                    <p>• Added createOfflineRecord() method to auto-create offline records from processed demos</p>
+                                    <p>• Improved Python demo processor (process_single_demo.py) for better metadata extraction</p>
+                                    <p>• Updated renamer.py with additional gametype detection logic</p>
+                                    <p>• Updated production storage documentation with Backblaze B2 configuration</p>
+                                    <p>• Added 7z compression support for demos (10-20% better than ZIP)</p>
+                                    <p>• Added p7zip-full in Docker container</p>
+                                    <p>• DEMO_COMPRESSION_FORMAT config option (zip/7z)</p>
+                                    <p>• Fixed directory permissions (0755) for processed demos storage</p>
+                                    <p>• Updated DemoProcessorService for multiple compression formats</p>
+                                    <p>• Backblaze B2 S3-compatible storage integration</p>
+                                    <p>• league/flysystem-aws-s3-v3 package for S3 support</p>
+                                    <p>• B2 configuration in .env (credentials/endpoint/bucket)</p>
+                                    <p>• PRODUCTION_DEPLOYMENT.template.md and PRODUCTION_STORAGE.md documentation</p>
+                                    <p>• Enhanced MapRecord component with improved time display and demo download links</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Serverlist Reworked -->
+                        <div class="relative pl-6 border-l-2 border-purple-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-purple-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-purple-300">Serverlist Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Redesigned servers page with modern card layout and compact list view</p>
+                                    <p>• Dual-layout system (large cards / compact list) with cookie persistence</p>
+                                    <p>• Comprehensive filtering (gametype/physics/hide empty)</p>
+                                    <p>• Sorting by popularity/alphabetically with toggle</p>
+                                    <p>• Redesigned compact list with VQ3/CPM split columns</p>
+                                    <p>• Fixed black Q3 text (^0 color code) visibility with white outline globally</p>
+                                    <p>• Improved filter controls with inline labels/optimized spacing</p>
+                                    <p>• Standardized page header sizes for Maps/Servers</p>
+                                    <p>• Hover-to-expand player list with smooth animation</p>
+                                    <p>• Fixed background image positioning with fade gradient</p>
+                                    <p>• Reduced header/filter spacing for cleaner layout</p>
+                                    <p>• Displayed player's personal best time on each server card</p>
+                                    <p>• Showed rank position "Rank 5/150" alongside times</p>
+                                    <p>• Added map features hover-to-expand (weapons/items/functions)</p>
+                                    <p>• Implemented player list hover-to-expand with "show more" indicators</p>
+                                    <p>• Added helper functions for weapon/item/function icons/names</p>
+                                    <p>• Subtler hover indicator animations (2.5s cycle, 2px movement)</p>
+                                    <p>• Reduced glow effects/ring opacity for less distraction</p>
+                                    <p>• Better text shadows for readability over dynamic backgrounds</p>
+                                    <p>• Improved gradient fades on thumbnails/player lists</p>
+                                    <p>• Enhanced glassmorphism on buttons/containers</p>
+                                    <p>• Added myrank_position and myrank_total to server data</p>
+                                    <p>• Improved rank calculation/retrieval</p>
+                                    <p>• Added debug logging for rank data</p>
+                                    <p>• Added manual gametype classification for servers (run/ctf/freestyle/teamrun)</p>
+                                    <p>• Implemented server type field in database/admin panel</p>
+                                    <p>• Enhanced scraping to preserve gametype</p>
+                                    <p>• Improved DefragServer class to handle server type info</p>
+                                    <p>• Updated MapFilters component for better filter handling</p>
+                                    <p>• Enhanced OnlinePlayer component styling</p>
+                                    <p>• Removed expand logic from map detail features (always visible)</p>
+                                    <p>• Added glass-like effect to VQ3/CPM leaderboard tables matching Servers</p>
+                                    <p>• Improved visibility of dates/ranks/"Your Best" in leaderboards</p>
+                                    <p>• Made players list always expanded by default on Servers</p>
+                                    <p>• Added server count badges with glassmorphism</p>
+                                    <p>• Fixed dropdown backdrop click-away functionality</p>
+                                    <p>• Added dynamic position calculation for teleported dropdowns on resize/scroll</p>
+                                    <p>• Map hover indicators on Servers page only on map box hover</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maps Reworked -->
+                        <div class="relative pl-6 border-l-2 border-purple-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-purple-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-purple-300">Maps Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Redesigned PlayerSelect: show dropdown only when search.length > 0</p>
+                                    <p>• Complete visual redesign with glassmorphism</p>
+                                    <p>• Added search icon in input</p>
+                                    <p>• Improved dropdown with backdrop blur/spacing</p>
+                                    <p>• Selected items show blue background/checkmark</p>
+                                    <p>• Enhanced hover states/transitions</p>
+                                    <p>• Added smooth expand/collapse filter animation</p>
+                                    <p>• Filter button icon rotates 180°</p>
+                                    <p>• Transition max-height 500ms enter/300ms leave with overflow-hidden</p>
+                                    <p>• CRITICAL FIX: added missing ref import from Vue</p>
+                                    <p>• Replaced Vuetify sliders with custom HTML5 inputs</p>
+                                    <p>• Implemented exponential scaling (power 2.5) - most values in first 80% travel, fine control last 20%</p>
+                                    <p>• Modern slider styling with blue gradient thumbs</p>
+                                    <p>• Hover effects: scale 1.05-1.15 with glow shadows</p>
+                                    <p>• Reset button clears all filters without closing using local resetFilters()</p>
+                                    <p>• Removed selected items display to prevent shift</p>
+                                    <p>• Complete visual redesign of MapFilters with glassmorphism</p>
+                                    <p>• Rewrote ItemsSelect from dropdown to visual grid</p>
+                                    <p>• Single-click cycling: neutral→include green→exclude red→neutral</p>
+                                    <p>• Grid auto-fill 48px tiles with sprites</p>
+                                    <p>• Visual state indicators (checkmark green/X red/neutral gray)</p>
+                                    <p>• Header with counts and bulk buttons (Clear/Include All green/Exclude All red)</p>
+                                    <p>• Hover scale 1.05 with color transitions</p>
+                                    <p>• No dropdown/search - direct visual interaction</p>
+                                    <p>• Constant grid size preventing layout shift</p>
+                                    <p>• Redesigned MapCard with modern layout/aspect ratios</p>
+                                    <p>• Physics badge repositioned top-right</p>
+                                    <p>• Items/weapons/functions overlay bottom-right with backdrop blur</p>
+                                    <p>• Compact 3x3 icon displays instead of 4x4</p>
+                                    <p>• Improved copy/download button styles</p>
+                                    <p>• Better typography hierarchy</p>
+                                    <p>• Increased pagination from 21 to 30 maps per page in both index() and filters()</p>
+                                    <p>• Exponential slider scaling for fine control</p>
+                                    <p>• CSS transitions with proper easing</p>
+                                    <p>• Modern color palette with semi-transparent elements</p>
+                                    <p>• Consistent component styling</p>
+                                    <p>• Better keyboard support (Enter to submit search)</p>
+                                    <p>• Hero section with full-width map thumbnail background on MapView</p>
+                                    <p>• Blur effect and fade gradient on map background</p>
+                                    <p>• Compact modern record card design with improved spacing</p>
+                                    <p>• Emerald highlight for user's personal records</p>
+                                    <p>• Amber/gold highlight for old top records with visible styling</p>
+                                    <p>• Improved sort button with clear labels (⚡ Fastest / 📅 Newest)</p>
+                                    <p>• Fixed sort functionality to properly toggle between time and date</p>
+                                    <p>• Fixed horizontal scrollbar bug from w-screen overflow</p>
+                                    <p>• Fixed rank calculation to show correct ranks per gametype (CTF1/CTF2/etc.)</p>
+                                    <p>• Added glassmorphism effects to leaderboard containers</p>
+                                    <p>• Smart gametype tabs: auto-detect and default to most populated gametype</p>
+                                    <p>• Hide empty gametype tabs (only show tabs with records)</p>
+                                    <p>• Display record count on each gametype tab for better visibility</p>
+                                    <p>• Backend auto-detect most populated gametype when not specified</p>
+                                    <p>• Calculate and pass gametype statistics to frontend</p>
+                                    <p>• Query optimization using SUBSTRING_INDEX to group by base gametype</p>
+                                    <p>• Replaced Dropdown components with horizontal tab buttons</p>
+                                    <p>• Added v-show directive to hide tabs with 0 records</p>
+                                    <p>• Improved visual hierarchy with active tab highlighting (blue background)</p>
+                                    <p>• Simplified sort button (combined date/time toggle)</p>
+                                    <p>• CTF maps now default to CTF1 instead of empty RUN gametype</p>
+                                    <p>• Users immediately see which gametypes are available</p>
+                                    <p>• No more clicking through dropdowns to find populated gametypes</p>
+                                    <p>• Added Quake icons for weapons/items/functions</p>
+                                    <p>• Display all map features with proper icons</p>
+                                    <p>• Adopted consistent header styling from records page for VQ3/CPM tables</p>
+                                    <p>• Compact headers with text-lg colored titles and smaller icons</p>
+                                    <p>• Changed map names from blue-400 to neutral gray-300 (white on hover)</p>
+                                    <p>• Improved date format dd/mm/yy for readability</p>
+                                    <p>• Enhanced background blur effects on cards</p>
+                                    <p>• Fixed deleted_at column reference in maps table query</p>
+                                    <p>• Added proper icon mappings for all Quake weapons/items/functions</p>
+                                    <p>• Fixed fallback icons with appropriate defaults</p>
+                                    <p>• Replaced emoji icons with custom SVG icons for VQ3/CPM physics</p>
+                                    <p>• Added custom haste.svg icon for fastest sorting mode</p>
+                                    <p>• Implemented active server display with player counts and defrag:// protocol links</p>
+                                    <p>• Added map download button with improved visibility</p>
+                                    <p>• Created mobile physics toggle to switch between VQ3/CPM leaderboards on small screens</p>
+                                    <p>• Made map author clickable to filter maps by author</p>
+                                    <p>• Fixed rank calculation to preserve time-based ranks when sorting by date</p>
+                                    <p>• Improved header consistency with min-width and placeholder for missing records</p>
+                                    <p>• Hid gametype buttons when only one gametype has records</p>
+                                    <p>• Updated MapRecordSmall component to match desktop ultra-compact design</p>
+                                    <p>• Removed star badge for personal records outside top 3</p>
+                                    <p>• Ensured top 3 medals display for all users including personal records</p>
+                                    <p>• Changed CPM color scheme to purple throughout UI</p>
+                                    <p>• Made record cards much more compact and visually appealing</p>
+                                    <p>• Emphasized rank numbers and times with larger bolder fonts</p>
+                                    <p>• Added top 3 rank colors and medals (🥇🥈🥉)</p>
+                                    <p>• Old top records show crown icon (👑) for ranks 1-3 only</p>
+                                    <p>• Player names and flags more visible with better contrast</p>
+                                    <p>• Dates shown in uniform MM/DD/YYYY format with monospace font</p>
+                                    <p>• Added smart hover effects: row highlights/rank scales-pops/badges animate</p>
+                                    <p>• Demo download and date info subtle by default, visible on hover</p>
+                                    <p>• Made VQ3/CPM headers more compact</p>
+                                    <p>• Fixed Old Top toggle state persistence across page refreshes</p>
+                                    <p>• Added localStorage sync for toggle state</p>
+                                    <p>• Fixed ToggleButton to properly watch for prop changes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Records Reworked -->
+                        <div class="relative pl-6 border-l-2 border-purple-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-purple-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-purple-300">Records Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Complete rewrite of Record.vue: removed old chunky card layout with borders/shadows</p>
+                                    <p>• Added map thumbnail as background (always visible, blurred)</p>
+                                    <p>• Background fades in on hover with unblur effect (opacity 20%→60%, blur-md→blur-none)</p>
+                                    <p>• Implemented ultra-compact horizontal layout: Rank|Map Name|Player|Time|Physics|Date</p>
+                                    <p>• Removed separate map thumbnail from row - now only background</p>
+                                    <p>• Top 3 ranks show medals (🥇🥈🥉) instead of colored numbers</p>
+                                    <p>• Replaced physics badges with clean VQ3/CPM icons</p>
+                                    <p>• Removed Mode badges (CTF/RUN) for cleaner look</p>
+                                    <p>• Smaller compact elements (6x6 avatars/xs text/tighter gaps)</p>
+                                    <p>• Background extends to edges with rounded corners matching container</p>
+                                    <p>• Smooth 500ms transitions on all hover effects</p>
+                                    <p>• Removed auto-update button functionality from RecordsView.vue</p>
+                                    <p>• Added gamemode filtering (ALL/RUN/CTF) with color-coded buttons</p>
+                                    <p>• Redesigned header with gradient background and modern filter buttons</p>
+                                    <p>• Changed physics filter from dropdown to inline buttons with icons</p>
+                                    <p>• Updated container styling: bg-black/40 border-white/5</p>
+                                    <p>• Cleaner pagination styling matching overall dark theme</p>
+                                    <p>• Map backgrounds create visual context for each record</p>
+                                    <p>• Subtle borders (border-white/[0.02]) instead of chunky gray lines</p>
+                                    <p>• Hover reveals full map image behind row with darker→lighter overlay transition</p>
+                                    <p>• All text/icons get subtle color shifts on hover</p>
+                                    <p>• First/last rows have rounded corners to match parent container</p>
+                                    <p>• Overall more compact with less vertical space per record</p>
+                                    <p>• Updated Record component with consistent neutral map name styling</p>
+                                    <p>• Improved date format dd/mm/yy for readability</p>
+                                    <p>• Enhanced background blur effects on cards</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Page Reworked -->
+                        <div class="relative pl-6 border-l-2 border-orange-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-orange-300">Main Page Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Updated Home.vue to use MainLayout instead of separate layout</p>
+                                    <p>• Applied consistent shadow gradient fade effects</p>
+                                    <p>• Improved shadow gradient fade effect on HomeLayout header</p>
+                                    <p>• Added backdrop-blur-xl bg-black/60 for consistent opacity</p>
+                                    <p>• Better shadow gradients fading from header to content</p>
+                                    <p>• More consistent spacing/padding throughout</p>
+                                    <p>• Improved readability with better contrast/blur effects</p>
+                                    <p>• Enhanced hovers/transitions</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profile Page Reworked -->
+                        <div class="relative pl-6 border-l-2 border-orange-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-orange-300">Profile Page Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added profile_background_path field to users table</p>
+                                    <p>• Implemented background upload with vue-advanced-cropper (4.8 aspect ratio, 1920x400px)</p>
+                                    <p>• Added SettingsController upload/deletion methods for backgrounds</p>
+                                    <p>• Displayed background on profile with edge fades</p>
+                                    <p>• Background attached to menu with max 400px height/1920px width</p>
+                                    <p>• Added avatar_effect, name_effect, color, avatar_border_color fields to users</p>
+                                    <p>• Implemented CSS effects system (effects.css) for animated avatars/names</p>
+                                    <p>• Added avatar/name effect selection in profile preferences</p>
+                                    <p>• Added color picker for effect customization</p>
+                                    <p>• Added avatar border color selection</p>
+                                    <p>• Redesigned profile header: compact 280px horizontal layout</p>
+                                    <p>• Added floating transparent elements with glassmorphism</p>
+                                    <p>• Compact stats grid: 8 cards (4 cols mobile/8 cols desktop) showing both CPM/VQ3 values</p>
+                                    <p>• Sidebar navigation tabs: left sidebar (sticky, 1/4 width)</p>
+                                    <p>• Records table redesign: inline Record component from RecordsView</p>
+                                    <p>• Removed player info from records table (profile context makes it redundant)</p>
+                                    <p>• Epic hover effects with gradient glows/animations</p>
+                                    <p>• Added Map Completionist section showing unplayed maps with pagination</p>
+                                    <p>• Backend getUnplayedMaps() in ProfileController</p>
+                                    <p>• Frontend display: 10 maps/page with thumbnails/names/authors</p>
+                                    <p>• Improved pagination with Prev/Next buttons and ellipsis for large page counts</p>
+                                    <p>• Changed map names color from physics-specific (blue/purple) to neutral gray</p>
+                                    <p>• Installed vue-advanced-cropper package</p>
+                                    <p>• Added effects.css with animation keyframes</p>
+                                    <p>• Updated rebuild-frontend.sh with better cache clearing</p>
+                                    <p>• Refactored Profile.vue: stats grid/sidebar tabs/inline records rendering</p>
+                                    <p>• Added ProfileProgressBar component</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profile Settings Reworked -->
+                        <div class="relative pl-6 border-l-2 border-orange-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-orange-300">Profile Settings Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added profile background upload section with vue-advanced-cropper</p>
+                                    <p>• Modernized settings UI with glassmorphism effects</p>
+                                    <p>• Added avatar/name effect selectors in preferences</p>
+                                    <p>• Added color pickers for effect customization</p>
+                                    <p>• Avatar border color selection interface</p>
+                                    <p>• Improved form layouts and spacing</p>
+                                    <p>• Added file size notes (1MB avatars/5MB backgrounds)</p>
+                                    <p>• GIF support notes and descriptions</p>
+                                    <p>• Profile background uses background-size for proper 1920px scaling</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notification System Reworked -->
+                        <div class="relative pl-6 border-l-2 border-orange-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-orange-300">Notification System Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Updated notification system with world record toggle in record notifications</p>
+                                    <p>• Added notification preview settings for unread_only and hide_old_wrs</p>
+                                    <p>• Enhanced notification processing to respect preview settings</p>
+                                    <p>• Improved SystemNotificationMenu with preview filtering</p>
+                                    <p>• Updated NotificationsView with better filtering and display</p>
+                                    <p>• Applied modern styling to both notification dropdowns (records/system)</p>
+                                    <p>• Fixed interaction issues with Teleport pattern</p>
+                                    <p>• Improved notification item layout with better spacing</p>
+                                    <p>• Updated icon sizes/colors for consistency</p>
+                                    <p>• Added proper transitions/hover effects to notifications</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Header Reworked -->
+                        <div class="relative pl-6 border-l-2 border-orange-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-orange-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-orange-300">Header Reworked</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Completely redesigned responsive header with clean Tailwind breakpoints</p>
+                                    <p>• Two-row responsive layout (Logo/Search/Notifications/Profile in row 1, all nav links in row 2)</p>
+                                    <p>• Progressive menu hiding right-to-left into "More" dropdown (Tournaments→Clans→Bundles→Demos→Records→Ranking→Maps→Servers→News)</p>
+                                    <p>• Menu items collapse into "More" dropdown using standard breakpoints (2XL/XL/LG/MD/SM)</p>
+                                    <p>• Removed old JS screen width detection logic</p>
+                                    <p>• Logo always visible on left</p>
+                                    <p>• Search bar/notifications/profile avatar always visible at all sizes</p>
+                                    <p>• Implemented Teleport pattern for all dropdowns (search/notifications/profile/more menu)</p>
+                                    <p>• Fixed click-away behavior: dropdowns close when clicking outside</p>
+                                    <p>• Fixed interaction issues: users can click inside without overlay blocking</p>
+                                    <p>• Wrapped overlay and dropdown in single Teleport for proper z-index stacking</p>
+                                    <p>• Updated styling with modern glassmorphism (backdrop-blur-xl/bg-gray-900/95)</p>
+                                    <p>• Redesigned search results popup with category tabs (All/Maps/Players)</p>
+                                    <p>• Increased search width to 550px for better spacing/layout</p>
+                                    <p>• Color-coded active states (blue/green/purple)</p>
+                                    <p>• Simplified MapSearchItem/PlayerSearchItem components with cleaner horizontal layouts</p>
+                                    <p>• Removed redundant borders/improved hover states</p>
+                                    <p>• Better visual hierarchy with proper text sizing/colors</p>
+                                    <p>• Avatar always visible at all sizes, username/arrow hidden on small screens (&lt;MD)</p>
+                                    <p>• Rounded corners updated (rounded-md→rounded-xl/rounded-lg)</p>
+                                    <p>• Applied Teleport fix for proper click-away on profile dropdown</p>
+                                    <p>• Removed screenWidth reactive state/resize event listeners</p>
+                                    <p>• Removed onSearchBlur function (replaced with Teleport overlay pattern)</p>
+                                    <p>• Removed duplicate mobile search bar</p>
+                                    <p>• Used clean Tailwind responsive classes with no arbitrary breakpoints</p>
+                                    <p>• Fixed z-index stacking context issues by using Teleport to body</p>
+                                    <p>• All dropdowns use consistent overlay pattern with z-index 2000</p>
+                                    <p>• Moved all navigation links to dedicated second row in MainLayout.vue</p>
+                                    <p>• Placed first row with Logo, Search, Notifications, Profile</p>
+                                    <p>• All navigation links visible on md+ screens (no progressive hiding from old design)</p>
+                                    <p>• Improved mobile menu dropdown to show all navigation items</p>
+                                    <p>• Added border-b to first header row to separate from navigation row</p>
+                                    <p>• Applied similar header structure to HomeLayout.vue</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Background Changed -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">Background Changed</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added consistent shadow gradient fade effects to all pages (Announcements/Servers/RankingView/Maps/Maplists/Models/RecordsView/Demos/Bundles/Clans/Tournaments/Profile Settings)</p>
+                                    <p>• Applied backdrop-blur-xl bg-black/60 for consistent opacity across entire site</p>
+                                    <p>• Applied consistent box shadows and border styling across all pages</p>
+                                    <p>• Updated Modal.vue to improve backdrop blur and z-index layering</p>
+                                    <p>• Updated MaplistCard.vue to add interactive hover states and improved visual hierarchy</p>
+                                    <p>• Optimized pattern.svg for background patterns</p>
+                                    <p>• Better shadow gradients fading from header to content areas</p>
+                                    <p>• More consistent spacing/padding throughout all pages</p>
+                                    <p>• Improved readability with better contrast/blur effects</p>
+                                    <p>• Enhanced hovers/transitions throughout the site</p>
+                                    <p>• Made clan boxes darker (bg-white/5→bg-black/20) to match profile page design</p>
+                                    <p>• Updated Hall of Fame/leaderboards/member cards/rival cards backgrounds</p>
+                                    <p>• Improved text visibility (text-gray-500→text-gray-300)</p>
+                                    <p>• Updated hover states (hover:bg-white/10→hover:bg-black/30)</p>
+                                    <p>• Darker stats bar/member bubble colors for consistency</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OAuth & Third-Party Integration -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">OAuth & Third-Party Integration</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added OAuthController for third-party authentication integration</p>
+                                    <p>• Created TwitchService for Twitch API integration</p>
+                                    <p>• Added CheckTwitchLiveStatus command for monitoring live streams</p>
+                                    <p>• Added migrations for OAuth tokens to users table</p>
+                                    <p>• Added Steam integration support to users table</p>
+                                    <p>• Added Twitter integration support to users table</p>
+                                    <p>• Updated config/services.php with Twitch/Steam/Twitter credentials</p>
+                                    <p>• Added OAuth/Twitch packages to composer.json/lock</p>
+                                    <p>• Updated routes/api.php with OAuth endpoints</p>
+                                    <p>• Updated routes/web.php with categories/OAuth routes</p>
+                                    <p>• Updated Auth pages with OAuth login integration</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Performance & Infrastructure (400x Faster) -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">Performance & Infrastructure (400x Faster)</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Added Rust rating service for ELO calculations (60s→0.15s, 400x faster)</p>
+                                    <p>• Created build-rust.sh compilation script</p>
+                                    <p>• Composite database indexes on records table (mapname/gametype/time, mdd_id/date_set, mdd_id/rank)</p>
+                                    <p>• Optimized ProfileController::recentlyBeaten query from 60s to 0.15s</p>
+                                    <p>• Removed correlated subqueries, use pre-calculated rank column</p>
+                                    <p>• Fixed queries to use indexed columns with proper join conditions</p>
+                                    <p>• Switched queue driver from database to Redis for better performance</p>
+                                    <p>• Added Redis service to docker-compose.yml</p>
+                                    <p>• Typesense search integration for Maps/Players/Demos</p>
+                                    <p>• Added Laravel Scout Searchable trait to Demo model</p>
+                                    <p>• Configured Typesense schema in scout.php</p>
+                                    <p>• Added scout:import commands in deploy.py for auto-indexing in production</p>
+                                    <p>• Fixed SCOUT_QUEUE issue - worker now processes all queues not just "demos"</p>
+                                    <p>• Fixed worker container configuration (remove /bin/sh wrapper, add SUPERVISOR_PHP_USER)</p>
+                                    <p>• Updated LOCAL_SETUP.md/README.md with new features documentation</p>
+                                    <p>• Updated deploy.py to run migrations/scout imports automatically</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Backend Architecture Updates -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">Backend Architecture Updates</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Updated Clans/Profile/Ranking/Records/Web controllers with OAuth integration</p>
+                                    <p>• Updated controllers for category-based ranking support</p>
+                                    <p>• Improved data handling and validation across all controllers</p>
+                                    <p>• Updated User/Clan/Record models with OAuth token fields</p>
+                                    <p>• Added social media integration fields to models</p>
+                                    <p>• Updated model relationships and scopes</p>
+                                    <p>• Updated EventServiceProvider with new event listeners</p>
+                                    <p>• Updated Console Kernel with scheduled ratings/Twitch status commands</p>
+                                    <p>• Updated composer.json/lock with OAuth/Twitch packages</p>
+                                    <p>• Updated deploy.py with improved deployment process</p>
+                                    <p>• Updated tailwind.config.js with new colors/utilities</p>
+                                    <p>• Updated public/images/svg/icons.svg with new weapon/function icons</p>
+                                    <p>• Updated .gitignore excluding icon libraries (5000+ SVGs) and Rust build artifacts</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scraping & Automation -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">Scraping & Automation</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Fixed WorldSpawn scraper to accept all maps (not just defrag)</p>
+                                    <p>• Added compression handling with CURLOPT_ENCODING for reliable scraping</p>
+                                    <p>• Added proper headers and timeout configuration</p>
+                                    <p>• Successfully scraped 550+ maps in minutes</p>
+                                    <p>• Enhanced ScrapeQ3dfModels with better model type detection</p>
+                                    <p>• Added pagination support to scraper (--pages, --start-page, --reverse)</p>
+                                    <p>• Implemented download history tracking</p>
+                                    <p>• Better error handling and progress reporting in scraper</p>
+                                    <p>• Added scrape:servers start/finish logging</p>
+                                    <p>• Restored scrape:servers schedule and split online/offline cadence</p>
+                                    <p>• Enhanced server scraping to preserve gametype classification</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Donations Transparency Added -->
+                        <div class="relative pl-6 border-l-2 border-red-500/30">
+                            <div class="absolute left-0 top-3 w-6 h-0.5 bg-red-500/30"></div>
+                            <div>
+                                <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500/10 to-transparent rounded mb-3">
+                                    <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                                    <span class="text-sm font-semibold text-red-300">Donations Transparency Added</span>
+                                </div>
+                                <div class="ml-3 text-xs text-gray-300 space-y-1">
+                                    <p>• Implemented full donation tracking system with SiteDonation, SelfRaisedMoney, DonationGoal models</p>
+                                    <p>• Added database migrations for donation goals, site donations, self-raised money tracking</p>
+                                    <p>• Created donation approval workflow supporting pending, approved, rejected statuses</p>
+                                    <p>• Integrated currency conversion for EUR, USD, CZK using live exchange rates</p>
+                                    <p>• Developed DonationResource in admin panel for managing donations with approval workflow</p>
+                                    <p>• Built DonationGoalResource for setting and managing yearly donation goals</p>
+                                    <p>• Created SelfRaisedMoneyResource for tracking YouTube/Twitch revenue with full CRUD</p>
+                                    <p>• Launched public donations page (/donations) with currency selector for USD/EUR</p>
+                                    <p>• Added current year progress bar showing crowd-raised (green) and self-raised (purple) splits</p>
+                                    <p>• Included "Where Your Support Goes" section detailing ~€1,200/year operational costs</p>
+                                    <p>• Featured "A Brief History" section explaining development since 2021</p>
+                                    <p>• Enabled interactive year-by-year donation history with collapsible sections</p>
+                                    <p>• Displayed individual donation entries with color-coded borders</p>
+                                    <p>• Added all-time total progress bar with visual crowd/self-raised split</p>
+                                    <p>• Created global DonationProgressBar footer component visible on all pages except /donations</p>
+                                    <p>• Built DonationController@index endpoint and DonationController@getProgress API</p>
+                                    <p>• Applied consistent backdrop-blur-xl bg-black/40 styling</p>
+                                    <p>• Used professional tone explaining development history and AI-assisted solo work</p>
+                                    <p>• Added links to GitHub (Defrag-racing org) and Twitch (DefragLive)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
 
             <!-- VERSION 2: All Items Flat (Scrollable Long List) -->

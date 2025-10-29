@@ -75,29 +75,37 @@ class DonationController extends Controller
 
     private function getExchangeRates()
     {
-        // Cache exchange rates for 1 hour
-        return Cache::remember('exchange_rates', 3600, function () {
+        // Cache exchange rates for 24 hours (86400 seconds)
+        return Cache::remember('exchange_rates_v4', 86400, function () {
             try {
                 // Using exchangerate-api.com (free tier: 1500 requests/month)
                 $response = Http::get('https://api.exchangerate-api.com/v4/latest/EUR');
 
                 if ($response->successful()) {
                     $data = $response->json();
-                    return [
-                        'EUR' => 1,
-                        'USD' => $data['rates']['USD'] ?? 1.1,
-                        'CZK' => $data['rates']['CZK'] ?? 25,
-                    ];
+                    // Return all available rates from the API
+                    $rates = $data['rates'] ?? [];
+                    $rates['EUR'] = 1; // Ensure EUR is always 1 (base currency)
+                    return $rates;
                 }
             } catch (\Exception $e) {
-                // Fallback rates if API fails
+                // Silent failure, will use fallback rates
             }
 
-            // Fallback static rates
+            // Fallback static rates (only most common currencies)
             return [
                 'EUR' => 1,
                 'USD' => 1.1,
+                'GBP' => 0.85,
                 'CZK' => 25,
+                'PLN' => 4.3,
+                'CAD' => 1.5,
+                'AUD' => 1.65,
+                'JPY' => 160,
+                'CHF' => 0.95,
+                'SEK' => 11.5,
+                'NOK' => 11.8,
+                'DKK' => 7.45,
             ];
         });
     }

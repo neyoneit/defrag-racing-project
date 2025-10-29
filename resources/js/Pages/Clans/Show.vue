@@ -36,7 +36,6 @@
                             class="w-full h-full bg-top bg-no-repeat"
                             :style="`background-image: url('/storage/${clan.background}'); background-size: 1920px auto;`"
                         ></div>
-                        <div v-else class="w-full h-full bg-gradient-to-br from-blue-900/20 via-blue-800/20 to-blue-700/20"></div>
                         <!-- Fade left edge of image -->
                         <div v-if="clan.background" class="absolute left-0 top-0 bottom-0 w-80 bg-gradient-to-r from-gray-900 to-transparent"></div>
                         <!-- Fade right edge of image -->
@@ -236,7 +235,7 @@
                             v-for="player in players"
                             :key="player.id"
                             :href="route('profile.index', player.id)"
-                            class="group relative overflow-visible rounded-xl bg-gradient-to-br from-black/40 to-black/20 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
+                            class="group relative overflow-visible rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
                         >
                             <!-- Card Background Glow -->
                             <div class="absolute inset-0 bg-gradient-to-br from-blue-600/0 to-blue-700/0 group-hover:from-blue-600/10 group-hover:to-blue-700/10 transition-all duration-500 rounded-xl"></div>

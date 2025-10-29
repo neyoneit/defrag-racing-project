@@ -158,9 +158,13 @@ Route::delete('/settings/background', [SettingsController::class, 'deleteBackgro
 
 Route::get('/notifications/records', [NotificationsController::class, 'records'])->middleware('auth')->name('notifications.index');
 Route::post('/notifications/records', [NotificationsController::class, 'recordsclear'])->middleware('auth')->name('notifications.clear');
+Route::post('/notifications/records/mark-unread', [NotificationsController::class, 'recordsMarkAllUnread'])->middleware('auth')->name('notifications.mark.unread');
+Route::post('/notifications/records/{id}/toggle', [NotificationsController::class, 'recordsToggle'])->middleware('auth')->name('notifications.toggle');
 
 Route::get('/notifications/system', [NotificationsController::class, 'system'])->middleware('auth')->name('notifications.system.index');
 Route::post('/notifications/system', [NotificationsController::class, 'systemclear'])->middleware('auth')->name('notifications.system.clear');
+Route::post('/notifications/system/mark-unread', [NotificationsController::class, 'systemMarkAllUnread'])->middleware('auth')->name('notifications.system.mark.unread');
+Route::post('/notifications/system/{id}/toggle', [NotificationsController::class, 'systemToggle'])->middleware('auth')->name('notifications.system.toggle');
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/profile/mdd/{userId}', [ProfileController::class, 'mdd'])->name('profile.mdd');

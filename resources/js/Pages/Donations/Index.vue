@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head } from '@inertiajs/vue3';
+import { Teleport } from 'vue';
 
 const props = defineProps({
     donations: Array,
@@ -11,8 +12,245 @@ const props = defineProps({
     exchangeRates: Object,
 });
 
-// Selected currency
-const selectedCurrency = ref('USD');
+// Currency names mapping
+const currencyNames = {
+    'USD': 'US Dollar',
+    'EUR': 'Euro',
+    'JPY': 'Japanese Yen',
+    'GBP': 'British Pound',
+    'CNY': 'Chinese Yuan',
+    'AUD': 'Australian Dollar',
+    'CAD': 'Canadian Dollar',
+    'CHF': 'Swiss Franc',
+    'HKD': 'Hong Kong Dollar',
+    'SEK': 'Swedish Krona',
+    'NZD': 'New Zealand Dollar',
+    'SGD': 'Singapore Dollar',
+    'NOK': 'Norwegian Krone',
+    'KRW': 'South Korean Won',
+    'MXN': 'Mexican Peso',
+    'INR': 'Indian Rupee',
+    'RUB': 'Russian Ruble',
+    'BRL': 'Brazilian Real',
+    'ZAR': 'South African Rand',
+    'DKK': 'Danish Krone',
+    'CZK': 'Czech Koruna',
+    'PLN': 'Polish Złoty',
+    'TRY': 'Turkish Lira',
+    'AED': 'UAE Dirham',
+    'AFN': 'Afghan Afghani',
+    'ALL': 'Albanian Lek',
+    'AMD': 'Armenian Dram',
+    'ANG': 'Netherlands Antillean Guilder',
+    'AOA': 'Angolan Kwanza',
+    'ARS': 'Argentine Peso',
+    'AWG': 'Aruban Florin',
+    'AZN': 'Azerbaijani Manat',
+    'BAM': 'Bosnia-Herzegovina Convertible Mark',
+    'BBD': 'Barbadian Dollar',
+    'BDT': 'Bangladeshi Taka',
+    'BGN': 'Bulgarian Lev',
+    'BHD': 'Bahraini Dinar',
+    'BIF': 'Burundian Franc',
+    'BMD': 'Bermudan Dollar',
+    'BND': 'Brunei Dollar',
+    'BOB': 'Bolivian Boliviano',
+    'BSD': 'Bahamian Dollar',
+    'BTN': 'Bhutanese Ngultrum',
+    'BWP': 'Botswanan Pula',
+    'BYN': 'Belarusian Ruble',
+    'BZD': 'Belize Dollar',
+    'CDF': 'Congolese Franc',
+    'CLF': 'Chilean Unit of Account',
+    'CLP': 'Chilean Peso',
+    'COP': 'Colombian Peso',
+    'CRC': 'Costa Rican Colón',
+    'CUC': 'Cuban Convertible Peso',
+    'CUP': 'Cuban Peso',
+    'CVE': 'Cape Verdean Escudo',
+    'CYP': 'Cypriot Pound',
+    'DJF': 'Djiboutian Franc',
+    'DOP': 'Dominican Peso',
+    'DZD': 'Algerian Dinar',
+    'EGP': 'Egyptian Pound',
+    'ERN': 'Eritrean Nakfa',
+    'ETB': 'Ethiopian Birr',
+    'FJD': 'Fijian Dollar',
+    'FKP': 'Falkland Islands Pound',
+    'GEL': 'Georgian Lari',
+    'GGP': 'Guernsey Pound',
+    'GHS': 'Ghanaian Cedi',
+    'GIP': 'Gibraltar Pound',
+    'GMD': 'Gambian Dalasi',
+    'GNF': 'Guinean Franc',
+    'GTQ': 'Guatemalan Quetzal',
+    'GYD': 'Guyanaese Dollar',
+    'HNL': 'Honduran Lempira',
+    'HRK': 'Croatian Kuna',
+    'HTG': 'Haitian Gourde',
+    'HUF': 'Hungarian Forint',
+    'IDR': 'Indonesian Rupiah',
+    'ILS': 'Israeli New Shekel',
+    'IMP': 'Isle of Man Pound',
+    'IQD': 'Iraqi Dinar',
+    'IRR': 'Iranian Rial',
+    'ISK': 'Icelandic Króna',
+    'JEP': 'Jersey Pound',
+    'JMD': 'Jamaican Dollar',
+    'JOD': 'Jordanian Dinar',
+    'KES': 'Kenyan Shilling',
+    'KGS': 'Kyrgystani Som',
+    'KHR': 'Cambodian Riel',
+    'KMF': 'Comorian Franc',
+    'KPW': 'North Korean Won',
+    'KWD': 'Kuwaiti Dinar',
+    'KYD': 'Cayman Islands Dollar',
+    'KZT': 'Kazakhstani Tenge',
+    'LAK': 'Laotian Kip',
+    'LBP': 'Lebanese Pound',
+    'LKR': 'Sri Lankan Rupee',
+    'LRD': 'Liberian Dollar',
+    'LSL': 'Lesotho Loti',
+    'LYD': 'Libyan Dinar',
+    'MAD': 'Moroccan Dirham',
+    'MDL': 'Moldovan Leu',
+    'MGA': 'Malagasy Ariary',
+    'MKD': 'Macedonian Denar',
+    'MMK': 'Myanmar Kyat',
+    'MNT': 'Mongolian Tugrik',
+    'MOP': 'Macanese Pataca',
+    'MRO': 'Mauritanian Ouguiya (pre-2018)',
+    'MRU': 'Mauritanian Ouguiya',
+    'MUR': 'Mauritian Rupee',
+    'MVR': 'Maldivian Rufiyaa',
+    'MWK': 'Malawian Kwacha',
+    'MYR': 'Malaysian Ringgit',
+    'MZN': 'Mozambican Metical',
+    'NAD': 'Namibian Dollar',
+    'NGN': 'Nigerian Naira',
+    'NIO': 'Nicaraguan Córdoba',
+    'NPR': 'Nepalese Rupee',
+    'OMR': 'Omani Rial',
+    'PAB': 'Panamanian Balboa',
+    'PEN': 'Peruvian Nuevo Sol',
+    'PGK': 'Papua New Guinean Kina',
+    'PHP': 'Philippine Peso',
+    'PKR': 'Pakistani Rupee',
+    'PYG': 'Paraguayan Guarani',
+    'QAR': 'Qatari Rial',
+    'RON': 'Romanian Leu',
+    'RSD': 'Serbian Dinar',
+    'RWF': 'Rwandan Franc',
+    'SAR': 'Saudi Riyal',
+    'SBD': 'Solomon Islands Dollar',
+    'SCR': 'Seychellois Rupee',
+    'SDG': 'Sudanese Pound',
+    'SHP': 'Saint Helena Pound',
+    'SLL': 'Sierra Leonean Leone',
+    'SOS': 'Somali Shilling',
+    'SRD': 'Surinamese Dollar',
+    'SSP': 'South Sudanese Pound',
+    'STD': 'São Tomé and Príncipe Dobra (pre-2018)',
+    'STN': 'São Tomé and Príncipe Dobra',
+    'SVC': 'Salvadoran Colón',
+    'SYP': 'Syrian Pound',
+    'SZL': 'Swazi Lilangeni',
+    'THB': 'Thai Baht',
+    'TJS': 'Tajikistani Somoni',
+    'TMT': 'Turkmenistani Manat',
+    'TND': 'Tunisian Dinar',
+    'TOP': 'Tongan Paʻanga',
+    'TTD': 'Trinidad and Tobago Dollar',
+    'TWD': 'New Taiwan Dollar',
+    'TZS': 'Tanzanian Shilling',
+    'UAH': 'Ukrainian Hryvnia',
+    'UGX': 'Ugandan Shilling',
+    'UYU': 'Uruguayan Peso',
+    'UZS': 'Uzbekistan Som',
+    'VEF': 'Venezuelan Bolívar Fuerte (Old)',
+    'VES': 'Venezuelan Bolívar Soberano',
+    'VND': 'Vietnamese Dong',
+    'VUV': 'Vanuatu Vatu',
+    'WST': 'Samoan Tala',
+    'XAF': 'CFA Franc BEAC',
+    'XAG': 'Silver Ounce',
+    'XAU': 'Gold Ounce',
+    'XCD': 'East Caribbean Dollar',
+    'XDR': 'Special Drawing Rights',
+    'XOF': 'CFA Franc BCEAO',
+    'XPD': 'Palladium Ounce',
+    'XPF': 'CFP Franc',
+    'XPT': 'Platinum Ounce',
+    'YER': 'Yemeni Rial',
+    'ZMW': 'Zambian Kwacha',
+    'ZWL': 'Zimbabwean Dollar'
+};
+
+// Most popular currencies (shown first)
+const popularCurrencies = [
+    'USD', 'EUR', 'JPY', 'GBP', 'CNY', 'AUD', 'CAD', 'CHF', 'HKD', 'SEK',
+    'NZD', 'SGD', 'NOK', 'KRW', 'MXN', 'INR', 'RUB', 'BRL', 'ZAR', 'DKK',
+    'CZK', 'PLN', 'TRY'
+];
+
+// Get available currencies sorted (popular first, then alphabetical)
+const availableCurrencies = computed(() => {
+    const allCurrencies = Object.keys(props.exchangeRates);
+    const popular = allCurrencies.filter(c => popularCurrencies.includes(c)).sort((a, b) => {
+        return popularCurrencies.indexOf(a) - popularCurrencies.indexOf(b);
+    });
+    const others = allCurrencies.filter(c => !popularCurrencies.includes(c)).sort();
+
+    return [...popular, ...others];
+});
+
+// Selected currency (default to USD if available, otherwise first currency)
+const selectedCurrency = ref(availableCurrencies.value.includes('USD') ? 'USD' : availableCurrencies.value[0]);
+
+// Dropdown state
+const isDropdownOpen = ref(false);
+const dropdownButton = ref(null);
+const dropdownPosition = ref({ top: 0, left: 0, width: 0 });
+
+// Update dropdown position
+const updateDropdownPosition = () => {
+    if (dropdownButton.value) {
+        const rect = dropdownButton.value.getBoundingClientRect();
+        dropdownPosition.value = {
+            top: rect.bottom + window.scrollY + 8,
+            left: rect.left + window.scrollX,
+            width: rect.width
+        };
+    }
+};
+
+// Toggle dropdown and update position
+const toggleDropdown = () => {
+    isDropdownOpen.value = !isDropdownOpen.value;
+    if (isDropdownOpen.value) {
+        updateDropdownPosition();
+    }
+};
+
+// Close dropdown when clicking outside
+const closeDropdown = (event) => {
+    const dropdown = document.querySelector('.currency-dropdown');
+    if (dropdown && !dropdown.contains(event.target)) {
+        isDropdownOpen.value = false;
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('click', closeDropdown);
+    window.addEventListener('scroll', updateDropdownPosition);
+    window.addEventListener('resize', updateDropdownPosition);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', closeDropdown);
+    window.removeEventListener('scroll', updateDropdownPosition);
+    window.removeEventListener('resize', updateDropdownPosition);
+});
 
 // Highlight operational costs section
 const highlightOperationalCosts = () => {
@@ -257,21 +495,77 @@ const getYearProgress = (year, yearTotal) => {
                 <div class="relative mb-2">
                     <h2 class="text-2xl font-bold text-white text-center">{{ currentYear }} Progress</h2>
 
-                    <!-- Currency Selector -->
-                    <div class="absolute right-0 top-0 flex gap-2">
+                    <!-- Currency Selector Dropdown -->
+                    <div class="absolute right-0 top-0 currency-dropdown">
                         <button
-                            v-for="currency in ['USD', 'EUR']"
-                            :key="currency"
-                            @click="selectedCurrency = currency"
-                            :class="[
-                                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                                selectedCurrency === currency
-                                    ? 'bg-blue-600 text-white'
-                                    : 'backdrop-blur-xl bg-black/60 text-gray-300 hover:bg-black/70 border border-white/10'
-                            ]"
+                            ref="dropdownButton"
+                            @click="toggleDropdown"
+                            class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-2"
                         >
-                            {{ currency }}
+                            {{ selectedCurrency }}
+                            <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': isDropdownOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
                         </button>
+
+                        <!-- Exchange Rate Disclaimer -->
+                        <div class="absolute right-0 top-full mt-1 text-xs text-gray-500 whitespace-nowrap">
+                            Rates from <a href="https://exchangerate-api.com" target="_blank" class="text-blue-400 hover:text-blue-300 underline">exchangerate-api.com</a>
+                        </div>
+
+                        <!-- Dropdown Menu (Teleported to body) -->
+                        <Teleport to="body">
+                            <div
+                                v-if="isDropdownOpen"
+                                class="fixed w-80 max-h-96 overflow-y-auto backdrop-blur-xl bg-black/90 rounded-lg border border-white/10 shadow-2xl z-[9999]"
+                                :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }"
+                            >
+                                <!-- Popular Currencies Header (not sticky) -->
+                                <div class="bg-gradient-to-b from-blue-600/20 to-blue-600/10 border-b border-blue-500/30 px-4 py-2">
+                                    <div class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                                        </svg>
+                                        <span class="text-xs font-semibold text-blue-400 uppercase tracking-wide">Popular Currencies</span>
+                                    </div>
+                                </div>
+
+                                <!-- Popular Currencies List -->
+                                <div v-for="currency in availableCurrencies" :key="currency">
+                                    <button
+                                        @click="selectedCurrency = currency; isDropdownOpen = false"
+                                        :class="[
+                                            'w-full px-4 py-2 text-left text-sm transition-colors flex items-center justify-between gap-2',
+                                            selectedCurrency === currency
+                                                ? 'bg-blue-600 text-white font-semibold'
+                                                : 'text-gray-300 hover:bg-white/10',
+                                            popularCurrencies.includes(currency) ? 'bg-blue-500/5' : ''
+                                        ]"
+                                    >
+                                        <span class="flex items-center gap-2">
+                                            <svg v-if="popularCurrencies.includes(currency)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3 text-blue-400">
+                                                <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="font-mono font-bold">{{ currency }}</span>
+                                        </span>
+                                        <span class="text-xs opacity-70">{{ currencyNames[currency] || currency }}</span>
+                                    </button>
+
+                                    <!-- Separator and All Currencies Header (sticky) -->
+                                    <div
+                                        v-if="popularCurrencies.includes(currency) && availableCurrencies.indexOf(currency) === popularCurrencies.filter(c => availableCurrencies.includes(c)).length - 1"
+                                        class="sticky top-0 border-t border-white/20 bg-black/95 backdrop-blur-xl"
+                                    >
+                                        <div class="px-4 py-2 text-xs text-gray-400 uppercase tracking-wide flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                            </svg>
+                                            All Currencies
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Teleport>
                     </div>
                 </div>
 
@@ -322,8 +616,11 @@ const getYearProgress = (year, yearTotal) => {
                 <div class="max-w-3xl mx-auto space-y-4 text-gray-300">
                     <div id="operational-costs">
                         <h3 class="text-lg font-semibold text-white mb-2">Operational Costs (~€1,200/year)</h3>
-                        <p class="text-sm leading-relaxed">
+                        <p class="text-sm leading-relaxed mb-3">
                             Donations help cover: servers, hosting, vps's, backblaze, domains, DemoMe, DefragLive, isp, electricity.
+                        </p>
+                        <p class="text-sm leading-relaxed text-gray-400">
+                            Any future excess donations would go towards tournament prizepools, new servers in underserved locations, and other community-driven initiatives.
                         </p>
                     </div>
 
@@ -340,7 +637,7 @@ const getYearProgress = (year, yearTotal) => {
                     <div>
                         <h3 class="text-lg font-semibold text-white mb-2">What I Cover Out-of-Pocket</h3>
                         <p class="text-sm leading-relaxed">
-                            Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and countless other expenses remain out-of-pocket.
+                            Hardware costs (dedicated PC for DemoMe+DefragLive, EU server PC) and other expenses remain out-of-pocket.
                             Your donations help offset <a href="#operational-costs" @click.prevent="highlightOperationalCosts" class="text-blue-400 hover:text-blue-300 underline cursor-pointer">operational costs</a>.
                         </p>
                     </div>
@@ -364,14 +661,16 @@ const getYearProgress = (year, yearTotal) => {
             <!-- Donate Button -->
             <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
                 <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
-                <p class="text-gray-400 mb-6">Your support helps us cover server costs and continue improving the platform!</p>
+                <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
 
-                <!-- PayPal Button Container - You'll add the embed code here -->
-                <div id="paypal-button-container" class="max-w-md mx-auto">
-                    <div class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg inline-block cursor-pointer transition-colors">
-                        Donate via PayPal
-                    </div>
-                    <p class="text-sm text-gray-500 mt-4">Secure payment through PayPal</p>
+                <!-- PayPal Donation Button -->
+                <div class="max-w-md mx-auto">
+                    <form action="https://www.paypal.com/donate" method="post" target="_top">
+                        <input type="hidden" name="hosted_button_id" value="WH6GY4PDGU8FA" />
+                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
+                        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+                    </form>
+                    <p class="text-sm text-gray-500 mt-6">Secure payment through PayPal</p>
                 </div>
             </div>
 
