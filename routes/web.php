@@ -221,6 +221,9 @@ Route::get('/api/tags', [App\Http\Controllers\TagController::class, 'index'])->n
 Route::get('/donations', [DonationController::class, 'index'])->name('donations.index');
 Route::get('/api/donations/progress', [DonationController::class, 'getProgress'])->name('donations.progress');
 
+// Roadmap route
+Route::get('/roadmap', [WebController::class, 'roadmap'])->name('roadmap');
+
 // PayPal webhook (no CSRF protection needed for webhooks)
 Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookController::class, 'handleWebhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 

@@ -99,4 +99,8 @@ class WebController extends Controller
     public function gettingstarted() {
         return Inertia::render('GettingStarted');
     }
+
+    public function roadmap() {
+        return Inertia::render('Roadmap');
+    }
 }

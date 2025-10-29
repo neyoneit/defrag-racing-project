@@ -333,7 +333,7 @@ const getYearProgress = (year, yearTotal) => {
                             All developers who worked on these projects since 2021 were fairly compensated. In early 2024, the last paid developer unexpectedly departed without response,
                             leaving everything as-is. At that point, I decided to stop paying for development as it felt like progress had stalled. With Batawi's help, I made defrag-racing and related repositories <a href="https://github.com/Defrag-racing/" target="_blank" class="text-blue-400 hover:text-blue-300 underline">open-source</a>, inviting the community to contribute.
                             Development has been in limbo since, as no one had the availability or free time to contribute. Around August 2025, I've taken it upon myself with AI assistance to continue development independently.
-                            Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href="https://twitch.tv/defraglive" target="_blank" class="text-purple-400 hover:text-purple-300 underline">DefragLive</a> with extension, improved defrag.racing, and more updates coming soon.
+                            Mind you, I never had any prior knowledge with coding, but I made it work and I am learning everyday as I go, bringing you a fully functional <a href="https://twitch.tv/defraglive" target="_blank" class="text-purple-400 hover:text-purple-300 underline">DefragLive</a> with extension, improved defrag.racing, and more updates coming soon - <a :href="route('roadmap')" class="text-blue-400 hover:text-blue-300 underline">Roadmap</a>.
                         </p>
                     </div>
 
