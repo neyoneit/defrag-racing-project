@@ -55,39 +55,114 @@ class DemosController extends Controller
     /**
      * Display demo upload page
      */
-    public function index()
+    public function index(Request $request)
     {
-        // If user is authenticated, show their demos grouped by status
-        if (Auth::check()) {
-            $currentUser = Auth::user();
-            $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
+        // Get current user
+        $currentUser = Auth::user();
+        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
-            if ($isAdmin) {
-                // Admin sees all uploads (including guest uploads)
-                $userDemos = UploadedDemo::with(['record.user', 'user'])
-                    ->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')")
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(30);
-            } else {
-                $userDemos = UploadedDemo::where('user_id', $currentUser->id)
-                    ->with(['record.user'])
-                    ->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')")
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(20);
-            }
-        } else {
-            // For guests, show demos assigned to records AND publicly uploaded demos (user_id IS NULL)
-            $userDemos = UploadedDemo::where(function ($q) {
-                    $q->whereNotNull('record_id')
-                      ->orWhereNull('user_id');
-                })
-                ->with(['record.user', 'user'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
+        // Get sorting parameters
+        $sortBy = $request->input('sort', 'created_at');
+        $sortOrder = $request->input('order', 'desc');
+
+        // Validate sort column
+        $allowedColumns = ['original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at'];
+        if (!in_array($sortBy, $allowedColumns)) {
+            $sortBy = 'created_at';
         }
 
+        // Validate sort order
+        if (!in_array($sortOrder, ['asc', 'desc'])) {
+            $sortOrder = 'desc';
+        }
+
+        // Get user's own uploads if authenticated
+        $userDemos = null;
+        $demoCounts = null;
+        if (Auth::check()) {
+            if ($isAdmin) {
+                // Admin sees all uploads (including guest uploads) in "Your Uploads" section
+                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
+
+                // Apply sorting
+                if ($sortBy === 'status') {
+                    $query->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                } else {
+                    $query->orderBy($sortBy, $sortOrder);
+                }
+
+                $userDemos = $query->paginate(20, ['*'], 'userPage');
+
+                // Calculate total counts for filters (all demos for admin)
+                $demoCounts = [
+                    'all' => UploadedDemo::count(),
+                    'online' => UploadedDemo::where('gametype', 'LIKE', 'm%')->count(),
+                    'offline' => UploadedDemo::where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+                    'assigned' => UploadedDemo::where('status', 'assigned')->count(),
+                    'failed' => UploadedDemo::where('status', 'failed')->count(),
+                ];
+            } else {
+                // Regular users see only their own uploads
+                $query = UploadedDemo::where('user_id', $currentUser->id)
+                    ->with(['record.user', 'offlineRecord']);
+
+                // Apply sorting
+                if ($sortBy === 'status') {
+                    $query->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                } else {
+                    $query->orderBy($sortBy, $sortOrder);
+                }
+
+                $userDemos = $query->paginate(20, ['*'], 'userPage');
+
+                // Calculate total counts for filters (only user's demos)
+                $demoCounts = [
+                    'all' => UploadedDemo::where('user_id', $currentUser->id)->count(),
+                    'online' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'LIKE', 'm%')->count(),
+                    'offline' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+                    'assigned' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'assigned')->count(),
+                    'failed' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'failed')->count(),
+                ];
+            }
+        }
+
+        // Get all public demos for the "Browse" section (successfully processed demos only)
+        $publicDemos = UploadedDemo::whereIn('status', ['assigned', 'processed'])
+            ->with(['record.user', 'user', 'offlineRecord'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(20, ['*'], 'browsePage');
+
+        // Get download limit info for current user/IP
+        $rateLimitKey = $currentUser
+            ? "demo_download_user_{$currentUser->id}"
+            : "demo_download_ip_" . request()->ip();
+
+        $downloadsToday = Cache::get($rateLimitKey, 0);
+        $maxDownloads = $currentUser ? 20 : 1;
+        $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
+
+        // Debug log
+        \Log::info('Demos index page - download limit info', [
+            'user_id' => optional($currentUser)->id,
+            'is_guest' => !$currentUser,
+            'downloads_today' => $downloadsToday,
+            'max_downloads' => $maxDownloads,
+            'remaining' => $remainingDownloads,
+            'rate_limit_key' => $rateLimitKey,
+        ]);
+
         return Inertia::render('Demos/Index', [
-            'demos' => $userDemos,
+            'userDemos' => $userDemos,
+            'publicDemos' => $publicDemos,
+            'demoCounts' => $demoCounts,
+            'sortBy' => $sortBy,
+            'sortOrder' => $sortOrder,
+            'downloadLimitInfo' => [
+                'used' => $downloadsToday,
+                'limit' => $maxDownloads,
+                'remaining' => $remainingDownloads,
+                'isGuest' => !$currentUser,
+            ],
         ]);
     }
 
@@ -111,7 +186,7 @@ class DemosController extends Controller
         }
 
         $request->validate([
-            'demos' => 'required|array|min:1|max:50', // Max 50 uploads per request (files or archives)
+            'demos' => 'required|array|min:1|max:10000', // Max 10,000 uploads per request (files or archives)
             // Allow larger files for archives; per-file max 512MB (512000 KB)
             'demos.*' => 'required|file|max:512000',
         ]);
@@ -121,16 +196,16 @@ class DemosController extends Controller
         $errors = [];
         $filesProcessed = 0;
 
-        // Check total size limit (500MB total)
+        // Check total size limit (10GB total)
         $totalSize = 0;
         foreach ($request->file('demos') as $demoFile) {
             $totalSize += $demoFile->getSize();
         }
 
-        if ($totalSize > 524288000) { // 500MB
+        if ($totalSize > 10737418240) { // 10GB
             return response()->json([
                 'success' => false,
-                'message' => 'Total upload size exceeds 500MB limit.',
+                'message' => 'Total upload size exceeds 10GB limit.',
             ], 413);
         }
 
@@ -354,6 +429,48 @@ class DemosController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        // Rate limiting for downloads (skip for admins and demo owners)
+        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
+            // Use both user ID (if logged in) and IP address for rate limiting
+            $rateLimitKey = $currentUser
+                ? "demo_download_user_{$currentUser->id}"
+                : "demo_download_ip_" . request()->ip();
+
+            $downloadsToday = Cache::get($rateLimitKey, 0);
+            $maxDownloads = $currentUser ? 20 : 1; // Authenticated: 20/day, Guest: 1/day
+
+            if ($downloadsToday >= $maxDownloads) {
+                // Return a JSON response for AJAX requests, or redirect with error for direct links
+                if (request()->wantsJson() || request()->expectsJson()) {
+                    return response()->json([
+                        'error' => 'Download limit reached',
+                        'message' => $currentUser
+                            ? "You've reached your download limit of {$maxDownloads} demos per day. Limit resets at midnight."
+                            : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 20 demos per day!",
+                        'isGuest' => !$currentUser,
+                        'limit' => $maxDownloads,
+                    ], 429);
+                } else {
+                    // For direct download links, redirect back with error message
+                    return back()->with('danger', $currentUser
+                        ? "Download limit reached. You can download maximum {$maxDownloads} demo" . ($maxDownloads > 1 ? 's' : '') . " per day."
+                        : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 20 demos per day!");
+                }
+            }
+
+            // Increment counter (expires at end of day)
+            $expiresAt = now()->endOfDay();
+            Cache::put($rateLimitKey, $downloadsToday + 1, $expiresAt);
+
+            Log::info('Demo download rate limit check', [
+                'demo_id' => $demo->id,
+                'user_id' => optional($currentUser)->id,
+                'ip' => request()->ip(),
+                'downloads_today' => $downloadsToday + 1,
+                'limit' => $maxDownloads,
+            ]);
+        }
+
         $filename = $demo->processed_filename ?: $demo->original_filename;
 
         // Check if demo is stored locally (failed or temp demos) or in Backblaze (processed demos)
@@ -543,9 +660,9 @@ class DemosController extends Controller
         if ($demoIds && is_array($demoIds)) {
             $demos = UploadedDemo::whereIn('id', $demoIds)->with(['record.user'])->get();
             return response()->json([
-                'processing_demos' => $demos->filter(function ($d) { return in_array($d->status, ['queued', 'processing']); })->values(),
+                'processing_demos' => $demos->filter(function ($d) { return in_array($d->status, ['uploaded', 'pending', 'processing']); })->values(),
                 'queue_stats' => [
-                    'total_queued' => UploadedDemo::where('status', 'queued')->count(),
+                    'total_queued' => UploadedDemo::whereIn('status', ['uploaded', 'pending'])->count(),
                     'total_processing' => UploadedDemo::where('status', 'processing')->count(),
                 ],
                 'timestamp' => now()->toISOString(),
@@ -562,7 +679,7 @@ class DemosController extends Controller
         $userId = $currentUser->id;
 
         // Get processing/queued demos for real-time updates. Admins see all queued demos.
-        $processingQuery = UploadedDemo::whereIn('status', ['queued', 'processing'])->with(['record.user']);
+        $processingQuery = UploadedDemo::whereIn('status', ['uploaded', 'pending', 'processing'])->with(['record.user']);
         if (!$isAdmin) {
             $processingQuery->where('user_id', $userId);
         }
@@ -570,9 +687,9 @@ class DemosController extends Controller
 
         // Get queue statistics
         $queueStats = [
-            'total_queued' => UploadedDemo::where('status', 'queued')->count(),
+            'total_queued' => UploadedDemo::whereIn('status', ['uploaded', 'pending'])->count(),
             'total_processing' => UploadedDemo::where('status', 'processing')->count(),
-            'user_queued' => $isAdmin ? UploadedDemo::where('status', 'queued')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'queued')->count(),
+            'user_queued' => $isAdmin ? UploadedDemo::whereIn('status', ['uploaded', 'pending'])->count() : UploadedDemo::where('user_id', $userId)->whereIn('status', ['uploaded', 'pending'])->count(),
             'user_processing' => $isAdmin ? UploadedDemo::where('status', 'processing')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'processing')->count(),
         ];
 

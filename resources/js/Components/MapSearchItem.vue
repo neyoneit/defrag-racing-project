@@ -12,7 +12,9 @@
 
     const onClick = () => {
         if (props.isRoute) {
-            router.get(route('maps.map', (props.map.name)))
+            // Manually encode the mapname to handle special characters like #
+            const encodedMapname = encodeURIComponent(props.map.name);
+            router.get(`/maps/${encodedMapname}`)
             return
         }
 

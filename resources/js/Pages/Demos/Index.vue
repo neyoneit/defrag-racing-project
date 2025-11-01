@@ -9,11 +9,17 @@ export default {
 <script setup>
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import Pagination from '@/Components/Basic/Pagination.vue';
 
 const $page = usePage();
 
 const props = defineProps({
-    demos: Object,
+    userDemos: Object,
+    publicDemos: Object,
+    demoCounts: Object,
+    sortBy: String,
+    sortOrder: String,
+    downloadLimitInfo: Object,
 });
 const fileInput = ref(null);
 const selectedFiles = ref([]);
@@ -24,6 +30,30 @@ const processingDemos = ref([]);
 const queueStats = ref({});
 const statusPolling = ref(null);
 const uploadProgress = ref(0);
+
+// Filter state
+const activeTab = ref('all'); // all, online, offline
+const activeStatusFilter = ref('all'); // all, assigned, failed
+
+// Tooltip state
+const hoveredDemo = ref(null);
+const tooltipPosition = ref({ x: 0, y: 0 });
+
+const showTooltip = (demo, event) => {
+    hoveredDemo.value = demo;
+    updateTooltipPosition(event);
+};
+
+const hideTooltip = () => {
+    hoveredDemo.value = null;
+};
+
+const updateTooltipPosition = (event) => {
+    tooltipPosition.value = {
+        x: event.clientX,
+        y: event.clientY
+    };
+};
 
 // Manual assignment state
 const showAssignModal = ref(false);
@@ -45,6 +75,39 @@ const form = useForm({
     demos: [],
 });
 
+// Computed filtered demos
+const filteredDemos = computed(() => {
+    if (!props.userDemos || !props.userDemos.data) return [];
+    let filtered = props.userDemos.data;
+
+    // Filter by online/offline
+    if (activeTab.value === 'online') {
+        filtered = filtered.filter(demo => demo.gametype && demo.gametype.startsWith('m'));
+    } else if (activeTab.value === 'offline') {
+        filtered = filtered.filter(demo => demo.gametype && !demo.gametype.startsWith('m'));
+    }
+
+    // Filter by status
+    if (activeStatusFilter.value === 'assigned') {
+        filtered = filtered.filter(demo => demo.status === 'assigned');
+    } else if (activeStatusFilter.value === 'failed') {
+        filtered = filtered.filter(demo => demo.status === 'failed');
+    }
+
+    return filtered;
+});
+
+// Use server-provided counts instead of counting current page
+const demoCountsComputed = computed(() => {
+    return props.demoCounts || {
+        all: 0,
+        online: 0,
+        offline: 0,
+        assigned: 0,
+        failed: 0,
+    };
+});
+
 const handleFileSelect = (event) => {
     const files = Array.from(event.target.files || event.dataTransfer.files);
     const validFiles = files.filter(file => {
@@ -54,7 +117,8 @@ const handleFileSelect = (event) => {
     });
 
     if (validFiles.length !== files.length) {
-        alert('Some files were not recognized as demo files and were not added. Archives (.zip, .rar, .7z) are supported.');
+        const skipped = files.length - validFiles.length;
+        alert(`Found ${validFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
     }
 
     selectedFiles.value = validFiles;
@@ -82,23 +146,56 @@ const handleDragOver = (e) => {
     e.stopPropagation();
 };
 
-const handleDrop = (e) => {
+const handleDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     isDragOver.value = false;
     dragCounter.value = 0;
 
-    const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(file => {
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
-        return ext && (ext.match(/^dm_\d+$/) || ['zip', 'rar', '7z'].includes(ext));
-    });
+    const items = Array.from(e.dataTransfer.items);
+    const allFiles = [];
 
-    if (validFiles.length !== files.length) {
-        alert('Some files were not recognized as demo files and were not added. Archives (.zip, .rar, .7z) are supported.');
+    // Helper function to recursively read directory
+    const readDirectory = async (entry) => {
+        if (entry.isFile) {
+            return new Promise((resolve) => {
+                entry.file((file) => {
+                    const ext = (file.name.split('.').pop() || '').toLowerCase();
+                    if (ext && (ext.match(/^dm_\d+$/) || ['zip', 'rar', '7z'].includes(ext))) {
+                        allFiles.push(file);
+                    }
+                    resolve();
+                });
+            });
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            return new Promise((resolve) => {
+                reader.readEntries(async (entries) => {
+                    for (const entry of entries) {
+                        await readDirectory(entry);
+                    }
+                    resolve();
+                });
+            });
+        }
+    };
+
+    // Process all dropped items
+    for (const item of items) {
+        const entry = item.webkitGetAsEntry();
+        if (entry) {
+            await readDirectory(entry);
+        }
     }
 
-    selectedFiles.value = [...selectedFiles.value, ...validFiles];
+    if (allFiles.length > 0) {
+        const totalFiles = items.length;
+        if (allFiles.length < totalFiles) {
+            const skipped = totalFiles - allFiles.length;
+            alert(`Found ${allFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
+        }
+        selectedFiles.value = [...selectedFiles.value, ...allFiles];
+    }
 };
 
 const removeFile = (index) => {
@@ -160,7 +257,7 @@ const uploadDemos = async () => {
             }
 
             // Immediately reload the demos list
-            router.reload({ only: ['demos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'] });
 
             // Clear success message after 10 seconds (longer for queue processing)
             setTimeout(() => {
@@ -184,6 +281,18 @@ const formatFileSize = (bytes) => {
     const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const sortColumn = (column) => {
+    const newOrder = props.sortBy === column && props.sortOrder === 'asc' ? 'desc' : 'asc';
+    router.get(route('demos.index'), {
+        sort: column,
+        order: newOrder,
+        userPage: props.userDemos?.current_page || 1,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
 };
 
 const formatTime = (ms) => {
@@ -213,7 +322,7 @@ const reprocessDemo = async (demoId) => {
     try {
         const response = await axios.post(route('demos.reprocess', demoId));
         if (response.data.success) {
-            router.reload({ only: ['demos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'] });
         }
     } catch (error) {
         alert('Failed to reprocess demo: ' + (error.response?.data?.message || error.message));
@@ -227,7 +336,7 @@ const deleteDemo = async (demoId) => {
 
     try {
         await axios.delete(route('demos.destroy', demoId));
-        router.reload({ only: ['demos'] });
+        router.reload({ only: ['userDemos', 'publicDemos'] });
     } catch (error) {
         alert('Failed to delete demo: ' + (error.response?.data?.message || error.message));
     }
@@ -244,7 +353,9 @@ const groupedDemos = computed(() => {
         uploaded: []
     };
 
-    props.demos.data.forEach(demo => {
+    if (!props.userDemos || !props.userDemos.data) return groups;
+
+    props.userDemos.data.forEach(demo => {
         if (groups[demo.status]) {
             groups[demo.status].push(demo);
         } else {
@@ -282,13 +393,13 @@ const startStatusPolling = (targetDemoIds = null) => {
                 const stillProcessing = (response.data.processing_demos || []).filter(d => targetDemoIds.includes(d.id)).length;
                 if (stillProcessing === 0) {
                     stopStatusPolling();
-                    router.reload({ only: ['demos'] });
+                    router.reload({ only: ['userDemos', 'publicDemos'] });
                 }
             } else {
                 // Stop polling if no demos are processing/queued (global)
                 if ((response.data.processing_demos || []).length === 0) {
                     stopStatusPolling();
-                    router.reload({ only: ['demos'] }); // Final reload when all done
+                    router.reload({ only: ['userDemos', 'publicDemos'] }); // Final reload when all done
                 }
             }
         } catch (error) {
@@ -393,7 +504,7 @@ const assignDemo = async () => {
 
         if (response.data.success) {
             closeAssignModal();
-            router.reload({ only: ['demos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'] });
         }
     } catch (error) {
         console.error('Error assigning demo:', error);
@@ -410,7 +521,7 @@ const unassignDemo = async (demo) => {
         const response = await axios.post(route('demos.unassign', demo.id));
 
         if (response.data.success) {
-            router.reload({ only: ['demos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'] });
         }
     } catch (error) {
         console.error('Error unassigning demo:', error);
@@ -440,7 +551,7 @@ watch(selectedPhysics, () => {
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-start flex-wrap gap-4">
+                <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Demos</h1>
                         <div class="flex items-center gap-2 text-gray-400">
@@ -448,6 +559,34 @@ watch(selectedPhysics, () => {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                             </svg>
                             <span class="text-sm font-semibold">Upload and manage demo files</span>
+                        </div>
+                    </div>
+
+                    <!-- Download Limit Info (Compact, Right Side) -->
+                    <div v-if="downloadLimitInfo" class="backdrop-blur-xl rounded-lg px-4 py-2 shadow-xl border" :class="downloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : downloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                        <div class="flex items-center gap-2">
+                            <svg v-if="downloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <svg v-else-if="downloadLimitInfo.remaining === 0" class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                            </svg>
+                            <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div v-if="downloadLimitInfo.isGuest" class="text-xs">
+                                <span class="text-blue-200 font-semibold">{{ downloadLimitInfo.remaining }}/{{ downloadLimitInfo.limit }}</span>
+                                <span class="text-blue-300/80 ml-1">downloads left</span>
+                            </div>
+                            <div v-else-if="downloadLimitInfo.remaining === 0" class="text-xs">
+                                <span class="text-red-200 font-semibold">Limit reached</span>
+                            </div>
+                            <div v-else class="text-xs">
+                                <span class="text-green-400 font-semibold">{{ downloadLimitInfo.remaining }}</span>
+                                <span class="text-gray-300 mx-1">/</span>
+                                <span class="text-gray-300">{{ downloadLimitInfo.limit }}</span>
+                                <span class="text-gray-400 ml-1">downloads left</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -458,9 +597,9 @@ watch(selectedPhysics, () => {
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-8 mb-8 shadow-2xl border border-white/5">
-                    <h3 class="text-2xl font-bold text-gray-100 mb-6 flex items-center">
-                        <svg class="w-8 h-8 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-6 shadow-2xl border border-white/5">
+                    <h3 class="text-lg font-bold text-gray-100 mb-3 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         Upload New Demos
@@ -473,7 +612,7 @@ watch(selectedPhysics, () => {
                         @dragover="handleDragOver"
                         @drop="handleDrop"
                         :class="[
-                            'relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ease-in-out',
+                            'relative border-2 border-dashed rounded-xl p-4 text-center transition-all duration-300 ease-in-out',
                             isDragOver
                                 ? 'border-blue-400 bg-blue-900/20 scale-[1.02]'
                                 : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/30'
@@ -489,10 +628,10 @@ watch(selectedPhysics, () => {
                                 <div class="text-sm text-blue-100 mt-1">Release to upload your selected demos</div>
                             </div>
                         </div>
-                        <div class="space-y-4">
+                        <div class="space-y-2">
                             <div class="flex justify-center">
                                 <svg :class="[
-                                    'w-16 h-16 transition-all duration-300',
+                                    'w-10 h-10 transition-all duration-300',
                                     isDragOver ? 'text-blue-400 scale-110' : 'text-gray-400'
                                 ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -501,37 +640,57 @@ watch(selectedPhysics, () => {
 
                             <div>
                                 <p :class="[
-                                    'text-xl font-semibold transition-colors duration-300',
+                                    'text-base font-semibold transition-colors duration-300',
                                     isDragOver ? 'text-blue-300' : 'text-gray-200'
                                 ]">
-                                    {{ isDragOver ? 'Drop demo files here' : 'Drag demo files here' }}
+                                    {{ isDragOver ? 'Drop demo files or folders here' : 'Drag demo files or folders here' }}
                                 </p>
-                                <p class="text-gray-400 mt-2">
-                                    Or click to choose files (.dm_68, .dm_66, .dm_67, .dm_73) or upload an archive (.zip, .rar, .7z)
+                                <p class="text-gray-400 mt-1 text-sm">
+                                    Or use buttons below to select files or folders
                                 </p>
                             </div>
 
-                            <!-- Hidden file input -->
+                            <!-- Hidden file inputs -->
                             <input
                                 ref="fileInput"
                                 type="file"
                                 multiple
                                 accept=".dm_68,.dm_66,.dm_67,.dm_73,.zip,.rar,.7z"
                                 @change="handleFileSelect"
-                                class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                class="hidden"
+                            />
+                            <input
+                                ref="folderInput"
+                                type="file"
+                                webkitdirectory
+                                directory
+                                @change="handleFileSelect"
+                                class="hidden"
                             />
 
-                            <!-- Browse button -->
-                            <button
-                                type="button"
-                                class="relative inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                                @click="fileInput.click()"
-                            >
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                Browse files
-                            </button>
+                            <!-- Browse buttons -->
+                            <div class="flex gap-2 justify-center">
+                                <button
+                                    type="button"
+                                    class="relative inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                                    @click="$refs.fileInput.click()"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Select Files
+                                </button>
+                                <button
+                                    type="button"
+                                    class="relative inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg shadow-lg hover:from-green-700 hover:to-green-800 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                                    @click="$refs.folderInput.click()"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                                    </svg>
+                                    Select Folder
+                                </button>
+                            </div>
                         
                         <!-- Guest notice -->
                         <div v-if="!$page.props.auth.user" class="mt-4 text-sm text-yellow-300">
@@ -652,64 +811,131 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Processing Status (real-time) -->
-                <div v-if="processingDemos.length > 0 || Object.keys(queueStats).length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-6 mb-8 shadow-2xl border border-white/5">
-                    <h3 class="text-xl font-semibold text-gray-200 mb-4">Processing Status</h3>
+                <div v-if="processingDemos.length > 0 || Object.keys(queueStats).length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
+                    <h3 class="text-base font-semibold text-gray-200 mb-2">Processing Status</h3>
 
                     <!-- Queue Statistics -->
-                    <div v-if="Object.keys(queueStats).length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-xl p-4 text-center border border-blue-600/30">
-                            <div class="text-3xl font-bold text-blue-400 mb-1">{{ queueStats.user_queued || 0 }}</div>
-                            <div class="text-sm text-blue-300">Your Queued</div>
+                    <div v-if="Object.keys(queueStats).length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+                        <div class="bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-lg p-2 text-center border border-blue-600/30">
+                            <div class="text-lg font-bold text-blue-400">{{ queueStats.user_queued || 0 }}</div>
+                            <div class="text-xs text-blue-300">Your Queued</div>
                         </div>
-                        <div class="bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-xl p-4 text-center border border-yellow-600/30">
-                            <div class="text-3xl font-bold text-yellow-400 mb-1">{{ queueStats.user_processing || 0 }}</div>
-                            <div class="text-sm text-yellow-300">Your Processing</div>
+                        <div class="bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-2 text-center border border-yellow-600/30">
+                            <div class="text-lg font-bold text-yellow-400">{{ queueStats.user_processing || 0 }}</div>
+                            <div class="text-xs text-yellow-300">Your Processing</div>
                         </div>
-                        <div class="bg-gradient-to-br from-gray-600/20 to-gray-700/10 rounded-xl p-4 text-center border border-gray-600/30">
-                            <div class="text-3xl font-bold text-gray-300 mb-1">{{ queueStats.total_queued || 0 }}</div>
-                            <div class="text-sm text-gray-400">Total Queued</div>
+                        <div class="bg-gradient-to-br from-gray-600/20 to-gray-700/10 rounded-lg p-2 text-center border border-gray-600/30">
+                            <div class="text-lg font-bold text-gray-300">{{ queueStats.total_queued || 0 }}</div>
+                            <div class="text-xs text-gray-400">Total Queued</div>
                         </div>
-                        <div class="bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-xl p-4 text-center border border-green-600/30">
-                            <div class="text-3xl font-bold text-green-400 mb-1">{{ queueStats.total_processing || 0 }}</div>
-                            <div class="text-sm text-green-300">Total Processing</div>
+                        <div class="bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-lg p-2 text-center border border-green-600/30">
+                            <div class="text-lg font-bold text-green-400">{{ queueStats.total_processing || 0 }}</div>
+                            <div class="text-xs text-green-300">Total Processing</div>
                         </div>
                     </div>
 
                     <!-- Processing Demos List -->
                     <div v-if="processingDemos.length > 0" class="space-y-2">
-                        <h4 class="text-lg font-semibold text-gray-300">Currently Processing:</h4>
-                        <div v-for="demo in processingDemos" :key="demo.id" class="flex items-center justify-between bg-gray-700/50 rounded-xl p-4 border border-gray-600/50">
-                            <div class="flex items-center space-x-3">
-                                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <h4 class="text-sm font-semibold text-gray-300">Currently Processing:</h4>
+                        <div v-for="demo in processingDemos" :key="demo.id" class="flex items-center justify-between bg-gray-700/50 rounded-lg p-2 border border-gray-600/50">
+                            <div class="flex items-center space-x-2">
+                                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                                 <div>
-                                    <div class="text-gray-200 font-medium">{{ demo.original_filename }}</div>
-                                    <div class="text-sm text-gray-400">Status: <span class="text-yellow-400">{{ demo.status }}</span></div>
+                                    <div class="text-gray-200 font-medium text-sm">{{ demo.original_filename }}</div>
+                                    <div class="text-xs text-gray-400">Status: <span class="text-yellow-400">{{ demo.status }}</span></div>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2">
                                 <div class="flex space-x-1">
-                                    <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                                    <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
-                                    <div class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
+                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
                                 </div>
-                                <span class="text-yellow-400 text-sm font-medium">Processing...</span>
+                                <span class="text-yellow-400 text-xs font-medium">Processing...</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Demos List -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <!-- Your Uploads Section (authenticated users only) -->
+                <div v-if="$page.props.auth.user && userDemos" class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
-                        <span v-if="$page.props.auth.user">Your Uploaded Demos</span>
-                        <span v-else>Recent Demos</span>
+                        Your Uploaded Demos
                     </h3>
 
-                    <div v-if="demos.data.length === 0" class="text-gray-400">
-                        <span v-if="$page.props.auth.user">You haven't uploaded any demos yet.</span>
-                        <span v-else>No demos available yet.</span>
+                    <!-- Filter Tabs -->
+                    <div class="mb-6 space-y-4">
+                        <!-- Category Tabs (Online/Offline) -->
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                @click="activeTab = 'all'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                :class="activeTab === 'all'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
+                            >
+                                All Demos <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.all }})</span>
+                            </button>
+                            <button
+                                @click="activeTab = 'online'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                :class="activeTab === 'online'
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
+                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
+                            >
+                                Online <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.online }})</span>
+                            </button>
+                            <button
+                                @click="activeTab = 'offline'"
+                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                :class="activeTab === 'offline'
+                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/50'
+                                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
+                            >
+                                Offline <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.offline }})</span>
+                            </button>
+                        </div>
+
+                        <!-- Status Filters -->
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                @click="activeStatusFilter = 'all'"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                :class="activeStatusFilter === 'all'
+                                    ? 'bg-gray-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                All Status
+                            </button>
+                            <button
+                                @click="activeStatusFilter = 'assigned'"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                :class="activeStatusFilter === 'assigned'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                Assigned <span class="ml-1 opacity-75">({{ demoCountsComputed.assigned }})</span>
+                            </button>
+                            <button
+                                @click="activeStatusFilter = 'failed'"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                :class="activeStatusFilter === 'failed'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                Failed <span class="ml-1 opacity-75">({{ demoCountsComputed.failed }})</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="!userDemos.data || userDemos.data.length === 0" class="text-gray-400">
+                        You haven't uploaded any demos yet.
+                    </div>
+
+                    <div v-else-if="filteredDemos.length === 0" class="text-gray-400 text-center py-8">
+                        No demos match the selected filters.
                     </div>
 
                     <div v-else class="overflow-x-auto">
@@ -717,19 +943,55 @@ watch(selectedPhysics, () => {
                             <thead class="bg-gray-700/50">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Filename
+                                        <button @click="sortColumn('original_filename')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Filename</span>
+                                            <svg v-if="sortBy === 'original_filename'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Map
+                                        <button @click="sortColumn('created_at')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Uploaded</span>
+                                            <svg v-if="sortBy === 'created_at'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('map_name')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Map</span>
+                                            <svg v-if="sortBy === 'map_name'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Type
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Physics
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Time
+                                        <button @click="sortColumn('time_ms')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Time</span>
+                                            <svg v-if="sortBy === 'time_ms'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Status
+                                        <button @click="sortColumn('status')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Status</span>
+                                            <svg v-if="sortBy === 'status'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Actions
@@ -737,7 +999,7 @@ watch(selectedPhysics, () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-600">
-                                <tr v-for="demo in demos.data" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
+                                <tr v-for="demo in filteredDemos" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
                                     <td class="px-6 py-4 text-sm">
                                         <div class="flex items-center space-x-3">
                                             <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -746,36 +1008,59 @@ watch(selectedPhysics, () => {
                                             <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-300">
-                                        <Link v-if="demo.map_name" :href="route('maps.map', demo.map_name)" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200">
+                                    <td class="px-6 py-4 text-sm text-gray-400">
+                                        <div class="flex flex-col">
+                                            <span class="text-gray-300">{{ new Date(demo.created_at).toLocaleDateString() }}</span>
+                                            <span class="text-xs text-gray-500">{{ new Date(demo.created_at).toLocaleTimeString() }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                        <Link v-if="demo.map_name" :href="`/maps/${encodeURIComponent(demo.map_name)}`" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200 truncate block max-w-[120px]" :title="demo.map_name">
                                             {{ demo.map_name }}
                                         </Link>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-300">
-                                        <span v-if="demo.physics" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
+                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                        <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
+                                            {{ demo.gametype }}
+                                        </span>
+                                        <span v-else class="text-gray-500">-</span>
+                                    </td>
+                                    <td class="px-2 py-4 text-xs text-gray-300">
+                                        <span v-if="demo.physics" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
                                             {{ demo.physics }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-300 font-mono">
+                                    <td class="px-4 py-4 text-sm text-gray-300 font-mono">
                                         {{ formatTime(demo.time_ms) }}
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <div class="flex items-center space-x-2">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="{
-                                                'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
-                                                'bg-blue-900/50 text-blue-200': demo.status === 'processing',
-                                                'bg-green-900/50 text-green-200': demo.status === 'processed',
-                                                'bg-purple-900/50 text-purple-200': demo.status === 'assigned',
-                                                'bg-red-900/50 text-red-200': demo.status === 'failed',
-                                                'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'failed'].includes(demo.status)
-                                            }">
-                                                {{ demo.status }}
-                                            </span>
-                                            <span v-if="demo.record_id" class="text-purple-400 text-xs">
-                                                (<Link :href="demo.record?.mapname ? route('maps.map', demo.record.mapname) : route('records')" class="text-purple-400 hover:text-purple-300 underline transition-colors duration-200" :title="demo.record ? `${demo.record.mapname} - ${demo.record.user?.name} - ${formatTime(demo.record.time)}` : 'View record details'">Record #{{ demo.record_id }}</Link>)
-                                            </span>
+                                    <td class="px-4 py-4 text-sm">
+                                        <div class="flex flex-col space-y-2">
+                                            <div class="flex items-center space-x-2">
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium relative"
+                                                    :class="{
+                                                        'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
+                                                        'bg-blue-900/50 text-blue-200': demo.status === 'processing',
+                                                        'bg-green-900/50 text-green-200': demo.status === 'processed',
+                                                        'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
+                                                        'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
+                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'failed'].includes(demo.status)
+                                                    }"
+                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) ? showTooltip(demo, $event) : null"
+                                                    @mouseleave="hideTooltip"
+                                                    @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
+                                                >
+                                                    {{ demo.status }}
+                                                    <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                </span>
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 text-sm">
@@ -837,21 +1122,112 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="demos.links && demos.links.length > 3" class="mt-4 flex justify-center">
-                        <nav class="flex space-x-2">
-                            <Link
-                                v-for="link in demos.links"
-                                :key="link.label"
-                                :href="link.url"
-                                :class="[
-                                    'px-3 py-2 rounded',
-                                    link.active ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600',
-                                    !link.url && 'opacity-50 cursor-not-allowed'
-                                ]"
-                                v-html="link.label"
-                                :disabled="!link.url"
-                            />
-                        </nav>
+                    <div v-if="userDemos.last_page > 1" class="mt-6">
+                        <Pagination
+                            :last_page="userDemos.last_page"
+                            :current_page="userDemos.current_page"
+                            :link="userDemos.path + '?'"
+                            pageName="userPage"
+                        />
+                    </div>
+                </div>
+
+                <!-- Browse All Demos Section (for everyone) -->
+                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                    <h3 class="text-xl font-semibold text-gray-200 mb-4">
+                        Browse All Demos
+                    </h3>
+
+                    <div v-if="!publicDemos.data || publicDemos.data.length === 0" class="text-gray-400">
+                        No demos available yet.
+                    </div>
+
+                    <div v-else class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-600">
+                            <thead class="bg-gray-700/50">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Filename
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Uploaded By
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Map
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Type
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Physics
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Time
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-600">
+                                <tr v-for="demo in publicDemos.data" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
+                                    <td class="px-6 py-4 text-sm">
+                                        <div class="flex items-center space-x-3">
+                                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-300">
+                                        <span v-if="demo.user">{{ demo.user.name }}</span>
+                                        <span v-else class="text-gray-500">Guest</span>
+                                    </td>
+                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                        <Link v-if="demo.map_name" :href="`/maps/${encodeURIComponent(demo.map_name)}`" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200 truncate block max-w-[120px]" :title="demo.map_name">
+                                            {{ demo.map_name }}
+                                        </Link>
+                                        <span v-else class="text-gray-500">-</span>
+                                    </td>
+                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                        <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
+                                            {{ demo.gametype }}
+                                        </span>
+                                        <span v-else class="text-gray-500">-</span>
+                                    </td>
+                                    <td class="px-2 py-4 text-xs text-gray-300">
+                                        <span v-if="demo.physics" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
+                                            {{ demo.physics }}
+                                        </span>
+                                        <span v-else class="text-gray-500">-</span>
+                                    </td>
+                                    <td class="px-4 py-4 text-sm text-gray-300 font-mono">
+                                        {{ formatTime(demo.time_ms) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm">
+                                        <a
+                                            :href="route('demos.download', demo.id)"
+                                            class="inline-flex items-center px-3 py-1.5 bg-blue-600/20 text-blue-300 text-xs font-medium rounded-md hover:bg-blue-600/30 transition-colors duration-200"
+                                        >
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination for Browse All Demos -->
+                    <div v-if="publicDemos.last_page > 1" class="mt-6">
+                        <Pagination
+                            :last_page="publicDemos.last_page"
+                            :current_page="publicDemos.current_page"
+                            :link="publicDemos.path + '?'"
+                            pageName="browsePage"
+                        />
                     </div>
                 </div>
             </div>
@@ -982,4 +1358,84 @@ watch(selectedPhysics, () => {
             </div>
         </div>
     </div>
+
+    <!-- Custom Tooltip for Failed and Assigned Demos -->
+    <Teleport to="body">
+        <!-- Failed Demo Tooltip -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'failed' && hoveredDemo.processing_output"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '500px'
+            }"
+        >
+            <div class="bg-gray-900 border border-red-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-red-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Error Details:
+                </div>
+                <div class="font-mono text-[11px] text-red-200 whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{{ hoveredDemo.processing_output }}</div>
+            </div>
+        </div>
+
+        <!-- Assigned Demo Tooltip (Online Record) -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'assigned' && hoveredDemo.record"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '400px'
+            }"
+        >
+            <div class="bg-gray-900 border border-purple-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-purple-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Online Record Details:
+                </div>
+                <div class="space-y-1 text-gray-300">
+                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.record_id }}</span></div>
+                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.record.mapname }}</span></div>
+                    <div v-if="hoveredDemo.record.user"><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.record.user.name }}</span></div>
+                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.record.time) }}</span></div>
+                    <div v-if="hoveredDemo.record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.record.date_set).toLocaleDateString() }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned Demo Tooltip (Offline Record) -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'assigned' && hoveredDemo.offline_record && !hoveredDemo.record"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '400px'
+            }"
+        >
+            <div class="bg-gray-900 border border-purple-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-purple-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Offline Record Details:
+                </div>
+                <div class="space-y-1 text-gray-300">
+                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.offline_record.id }}</span></div>
+                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
+                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.offline_record.player_name }}</span></div>
+                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
+                    <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
+                    <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
+                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>

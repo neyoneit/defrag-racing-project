@@ -571,12 +571,14 @@
             </header>
 
             <!-- Page Content -->
-            <main>
+            <main class="pb-8">
                 <slot />
             </main>
 
             <!-- Donation Progress Bar -->
-            <DonationProgressBar />
+            <div class="mt-8">
+                <DonationProgressBar />
+            </div>
 
             <Footer />
         </div>

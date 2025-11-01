@@ -170,7 +170,7 @@
                         <div class="flex flex-wrap gap-2 justify-end">
                             <div v-for="pk3 in round.maps" :key="pk3.id">
                                 <div v-if="pk3.external" class="flex items-center gap-2">
-                                    <Link :href="route('maps.map', pk3.name)" class="text-blue-400 hover:text-blue-300 transition">
+                                    <Link :href="`/maps/${encodeURIComponent(pk3.name)}`" class="text-blue-400 hover:text-blue-300 transition">
                                         {{ pk3.name }}
                                     </Link>
                                     <a :download="pk3.download_name" :href="'https://dl.defrag.racing/downloads/maps/' + pk3.pk3.split('/').pop()" class="text-blue-400 hover:text-blue-300 transition">

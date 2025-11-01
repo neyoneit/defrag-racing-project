@@ -789,7 +789,7 @@
                 <!-- Maps Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                     <Link v-for="map in unplayed_maps.data" :key="map.name"
-                          :href="route('maps.map', map.name)"
+                          :href="`/maps/${encodeURIComponent(map.name)}`"
                           class="group relative backdrop-blur-xl bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
                         <div class="relative overflow-hidden rounded-md mb-2">
                             <img :src="`/storage/${map.thumbnail}`"
@@ -1093,7 +1093,7 @@
                             </div>
 
                             <div v-if="vq3Records.total > 0" class="px-4 py-2 flex-1">
-                                <Link v-for="record in vq3Records.data" :key="record.id" :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
                                     <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
                                         <img
@@ -1159,7 +1159,7 @@
                             </div>
 
                             <div v-if="cpmRecords.total > 0" class="px-4 py-2 flex-1">
-                                <Link v-for="record in cpmRecords.data" :key="record.id" :href="route('maps.map', record.mapname)" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
                                     <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
                                         <img

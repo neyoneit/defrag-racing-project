@@ -61,13 +61,17 @@ class DemoProcessorService
             // Use suggested filename if available, otherwise keep original
             $processedFilename = $metadata['suggested_filename'] ?? $demo->original_filename;
 
-            // Compress the demo file to save space and upload to Backblaze
-            $compressedPath = $this->compressDemo($tempFile, $processedFilename);
+            // Compress the demo file to save space (but don't upload yet)
+            $compressedLocalPath = $this->compressDemo($tempFile, $processedFilename);
 
-            // Update demo record
+            // Generate the proper compressed filename for storage
+            $format = config('app.demo_compression_format', '7z');
+            $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.' . $format;
+
+            // Update demo record with metadata
             $demo->update([
-                'processed_filename' => basename($compressedPath),
-                'file_path' => $compressedPath,
+                'processed_filename' => $compressedFilename,
+                'file_path' => null, // Will be set after upload if successful
                 'map_name' => $metadata['map'] ?? null,
                 'physics' => $metadata['physics'] ?? null,
                 'gametype' => $metadata['gametype'] ?? null,
@@ -95,10 +99,10 @@ class DemoProcessorService
 
             if ($demo->is_offline) {
                 // Create offline record for offline demos
-                $this->createOfflineRecord($demo);
+                $this->createOfflineRecord($demo, $compressedLocalPath);
             } else {
                 // Auto-assign online demos to existing records
-                $this->autoAssignToRecord($demo);
+                $this->autoAssignToRecord($demo, $compressedLocalPath);
             }
 
             return $demo;
@@ -283,42 +287,51 @@ class DemoProcessorService
             $zip->close();
         }
 
-        // Store the compressed file to Backblaze
-        $fileContents = file_get_contents($tempCompressedPath);
-        $uploadSuccess = Storage::put($compressedPath, $fileContents);
-
-        if (!$uploadSuccess) {
-            throw new \Exception('Failed to upload compressed demo to Backblaze B2 storage');
-        }
-
-        Log::info('Demo uploaded to Backblaze', [
-            'path' => $compressedPath,
-            'size' => strlen($fileContents),
-        ]);
-
-        // Clean up temporary file
-        unlink($tempCompressedPath);
-
-        // Attempt to get compressed size via Storage
-        $compressedSize = null;
-        try {
-            $compressedSize = Storage::size($compressedPath);
-        } catch (\Throwable $e) {
-            Log::warning('Unable to retrieve compressed file size via Storage::size(), falling back', [
-                'compressed_path' => $compressedPath,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        // Return the local compressed file path (don't upload yet)
+        // Upload will happen later only if record matching succeeds
+        $originalSize = filesize($tempFile);
+        $compressedSize = filesize($tempCompressedPath);
 
         Log::info('Demo compressed successfully', [
             'format' => $format,
             'original_file' => $processedFilename,
             'compressed_file' => $compressedFilename,
-            'original_size' => filesize($tempFile),
+            'original_size' => $originalSize,
             'compressed_size' => $compressedSize,
         ]);
 
-        return $compressedPath;
+        return $tempCompressedPath;
+    }
+
+    /**
+     * Upload compressed demo to Backblaze B2 storage
+     */
+    protected function uploadToBackblaze($localFilePath, $filename)
+    {
+        $storagePath = "demos/{$filename}";
+        $fileContents = file_get_contents($localFilePath);
+
+        try {
+            $uploadSuccess = Storage::put($storagePath, $fileContents);
+
+            if (!$uploadSuccess) {
+                throw new \Exception('Storage::put() returned false - upload may have failed silently');
+            }
+        } catch (\Throwable $e) {
+            Log::error('Failed to upload demo to Backblaze', [
+                'path' => $storagePath,
+                'error' => $e->getMessage(),
+                'exception_class' => get_class($e),
+            ]);
+            throw new \Exception('Failed to upload compressed demo to Backblaze B2 storage: ' . $e->getMessage(), 0, $e);
+        }
+
+        Log::info('Demo uploaded to Backblaze', [
+            'path' => $storagePath,
+            'size' => strlen($fileContents),
+        ]);
+
+        return $storagePath;
     }
 
     /**
@@ -335,10 +348,9 @@ class DemoProcessorService
     /**
      * Move failed demo to failed directory for admin review
      */
-    protected function moveToFailedDirectory(UploadedDemo $demo)
+    protected function moveToFailedDirectory(UploadedDemo $demo, $compressedLocalPath = null)
     {
         try {
-            $sourcePath = storage_path("app/{$demo->file_path}");
             $failedDir = storage_path("app/demos/failed/{$demo->id}");
 
             // Create failed directory
@@ -346,13 +358,16 @@ class DemoProcessorService
                 mkdir($failedDir, 0755, true);
             }
 
+            // Use the compressed local path if provided, otherwise try the stored file_path
+            $sourcePath = $compressedLocalPath ?? storage_path("app/{$demo->file_path}");
+
             // Move file to failed directory
             if (file_exists($sourcePath)) {
-                $destPath = $failedDir . '/' . $demo->original_filename;
+                $destPath = $failedDir . '/' . ($demo->processed_filename ?? $demo->original_filename);
                 rename($sourcePath, $destPath);
 
-                // Update file_path to point to failed directory
-                $demo->update(['file_path' => "demos/failed/{$demo->id}/{$demo->original_filename}"]);
+                // Update file_path to point to failed directory (local path, not Backblaze)
+                $demo->update(['file_path' => "demos/failed/{$demo->id}/" . ($demo->processed_filename ?? $demo->original_filename)]);
 
                 Log::info('Moved failed demo to failed directory', [
                     'demo_id' => $demo->id,
@@ -371,7 +386,7 @@ class DemoProcessorService
     /**
      * Try to automatically assign demo to a record
      */
-    protected function autoAssignToRecord(UploadedDemo $demo)
+    protected function autoAssignToRecord(UploadedDemo $demo, $compressedLocalPath)
     {
         if (!$demo->map_name || !$demo->physics || !$demo->time_ms) {
             return; // Not enough data to match
@@ -391,7 +406,9 @@ class DemoProcessorService
 
         // Build gametype string (e.g., "run_cpm" or "run_vq3")
         // Records from q3df.org are all online records
-        $gametype = 'run_' . strtolower($demo->physics);
+        // Strip .tr suffix (timer reset) as it's just an indicator and not part of physics matching
+        $physics = str_replace('.tr', '', strtolower($demo->physics));
+        $gametype = 'run_' . $physics;
 
         // Find matching record
         $query = Record::where('mapname', $demo->map_name)
@@ -414,18 +431,30 @@ class DemoProcessorService
         $record = $query->first();
 
         if ($record) {
+            // Match found! Upload to Backblaze
+            $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
+
             $demo->update([
                 'record_id' => $record->id,
                 'status' => 'assigned',
+                'file_path' => $uploadedPath,
             ]);
 
-            Log::info('Demo auto-assigned to record', [
+            // Clean up local compressed file after successful upload
+            if (file_exists($compressedLocalPath)) {
+                unlink($compressedLocalPath);
+            }
+
+            Log::info('Demo auto-assigned to record and uploaded', [
                 'demo_id' => $demo->id,
                 'record_id' => $record->id,
                 'gametype' => $demo->gametype,
+                'uploaded_path' => $uploadedPath,
             ]);
         } else {
-            // Online demo with no matching record should be marked as failed
+            // No match - move to failed directory and keep local
+            $this->moveToFailedDirectory($demo, $compressedLocalPath);
+
             $demo->update([
                 'status' => 'failed',
             ]);
@@ -437,9 +466,6 @@ class DemoProcessorService
                 'time_ms' => $demo->time_ms,
                 'user_id' => $demo->user_id,
             ]);
-
-            // Move the failed demo file to failed directory for review
-            $this->moveToFailedDirectory($demo);
         }
     }
 
@@ -447,7 +473,7 @@ class DemoProcessorService
      * Create offline record from demo
      * Offline demos (df, fs, fc) get their own leaderboards separate from online records
      */
-    protected function createOfflineRecord(UploadedDemo $demo)
+    protected function createOfflineRecord(UploadedDemo $demo, $compressedLocalPath)
     {
         if (!$demo->map_name || !$demo->physics || !$demo->gametype || !$demo->time_ms) {
             Log::warning('Cannot create offline record - missing required fields', [
@@ -479,6 +505,9 @@ class DemoProcessorService
 
         $rank = $fasterTimes + 1;
 
+        // Upload to Backblaze for offline records too
+        $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
+
         // Create the offline record
         // Use record_date from demo metadata if available, otherwise fall back to upload date
         $offlineRecord = OfflineRecord::create([
@@ -492,6 +521,17 @@ class DemoProcessorService
             'date_set' => $demo->record_date ?? $demo->created_at,
         ]);
 
+        // Update demo with uploaded path
+        $demo->update([
+            'file_path' => $uploadedPath,
+            'status' => 'assigned',
+        ]);
+
+        // Clean up local compressed file after successful upload
+        if (file_exists($compressedLocalPath)) {
+            unlink($compressedLocalPath);
+        }
+
         // Update ranks for all records slower than this one
         // (increment their rank by 1 since a new faster/equal record was inserted)
         OfflineRecord::where('map_name', $demo->map_name)
@@ -501,7 +541,7 @@ class DemoProcessorService
             ->where('id', '!=', $offlineRecord->id)
             ->increment('rank');
 
-        Log::info('Offline record created', [
+        Log::info('Offline record created and uploaded', [
             'demo_id' => $demo->id,
             'record_id' => $offlineRecord->id,
             'map' => $demo->map_name,
@@ -509,6 +549,7 @@ class DemoProcessorService
             'physics' => $demo->physics,
             'rank' => $rank,
             'time_ms' => $demo->time_ms,
+            'uploaded_path' => $uploadedPath,
         ]);
     }
 }

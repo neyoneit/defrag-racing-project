@@ -88,7 +88,7 @@
 </script>
 
 <template>
-    <Link :href="route('maps.map', getRouteData)" class="block group">
+    <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block group">
         <div class="backdrop-blur-xl bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
             <!-- Map Thumbnail -->
             <div class="relative w-full aspect-video bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">

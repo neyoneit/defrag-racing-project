@@ -363,7 +363,7 @@
                                         {{ notification.physics }}
                                     </span>
                                     <span class="text-gray-500">broke your time on</span>
-                                    <Link class="text-blue-400 hover:text-blue-300 font-semibold transition-colors" :href="route('maps.map', notification.mapname)">{{ notification.mapname }}</Link>
+                                    <Link class="text-blue-400 hover:text-blue-300 font-semibold transition-colors" :href="`/maps/${encodeURIComponent(notification.mapname)}`">{{ notification.mapname }}</Link>
                                     <span class="text-gray-500">with</span>
                                     <span class="font-bold text-white">{{ formatTime(notification.time) }}</span>
                                     <span class="text-green-400 font-semibold">(+{{ formatTime(timeDiff(notification.my_time, notification.time)) }})</span>

@@ -31,7 +31,7 @@
             <div class="flex text-gray-400 items-center">
                 <span>#</span>
                 <div class="ml-2 font-bold mr-2 text-white">{{ record.rank }}</div>
-                <Link :class="{'text-xs': record.mapname.length > 16}" class="ml-4 text-blue-400 hover:text-blue-300 font-bold" :href="route('maps.map', record.mapname)"> {{ record.mapname }} </Link>
+                <Link :class="{'text-xs': record.mapname.length > 16}" class="ml-4 text-blue-400 hover:text-blue-300 font-bold" :href="`/maps/${encodeURIComponent(record.mapname)}`"> {{ record.mapname }} </Link>
             </div>
 
             <div class="flex justify-between items-center mt-2">

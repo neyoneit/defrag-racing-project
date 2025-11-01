@@ -65,6 +65,17 @@
         if (props.queries?.tags) {
             selectedTags.value = props.queries.tags.split(',');
         }
+
+        // Handle fragment redirects - if user typed /maps/#mapname, redirect to /maps/%23mapname
+        const pathname = window.location.pathname.replace(/\/$/, ''); // Remove trailing slash
+        if (window.location.hash && pathname === '/maps') {
+            const fragment = window.location.hash.substring(1); // Remove the # prefix
+            if (fragment) {
+                const encodedMapname = encodeURIComponent('#' + fragment);
+                console.log('Redirecting from fragment to encoded URL:', `/maps/${encodedMapname}`);
+                router.get(`/maps/${encodedMapname}`);
+            }
+        }
     });
 </script>
 
