@@ -324,6 +324,31 @@ class ProfileController extends Controller {
 
         \Log::info('Profile page load times', $timings);
 
+        // Load user aliases
+        // For own profile: show all aliases (approved and pending)
+        // For other profiles: show only approved aliases
+        $aliases = null;
+        $canManageAliases = false;
+        if ($isOwnProfile) {
+            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'alias', 'is_approved', 'created_at']);
+            $canManageAliases = true;
+        } else {
+            // For public profiles, only show approved aliases
+            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
+                ->where('is_approved', true)
+                ->orderBy('created_at', 'desc')
+                ->get(['alias']);
+        }
+
+        // Load top downloaded demos
+        $topDownloadedDemos = \App\Models\UploadedDemo::where('user_id', $user->id)
+            ->where('download_count', '>', 0)
+            ->orderBy('download_count', 'desc')
+            ->limit(5)
+            ->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
+
         return Inertia::render('Profile')
             ->with('vq3Records', $vq3Records)
             ->with('cpmRecords', $cpmRecords)
@@ -339,6 +364,9 @@ class ProfileController extends Controller {
             ->with('unplayed_maps', $unplayedMaps)
             ->with('total_maps', $totalMaps)
             ->with('user_maplists', $userMaplists)
+            ->with('aliases', $aliases)
+            ->with('can_manage_aliases', $canManageAliases)
+            ->with('topDownloadedDemos', $topDownloadedDemos)
             ->with('load_times', $timings)
             ->with('hasProfile', true);
     }

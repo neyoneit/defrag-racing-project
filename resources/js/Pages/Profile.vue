@@ -33,6 +33,14 @@
             type: Array,
             default: () => []
         },
+        aliases: {
+            type: Array,
+            default: () => []
+        },
+        topDownloadedDemos: {
+            type: Array,
+            default: () => []
+        },
         hasProfile: Boolean,
         load_times: Object
     });
@@ -321,6 +329,43 @@
         if (props.total_maps === 0) return 0;
         return ((playedMapsCount.value / props.total_maps) * 100).toFixed(3);
     });
+
+    // Alias reporting
+    const showReportModal = ref(false);
+    const reportingAlias = ref(null);
+    const reportReason = ref('');
+    const reportingInProgress = ref(false);
+
+    const reportAlias = (alias) => {
+        reportingAlias.value = alias;
+        showReportModal.value = true;
+    };
+
+    const closeReportModal = () => {
+        showReportModal.value = false;
+        reportingAlias.value = null;
+        reportReason.value = '';
+    };
+
+    const submitAliasReport = () => {
+        if (!reportReason.value.trim()) {
+            return;
+        }
+
+        reportingInProgress.value = true;
+
+        router.post(route('aliases.report', reportingAlias.value.id || reportingAlias.value.alias), {
+            reason: reportReason.value,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeReportModal();
+            },
+            onFinish: () => {
+                reportingInProgress.value = false;
+            }
+        });
+    };
 
 </script>
 
@@ -622,6 +667,71 @@
                                 <span class="text-sm font-bold text-white">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
                                 <span class="text-xs text-gray-500">/</span>
                                 <span class="text-xs font-medium text-gray-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Downloaded Demos & Known Aliases Grid -->
+            <div v-if="(topDownloadedDemos && topDownloadedDemos.length > 0) || (aliases && aliases.length > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Top Downloaded Demos Section -->
+                <div v-if="topDownloadedDemos && topDownloadedDemos.length > 0">
+                    <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                            Top Downloaded Demos
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-4">Most popular demos uploaded by this player</p>
+                        <div class="space-y-2">
+                            <Link
+                                v-for="demo in topDownloadedDemos"
+                                :key="demo.id"
+                                :href="`/maps/${encodeURIComponent(demo.map_name)}`"
+                                class="flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-colors group"
+                            >
+                                <div class="text-white text-sm truncate mr-3">{{ demo.processed_filename || demo.original_filename }}</div>
+                                <div class="flex items-center gap-1.5 text-blue-400 font-bold text-sm whitespace-nowrap">
+                                    <span>{{ demo.download_count }}</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                    </svg>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player Aliases Section -->
+                <div v-if="aliases && aliases.length > 0">
+                    <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                        <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-indigo-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                            </svg>
+                            Known Aliases
+                        </h3>
+                        <p class="text-xs text-gray-400 mb-4">Alternative nicknames used by this player</p>
+                        <div class="flex flex-wrap gap-2">
+                            <div
+                                v-for="alias in aliases"
+                                :key="alias.alias"
+                                class="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-sm text-indigo-300 flex items-center gap-2"
+                            >
+                                <span v-html="q3tohtml(alias.alias)"></span>
+                                <!-- Report button (only show for other users viewing profile) -->
+                                <button
+                                    v-if="$page.props.auth.user && $page.props.auth.user.id !== user.id"
+                                    @click="reportAlias(alias)"
+                                    class="text-gray-400 hover:text-red-400 transition-colors"
+                                    title="Report this alias"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1300,6 +1410,62 @@
         </div>
 
         <div class="h-20"></div>
+
+        <!-- Alias Report Modal -->
+        <Teleport to="body">
+            <div v-if="showReportModal" class="fixed inset-0 z-50 overflow-y-auto">
+                <!-- Backdrop -->
+                <div class="fixed inset-0 bg-black/70" @click="closeReportModal"></div>
+
+                <!-- Modal -->
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative backdrop-blur-xl bg-black/80 rounded-xl shadow-2xl max-w-md w-full border border-white/10">
+                        <!-- Header -->
+                        <div class="px-6 py-4 border-b border-white/10">
+                            <h3 class="text-xl font-bold text-white">Report Alias</h3>
+                            <p class="text-sm text-gray-400 mt-1">
+                                Reporting alias: <span class="text-white" v-html="q3tohtml(reportingAlias?.alias || '')"></span>
+                            </p>
+                        </div>
+
+                        <!-- Body -->
+                        <form @submit.prevent="submitAliasReport" class="px-6 py-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">Reason for report</label>
+                                <textarea
+                                    v-model="reportReason"
+                                    rows="4"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none resize-none"
+                                    placeholder="Please explain why this alias is incorrect or fake..."
+                                    required
+                                    maxlength="500"
+                                ></textarea>
+                                <p class="text-xs text-gray-500 mt-1">{{ reportReason.length }}/500 characters</p>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="flex gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    @click="closeReportModal"
+                                    class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors"
+                                    :disabled="reportingInProgress"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors font-semibold disabled:opacity-50"
+                                    :disabled="reportingInProgress || !reportReason.trim()"
+                                >
+                                    {{ reportingInProgress ? 'Submitting...' : 'Submit Report' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
 

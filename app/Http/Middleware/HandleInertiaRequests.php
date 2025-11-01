@@ -41,9 +41,15 @@ class HandleInertiaRequests extends Middleware
     {
         $recordsNotifications = [];
         $systemNotifications = [];
+        $aliases = [];
 
         if ($request->user()) {
             $user = $request->user();
+
+            // Load user aliases
+            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get(['id', 'alias', 'is_approved', 'created_at']);
 
             // Filter record notifications based on preview_records setting
             if ($user->preview_records !== 'none') {
@@ -93,6 +99,7 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'recordsNotifications'      =>      $recordsNotifications,
             'systemNotifications'       =>      $systemNotifications,
+            'aliases'                   =>      $aliases,
             'danger'                    =>      $request->session()->get('danger'),
             'success'                   =>      $request->session()->get('success'),
             'dangerRandom'                 =>      random_int(0, 1_000_000_000),

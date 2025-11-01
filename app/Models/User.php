@@ -308,4 +308,76 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
             ]);
         });
     }
+
+    /**
+     * Get user's aliases
+     */
+    public function aliases()
+    {
+        return $this->hasMany(UserAlias::class);
+    }
+
+    /**
+     * Get user's uploaded demos
+     */
+    public function uploadedDemos()
+    {
+        return $this->hasMany(UploadedDemo::class, 'user_id');
+    }
+
+    /**
+     * Get user's records
+     */
+    public function records()
+    {
+        return $this->hasMany(Record::class, 'user_id');
+    }
+
+    /**
+     * Get user's top 5 most downloaded demos
+     */
+    public function topDownloadedDemos()
+    {
+        return $this->uploadedDemos()
+            ->orderBy('download_count', 'desc')
+            ->limit(5);
+    }
+
+    /**
+     * Check if user can upload demos
+     * Requires 30 records and not being upload-restricted
+     */
+    public function canUploadDemos()
+    {
+        if ($this->upload_restricted) {
+            return false;
+        }
+
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
+    }
+
+    /**
+     * Check if user can assign/reassign demos
+     * Requires 30 records and not being assignment-restricted
+     */
+    public function canAssignDemos()
+    {
+        if ($this->assignment_restricted) {
+            return false;
+        }
+
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
+    }
+
+    /**
+     * Check if user can report demos/aliases
+     * Requires 30 records
+     */
+    public function canReportDemos()
+    {
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
+    }
 }

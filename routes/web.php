@@ -20,6 +20,8 @@ use App\Http\Controllers\ModelsController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\DefragHQ\DonationManagementController;
+use App\Http\Controllers\AliasController;
+use App\Http\Controllers\AliasReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +103,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/oauth/twitter', [App\Http\Controllers\OAuthController::class, 'redirectToTwitter'])->name('oauth.twitter');
     Route::get('/oauth/twitter/callback', [App\Http\Controllers\OAuthController::class, 'handleTwitterCallback'])->name('oauth.twitter.callback');
     Route::post('/oauth/twitter/disconnect', [App\Http\Controllers\OAuthController::class, 'disconnectTwitter'])->name('oauth.twitter.disconnect');
+
+    // Alias management routes
+    Route::post('/aliases', [AliasController::class, 'store'])->name('aliases.store');
+    Route::delete('/aliases/{alias}', [AliasController::class, 'destroy'])->name('aliases.destroy');
+    Route::post('/aliases/{alias}/report', [AliasReportController::class, 'store'])->name('aliases.report');
 });
 
 // Make the main upload endpoint publicly reachable so the demos page can accept

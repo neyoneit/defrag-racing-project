@@ -384,11 +384,11 @@ class DemoProcessorService
     }
 
     /**
-     * Try to automatically assign demo to a record
+     * Try to automatically assign demo to a record using name matching
      */
     protected function autoAssignToRecord(UploadedDemo $demo, $compressedLocalPath)
     {
-        if (!$demo->map_name || !$demo->physics || !$demo->time_ms) {
+        if (!$demo->map_name || !$demo->physics || !$demo->time_ms || !$demo->player_name) {
             return; // Not enough data to match
         }
 
@@ -410,63 +410,70 @@ class DemoProcessorService
         $physics = str_replace('.tr', '', strtolower($demo->physics));
         $gametype = 'run_' . $physics;
 
-        // Find matching record
-        $query = Record::where('mapname', $demo->map_name)
-            ->where('gametype', $gametype)
-            ->where('time', $demo->time_ms);
+        // Use NameMatcher to find best match
+        $nameMatcher = app(NameMatcher::class);
+        $nameMatch = $nameMatcher->findBestMatch($demo->player_name, $demo->user_id);
 
-        // If the demo was uploaded by a logged-in user, prefer records for that user.
-        // For guest uploads (user_id == null) allow matching records regardless of owner so
-        // community-submitted demos can be auto-assigned to existing public records.
-        if (!is_null($demo->user_id)) {
-            $query->where('user_id', $demo->user_id);
-        } else {
-            Log::info('Auto-assign: demo uploaded by guest, searching records without user constraint', [
-                'demo_id' => $demo->id,
-                'map' => $demo->map_name,
-                'time_ms' => $demo->time_ms,
-            ]);
-        }
+        // Store name matching results
+        $demo->update([
+            'name_confidence' => $nameMatch['confidence'],
+            'suggested_user_id' => $nameMatch['user_id'],
+        ]);
 
-        $record = $query->first();
+        Log::info('Name matching completed', [
+            'demo_id' => $demo->id,
+            'player_name' => $demo->player_name,
+            'confidence' => $nameMatch['confidence'],
+            'suggested_user_id' => $nameMatch['user_id'],
+            'source' => $nameMatch['source'],
+        ]);
 
-        if ($record) {
-            // Match found! Upload to Backblaze
-            $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
+        // Only auto-assign if we have 100% confidence match
+        if ($nameMatch['confidence'] === 100 && $nameMatch['user_id']) {
+            // Find matching record for this user
+            $record = Record::where('mapname', $demo->map_name)
+                ->where('gametype', $gametype)
+                ->where('time', $demo->time_ms)
+                ->where('user_id', $nameMatch['user_id'])
+                ->first();
 
-            $demo->update([
-                'record_id' => $record->id,
-                'status' => 'assigned',
-                'file_path' => $uploadedPath,
-            ]);
+            if ($record) {
+                // Perfect match found! Upload to Backblaze
+                $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
 
-            // Clean up local compressed file after successful upload
-            if (file_exists($compressedLocalPath)) {
-                unlink($compressedLocalPath);
+                $demo->update([
+                    'record_id' => $record->id,
+                    'status' => 'assigned',
+                    'file_path' => $uploadedPath,
+                ]);
+
+                // Clean up local compressed file after successful upload
+                if (file_exists($compressedLocalPath)) {
+                    unlink($compressedLocalPath);
+                }
+
+                Log::info('Demo auto-assigned to record with 100% name match', [
+                    'demo_id' => $demo->id,
+                    'record_id' => $record->id,
+                    'user_id' => $nameMatch['user_id'],
+                    'gametype' => $demo->gametype,
+                    'uploaded_path' => $uploadedPath,
+                ]);
+
+                return;
             }
-
-            Log::info('Demo auto-assigned to record and uploaded', [
-                'demo_id' => $demo->id,
-                'record_id' => $record->id,
-                'gametype' => $demo->gametype,
-                'uploaded_path' => $uploadedPath,
-            ]);
-        } else {
-            // No match - move to failed directory and keep local
-            $this->moveToFailedDirectory($demo, $compressedLocalPath);
-
-            $demo->update([
-                'status' => 'failed',
-            ]);
-
-            Log::warning('Online demo failed to match any record', [
-                'demo_id' => $demo->id,
-                'map' => $demo->map_name,
-                'gametype' => $gametype,
-                'time_ms' => $demo->time_ms,
-                'user_id' => $demo->user_id,
-            ]);
         }
+
+        // Less than 100% confidence or no matching record found
+        // Create offline record instead (goes to "Demos Top")
+        Log::info('Creating offline record for non-100% match', [
+            'demo_id' => $demo->id,
+            'confidence' => $nameMatch['confidence'],
+            'map' => $demo->map_name,
+            'time_ms' => $demo->time_ms,
+        ]);
+
+        $this->createOfflineRecord($demo, $compressedLocalPath);
     }
 
     /**

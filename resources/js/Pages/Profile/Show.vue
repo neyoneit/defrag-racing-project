@@ -9,6 +9,7 @@ import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthe
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
 import VerifyMddProfile from '@/Pages/Profile/Partials/VerifyMddProfile.vue';
+import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
@@ -351,6 +352,11 @@ const updateNotifications = () => {
                 <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
+            </div>
+
+            <!-- Player Aliases Card -->
+            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+                <ManageAliasesForm :user="user" />
             </div>
 
             <!-- Profile Images Card -->

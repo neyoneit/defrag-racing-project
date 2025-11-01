@@ -25,12 +25,19 @@ class UploadedDemo extends Model
         'record_date',
         'status',
         'processing_output',
+        'name_confidence',
+        'suggested_user_id',
+        'manually_assigned',
+        'download_count',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
         'time_ms' => 'integer',
         'record_date' => 'datetime',
+        'name_confidence' => 'integer',
+        'manually_assigned' => 'boolean',
+        'download_count' => 'integer',
     ];
 
     /**
@@ -55,6 +62,22 @@ class UploadedDemo extends Model
     public function offlineRecord()
     {
         return $this->hasOne(OfflineRecord::class, 'demo_id');
+    }
+
+    /**
+     * Assignment reports for this demo
+     */
+    public function assignmentReports()
+    {
+        return $this->hasMany(DemoAssignmentReport::class, 'demo_id');
+    }
+
+    /**
+     * Suggested user based on name matching
+     */
+    public function suggestedUser()
+    {
+        return $this->belongsTo(User::class, 'suggested_user_id');
     }
 
     /**
@@ -97,5 +120,13 @@ class UploadedDemo extends Model
     {
         // Offline gametypes: df, fs, fc
         return $this->gametype && !str_starts_with($this->gametype, 'm');
+    }
+
+    /**
+     * Increment download counter
+     */
+    public function incrementDownloads()
+    {
+        $this->increment('download_count');
     }
 }

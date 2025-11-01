@@ -471,6 +471,11 @@ class DemosController extends Controller
             ]);
         }
 
+        // Increment download counter (skip for demo owner and admins to avoid inflating count)
+        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
+            $demo->incrementDownloads();
+        }
+
         $filename = $demo->processed_filename ?: $demo->original_filename;
 
         // Check if demo is stored locally (failed or temp demos) or in Backblaze (processed demos)
