@@ -67,12 +67,20 @@ class NameMatcher
      */
     public function findBestMatch(string $demoPlayerName, ?int $uploaderId = null): array
     {
-        // Pass 1: Check uploader's primary name and aliases (if uploader is logged in)
+        // Pass 1: Check global search first
+        $globalMatch = $this->matchGlobally($demoPlayerName, null); // Don't exclude uploader
+
+        // If we found a 100% confidence match globally, always use it
+        if ($globalMatch['confidence'] === 100) {
+            return $globalMatch;
+        }
+
+        // Pass 2: Check uploader's primary name and aliases (if uploader is logged in)
         if ($uploaderId) {
             $uploaderMatch = $this->matchAgainstUser($demoPlayerName, $uploaderId);
 
-            // If we have a high confidence match (>=70%), use it
-            if ($uploaderMatch['confidence'] >= 70) {
+            // If uploader has a high confidence match (>=70%) and it's better than global, use it
+            if ($uploaderMatch['confidence'] >= 70 && $uploaderMatch['confidence'] > $globalMatch['confidence']) {
                 return [
                     'user_id' => $uploaderId,
                     'confidence' => $uploaderMatch['confidence'],
@@ -81,9 +89,7 @@ class NameMatcher
             }
         }
 
-        // Pass 2: Global search across all users
-        $globalMatch = $this->matchGlobally($demoPlayerName, $uploaderId);
-
+        // Return the global match
         return $globalMatch;
     }
 

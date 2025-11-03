@@ -1,6 +1,7 @@
 <script setup>
     import { Link, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+    import DemoReportModal from '@/Components/DemoReportModal.vue';
 
     const props = defineProps({
         record: Object,
@@ -16,7 +17,22 @@
     const page = usePage();
     const showTooltip = ref(false);
     const showUploaderTooltip = ref(false);
+    const showReportModal = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
+
+    const canReportDemo = computed(() => {
+        return isLoggedIn.value && page.props.canReportDemos;
+    });
+
+    const getDemoForReport = computed(() => {
+        if (isOfflineRecord.value && props.record.demo) {
+            return props.record.demo;
+        }
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) {
+            return props.record.uploaded_demos[0];
+        }
+        return null;
+    });
 
     // Check if this is an offline record (has demo_id instead of record_id)
     const isOfflineRecord = computed(() => {
@@ -233,6 +249,19 @@
                     <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
                 </svg>
             </a>
+
+            <!-- Report Demo Button -->
+            <button
+                v-if="canReportDemo && getDemoForReport"
+                @click.stop="showReportModal = true"
+                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                title="Report demo"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </button>
+
         </div>
 
         <!-- Left side badges -->
@@ -245,4 +274,11 @@
             <span v-else-if="record.rank === 3 && !record.oldtop">🥉</span>
         </div>
     </div>
+
+    <!-- Demo Report Modal -->
+    <DemoReportModal
+        :show="showReportModal"
+        :demo="getDemoForReport"
+        @close="showReportModal = false"
+    />
 </template>

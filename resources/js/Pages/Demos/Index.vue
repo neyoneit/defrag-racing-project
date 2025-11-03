@@ -75,27 +75,61 @@ const form = useForm({
     demos: [],
 });
 
-// Computed filtered demos
+// Initialize filter state from URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('tab')) {
+    activeTab.value = urlParams.get('tab');
+}
+if (urlParams.has('status')) {
+    activeStatusFilter.value = urlParams.get('status');
+}
+
+// No client-side filtering needed - server handles it
 const filteredDemos = computed(() => {
-    if (!props.userDemos || !props.userDemos.data) return [];
-    let filtered = props.userDemos.data;
-
-    // Filter by online/offline
-    if (activeTab.value === 'online') {
-        filtered = filtered.filter(demo => demo.gametype && demo.gametype.startsWith('m'));
-    } else if (activeTab.value === 'offline') {
-        filtered = filtered.filter(demo => demo.gametype && !demo.gametype.startsWith('m'));
-    }
-
-    // Filter by status
-    if (activeStatusFilter.value === 'assigned') {
-        filtered = filtered.filter(demo => demo.status === 'assigned');
-    } else if (activeStatusFilter.value === 'failed') {
-        filtered = filtered.filter(demo => demo.status === 'failed');
-    }
-
-    return filtered;
+    return props.userDemos?.data || [];
 });
+
+// Function to change tab filter (ONLINE/OFFLINE/ALL)
+const changeTabFilter = (tab) => {
+    activeTab.value = tab;
+    const currentUrl = new URL(window.location.href);
+
+    if (tab === 'all') {
+        currentUrl.searchParams.delete('tab');
+    } else {
+        currentUrl.searchParams.set('tab', tab);
+    }
+
+    // Reset to page 1 when changing filters
+    currentUrl.searchParams.delete('userPage');
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['userDemos', 'demoCounts'],
+    });
+};
+
+// Function to change status filter (ASSIGNED/FAILED/ALL)
+const changeStatusFilter = (status) => {
+    activeStatusFilter.value = status;
+    const currentUrl = new URL(window.location.href);
+
+    if (status === 'all') {
+        currentUrl.searchParams.delete('status');
+    } else {
+        currentUrl.searchParams.set('status', status);
+    }
+
+    // Reset to page 1 when changing filters
+    currentUrl.searchParams.delete('userPage');
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['userDemos', 'demoCounts'],
+    });
+};
 
 // Use server-provided counts instead of counting current page
 const demoCountsComputed = computed(() => {
@@ -870,7 +904,7 @@ watch(selectedPhysics, () => {
                         <!-- Category Tabs (Online/Offline) -->
                         <div class="flex flex-wrap gap-2">
                             <button
-                                @click="activeTab = 'all'"
+                                @click="changeTabFilter('all')"
                                 class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                                 :class="activeTab === 'all'
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
@@ -879,7 +913,7 @@ watch(selectedPhysics, () => {
                                 All Demos <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.all }})</span>
                             </button>
                             <button
-                                @click="activeTab = 'online'"
+                                @click="changeTabFilter('online')"
                                 class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                                 :class="activeTab === 'online'
                                     ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
@@ -888,7 +922,7 @@ watch(selectedPhysics, () => {
                                 Online <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.online }})</span>
                             </button>
                             <button
-                                @click="activeTab = 'offline'"
+                                @click="changeTabFilter('offline')"
                                 class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                                 :class="activeTab === 'offline'
                                     ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/50'
@@ -901,7 +935,7 @@ watch(selectedPhysics, () => {
                         <!-- Status Filters -->
                         <div class="flex flex-wrap gap-2">
                             <button
-                                @click="activeStatusFilter = 'all'"
+                                @click="changeStatusFilter('all')"
                                 class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                                 :class="activeStatusFilter === 'all'
                                     ? 'bg-gray-600 text-white'
@@ -910,7 +944,7 @@ watch(selectedPhysics, () => {
                                 All Status
                             </button>
                             <button
-                                @click="activeStatusFilter = 'assigned'"
+                                @click="changeStatusFilter('assigned')"
                                 class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                                 :class="activeStatusFilter === 'assigned'
                                     ? 'bg-purple-600 text-white'
@@ -919,7 +953,7 @@ watch(selectedPhysics, () => {
                                 Assigned <span class="ml-1 opacity-75">({{ demoCountsComputed.assigned }})</span>
                             </button>
                             <button
-                                @click="activeStatusFilter = 'failed'"
+                                @click="changeStatusFilter('failed')"
                                 class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                                 :class="activeStatusFilter === 'failed'
                                     ? 'bg-red-600 text-white'

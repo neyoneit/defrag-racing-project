@@ -96,14 +96,17 @@ class HandleInertiaRequests extends Middleware
             $systemNotifications = $systemQuery->orderBy('created_at', 'DESC')->get();
         }
 
-        return array_merge(parent::share($request), [
+        $shared = parent::share($request);
+
+        return array_merge($shared, [
             'recordsNotifications'      =>      $recordsNotifications,
             'systemNotifications'       =>      $systemNotifications,
             'aliases'                   =>      $aliases,
             'danger'                    =>      $request->session()->get('danger'),
             'success'                   =>      $request->session()->get('success'),
             'dangerRandom'                 =>      random_int(0, 1_000_000_000),
-            'successRandom'                 =>      random_int(0, 1_000_000_000)
+            'successRandom'                 =>      random_int(0, 1_000_000_000),
+            'canReportDemos'            =>      $request->user() ? (\App\Models\Record::where('user_id', $request->user()->id)->count() >= 30) : false,
         ]);
     }
 }

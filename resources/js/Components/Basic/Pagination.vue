@@ -47,9 +47,20 @@
 
     const goToPage = (page) => {
         newPage.value = page;
-        const url = new URL(getUrl(page), window.location.origin);
-        const params = Object.fromEntries(url.searchParams);
-        router.reload({ data: params, preserveScroll: true });
+        const url = getUrl(page);
+
+        // Save current scroll position
+        const scrollPosition = window.scrollY;
+
+        router.visit(url, {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['userDemos', 'publicDemos'],
+            onSuccess: () => {
+                // Restore scroll position after navigation
+                window.scrollTo(0, scrollPosition);
+            }
+        });
     }
 
     const changePage = () => {
@@ -71,9 +82,10 @@
     }
 
     const getUrl = (page) => {
-        let result = props.link.replace('?' + props.pageName + '=1', '?' + props.pageName + '=' + page).replace('&' + props.pageName + '=1', '&' + props.pageName + '=' + page)
-
-        return result
+        // Build URL with the page parameter
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set(props.pageName, page);
+        return currentUrl.pathname + '?' + currentUrl.searchParams.toString();
     }
 
     watchEffect(() => {

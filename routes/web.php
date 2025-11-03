@@ -22,6 +22,7 @@ use App\Http\Controllers\DonationController;
 use App\Http\Controllers\DefragHQ\DonationManagementController;
 use App\Http\Controllers\AliasController;
 use App\Http\Controllers\AliasReportController;
+use App\Http\Controllers\DemoReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -108,6 +109,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/aliases', [AliasController::class, 'store'])->name('aliases.store');
     Route::delete('/aliases/{alias}', [AliasController::class, 'destroy'])->name('aliases.destroy');
     Route::post('/aliases/{alias}/report', [AliasReportController::class, 'store'])->name('aliases.report');
+
+    // Demo reporting routes
+    Route::post('/demos/{demo}/report', [DemoReportController::class, 'store'])->name('demos.report');
 });
 
 // Make the main upload endpoint publicly reachable so the demos page can accept

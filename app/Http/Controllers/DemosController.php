@@ -65,6 +65,10 @@ class DemosController extends Controller
         $sortBy = $request->input('sort', 'created_at');
         $sortOrder = $request->input('order', 'desc');
 
+        // Get filter parameters
+        $filterTab = $request->input('tab', 'all'); // all, online, offline
+        $filterStatus = $request->input('status', 'all'); // all, assigned, failed
+
         // Validate sort column
         $allowedColumns = ['original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at'];
         if (!in_array($sortBy, $allowedColumns)) {
@@ -83,6 +87,19 @@ class DemosController extends Controller
             if ($isAdmin) {
                 // Admin sees all uploads (including guest uploads) in "Your Uploads" section
                 $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
+
+                // Apply filters
+                if ($filterTab === 'online') {
+                    $query->where('gametype', 'LIKE', 'm%');
+                } elseif ($filterTab === 'offline') {
+                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+                }
+
+                if ($filterStatus === 'assigned') {
+                    $query->where('status', 'assigned');
+                } elseif ($filterStatus === 'failed') {
+                    $query->where('status', 'failed');
+                }
 
                 // Apply sorting
                 if ($sortBy === 'status') {
@@ -105,6 +122,19 @@ class DemosController extends Controller
                 // Regular users see only their own uploads
                 $query = UploadedDemo::where('user_id', $currentUser->id)
                     ->with(['record.user', 'offlineRecord']);
+
+                // Apply filters
+                if ($filterTab === 'online') {
+                    $query->where('gametype', 'LIKE', 'm%');
+                } elseif ($filterTab === 'offline') {
+                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+                }
+
+                if ($filterStatus === 'assigned') {
+                    $query->where('status', 'assigned');
+                } elseif ($filterStatus === 'failed') {
+                    $query->where('status', 'failed');
+                }
 
                 // Apply sorting
                 if ($sortBy === 'status') {

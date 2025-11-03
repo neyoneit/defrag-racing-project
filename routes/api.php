@@ -21,3 +21,4 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/profile/{userId}/beatable-records/{rivalMddId}', [\App\Http\Controllers\ProfileController::class, 'beatableRecordsApi']);
 Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);
 Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\ProfileController::class, 'comparePlayer']);
+Route::get('/records/search', [\App\Http\Controllers\RecordsController::class, 'search']);

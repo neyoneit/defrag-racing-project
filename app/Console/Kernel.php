@@ -39,6 +39,9 @@ class Kernel extends ConsoleKernel
 
         // Process overdue Headhunter challenge disputes and auto-ban creators
         $schedule->command('headhunter:process-disputes')->withoutOverlapping()->daily();
+
+        // Rematch all unassigned demos against current user aliases (runs daily at 2am)
+        $schedule->command('demos:rematch-all')->withoutOverlapping()->dailyAt('02:00');
     }
 
     /**
