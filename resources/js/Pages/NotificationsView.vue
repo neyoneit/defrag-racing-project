@@ -13,7 +13,7 @@
         }
     });
 
-    const activeSystemTab = ref('announcements');
+    const activeSystemTab = ref('all');
     const activeRecordTab = ref('all');
 
     const timeDiff = (time, bettertime) => {
@@ -21,7 +21,9 @@
     };
 
     const totalCount = computed(() => {
-        return (props.recordNotificationsPage?.length || 0) + (props.systemNotificationsPage?.total || 0);
+        const unreadRecords = (props.recordNotificationsPage || []).filter(n => !n.read).length;
+        const unreadSystem = (props.systemNotificationsPage?.data || []).filter(n => !n.read).length;
+        return unreadRecords + unreadSystem;
     });
 
     const toggleNotificationRead = (notificationId) => {
@@ -80,9 +82,9 @@
         return notifications;
     });
 
-    // Count notifications for each record sub-tab
+    // Count notifications for each record sub-tab (only unread)
     const recordTabCounts = computed(() => {
-        const notifications = props.recordNotificationsPage || [];
+        const notifications = (props.recordNotificationsPage || []).filter(n => !n.read);
         return {
             all: notifications.length,
             beaten: notifications.filter(n => !n.worldrecord).length,
@@ -94,24 +96,30 @@
     const filteredSystemNotifications = computed(() => {
         const notifications = props.systemNotificationsPage?.data || [];
 
-        if (activeSystemTab.value === 'announcements') {
+        if (activeSystemTab.value === 'all') {
+            return notifications;
+        } else if (activeSystemTab.value === 'announcements') {
             return notifications.filter(n => n.type === 'announcement');
         } else if (activeSystemTab.value === 'clan') {
             return notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer'].includes(n.type));
         } else if (activeSystemTab.value === 'tournament') {
             return notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type));
+        } else if (activeSystemTab.value === 'profile') {
+            return notifications.filter(n => n.type === 'alias_suggestion');
         }
 
         return notifications;
     });
 
-    // Count notifications for each sub-tab
+    // Count notifications for each sub-tab (only unread)
     const systemTabCounts = computed(() => {
-        const notifications = props.systemNotificationsPage?.data || [];
+        const notifications = (props.systemNotificationsPage?.data || []).filter(n => !n.read);
         return {
+            all: notifications.length,
             announcements: notifications.filter(n => n.type === 'announcement').length,
             clan: notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer'].includes(n.type)).length,
-            tournament: notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type)).length
+            tournament: notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type)).length,
+            profile: notifications.filter(n => n.type === 'alias_suggestion').length
         };
     });
 
@@ -180,6 +188,13 @@
                 bgColor: 'bg-indigo-500/20',
                 borderColor: 'border-indigo-500/30',
                 iconColor: 'text-indigo-400'
+            },
+            'alias_suggestion': {
+                label: 'Alias Suggestions',
+                icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z',
+                bgColor: 'bg-indigo-500/20',
+                borderColor: 'border-indigo-500/30',
+                iconColor: 'text-indigo-400'
             }
         };
 
@@ -232,9 +247,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
                             </svg>
                             <span>Record Notifications</span>
-                            <span v-if="recordNotificationsPage?.length" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                            <span v-if="(recordNotificationsPage || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                   :class="activeTab === 'records' ? 'bg-orange-500/30 text-orange-300' : 'bg-white/10 text-gray-400'">
-                                {{ recordNotificationsPage?.length }}
+                                {{ (recordNotificationsPage || []).filter(n => !n.read).length }}
                             </span>
                         </div>
                         <div v-if="activeTab === 'records'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-orange-400 to-transparent"></div>
@@ -252,9 +267,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
                             </svg>
                             <span>System Notifications</span>
-                            <span v-if="systemNotificationsPage?.total" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                            <span v-if="(systemNotificationsPage?.data || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                   :class="activeTab === 'system' ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-gray-400'">
-                                {{ systemNotificationsPage?.total }}
+                                {{ (systemNotificationsPage?.data || []).filter(n => !n.read).length }}
                             </span>
                         </div>
                         <div v-if="activeTab === 'system'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
@@ -397,6 +412,26 @@
                     <!-- Sub-tabs -->
                     <div class="flex border-b border-white/10 bg-black/20">
                         <button
+                            @click="activeSystemTab = 'all'"
+                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            :class="activeSystemTab === 'all'
+                                ? 'text-white bg-white/10'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        >
+                            <div class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                                </svg>
+                                <span>All</span>
+                                <span v-if="systemTabCounts.all" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                                      :class="activeSystemTab === 'all' ? 'bg-white/30 text-white' : 'bg-white/10 text-gray-400'">
+                                    {{ systemTabCounts.all }}
+                                </span>
+                            </div>
+                            <div v-if="activeSystemTab === 'all'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent"></div>
+                        </button>
+
+                        <button
                             @click="activeSystemTab = 'announcements'"
                             class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
                             :class="activeSystemTab === 'announcements'
@@ -455,6 +490,26 @@
                             </div>
                             <div v-if="activeSystemTab === 'tournament'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-pink-400 to-transparent"></div>
                         </button>
+
+                        <button
+                            @click="activeSystemTab = 'profile'"
+                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            :class="activeSystemTab === 'profile'
+                                ? 'text-indigo-400 bg-indigo-500/10'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        >
+                            <div class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                </svg>
+                                <span>Profile</span>
+                                <span v-if="systemTabCounts.profile" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                                      :class="activeSystemTab === 'profile' ? 'bg-indigo-500/30 text-indigo-300' : 'bg-white/10 text-gray-400'">
+                                    {{ systemTabCounts.profile }}
+                                </span>
+                            </div>
+                            <div v-if="activeSystemTab === 'profile'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent"></div>
+                        </button>
                     </div>
 
                     <!-- Bulk Actions -->
@@ -488,10 +543,19 @@
 
                                 <!-- Content -->
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
-                                    <span v-if="notification.type === 'announcement'">Announcement: </span>
-                                    <span v-else>{{ notification.before }} </span>
-                                    <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
-                                    <span v-if="notification.type !== 'announcement'"> {{ notification.after }}</span>
+                                    <template v-if="notification.type === 'announcement'">
+                                        <span>Announcement: </span>
+                                        <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                    </template>
+                                    <template v-else>
+                                        <span v-html="q3tohtml(notification.before)"></span>
+                                        <span> </span>
+                                        <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span> </span>
+                                        <span v-html="q3tohtml(notification.after)"></span>
+                                        <span v-if="notification.type === 'alias_suggestion'">. </span>
+                                        <Link v-if="notification.type === 'alias_suggestion'" class="text-blue-400 hover:text-blue-300 underline transition-colors" :href="notification.url">Click here to approve or reject</Link>
+                                    </template>
                                 </div>
 
                                 <!-- Read/Unread Toggle -->

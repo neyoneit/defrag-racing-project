@@ -77,6 +77,7 @@ class DemoProcessorService
                 'gametype' => $metadata['gametype'] ?? null,
                 'time_ms' => $metadata['time_ms'] ?? null,
                 'player_name' => $metadata['player'] ?? null,
+                'country' => $metadata['country'] ?? null,
                 'record_date' => $metadata['record_date'] ?? null,
                 'processing_output' => $output,
                 'status' => 'processed',
@@ -185,7 +186,18 @@ class DemoProcessorService
                 $milliseconds = (int)$matches[6];
                 $metadata['time_ms'] = ($minutes * 60000) + ($seconds * 1000) + $milliseconds;
 
-                $metadata['player'] = $matches[7];
+                // Extract player name and country from (playername.Country) pattern
+                // Work backwards from ) to find the last . to split player and country
+                $playerAndCountry = $matches[7];
+                $lastDotPos = strrpos($playerAndCountry, '.');
+                if ($lastDotPos !== false) {
+                    $metadata['player'] = substr($playerAndCountry, 0, $lastDotPos);
+                    $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                } else {
+                    // No country found, just player name
+                    $metadata['player'] = $playerAndCountry;
+                    $metadata['country'] = null;
+                }
             }
 
             return $metadata;
@@ -214,7 +226,18 @@ class DemoProcessorService
                         $milliseconds = (int)$matches[6];
                         $metadata['time_ms'] = ($minutes * 60000) + ($seconds * 1000) + $milliseconds;
 
-                        $metadata['player'] = $matches[7];
+                        // Extract player name and country from (playername.Country) pattern
+                        // Work backwards from ) to find the last . to split player and country
+                        $playerAndCountry = $matches[7];
+                        $lastDotPos = strrpos($playerAndCountry, '.');
+                        if ($lastDotPos !== false) {
+                            $metadata['player'] = substr($playerAndCountry, 0, $lastDotPos);
+                            $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                        } else {
+                            // No country found, just player name
+                            $metadata['player'] = $playerAndCountry;
+                            $metadata['country'] = null;
+                        }
                     }
                 }
 

@@ -22,11 +22,13 @@ class UploadedDemo extends Model
         'gametype',
         'time_ms',
         'player_name',
+        'country',
         'record_date',
         'status',
         'processing_output',
         'name_confidence',
         'suggested_user_id',
+        'matched_alias',
         'manually_assigned',
         'download_count',
     ];

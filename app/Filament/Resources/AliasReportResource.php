@@ -205,17 +205,16 @@ class AliasReportResource extends Resource
                     }),
 
                 Tables\Actions\Action::make('reject_report')
-                    ->label('Reject Report')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
+                    ->label('Reject Report & Approve Alias')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
                     ->visible(fn (AliasReport $record) => $record->status === 'pending')
                     ->requiresConfirmation()
-                    ->modalHeading('Reject Report')
-                    ->modalDescription('The report is invalid. The alias will remain as-is.')
+                    ->modalHeading('Reject Report & Approve Alias')
+                    ->modalDescription('The report is invalid. The alias claim is valid and will be approved.')
                     ->form([
                         Forms\Components\Textarea::make('admin_notes')
-                            ->label('Rejection Reason')
-                            ->required()
+                            ->label('Admin Notes (Optional)')
                             ->rows(3),
                     ])
                     ->action(function (AliasReport $record, array $data) {
@@ -223,11 +222,18 @@ class AliasReportResource extends Resource
                             'status' => 'rejected',
                             'resolved_at' => now(),
                             'resolved_by_admin_id' => auth()->id(),
-                            'admin_notes' => $data['admin_notes'],
+                            'admin_notes' => $data['admin_notes'] ?? null,
                         ]);
 
+                        // Approve the alias
+                        $alias = UserAlias::find($record->alias_id);
+                        if ($alias && !$alias->is_approved) {
+                            $alias->update(['is_approved' => true]);
+                        }
+
                         Notification::make()
-                            ->title('Report Rejected')
+                            ->title('Report Rejected & Alias Approved')
+                            ->body('Demos will be rematched during the next scheduled run.')
                             ->success()
                             ->send();
                     }),

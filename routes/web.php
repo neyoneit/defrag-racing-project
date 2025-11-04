@@ -110,6 +110,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/aliases/{alias}', [AliasController::class, 'destroy'])->name('aliases.destroy');
     Route::post('/aliases/{alias}/report', [AliasReportController::class, 'store'])->name('aliases.report');
 
+    // Alias suggestion routes
+    Route::post('/users/{user}/suggest-alias', [App\Http\Controllers\AliasSuggestionController::class, 'store'])->name('alias-suggestions.store');
+    Route::post('/alias-suggestions/{suggestion}/approve', [App\Http\Controllers\AliasSuggestionController::class, 'approve'])->name('alias-suggestions.approve');
+    Route::post('/alias-suggestions/{suggestion}/reject', [App\Http\Controllers\AliasSuggestionController::class, 'reject'])->name('alias-suggestions.reject');
+
     // Demo reporting routes
     Route::post('/demos/{demo}/report', [DemoReportController::class, 'store'])->name('demos.report');
 });

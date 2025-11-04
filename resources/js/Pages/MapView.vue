@@ -802,7 +802,7 @@
                             <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
                         </div>
                         <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                            <span class="text-gray-300">Offline Demos:</span>
+                            <span class="text-gray-300">Demos Top:</span>
                             <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
                         </div>
                     </div>

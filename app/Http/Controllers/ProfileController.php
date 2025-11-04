@@ -324,22 +324,36 @@ class ProfileController extends Controller {
 
         \Log::info('Profile page load times', $timings);
 
-        // Load user aliases
-        // For own profile: show all aliases (approved and pending)
-        // For other profiles: show only approved aliases
-        $aliases = null;
+        // Load user aliases - Always load aliases (even if empty) to allow suggestions
         $canManageAliases = false;
+        $aliasSuggestions = null;
+        $canSuggestAlias = false;
+
         if ($isOwnProfile) {
+            // For own profile, show all aliases (approved and pending)
             $aliases = \App\Models\UserAlias::where('user_id', $user->id)
                 ->orderBy('created_at', 'desc')
                 ->get(['id', 'alias', 'is_approved', 'created_at']);
             $canManageAliases = true;
+
+            // Load pending alias suggestions for this user
+            $aliasSuggestions = \App\Models\AliasSuggestion::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->with('suggestedBy:id,name,profile_photo_path')
+                ->orderBy('created_at', 'desc')
+                ->get();
         } else {
             // For public profiles, only show approved aliases
             $aliases = \App\Models\UserAlias::where('user_id', $user->id)
                 ->where('is_approved', true)
                 ->orderBy('created_at', 'desc')
                 ->get(['alias']);
+
+            // Check if current user can suggest aliases (authenticated and has 30+ records)
+            // Allow suggesting even if target user has no aliases yet
+            if (auth()->check()) {
+                $canSuggestAlias = auth()->user()->canReportDemos(); // Uses same 30 record requirement
+            }
         }
 
         // Load top downloaded demos
@@ -366,6 +380,8 @@ class ProfileController extends Controller {
             ->with('user_maplists', $userMaplists)
             ->with('aliases', $aliases)
             ->with('can_manage_aliases', $canManageAliases)
+            ->with('alias_suggestions', $aliasSuggestions)
+            ->with('can_suggest_alias', $canSuggestAlias)
             ->with('topDownloadedDemos', $topDownloadedDemos)
             ->with('load_times', $timings)
             ->with('hasProfile', true);

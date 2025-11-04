@@ -318,6 +318,22 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     /**
+     * Get alias suggestions received by this user
+     */
+    public function aliasSuggestions()
+    {
+        return $this->hasMany(AliasSuggestion::class, 'user_id');
+    }
+
+    /**
+     * Get alias suggestions made by this user
+     */
+    public function suggestedAliases()
+    {
+        return $this->hasMany(AliasSuggestion::class, 'suggested_by_user_id');
+    }
+
+    /**
      * Get user's uploaded demos
      */
     public function uploadedDemos()

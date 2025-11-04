@@ -39,7 +39,10 @@ class UserAliasResource extends Resource
                         Forms\Components\TextInput::make('alias')
                             ->label('Alias')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true)
+                            ->regex('/^[^^]+$/')
+                            ->helperText('Aliases cannot contain Quake 3 color codes (^).'),
 
                         Forms\Components\Toggle::make('is_approved')
                             ->label('Approved')
@@ -132,6 +135,7 @@ class UserAliasResource extends Resource
 
                         Notification::make()
                             ->title('Alias Approved')
+                            ->body('Demos will be rematched during the next scheduled run.')
                             ->success()
                             ->send();
                     }),
@@ -167,10 +171,13 @@ class UserAliasResource extends Resource
                         ->color('success')
                         ->requiresConfirmation()
                         ->action(function ($records) {
-                            $records->each->update(['is_approved' => true]);
+                            foreach ($records as $record) {
+                                $record->update(['is_approved' => true]);
+                            }
 
                             Notification::make()
                                 ->title('Aliases Approved')
+                                ->body('Demos will be rematched during the next scheduled run.')
                                 ->success()
                                 ->send();
                         }),

@@ -63,7 +63,7 @@ class NameMatcher
      *
      * @param string $demoPlayerName Name from the demo file
      * @param int|null $uploaderId ID of user who uploaded the demo
-     * @return array{user_id: int|null, confidence: int, source: string}
+     * @return array{user_id: int|null, confidence: int, source: string, matched_name: string|null}
      */
     public function findBestMatch(string $demoPlayerName, ?int $uploaderId = null): array
     {
@@ -85,6 +85,7 @@ class NameMatcher
                     'user_id' => $uploaderId,
                     'confidence' => $uploaderMatch['confidence'],
                     'source' => 'uploader',
+                    'matched_name' => $uploaderMatch['matched_name'],
                 ];
             }
         }
@@ -144,7 +145,7 @@ class NameMatcher
      *
      * @param string $demoPlayerName Name from demo
      * @param int|null $excludeUserId User ID to exclude from search (already checked)
-     * @return array{user_id: int|null, confidence: int, source: string}
+     * @return array{user_id: int|null, confidence: int, source: string, matched_name: string|null}
      */
     public function matchGlobally(string $demoPlayerName, ?int $excludeUserId = null): array
     {
@@ -152,6 +153,7 @@ class NameMatcher
             'user_id' => null,
             'confidence' => 0,
             'source' => 'global',
+            'matched_name' => null,
         ];
 
         // Get all users (excluding the uploader if already checked)
@@ -165,6 +167,7 @@ class NameMatcher
             if ($match['confidence'] > $bestMatch['confidence']) {
                 $bestMatch['user_id'] = $user->id;
                 $bestMatch['confidence'] = $match['confidence'];
+                $bestMatch['matched_name'] = $match['matched_name'];
             }
         }
 

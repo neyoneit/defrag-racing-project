@@ -107,6 +107,8 @@ class HandleInertiaRequests extends Middleware
             'dangerRandom'                 =>      random_int(0, 1_000_000_000),
             'successRandom'                 =>      random_int(0, 1_000_000_000),
             'canReportDemos'            =>      $request->user() ? (\App\Models\Record::where('user_id', $request->user()->id)->count() >= 30) : false,
+            'canUploadDemos'            =>      $request->user() ? $request->user()->canUploadDemos() : false,
+            'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
         ]);
     }
 }

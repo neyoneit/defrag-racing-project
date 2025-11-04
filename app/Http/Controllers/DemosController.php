@@ -68,9 +68,15 @@ class DemosController extends Controller
         // Get filter parameters
         $filterTab = $request->input('tab', 'all'); // all, online, offline
         $filterStatus = $request->input('status', 'all'); // all, assigned, failed
+        $searchQuery = $request->input('search', '');
+
+        // Get advanced filter parameters (admin only)
+        $confidenceFilter = $request->input('confidence');
+        $showOtherUserMatches = $request->input('other_user_matches');
+        $uploadedBy = $request->input('uploaded_by');
 
         // Validate sort column
-        $allowedColumns = ['original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at'];
+        $allowedColumns = ['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at'];
         if (!in_array($sortBy, $allowedColumns)) {
             $sortBy = 'created_at';
         }
@@ -86,7 +92,7 @@ class DemosController extends Controller
         if (Auth::check()) {
             if ($isAdmin) {
                 // Admin sees all uploads (including guest uploads) in "Your Uploads" section
-                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
+                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord', 'suggestedUser']);
 
                 // Apply filters
                 if ($filterTab === 'online') {
@@ -97,8 +103,57 @@ class DemosController extends Controller
 
                 if ($filterStatus === 'assigned') {
                     $query->where('status', 'assigned');
+                } elseif ($filterStatus === 'processed') {
+                    $query->where('status', 'processed');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
+                }
+
+                // Apply search filter
+                if (!empty($searchQuery)) {
+                    $query->where(function($q) use ($searchQuery) {
+                        $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
+                          ->orWhere('processed_filename', 'LIKE', '%' . $searchQuery . '%');
+                    });
+                }
+
+                // Apply confidence filter (admin only)
+                if ($confidenceFilter) {
+                    switch ($confidenceFilter) {
+                        case '90-99':
+                            $query->whereBetween('name_confidence', [90, 99]);
+                            break;
+                        case '80-89':
+                            $query->whereBetween('name_confidence', [80, 89]);
+                            break;
+                        case '70-79':
+                            $query->whereBetween('name_confidence', [70, 79]);
+                            break;
+                        case '60-69':
+                            $query->whereBetween('name_confidence', [60, 69]);
+                            break;
+                        case '50-59':
+                            $query->whereBetween('name_confidence', [50, 59]);
+                            break;
+                        case 'below-50':
+                            $query->where('name_confidence', '<', 50);
+                            break;
+                    }
+                }
+
+                // Filter for demos matched to other users (admin only)
+                if ($showOtherUserMatches) {
+                    $query->where('name_confidence', 100)
+                          ->whereNotNull('suggested_user_id')
+                          ->where('suggested_user_id', '!=', Auth::id());
+                }
+
+                // Filter by uploader (admin only)
+                if ($uploadedBy) {
+                    $uploaderUser = \App\Models\User::where('name', $uploadedBy)->first();
+                    if ($uploaderUser) {
+                        $query->where('user_id', $uploaderUser->id);
+                    }
                 }
 
                 // Apply sorting
@@ -116,6 +171,7 @@ class DemosController extends Controller
                     'online' => UploadedDemo::where('gametype', 'LIKE', 'm%')->count(),
                     'offline' => UploadedDemo::where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
                     'assigned' => UploadedDemo::where('status', 'assigned')->count(),
+                    'processed' => UploadedDemo::where('status', 'processed')->count(),
                     'failed' => UploadedDemo::where('status', 'failed')->count(),
                 ];
             } else {
@@ -132,8 +188,18 @@ class DemosController extends Controller
 
                 if ($filterStatus === 'assigned') {
                     $query->where('status', 'assigned');
+                } elseif ($filterStatus === 'processed') {
+                    $query->where('status', 'processed');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
+                }
+
+                // Apply search filter
+                if (!empty($searchQuery)) {
+                    $query->where(function($q) use ($searchQuery) {
+                        $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
+                          ->orWhere('processed_filename', 'LIKE', '%' . $searchQuery . '%');
+                    });
                 }
 
                 // Apply sorting
@@ -151,16 +217,59 @@ class DemosController extends Controller
                     'online' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'LIKE', 'm%')->count(),
                     'offline' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
                     'assigned' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'assigned')->count(),
+                    'processed' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'processed')->count(),
                     'failed' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'failed')->count(),
                 ];
             }
         }
 
-        // Get all public demos for the "Browse" section (successfully processed demos only)
-        $publicDemos = UploadedDemo::whereIn('status', ['assigned', 'processed'])
-            ->with(['record.user', 'user', 'offlineRecord'])
-            ->orderBy('created_at', 'desc')
+        // Get browse filter parameters
+        $browseTab = $request->input('browse_tab', 'all'); // all, online, offline
+        $browseStatus = $request->input('browse_status', 'all'); // all, assigned, processed, failed
+        $browseSearch = $request->input('browse_search', ''); // filename search
+
+        // Get all public demos for the "Browse" section
+        $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
+
+        // Apply status filter first
+        if ($browseStatus === 'assigned') {
+            $query->where('status', 'assigned');
+        } elseif ($browseStatus === 'processed') {
+            $query->where('status', 'processed');
+        } elseif ($browseStatus === 'failed') {
+            $query->where('status', 'failed');
+        } else {
+            // Show all statuses: assigned, processed, failed
+            $query->whereIn('status', ['assigned', 'processed', 'failed']);
+        }
+
+        // Apply browse tab filters (online/offline)
+        if ($browseTab === 'online') {
+            $query->where('gametype', 'LIKE', 'm%');
+        } elseif ($browseTab === 'offline') {
+            $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+        }
+
+        // Apply search filter
+        if (!empty($browseSearch)) {
+            $query->where(function($q) use ($browseSearch) {
+                $q->where('original_filename', 'LIKE', "%{$browseSearch}%")
+                  ->orWhere('processed_filename', 'LIKE', "%{$browseSearch}%");
+            });
+        }
+
+        $publicDemos = $query->orderBy('created_at', 'desc')
             ->paginate(20, ['*'], 'browsePage');
+
+        // Calculate counts for browse section filters
+        $browseCounts = [
+            'all' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->count(),
+            'online' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->where('gametype', 'LIKE', 'm%')->count(),
+            'offline' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+            'assigned' => UploadedDemo::where('status', 'assigned')->count(),
+            'processed' => UploadedDemo::where('status', 'processed')->count(),
+            'failed' => UploadedDemo::where('status', 'failed')->count(),
+        ];
 
         // Get download limit info for current user/IP
         $rateLimitKey = $currentUser
@@ -185,8 +294,16 @@ class DemosController extends Controller
             'userDemos' => $userDemos,
             'publicDemos' => $publicDemos,
             'demoCounts' => $demoCounts,
+            'browseCounts' => $browseCounts,
             'sortBy' => $sortBy,
             'sortOrder' => $sortOrder,
+            'browseTab' => $browseTab,
+            'browseStatus' => $browseStatus,
+            'browseSearch' => $browseSearch,
+            'userSearch' => $searchQuery,
+            'confidenceFilter' => $confidenceFilter,
+            'showOtherUserMatches' => $showOtherUserMatches,
+            'uploadedBy' => $uploadedBy,
             'downloadLimitInfo' => [
                 'used' => $downloadsToday,
                 'limit' => $maxDownloads,
@@ -201,6 +318,33 @@ class DemosController extends Controller
      */
     public function upload(Request $request)
     {
+        $currentUser = Auth::user();
+
+        // Check if user is logged in
+        if (!$currentUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You must be logged in to upload demos.',
+            ], 403);
+        }
+
+        // Check if user meets upload requirements
+        if (!$currentUser->canUploadDemos()) {
+            $recordsCount = $currentUser->records()->count();
+
+            if ($currentUser->upload_restricted) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been restricted from uploading demos. Please contact an administrator.',
+                ], 403);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => "You need at least 30 records to upload demos. You currently have {$recordsCount} record(s).",
+            ], 403);
+        }
+
         // Rate limiting: allow a larger cap to support archive imports
         // Max demos allowed to be uploaded/processed per user per 5 minutes
         $RATE_LIMIT_MAX = 500;

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserAlias;
-use App\Jobs\RematchDemosByAlias;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +15,15 @@ class AliasController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'alias' => 'required|string|max:255|unique:user_aliases,alias',
+            'alias' => [
+                'required',
+                'string',
+                'max:255',
+                'unique:user_aliases,alias',
+                'regex:/^[^^]+$/', // Disallow ^ character (Quake color codes)
+            ],
+        ], [
+            'alias.regex' => 'Aliases cannot contain Quake 3 color codes (^).',
         ]);
 
         $user = Auth::user();
@@ -38,13 +45,8 @@ class AliasController extends Controller
             'is_approved' => $isApproved,
         ]);
 
-        // Trigger retroactive demo matching if alias is approved
-        if ($isApproved) {
-            dispatch(new RematchDemosByAlias($alias));
-        }
-
         $message = $isApproved
-            ? 'Alias added successfully! Checking existing demos for matches...'
+            ? 'Alias added successfully! Demos will be rematched during the next scheduled run.'
             : 'Alias submitted for admin approval.';
 
         return back()->with('success', $message);
@@ -60,8 +62,32 @@ class AliasController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        // Find all demos that were specifically matched using this alias
+        $affectedDemos = \App\Models\UploadedDemo::where('status', 'assigned')
+            ->where('matched_alias', $alias->alias)
+            ->whereHas('record', function ($query) use ($alias) {
+                $query->where('user_id', $alias->user_id);
+            })
+            ->get();
+
+        // Unassign these demos so they can be rematched with other aliases or primary name
+        $unassignedCount = 0;
+        foreach ($affectedDemos as $demo) {
+            $demo->update([
+                'record_id' => null,
+                'status' => 'processed',
+                'matched_alias' => null,
+            ]);
+            $unassignedCount++;
+        }
+
         $alias->delete();
 
-        return back()->with('success', 'Alias deleted successfully.');
+        $message = 'Alias deleted successfully.';
+        if ($unassignedCount > 0) {
+            $message .= " {$unassignedCount} demo(s) will be rematched during the next scheduled run.";
+        }
+
+        return back()->with('success', $message);
     }
 }

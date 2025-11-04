@@ -37,6 +37,18 @@
             type: Array,
             default: () => []
         },
+        alias_suggestions: {
+            type: Array,
+            default: () => []
+        },
+        can_suggest_alias: {
+            type: Boolean,
+            default: false
+        },
+        can_manage_aliases: {
+            type: Boolean,
+            default: false
+        },
         topDownloadedDemos: {
             type: Array,
             default: () => []
@@ -367,6 +379,63 @@
         });
     };
 
+    // Alias suggestions
+    const showSuggestionModal = ref(false);
+    const suggestedAlias = ref('');
+    const suggestionNote = ref('');
+    const suggestionInProgress = ref(false);
+
+    const openSuggestionModal = () => {
+        showSuggestionModal.value = true;
+    };
+
+    const closeSuggestionModal = () => {
+        showSuggestionModal.value = false;
+        suggestedAlias.value = '';
+        suggestionNote.value = '';
+    };
+
+    const submitAliasSuggestion = () => {
+        if (!suggestedAlias.value.trim()) {
+            return;
+        }
+
+        suggestionInProgress.value = true;
+
+        router.post(route('alias-suggestions.store', props.user.id), {
+            alias: suggestedAlias.value,
+            note: suggestionNote.value,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeSuggestionModal();
+            },
+            onFinish: () => {
+                suggestionInProgress.value = false;
+            }
+        });
+    };
+
+    const approveSuggestion = (suggestion) => {
+        if (!confirm(`Add alias "${suggestion.alias}" to your account?`)) {
+            return;
+        }
+
+        router.post(route('alias-suggestions.approve', suggestion.id), {}, {
+            preserveScroll: true,
+        });
+    };
+
+    const rejectSuggestion = (suggestion) => {
+        if (!confirm(`Reject alias suggestion "${suggestion.alias}"?`)) {
+            return;
+        }
+
+        router.post(route('alias-suggestions.reject', suggestion.id), {}, {
+            preserveScroll: true,
+        });
+    };
+
 </script>
 
 <template>
@@ -674,7 +743,7 @@
             </div>
 
             <!-- Top Downloaded Demos & Known Aliases Grid -->
-            <div v-if="(topDownloadedDemos && topDownloadedDemos.length > 0) || (aliases && aliases.length > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div v-if="(topDownloadedDemos && topDownloadedDemos.length > 0) || (aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <!-- Top Downloaded Demos Section -->
                 <div v-if="topDownloadedDemos && topDownloadedDemos.length > 0">
                     <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
@@ -704,17 +773,70 @@
                     </div>
                 </div>
 
-                <!-- Player Aliases Section -->
-                <div v-if="aliases && aliases.length > 0">
+                <!-- Player Aliases Section - Show if aliases exist, can suggest, or has pending suggestions -->
+                <div v-if="(aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0)">
                     <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-indigo-400">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                            </svg>
-                            Known Aliases
-                        </h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-indigo-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                                </svg>
+                                Known Aliases
+                            </h3>
+                            <!-- Suggest Alias button (for other profiles) -->
+                            <button
+                                v-if="can_suggest_alias"
+                                @click="openSuggestionModal"
+                                class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                Suggest Alias
+                            </button>
+                        </div>
                         <p class="text-xs text-gray-400 mb-4">Alternative nicknames used by this player</p>
-                        <div class="flex flex-wrap gap-2">
+
+                        <!-- Pending Suggestions (only visible on own profile) -->
+                        <div v-if="alias_suggestions && alias_suggestions.length > 0" class="mb-4">
+                            <h4 class="text-sm font-semibold text-yellow-400 mb-2">Pending Suggestions</h4>
+                            <div class="space-y-2">
+                                <div
+                                    v-for="suggestion in alias_suggestions"
+                                    :key="suggestion.id"
+                                    class="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-3 py-2"
+                                >
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-white font-semibold" v-html="q3tohtml(suggestion.alias)"></span>
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Suggested by <span class="text-white" v-html="q3tohtml(suggestion.suggested_by.name)"></span>
+                                            <span v-if="suggestion.note" class="block mt-1 text-gray-500">{{ suggestion.note }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 ml-3">
+                                        <button
+                                            @click="approveSuggestion(suggestion)"
+                                            class="px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors"
+                                            title="Approve and add this alias"
+                                        >
+                                            Approve
+                                        </button>
+                                        <button
+                                            @click="rejectSuggestion(suggestion)"
+                                            class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+                                            title="Reject this suggestion"
+                                        >
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Approved Aliases -->
+                        <div v-if="aliases && aliases.length > 0" class="flex flex-wrap gap-2">
                             <div
                                 v-for="alias in aliases"
                                 :key="alias.alias"
@@ -733,6 +855,11 @@
                                     </svg>
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- No aliases message -->
+                        <div v-else class="text-center py-4">
+                            <p class="text-gray-500 text-sm">No aliases yet</p>
                         </div>
                     </div>
                 </div>
@@ -1413,6 +1540,7 @@
 
         <!-- Alias Report Modal -->
         <Teleport to="body">
+            <!-- Report Alias Modal -->
             <div v-if="showReportModal" class="fixed inset-0 z-50 overflow-y-auto">
                 <!-- Backdrop -->
                 <div class="fixed inset-0 bg-black/70" @click="closeReportModal"></div>
@@ -1459,6 +1587,72 @@
                                     :disabled="reportingInProgress || !reportReason.trim()"
                                 >
                                     {{ reportingInProgress ? 'Submitting...' : 'Submit Report' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggest Alias Modal -->
+            <div v-if="showSuggestionModal" class="fixed inset-0 z-50 overflow-y-auto">
+                <!-- Backdrop -->
+                <div class="fixed inset-0 bg-black/70" @click="closeSuggestionModal"></div>
+
+                <!-- Modal -->
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative backdrop-blur-xl bg-black/80 rounded-xl shadow-2xl max-w-md w-full border border-white/10">
+                        <!-- Header -->
+                        <div class="px-6 py-4 border-b border-white/10">
+                            <h3 class="text-xl font-bold text-white">Suggest Alias</h3>
+                            <p class="text-sm text-gray-400 mt-1">
+                                Suggest an alias for <span class="text-white" v-html="q3tohtml(user?.name || '')"></span>
+                            </p>
+                        </div>
+
+                        <!-- Body -->
+                        <form @submit.prevent="submitAliasSuggestion" class="px-6 py-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">Alias <span class="text-red-400">*</span></label>
+                                <input
+                                    v-model="suggestedAlias"
+                                    type="text"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none"
+                                    placeholder="Enter alias (no ^ color codes)"
+                                    required
+                                    maxlength="255"
+                                />
+                                <p class="text-xs text-gray-500 mt-1">Plain text only - Quake color codes (^) are not allowed</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-300 mb-2">Note (optional)</label>
+                                <textarea
+                                    v-model="suggestionNote"
+                                    rows="3"
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none resize-none"
+                                    placeholder="Add context about where you've seen this alias..."
+                                    maxlength="500"
+                                ></textarea>
+                                <p class="text-xs text-gray-500 mt-1">{{ suggestionNote.length }}/500 characters</p>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="flex gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    @click="closeSuggestionModal"
+                                    class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors"
+                                    :disabled="suggestionInProgress"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors font-semibold disabled:opacity-50"
+                                    :disabled="suggestionInProgress || !suggestedAlias.trim()"
+                                >
+                                    {{ suggestionInProgress ? 'Submitting...' : 'Suggest Alias' }}
                                 </button>
                             </div>
                         </form>
