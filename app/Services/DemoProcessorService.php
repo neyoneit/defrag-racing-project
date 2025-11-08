@@ -79,6 +79,7 @@ class DemoProcessorService
                 'player_name' => $metadata['player'] ?? null,
                 'country' => $metadata['country'] ?? null,
                 'record_date' => $metadata['record_date'] ?? null,
+                'validity' => $metadata['validity'] ?? null,
                 'processing_output' => $output,
                 'status' => 'processed',
             ]);
@@ -172,6 +173,12 @@ class DemoProcessorService
         if (json_last_error() === JSON_ERROR_NONE && isset($jsonData['suggested_filename'])) {
             $metadata['suggested_filename'] = $jsonData['suggested_filename'];
             $metadata['record_date'] = $jsonData['record_date'] ?? null;
+            $metadata['validity'] = $jsonData['validity'] ?? null;
+
+            // Use country from JSON if available (extracted from demo file)
+            if (isset($jsonData['country'])) {
+                $metadata['country'] = $jsonData['country'];
+            }
 
             // Parse the suggested filename to extract components
             $suggestedName = $jsonData['suggested_filename'];
@@ -186,17 +193,21 @@ class DemoProcessorService
                 $milliseconds = (int)$matches[6];
                 $metadata['time_ms'] = ($minutes * 60000) + ($seconds * 1000) + $milliseconds;
 
-                // Extract player name and country from (playername.Country) pattern
-                // Work backwards from ) to find the last . to split player and country
+                // Extract player name from filename (already have country from JSON)
                 $playerAndCountry = $matches[7];
                 $lastDotPos = strrpos($playerAndCountry, '.');
                 if ($lastDotPos !== false) {
                     $metadata['player'] = substr($playerAndCountry, 0, $lastDotPos);
-                    $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                    // Only use country from filename if not already set from JSON
+                    if (!isset($metadata['country'])) {
+                        $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                    }
                 } else {
-                    // No country found, just player name
+                    // No country in filename
                     $metadata['player'] = $playerAndCountry;
-                    $metadata['country'] = null;
+                    if (!isset($metadata['country'])) {
+                        $metadata['country'] = null;
+                    }
                 }
             }
 
@@ -433,41 +444,26 @@ class DemoProcessorService
         $physics = str_replace('.tr', '', strtolower($demo->physics));
         $gametype = 'run_' . $physics;
 
-        // Use NameMatcher to find best match
-        $nameMatcher = app(NameMatcher::class);
-        $nameMatch = $nameMatcher->findBestMatch($demo->player_name, $demo->user_id);
-
-        // Store name matching results
-        $demo->update([
-            'name_confidence' => $nameMatch['confidence'],
-            'suggested_user_id' => $nameMatch['user_id'],
-        ]);
-
-        Log::info('Name matching completed', [
-            'demo_id' => $demo->id,
-            'player_name' => $demo->player_name,
-            'confidence' => $nameMatch['confidence'],
-            'suggested_user_id' => $nameMatch['user_id'],
-            'source' => $nameMatch['source'],
-        ]);
-
-        // Only auto-assign if we have 100% confidence match
-        if ($nameMatch['confidence'] === 100 && $nameMatch['user_id']) {
-            // Find matching record for this user
-            $record = Record::where('mapname', $demo->map_name)
+        // PASS 1: Check if uploader has a matching record (ignores name completely)
+        $uploaderRecordMatch = false;
+        if ($demo->user_id) {
+            $uploaderRecord = Record::where('mapname', $demo->map_name)
                 ->where('gametype', $gametype)
                 ->where('time', $demo->time_ms)
-                ->where('user_id', $nameMatch['user_id'])
+                ->where('user_id', $demo->user_id)
                 ->first();
 
-            if ($record) {
-                // Perfect match found! Upload to Backblaze
+            if ($uploaderRecord) {
+                // Uploader has a matching record - assign immediately with 100% confidence
                 $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
 
                 $demo->update([
-                    'record_id' => $record->id,
+                    'record_id' => $uploaderRecord->id,
                     'status' => 'assigned',
                     'file_path' => $uploadedPath,
+                    'name_confidence' => 100,
+                    'suggested_user_id' => $demo->user_id,
+                    'matched_alias' => null, // Matched by uploader record, not name
                 ]);
 
                 // Clean up local compressed file after successful upload
@@ -475,15 +471,75 @@ class DemoProcessorService
                     unlink($compressedLocalPath);
                 }
 
-                Log::info('Demo auto-assigned to record with 100% name match', [
+                Log::info('Demo auto-assigned to uploader\'s record', [
                     'demo_id' => $demo->id,
-                    'record_id' => $record->id,
-                    'user_id' => $nameMatch['user_id'],
-                    'gametype' => $demo->gametype,
+                    'record_id' => $uploaderRecord->id,
+                    'user_id' => $demo->user_id,
+                    'gametype' => $gametype,
                     'uploaded_path' => $uploadedPath,
                 ]);
 
+                $uploaderRecordMatch = true;
                 return;
+            }
+        }
+
+        // PASS 2: Global name matching (only if uploader didn't match in PASS 1)
+        if (!$uploaderRecordMatch) {
+            $nameMatcher = app(NameMatcher::class);
+            $nameMatch = $nameMatcher->findBestMatch($demo->player_name, null); // null = global search
+
+            // Store name matching results including matched_alias
+            $demo->update([
+                'name_confidence' => $nameMatch['confidence'],
+                'suggested_user_id' => $nameMatch['user_id'],
+                'matched_alias' => $nameMatch['matched_name'] ?? null,
+            ]);
+
+            Log::info('Name matching completed', [
+                'demo_id' => $demo->id,
+                'player_name' => $demo->player_name,
+                'confidence' => $nameMatch['confidence'],
+                'suggested_user_id' => $nameMatch['user_id'],
+                'matched_alias' => $nameMatch['matched_name'] ?? null,
+                'source' => $nameMatch['source'],
+            ]);
+
+            // Only auto-assign if we have 100% confidence match
+            if ($nameMatch['confidence'] === 100 && $nameMatch['user_id']) {
+                // Find matching record for this user
+                $record = Record::where('mapname', $demo->map_name)
+                    ->where('gametype', $gametype)
+                    ->where('time', $demo->time_ms)
+                    ->where('user_id', $nameMatch['user_id'])
+                    ->first();
+
+                if ($record) {
+                    // Perfect match found! Upload to Backblaze
+                    $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
+
+                    $demo->update([
+                        'record_id' => $record->id,
+                        'status' => 'assigned',
+                        'file_path' => $uploadedPath,
+                    ]);
+
+                    // Clean up local compressed file after successful upload
+                    if (file_exists($compressedLocalPath)) {
+                        unlink($compressedLocalPath);
+                    }
+
+                    Log::info('Demo auto-assigned to record with 100% name match', [
+                        'demo_id' => $demo->id,
+                        'record_id' => $record->id,
+                        'user_id' => $nameMatch['user_id'],
+                        'gametype' => $demo->gametype,
+                        'matched_alias' => $nameMatch['matched_name'] ?? null,
+                        'uploaded_path' => $uploadedPath,
+                    ]);
+
+                    return;
+                }
             }
         }
 

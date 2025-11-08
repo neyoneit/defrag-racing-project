@@ -10,6 +10,7 @@ use App\Models\Map;
 use App\Models\Server;
 use App\Models\Tournament;
 use App\Models\MddProfile;
+use App\Models\UploadedDemo;
 use Illuminate\Support\Facades\DB;
 
 class WebController extends Controller
@@ -25,6 +26,7 @@ class WebController extends Controller
             ->get();
 
         $totalMaps = Map::count();
+        $totalDemos = UploadedDemo::count();
 
         $tournaments = Tournament::query()
             ->where('start_date', '<=', now())
@@ -53,6 +55,7 @@ class WebController extends Controller
             ->with('servers', $servers)
             ->with('tournaments', $tournaments)
             ->with('totalMaps', $totalMaps)
+            ->with('totalDemos', $totalDemos)
             ->with('activeServers', $activeServers)
             ->with('activePlayers', $activePlayers);
     }

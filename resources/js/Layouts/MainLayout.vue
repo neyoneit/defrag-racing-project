@@ -491,6 +491,7 @@
                         </NavLink>
                         <NavLink :href="route('demos.index')" :active="route().current('demos.*')" class="hidden xl:inline-flex">
                             Demos
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
 
                         <!-- Beta - VISIBLE AT XL -->
@@ -515,6 +516,7 @@
                                 <div class="xl:hidden">
                                     <DropdownLink :href="route('demos.index')">
                                         Demos
+                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">
                                         Beta

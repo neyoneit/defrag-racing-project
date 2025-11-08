@@ -14,6 +14,49 @@ from game_info import GameInfo
 from raw_info import RawInfo
 
 
+# Country name to ISO 2-letter code mapping
+COUNTRY_CODE_MAP = {
+    # Full names
+    'RUSSIA': 'RU', 'GERMANY': 'DE', 'USA': 'US', 'POLAND': 'PL',
+    'FRANCE': 'FR', 'SPAIN': 'ES', 'ITALY': 'IT', 'NETHERLANDS': 'NL',
+    'BELGIUM': 'BE', 'SWEDEN': 'SE', 'NORWAY': 'NO', 'DENMARK': 'DK',
+    'FINLAND': 'FI', 'AUSTRIA': 'AT', 'SWITZERLAND': 'CH', 'PORTUGAL': 'PT',
+    'GREECE': 'GR', 'CZECHREPUBLIC': 'CZ', 'CZECH': 'CZ', 'SLOVAKIA': 'SK',
+    'HUNGARY': 'HU', 'ROMANIA': 'RO', 'BULGARIA': 'BG', 'CROATIA': 'HR',
+    'SERBIA': 'RS', 'SLOVENIA': 'SI', 'UKRAINE': 'UA', 'BELARUS': 'BY',
+    'LITHUANIA': 'LT', 'LATVIA': 'LV', 'ESTONIA': 'EE', 'ICELAND': 'IS',
+    'IRELAND': 'IE', 'UNITEDKINGDOM': 'GB', 'UK': 'GB', 'BRITAIN': 'GB',
+    'GREATBRITAIN': 'GB', 'ENGLAND': 'GB', 'SCOTLAND': 'GB', 'WALES': 'GB',
+    'CANADA': 'CA', 'MEXICO': 'MX', 'BRAZIL': 'BR', 'ARGENTINA': 'AR',
+    'CHILE': 'CL', 'COLOMBIA': 'CO', 'PERU': 'PE', 'VENEZUELA': 'VE',
+    'AUSTRALIA': 'AU', 'NEWZEALAND': 'NZ', 'JAPAN': 'JP', 'CHINA': 'CN',
+    'SOUTHKOREA': 'KR', 'KOREA': 'KR', 'INDIA': 'IN', 'THAILAND': 'TH',
+    'VIETNAM': 'VN', 'INDONESIA': 'ID', 'MALAYSIA': 'MY', 'SINGAPORE': 'SG',
+    'PHILIPPINES': 'PH', 'TAIWAN': 'TW', 'HONGKONG': 'HK', 'ISRAEL': 'IL',
+    'TURKEY': 'TR', 'SOUTHAFRICA': 'ZA', 'EGYPT': 'EG', 'MOROCCO': 'MA',
+    # Already 2-letter codes (pass through)
+    'RU': 'RU', 'DE': 'DE', 'US': 'US', 'PL': 'PL', 'FR': 'FR', 'ES': 'ES',
+    'IT': 'IT', 'NL': 'NL', 'BE': 'BE', 'SE': 'SE', 'NO': 'NO', 'DK': 'DK',
+    'FI': 'FI', 'AT': 'AT', 'CH': 'CH', 'PT': 'PT', 'GR': 'GR', 'CZ': 'CZ',
+    'SK': 'SK', 'HU': 'HU', 'RO': 'RO', 'BG': 'BG', 'HR': 'HR', 'RS': 'RS',
+    'SI': 'SI', 'UA': 'UA', 'BY': 'BY', 'LT': 'LT', 'LV': 'LV', 'EE': 'EE',
+    'IS': 'IS', 'IE': 'IE', 'GB': 'GB', 'CA': 'CA', 'MX': 'MX', 'BR': 'BR',
+    'AR': 'AR', 'CL': 'CL', 'CO': 'CO', 'PE': 'PE', 'VE': 'VE', 'AU': 'AU',
+    'NZ': 'NZ', 'JP': 'JP', 'CN': 'CN', 'KR': 'KR', 'IN': 'IN', 'TH': 'TH',
+    'VN': 'VN', 'ID': 'ID', 'MY': 'MY', 'SG': 'SG', 'PH': 'PH', 'TW': 'TW',
+    'HK': 'HK', 'IL': 'IL', 'TR': 'TR', 'ZA': 'ZA', 'EG': 'EG', 'MA': 'MA',
+}
+
+
+def normalize_country_code(country: str) -> str:
+    """Convert country name to ISO 2-letter code."""
+    if not country:
+        return ''
+    # Remove spaces, hyphens, underscores and convert to uppercase
+    normalized = country.upper().replace(' ', '').replace('-', '').replace('_', '')
+    return COUNTRY_CODE_MAP.get(normalized, country.upper()[:2] if len(country) >= 2 else country.upper())
+
+
 @dataclass
 class Demo:
     mapName: str = ''
@@ -180,12 +223,17 @@ class Demo:
         filename = demo.normalizedFileName
         country_and_name = Demo._get_name_and_country(filename)
         country_name_parsed = Demo._try_get_name_and_country(country_and_name, names)
+        import sys
+        print(f"DEBUG: filename={filename}", file=sys.stderr)
+        print(f"DEBUG: country_and_name={country_and_name}", file=sys.stderr)
+        print(f"DEBUG: country_name_parsed={country_name_parsed}", file=sys.stderr)
         normal_name = names.chooseNormalName()
         if not normal_name or normal_name == DemoNames.defaultName:
             names.setBracketsName(country_name_parsed[0])
         demo.playerName = names.chooseNormalName()
         demo.names = names
-        demo.country = country_name_parsed[1]
+        demo.country = normalize_country_code(country_name_parsed[1])
+        print(f"DEBUG: demo.country={demo.country}", file=sys.stderr)
         lower_filename = filename.lower()
         if 'tool_assisted=true' in lower_filename or Ext.ContainsAnySplitted(country_and_name, *Demo.tasTriggers) or Ext.ContainsAnySplitted(demo.playerName, *Demo.tasTriggers):
             demo.isTas = True
@@ -270,18 +318,24 @@ class Demo:
 
     @staticmethod
     def _get_name_and_country(filename: str) -> str:
-        match = re.search(r"[^(]*\\((.*)\\).*", filename)
+        match = re.search(r"[^(]*\(([^)]*)\).*", filename)
         return match.group(1) if match else ''
 
     @staticmethod
     def _try_get_name_and_country(partname: str, names: DemoNames) -> Tuple[str, str]:
-        if names and partname in (names.dfName, names.uName, names.oName, names.cName):
-            return partname, ''
+        # Always try to extract country from filename first
         sep = max(partname.rfind('.'), partname.rfind(','))
         if sep > 0 and sep + 1 < len(partname):
             country = partname[sep + 1:].strip()
             if not any(ch.isdigit() for ch in country):
-                return partname[:sep], country
+                name_part = partname[:sep]
+                # Check if the name part (without country) matches internal names
+                if names and name_part in (names.dfName, names.uName, names.oName, names.cName):
+                    return name_part, country
+                return name_part, country
+        # No country found - check if full partname matches internal names
+        if names and partname in (names.dfName, names.uName, names.oName, names.cName):
+            return partname, ''
         return partname, ''
 
     @staticmethod

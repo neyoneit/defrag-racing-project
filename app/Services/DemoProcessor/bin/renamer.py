@@ -203,6 +203,11 @@ def parse_demo_metadata(file_path: Path) -> Optional[dict]:
         "player_name": demo.playerName,
         "physics": demo.modphysic,
         "time_seconds": demo.time.total_seconds() if demo.time else None,
+        "country": demo.country if demo.country else None,
+        "validity": demo.validDict if demo.validDict else None,
+        "_debug_original_filename": str(file_path.name),
+        "_debug_normalized_filename": demo.normalizedFileName if hasattr(demo, 'normalizedFileName') else None,
+        "_debug_demo_country": demo.country if hasattr(demo, 'country') else None,
     }
 
     return metadata

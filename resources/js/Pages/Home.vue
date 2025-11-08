@@ -17,6 +17,7 @@
         latestAnnouncement: Object,
         recentAnnouncements: Array,
         totalMaps: Number,
+        totalDemos: Number,
         activeServers: Number,
         activePlayers: Number
     });
@@ -43,20 +44,24 @@
                     </p>
 
                     <!-- Stats Row -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto mb-8">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-5xl mx-auto mb-8">
                         <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
                             <div class="text-2xl md:text-3xl font-black text-blue-400 mb-1">{{ totalMaps }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Total Maps</div>
                         </div>
-                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
+                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-yellow-500/50 transition-all">
+                            <div class="text-2xl md:text-3xl font-black text-yellow-400 mb-1">{{ totalDemos }}</div>
+                            <div class="text-gray-400 font-semibold text-xs">Total Demos</div>
+                        </div>
+                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-green-500/50 transition-all">
                             <div class="text-2xl md:text-3xl font-black text-green-400 mb-1">{{ activeServers }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Active Servers</div>
                         </div>
-                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
+                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-purple-500/50 transition-all">
                             <div class="text-2xl md:text-3xl font-black text-purple-400 mb-1">{{ activePlayers }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Players (30d)</div>
                         </div>
-                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
+                        <div class="backdrop-blur-xl bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-orange-500/50 transition-all">
                             <div class="text-2xl md:text-3xl font-black text-orange-400 mb-1">1M+</div>
                             <div class="text-gray-400 font-semibold text-xs">Records Stored</div>
                         </div>

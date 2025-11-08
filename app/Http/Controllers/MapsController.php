@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use App\Models\Record;
 use App\Models\OldtopRecord;
 use App\Models\OfflineRecord;
+use App\Models\UploadedDemo;
 use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
@@ -194,48 +195,79 @@ class MapsController extends Controller
 
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', "CPM.{$ctfNumber}%")
-                    ->with(['demo', 'user'])
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
 
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order
+                );
+
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', "VQ3.{$ctfNumber}%")
-                    ->with(['demo', 'user'])
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order
+                );
             } elseif ($offlineGametype === 'fc') {
                 // Fast caps map but no specific CTF mode selected (on "run" gametype)
                 // Show all offline fast caps records regardless of CTF mode
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'CPM%')
-                    ->with(['demo', 'user'])
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
+
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'VQ3%')
-                    ->with(['demo', 'user'])
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                );
             } else {
-                // For df (defrag), physics is just "CPM" or "VQ3" (no CTF mode)
+                // For df (defrag), physics can be "CPM" or "CPM.TR" (with timer reset)
+                // Use LIKE to match both
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'CPM')
-                    ->with(['demo', 'user'])
+                    ->where('physics', 'LIKE', 'CPM%')
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
 
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                );
+
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'VQ3')
-                    ->with(['demo', 'user'])
+                    ->where('physics', 'LIKE', 'VQ3%')
+                    ->with(['demo.suggestedUser', 'user'])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                );
             }
         } else {
             $cpmOfflineRecords = null;
@@ -289,5 +321,89 @@ class MapsController extends Controller
             ->with('servers', $servers)
             ->with('publicMaplists', $publicMaplists);
 
+    }
+
+    /**
+     * Combine offline records with assigned online demos for "Demos Top" section
+     */
+    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order)
+    {
+        if (!$offlineRecords) {
+            return null;
+        }
+
+        // Get offline records collection
+        $offlineItems = $offlineRecords->getCollection()->map(function ($record) {
+            return (object) [
+                'id' => $record->id,
+                'time_ms' => $record->time_ms,
+                'time' => $record->time,
+                'player_name' => $record->player_name,
+                'date_set' => $record->date_set,
+                'demo' => $record->demo,
+                'demo_id' => $record->demo_id, // Add for isOfflineRecord check
+                'record_id' => null, // Offline records don't have record_id
+                'user' => null, // Offline demos have no user - use demo file country for flag
+                'country' => $record->demo->country, // Pass country from demo file
+                'rank' => $record->rank,
+                'is_online' => false, // Flag for offline demos
+            ];
+        });
+
+        // Get assigned online demos for this map/physics
+        $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)
+            ->where('status', 'assigned')
+            ->whereNotNull('record_id')
+            ->with(['record.user', 'user']);
+
+        // Apply physics filter
+        if ($physicsPattern) {
+            $onlineDemosQuery->where('physics', 'LIKE', $physicsPattern);
+        } else {
+            $onlineDemosQuery->where('physics', $physics);
+        }
+
+        $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
+            return (object) [
+                'id' => $demo->id,
+                'time_ms' => $demo->time_ms,
+                'time' => $demo->time_ms,
+                'player_name' => $demo->player_name,
+                'date_set' => $demo->record_date ?? $demo->created_at,
+                'demo' => $demo,
+                'demo_id' => null, // Online demos don't use demo_id
+                'record_id' => $demo->record_id, // Has record_id since they're assigned
+                'user' => $demo->record->user ?? $demo->user, // Use record owner (assigned user) for avatar/effects/country
+                'rank' => null, // Will be calculated after merge
+                'is_online' => true, // Flag for online demos
+            ];
+        });
+
+        // Merge collections
+        $combined = $offlineItems->merge($onlineDemos);
+
+        // Sort by time_ms or date_set
+        $sortField = $column === 'date_set' ? 'date_set' : 'time_ms';
+        $combined = $order === 'ASC'
+            ? $combined->sortBy($sortField)->values()
+            : $combined->sortByDesc($sortField)->values();
+
+        // Recalculate ranks based on time_ms
+        $combined = $combined->sortBy('time_ms')->values()->map(function ($item, $index) {
+            $item->rank = $index + 1;
+            return $item;
+        });
+
+        // Apply original sort order again if needed
+        if ($column === 'date_set') {
+            $combined = $order === 'ASC'
+                ? $combined->sortBy('date_set')->values()
+                : $combined->sortByDesc('date_set')->values();
+        }
+
+        // Update paginator with combined data
+        $offlineRecords->setCollection($combined);
+
+        return $offlineRecords;
     }
 }

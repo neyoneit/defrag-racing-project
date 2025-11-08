@@ -28,6 +28,9 @@
         if (isOfflineRecord.value && props.record.demo) {
             return props.record.demo;
         }
+        if (isOnlineDemo.value && props.record.demo) {
+            return props.record.demo;
+        }
         if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) {
             return props.record.uploaded_demos[0];
         }
@@ -39,25 +42,34 @@
         return !!props.record.demo_id && !props.record.record_id;
     });
 
+    // Check if this is an online demo shown in Demos Top
+    const isOnlineDemo = computed(() => {
+        return props.record.is_online === true;
+    });
+
     const isMyRecord = computed(() => {
         const userId = page.props.auth?.user?.id;
         if (!userId) return false;
         return props.record.user?.id === userId;
     });
 
-    // For offline records, show player_name from demo. For online records, use user name.
+    // For offline records and online demos in Demos Top, ALWAYS show player_name from demo file
+    // For regular online records, use user's login name
     const displayName = computed(() => {
+        // ALWAYS use player_name for offline records (from demo file)
         if (isOfflineRecord.value) {
             return props.record.player_name || props.record.name;
         }
+        // For online demos in Demos Top, use player_name from demo
+        if (isOnlineDemo.value) {
+            return props.record.player_name || props.record.name;
+        }
+        // For regular online records, use user's login name
         return props.record.user?.name ?? props.record.name;
     });
 
     const bestrecordCountry = computed(() => {
-        // For offline records, we don't have a country - show generic flag
-        if (isOfflineRecord.value) {
-            return '_404'; // Unknown/generic flag
-        }
+        // Get country from user (uploader/record owner)
         let country = props.record.user?.country ?? props.record.country;
         return (country == 'XX') ? '_404' : country;
     });
@@ -139,15 +151,15 @@
             @mouseleave="!getRoute && !isOfflineRecord && (showTooltip = false); isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
-                <!-- For offline records, use plain avatar with no effects -->
+                <!-- Show user's avatar with effects -->
                 <div
-                    :class="isOfflineRecord ? 'avatar-effect-none' : ('avatar-effect-' + (record.user?.avatar_effect || 'none'))"
-                    :style="isOfflineRecord ? '--border-color: #6b7280; --orbit-radius: 16px' : `--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`"
+                    :class="'avatar-effect-' + (record.user?.avatar_effect || 'none')"
+                    :style="`--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`"
                 >
                     <img
                         class="h-7 w-7 rounded-full object-cover border-2 relative"
-                        :style="isOfflineRecord ? 'border-color: #6b7280' : `border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
-                        :src="isOfflineRecord ? '/images/null.jpg' : (record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg')"
+                        :style="`border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
+                        :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
                         :alt="displayName"
                     />
                 </div>
@@ -159,16 +171,26 @@
             >
             <span
                 :class="[
-                    isOfflineRecord ? 'name-effect-none' : ('name-effect-' + (record.user?.name_effect || 'none')),
+                    'name-effect-' + (record.user?.name_effect || 'none'),
                     'text-sm font-semibold truncate group-hover/player:text-blue-400 transition-colors', {
                         'text-amber-200': record.oldtop,
                         'text-emerald-200': isMyRecord && !record.oldtop,
                         'text-gray-200': !isMyRecord && !record.oldtop
                     }
                 ]"
-                :style="isOfflineRecord ? '' : `--effect-color: ${record.user?.color || '#ffffff'}`"
+                :style="`--effect-color: ${record.user?.color || '#ffffff'}`"
                 v-html="q3tohtml(displayName)"
             ></span>
+
+            <!-- Offline Demo Badge (shown in Demos Top section) -->
+            <span v-if="isOfflineRecord" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
+                OFFLINE
+            </span>
+
+            <!-- Online Demo Badge (shown in Demos Top section) -->
+            <span v-if="isOnlineDemo" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
+                ONLINE
+            </span>
         </component>
 
         <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
@@ -234,8 +256,8 @@
             </div>
 
             <a
-                v-if="(record.uploaded_demos && record.uploaded_demos.length > 0) || (isOfflineRecord && record.demo)"
-                :href="isOfflineRecord ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
+                v-if="(record.uploaded_demos && record.uploaded_demos.length > 0) || (isOfflineRecord && record.demo) || (isOnlineDemo && record.demo)"
+                :href="(isOfflineRecord || isOnlineDemo) ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
                 class="p-1 rounded transition-all hover:scale-110"
                 :class="{
                     'bg-amber-500/20 text-amber-400': record.oldtop,

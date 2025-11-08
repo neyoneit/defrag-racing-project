@@ -257,9 +257,10 @@ const handleBrowseSearch = () => {
 const handleFileSelect = (event) => {
     const files = Array.from(event.target.files || event.dataTransfer.files);
     const validFiles = files.filter(file => {
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
-        // Accept demo files like .dm_68 and archive files (.zip, .rar, .7z)
-        return ext && (ext.match(/^dm_\d+$/) || ['zip', 'rar', '7z'].includes(ext));
+        // Get full filename for pattern matching
+        const fileName = file.name.toLowerCase();
+        // Check if it's a demo file (.dm_68, .dm_66, etc.) or archive (.zip, .rar, .7z)
+        return fileName.match(/\.dm_\d+$/) || fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z');
     });
 
     if (validFiles.length !== files.length) {
@@ -267,7 +268,7 @@ const handleFileSelect = (event) => {
         alert(`Found ${validFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
     }
 
-    selectedFiles.value = validFiles;
+    selectedFiles.value = [...selectedFiles.value, ...validFiles];
 };
 
 // Drag and drop handlers
@@ -298,49 +299,23 @@ const handleDrop = async (e) => {
     isDragOver.value = false;
     dragCounter.value = 0;
 
-    const items = Array.from(e.dataTransfer.items);
-    const allFiles = [];
+    // Use dataTransfer.files directly for simple file drops
+    const files = Array.from(e.dataTransfer.files);
 
-    // Helper function to recursively read directory
-    const readDirectory = async (entry) => {
-        if (entry.isFile) {
-            return new Promise((resolve) => {
-                entry.file((file) => {
-                    const ext = (file.name.split('.').pop() || '').toLowerCase();
-                    if (ext && (ext.match(/^dm_\d+$/) || ['zip', 'rar', '7z'].includes(ext))) {
-                        allFiles.push(file);
-                    }
-                    resolve();
-                });
-            });
-        } else if (entry.isDirectory) {
-            const reader = entry.createReader();
-            return new Promise((resolve) => {
-                reader.readEntries(async (entries) => {
-                    for (const entry of entries) {
-                        await readDirectory(entry);
-                    }
-                    resolve();
-                });
-            });
-        }
-    };
+    if (files.length > 0) {
+        const validFiles = files.filter(file => {
+            const fileName = file.name.toLowerCase();
+            return fileName.match(/\.dm_\d+$/) || fileName.endsWith('.zip') || fileName.endsWith('.rar') || fileName.endsWith('.7z');
+        });
 
-    // Process all dropped items
-    for (const item of items) {
-        const entry = item.webkitGetAsEntry();
-        if (entry) {
-            await readDirectory(entry);
+        if (validFiles.length !== files.length) {
+            const skipped = files.length - validFiles.length;
+            alert(`Found ${validFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
         }
-    }
 
-    if (allFiles.length > 0) {
-        const totalFiles = items.length;
-        if (allFiles.length < totalFiles) {
-            const skipped = totalFiles - allFiles.length;
-            alert(`Found ${allFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
+        if (validFiles.length > 0) {
+            selectedFiles.value = [...selectedFiles.value, ...validFiles];
         }
-        selectedFiles.value = [...selectedFiles.value, ...allFiles];
     }
 };
 
@@ -962,28 +937,26 @@ watch(selectedPhysics, () => {
                             </button>
                         </div>
 
-                        <div class="grid gap-3 max-h-60 overflow-y-auto">
+                        <div class="grid gap-2 max-h-60 overflow-y-auto">
                             <div
                                 v-for="(file, index) in selectedFiles"
                                 :key="file.name + index"
-                                class="flex items-center justify-between bg-gray-700/50 rounded-lg p-4 border border-gray-600/50 hover:bg-gray-700 transition-colors duration-200"
+                                class="flex items-center justify-between bg-gray-700/50 rounded-lg px-3 py-2 border border-gray-600/50 hover:bg-gray-700 transition-colors duration-200"
                             >
-                                <div class="flex items-center space-x-3">
+                                <div class="flex items-center space-x-2 min-w-0 flex-1">
                                     <div class="flex-shrink-0">
-                                        <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                         </svg>
                                     </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-200">{{ file.name }}</p>
-                                        <p class="text-xs text-gray-400">{{ formatFileSize(file.size) }}</p>
-                                    </div>
+                                    <p class="text-sm font-medium text-gray-200 truncate">{{ file.name }}</p>
+                                    <p class="text-xs text-gray-400 flex-shrink-0">{{ formatFileSize(file.size) }}</p>
                                 </div>
                                 <button
                                     @click="removeFile(index)"
-                                    class="flex-shrink-0 p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors duration-200"
+                                    class="flex-shrink-0 p-1 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded transition-colors duration-200 ml-2"
                                 >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
                                 </button>
@@ -1306,10 +1279,10 @@ watch(selectedPhysics, () => {
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Type
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Physics
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -1385,7 +1358,7 @@ watch(selectedPhysics, () => {
                                         </Link>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                    <td class="px-2 py-4 text-xs text-gray-300">
                                         <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
                                             {{ demo.gametype }}
                                         </span>
@@ -1616,10 +1589,10 @@ watch(selectedPhysics, () => {
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Map
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Type
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Physics
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
@@ -1653,7 +1626,7 @@ watch(selectedPhysics, () => {
                                         </Link>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                    <td class="px-2 py-4 text-xs text-gray-300">
                                         <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
                                             {{ demo.gametype }}
                                         </span>

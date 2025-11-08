@@ -24,6 +24,7 @@ class UploadedDemo extends Model
         'player_name',
         'country',
         'record_date',
+        'validity',
         'status',
         'processing_output',
         'name_confidence',
@@ -37,6 +38,7 @@ class UploadedDemo extends Model
         'file_size' => 'integer',
         'time_ms' => 'integer',
         'record_date' => 'datetime',
+        'validity' => 'array',
         'name_confidence' => 'integer',
         'manually_assigned' => 'boolean',
         'download_count' => 'integer',
@@ -83,6 +85,16 @@ class UploadedDemo extends Model
     }
 
     /**
+     * Check if demo is offline (df/fs/fc) vs online (mdf/mfs/mfc)
+     */
+    public function getIsOfflineAttribute()
+    {
+        // Online demos have gametype starting with 'm' (mdf, mfs, mfc)
+        // Offline demos don't (df, fs, fc)
+        return $this->gametype && !str_starts_with($this->gametype, 'm');
+    }
+
+    /**
      * Get the full storage path
      */
     public function getFullPathAttribute()
@@ -113,15 +125,6 @@ class UploadedDemo extends Model
     {
         // Online gametypes start with 'm': mdf, mfs, mfc
         return $this->gametype && str_starts_with($this->gametype, 'm');
-    }
-
-    /**
-     * Check if demo is from offline run
-     */
-    public function getIsOfflineAttribute()
-    {
-        // Offline gametypes: df, fs, fc
-        return $this->gametype && !str_starts_with($this->gametype, 'm');
     }
 
     /**
