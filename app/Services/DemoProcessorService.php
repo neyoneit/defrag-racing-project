@@ -175,39 +175,72 @@ class DemoProcessorService
             $metadata['record_date'] = $jsonData['record_date'] ?? null;
             $metadata['validity'] = $jsonData['validity'] ?? null;
 
-            // Use country from JSON if available (extracted from demo file)
+            // Use fields directly from JSON when available (more reliable than regex parsing)
+            if (isset($jsonData['map_name'])) {
+                $metadata['map'] = $jsonData['map_name'];
+            }
+            if (isset($jsonData['player_name'])) {
+                $metadata['player'] = $jsonData['player_name'];
+            }
+            if (isset($jsonData['physics'])) {
+                $metadata['physics'] = strtoupper($jsonData['physics']);
+            }
+            if (isset($jsonData['time_seconds'])) {
+                $metadata['time_ms'] = (int)($jsonData['time_seconds'] * 1000);
+            }
             if (isset($jsonData['country'])) {
                 $metadata['country'] = $jsonData['country'];
             }
 
-            // Parse the suggested filename to extract components
+            // Parse the suggested filename to extract remaining components (gametype)
+            // and as fallback if JSON fields are missing
             $suggestedName = $jsonData['suggested_filename'];
             if (preg_match('/([^[]+)\[([^.]+)\.([^\]]+)\](\d+)\.(\d+)\.(\d+)\(([^)]+)\)\.dm_\d+/', $suggestedName, $matches)) {
-                $metadata['map'] = $matches[1];
-                $metadata['gametype'] = $matches[2]; // mdf, df, etc.
-                $metadata['physics'] = strtoupper($matches[3]); // VQ3 or CPM
+                // Only set if not already from JSON (JSON is more reliable)
+                if (!isset($metadata['map'])) {
+                    $metadata['map'] = $matches[1];
+                }
+                if (!isset($metadata['gametype'])) {
+                    $metadata['gametype'] = $matches[2]; // mdf, df, etc.
+                }
+                if (!isset($metadata['physics'])) {
+                    $metadata['physics'] = strtoupper($matches[3]); // VQ3 or CPM
+                }
 
-                // Calculate time in milliseconds
-                $minutes = (int)$matches[4];
-                $seconds = (int)$matches[5];
-                $milliseconds = (int)$matches[6];
-                $metadata['time_ms'] = ($minutes * 60000) + ($seconds * 1000) + $milliseconds;
+                // Calculate time in milliseconds (fallback if not from JSON)
+                if (!isset($metadata['time_ms'])) {
+                    $minutes = (int)$matches[4];
+                    $seconds = (int)$matches[5];
+                    $milliseconds = (int)$matches[6];
+                    $metadata['time_ms'] = ($minutes * 60000) + ($seconds * 1000) + $milliseconds;
+                }
 
-                // Extract player name from filename (already have country from JSON)
-                $playerAndCountry = $matches[7];
-                $lastDotPos = strrpos($playerAndCountry, '.');
-                if ($lastDotPos !== false) {
-                    $metadata['player'] = substr($playerAndCountry, 0, $lastDotPos);
-                    // Only use country from filename if not already set from JSON
-                    if (!isset($metadata['country'])) {
-                        $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                // Extract player name from filename if not from JSON
+                if (!isset($metadata['player'])) {
+                    $playerAndCountry = $matches[7];
+                    $lastDotPos = strrpos($playerAndCountry, '.');
+                    if ($lastDotPos !== false) {
+                        $metadata['player'] = substr($playerAndCountry, 0, $lastDotPos);
+                        // Only use country from filename if not already set from JSON
+                        if (!isset($metadata['country'])) {
+                            $metadata['country'] = substr($playerAndCountry, $lastDotPos + 1);
+                        }
+                    } else {
+                        // No country in filename
+                        $metadata['player'] = $playerAndCountry;
+                        if (!isset($metadata['country'])) {
+                            $metadata['country'] = null;
+                        }
                     }
-                } else {
-                    // No country in filename
-                    $metadata['player'] = $playerAndCountry;
-                    if (!isset($metadata['country'])) {
-                        $metadata['country'] = null;
-                    }
+                }
+            }
+
+            // Extract gametype from physics if not already set
+            // Format is like "mdf.vq3" where mdf is gametype
+            if (!isset($metadata['gametype']) && isset($jsonData['physics'])) {
+                $physicsParts = explode('.', $jsonData['physics']);
+                if (count($physicsParts) >= 2) {
+                    $metadata['gametype'] = $physicsParts[0];
                 }
             }
 
