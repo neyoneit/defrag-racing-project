@@ -15,14 +15,18 @@ def remove_non_ascii(text: str | None) -> str | None:
 
 
 def get_time_span(value: str) -> timedelta:
-    parts = value.split(':')
+    # Some demos use dots instead of colons as separators
+    # Convert dots to colons for consistent parsing
+    normalized = value.replace('.', ':')
+
+    parts = normalized.split(':')
     if len(parts) == 3:
         minutes, seconds, millis = parts
     elif len(parts) == 2:
         minutes = '0'
         seconds, millis = parts
     else:
-        raise ValueError('Invalid time format')
+        raise ValueError(f'Invalid time format: "{value}" (parts: {len(parts)})')
 
     # Strip non-numeric characters from each component
     # This handles cases like "984!!!" or "984(" that appear in some demos
