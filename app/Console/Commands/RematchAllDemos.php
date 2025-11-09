@@ -54,6 +54,25 @@ class RematchAllDemos extends Command
                     ->first();
 
                 if ($uploaderRecord) {
+                    // Check if this demo has an existing offline_record (from fallback-assigned status)
+                    $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
+
+                    if ($offlineRecord) {
+                        // Delete the offline_record since we're upgrading to online record
+                        // Update ranks for records that were slower than the deleted one
+                        \App\Models\OfflineRecord::where('map_name', $offlineRecord->map_name)
+                            ->where('physics', $offlineRecord->physics)
+                            ->where('gametype', $offlineRecord->gametype)
+                            ->where('time_ms', '>', $offlineRecord->time_ms)
+                            ->decrement('rank');
+
+                        $offlineRecord->delete();
+
+                        if ($demoId) {
+                            $this->info("✓ Deleted offline_record (upgrading to online record)");
+                        }
+                    }
+
                     // Uploader has a matching record - assign immediately with 100% confidence
                     $demo->update([
                         'record_id' => $uploaderRecord->id,
@@ -173,7 +192,26 @@ class RematchAllDemos extends Command
                         ->first();
 
                     if ($record && $demo->file_path) {
-                        // Assign demo to record
+                        // Check if this demo has an existing offline_record (from fallback-assigned status)
+                        $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
+
+                        if ($offlineRecord) {
+                            // Delete the offline_record since we're upgrading to online record
+                            // Update ranks for records that were slower than the deleted one
+                            \App\Models\OfflineRecord::where('map_name', $offlineRecord->map_name)
+                                ->where('physics', $offlineRecord->physics)
+                                ->where('gametype', $offlineRecord->gametype)
+                                ->where('time_ms', '>', $offlineRecord->time_ms)
+                                ->decrement('rank');
+
+                            $offlineRecord->delete();
+
+                            if ($demoId) {
+                                $this->info("✓ Deleted offline_record (upgrading to online record)");
+                            }
+                        }
+
+                        // Assign demo to online record
                         $demo->update([
                             'record_id' => $record->id,
                             'status' => 'assigned',
@@ -181,7 +219,7 @@ class RematchAllDemos extends Command
                         $assigned++;
 
                         if ($demoId) {
-                            $this->info("✓ Assigned to record ID: {$record->id}");
+                            $this->info("✓ Assigned to online record ID: {$record->id}");
                         }
                     }
                 }

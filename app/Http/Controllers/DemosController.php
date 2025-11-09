@@ -158,7 +158,7 @@ class DemosController extends Controller
 
                 // Apply sorting
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -166,13 +166,26 @@ class DemosController extends Controller
                 $userDemos = $query->paginate(20, ['*'], 'userPage');
 
                 // Calculate total counts for filters (all demos for admin)
+                $baseQuery = UploadedDemo::query();
                 $demoCounts = [
-                    'all' => UploadedDemo::count(),
-                    'online' => UploadedDemo::where('gametype', 'LIKE', 'm%')->count(),
-                    'offline' => UploadedDemo::where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-                    'assigned' => UploadedDemo::where('status', 'assigned')->count(),
-                    'processed' => UploadedDemo::where('status', 'processed')->count(),
-                    'failed' => UploadedDemo::where('status', 'failed')->count(),
+                    'all' => (clone $baseQuery)->count(),
+                    'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
+                    'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+                    // Status counts for ALL tab
+                    'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
+                    'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
+                    'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
+                    'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
+                    // Status counts for ONLINE tab
+                    'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
+                    'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
+                    'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+                    'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
+                    // Status counts for OFFLINE tab
+                    'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
+                    'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
+                    'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+                    'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
                 ];
             } else {
                 // Regular users see only their own uploads
@@ -187,7 +200,7 @@ class DemosController extends Controller
                 }
 
                 if ($filterStatus === 'assigned') {
-                    $query->where('status', 'assigned');
+                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
                 } elseif ($filterStatus === 'processed') {
                     $query->where('status', 'processed');
                 } elseif ($filterStatus === 'failed') {
@@ -204,7 +217,7 @@ class DemosController extends Controller
 
                 // Apply sorting
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -212,13 +225,26 @@ class DemosController extends Controller
                 $userDemos = $query->paginate(20, ['*'], 'userPage');
 
                 // Calculate total counts for filters (only user's demos)
+                $baseQuery = UploadedDemo::where('user_id', $currentUser->id);
                 $demoCounts = [
-                    'all' => UploadedDemo::where('user_id', $currentUser->id)->count(),
-                    'online' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'LIKE', 'm%')->count(),
-                    'offline' => UploadedDemo::where('user_id', $currentUser->id)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-                    'assigned' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'assigned')->count(),
-                    'processed' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'processed')->count(),
-                    'failed' => UploadedDemo::where('user_id', $currentUser->id)->where('status', 'failed')->count(),
+                    'all' => (clone $baseQuery)->count(),
+                    'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
+                    'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+                    // Status counts for ALL tab
+                    'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
+                    'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
+                    'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
+                    'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
+                    // Status counts for ONLINE tab
+                    'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
+                    'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
+                    'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+                    'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
+                    // Status counts for OFFLINE tab
+                    'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
+                    'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
+                    'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+                    'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
                 ];
             }
         }
@@ -233,14 +259,14 @@ class DemosController extends Controller
 
         // Apply status filter first
         if ($browseStatus === 'assigned') {
-            $query->where('status', 'assigned');
+            $query->whereIn('status', ['assigned', 'fallback-assigned']);
         } elseif ($browseStatus === 'processed') {
             $query->where('status', 'processed');
         } elseif ($browseStatus === 'failed') {
             $query->where('status', 'failed');
         } else {
-            // Show all statuses: assigned, processed, failed
-            $query->whereIn('status', ['assigned', 'processed', 'failed']);
+            // Show all statuses: assigned, fallback-assigned, processed, failed
+            $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed']);
         }
 
         // Apply browse tab filters (online/offline)
@@ -262,13 +288,26 @@ class DemosController extends Controller
             ->paginate(20, ['*'], 'browsePage');
 
         // Calculate counts for browse section filters
+        $browseBaseQuery = UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed']);
         $browseCounts = [
-            'all' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->count(),
-            'online' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->where('gametype', 'LIKE', 'm%')->count(),
-            'offline' => UploadedDemo::whereIn('status', ['assigned', 'processed', 'failed'])->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-            'assigned' => UploadedDemo::where('status', 'assigned')->count(),
-            'processed' => UploadedDemo::where('status', 'processed')->count(),
-            'failed' => UploadedDemo::where('status', 'failed')->count(),
+            'all' => (clone $browseBaseQuery)->count(),
+            'online' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->count(),
+            'offline' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
+            // Status counts for ALL tab
+            'assigned' => (clone $browseBaseQuery)->where('status', 'assigned')->count(),
+            'fallback_assigned' => (clone $browseBaseQuery)->where('status', 'fallback-assigned')->count(),
+            'processed' => (clone $browseBaseQuery)->where('status', 'processed')->count(),
+            'failed' => (clone $browseBaseQuery)->where('status', 'failed')->count(),
+            // Status counts for ONLINE tab
+            'online_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
+            'online_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
+            'online_processed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+            'online_failed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
+            // Status counts for OFFLINE tab
+            'offline_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
+            'offline_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
+            'offline_processed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+            'offline_failed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
         ];
 
         // Get download limit info for current user/IP
@@ -416,79 +455,32 @@ class DemosController extends Controller
                         'client_path' => $demoFile->getPathname(),
                     ]);
 
-                    // If the upload is an archive, extract and process contained demo files
+                    // If the upload is an archive, queue it for async extraction and processing
                     if ($isArchive) {
                         try {
-                            $extracted = $this->extractArchiveToTemp($demoFile);
-                            if (empty($extracted)) {
-                                $errors[] = $demoFile->getClientOriginalName() . ': Archive contained no valid demo files';
-                                continue;
+                            // Store archive temporarily
+                            $archiveFilename = 'archive_' . uniqid() . '_' . $originalName;
+                            $archivePath = storage_path('app/temp_archives/' . $archiveFilename);
+
+                            if (!is_dir(storage_path('app/temp_archives'))) {
+                                mkdir(storage_path('app/temp_archives'), 0755, true);
                             }
 
-                            // Process each extracted file as a demo upload
-                            foreach ($extracted as $extractedPath) {
-                                if (!is_file($extractedPath)) continue;
+                            $demoFile->move(storage_path('app/temp_archives'), $archiveFilename);
 
-                                // Calculate file hash and duplicates
-                                $fileHash = md5_file($extractedPath);
-                                $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
-                                if ($existingDemo) {
-                                    $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
-                                    $errors[] = basename($extractedPath) . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
-                                    @unlink($extractedPath);
-                                    continue;
-                                }
+                            // Dispatch job to extract archive and queue individual demos
+                            \App\Jobs\ExtractAndQueueArchiveJob::dispatch($archivePath, $userId, $originalName);
 
-                                $originalName = basename($extractedPath);
-                                $existingByFilename = UploadedDemo::where('user_id', $userId)
-                                    ->where('original_filename', $originalName)
-                                    ->first();
-                                if ($existingByFilename) {
-                                    $errors[] = $originalName . ': Filename already uploaded by you';
-                                    @unlink($extractedPath);
-                                    continue;
-                                }
+                            Log::info("Archive queued for extraction", [
+                                'filename' => $originalName,
+                                'user_id' => $userId,
+                                'archive_path' => $archivePath,
+                            ]);
 
-                                // Create database record first to get the ID
-                                $demo = UploadedDemo::create([
-                                    'original_filename' => $originalName,
-                                    'file_path' => '', // Will be set after moving file
-                                    'file_size' => filesize($extractedPath),
-                                    'file_hash' => $fileHash,
-                                    'user_id' => $userId,
-                                    'status' => 'uploaded',
-                                ]);
-
-                                // Move extracted file to temp directory using demo ID
-                                $directory = storage_path("app/demos/temp/{$demo->id}");
-                                if (!is_dir($directory)) {
-                                    mkdir($directory, 0755, true);
-                                }
-                                $destPath = $directory . '/' . $originalName;
-                                rename($extractedPath, $destPath);
-                                $storedPath = "demos/temp/{$demo->id}/{$originalName}";
-                                $demo->update(['file_path' => $storedPath]);
-
-                                // Dispatch for immediate processing (no long delay)
-                                ProcessDemoJob::dispatch($demo);
-
-                                $queuedDemos[] = $demo;
-                                $filesProcessed++;
-
-                                Log::info("Demo queued (from archive) for processing", [
-                                    'demo_id' => $demo->id,
-                                    'filename' => $demo->original_filename,
-                                    'user_id' => $userId,
-                                ]);
-
-                                // cleanup extracted temp file
-                                @unlink($extractedPath);
-                            }
-
-                            // remove extracted dir if empty (handled inside extractor)
+                            $filesProcessed++;
                         } catch (\Exception $e) {
-                            $errors[] = $demoFile->getClientOriginalName() . ': Archive processing failed - ' . $e->getMessage();
-                            Log::error('Archive extraction failed', ['file' => $demoFile->getClientOriginalName(), 'error' => $e->getMessage()]);
+                            $errors[] = $demoFile->getClientOriginalName() . ': Failed to queue archive - ' . $e->getMessage();
+                            Log::error('Archive queueing failed', ['file' => $demoFile->getClientOriginalName(), 'error' => $e->getMessage()]);
                             continue;
                         }
 
@@ -1057,6 +1049,12 @@ class DemosController extends Controller
         ]);
 
         $record = \App\Models\Record::findOrFail($request->record_id);
+
+        // Delete any existing offline_record (from fallback-assigned status)
+        // When assigning to an online record, the demo should only appear in online demos, not offline
+        if ($demo->offlineRecord) {
+            $demo->offlineRecord->delete();
+        }
 
         $demo->update([
             'record_id' => $record->id,

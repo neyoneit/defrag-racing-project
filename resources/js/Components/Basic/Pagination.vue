@@ -10,6 +10,10 @@
         pageName: {
             type: String,
             default: 'page'
+        },
+        only: {
+            type: Array,
+            default: () => ['userDemos', 'publicDemos']
         }
     });
 
@@ -55,7 +59,7 @@
         router.visit(url, {
             preserveScroll: true,
             preserveState: true,
-            only: ['userDemos', 'publicDemos'],
+            only: props.only,
             onSuccess: () => {
                 // Restore scroll position after navigation
                 window.scrollTo(0, scrollPosition);

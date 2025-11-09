@@ -296,14 +296,14 @@ class DemoProcessorService
         $tempCompressedPath = storage_path('app/temp_' . uniqid() . '.' . $format);
 
         if ($format === '7z') {
-            // Use 7z command for better compression ratio
-            // -mx=5 = normal compression (good balance of speed/ratio)
-            // -mmt=2 = use 2 threads for compression
+            // Use 7z command with fastest compression for maximum speed
+            // -mx=1 = fastest compression (prioritize speed over ratio)
+            // -mmt=4 = use 4 threads for compression (parallelization)
             $escapedTemp = escapeshellarg($tempFile);
             $escapedOutput = escapeshellarg($tempCompressedPath);
             $escapedFilename = escapeshellarg($processedFilename);
 
-            exec("7z a -t7z -mx=5 -mmt=2 $escapedOutput $escapedTemp 2>&1", $output, $returnCode);
+            exec("7z a -t7z -mx=1 -mmt=4 $escapedOutput $escapedTemp 2>&1", $output, $returnCode);
 
             if ($returnCode !== 0) {
                 throw new \Exception('Failed to create 7z archive: ' . implode("\n", $output));
@@ -607,10 +607,15 @@ class DemoProcessorService
             'date_set' => $demo->record_date ?? $demo->created_at,
         ]);
 
-        // Update demo with uploaded path
+        // Determine status based on whether this is an online demo (rematchable) or offline demo (final)
+        // Online demos (mdf/mfs/mfc) that create offline_record should use 'fallback-assigned' (can be rematched later)
+        // Offline demos (df/fs/fc) should use 'assigned' (final, won't be rematched)
+        $status = ($demo->gametype && str_starts_with($demo->gametype, 'm')) ? 'fallback-assigned' : 'assigned';
+
+        // Update demo with uploaded path and appropriate status
         $demo->update([
             'file_path' => $uploadedPath,
-            'status' => 'assigned',
+            'status' => $status,
         ]);
 
         // Clean up local compressed file after successful upload
@@ -635,6 +640,7 @@ class DemoProcessorService
             'physics' => $demo->physics,
             'rank' => $rank,
             'time_ms' => $demo->time_ms,
+            'status' => $status,
             'uploaded_path' => $uploadedPath,
         ]);
     }

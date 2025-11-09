@@ -334,6 +334,12 @@ class MapsController extends Controller
 
         // Get offline records collection
         $offlineItems = $offlineRecords->getCollection()->map(function ($record) {
+            // Determine verification status based on demo status
+            // 'verified' = online record from q3df.org (shouldn't happen here since those have record_id)
+            // 'community' = online demo that created offline_record as fallback (status='fallback-assigned')
+            // 'offline' = true offline demo (df/fs/fc, status='assigned')
+            $verificationType = ($record->demo->status === 'fallback-assigned') ? 'community' : 'offline';
+
             return (object) [
                 'id' => $record->id,
                 'time_ms' => $record->time_ms,
@@ -347,6 +353,7 @@ class MapsController extends Controller
                 'country' => $record->demo->country, // Pass country from demo file
                 'rank' => $record->rank,
                 'is_online' => false, // Flag for offline demos
+                'verification_type' => $verificationType, // New field for badge display
             ];
         });
 
@@ -364,18 +371,37 @@ class MapsController extends Controller
         }
 
         $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
+            // Determine which user to use: record owner takes priority
+            // If record has a registered user, use that for avatar/effects
+            // If record has no user (unregistered player), pass NULL for user so no avatar/effects show
+            $user = null;
+            $nameToDisplay = $demo->player_name;
+
+            if ($demo->record && $demo->record->user) {
+                // Record has a registered user - use their info for name, avatar, effects
+                $user = $demo->record->user;
+                $nameToDisplay = $demo->record->user->name;
+            } elseif ($demo->record && $demo->record->name) {
+                // Record has no registered user - use record's name, but NO avatar/effects
+                $user = null;
+                $nameToDisplay = $demo->record->name;
+            }
+
             return (object) [
                 'id' => $demo->id,
                 'time_ms' => $demo->time_ms,
                 'time' => $demo->time_ms,
                 'player_name' => $demo->player_name,
+                'name' => $nameToDisplay, // Override name for unregistered record owners
                 'date_set' => $demo->record_date ?? $demo->created_at,
                 'demo' => $demo,
                 'demo_id' => null, // Online demos don't use demo_id
                 'record_id' => $demo->record_id, // Has record_id since they're assigned
-                'user' => $demo->record->user ?? $demo->user, // Use record owner (assigned user) for avatar/effects/country
+                'user' => $user, // Use record owner (assigned user) for avatar/effects/country
+                'country' => $demo->record->country ?? $demo->country, // Use record's country
                 'rank' => null, // Will be calculated after merge
                 'is_online' => true, // Flag for online demos
+                'verification_type' => 'verified', // Online demos assigned to records are verified
             ];
         });
 

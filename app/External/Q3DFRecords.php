@@ -43,10 +43,32 @@ class Q3DFRecords {
         return $result;
     }
 
-    public function scrape($page) {
+    public function scrape($page, $maxRetries = 5, $baseDelay = 60) {
         echo 'Scraping page: ' . $page . PHP_EOL;
 
-        $response = file_get_contents($this->url . $page);
+        $attempt = 0;
+        $response = false;
+
+        while ($attempt < $maxRetries && $response === false) {
+            try {
+                $response = @file_get_contents($this->url . $page);
+
+                if ($response === false) {
+                    throw new \Exception("Failed to fetch page");
+                }
+            } catch (\Exception $e) {
+                $attempt++;
+
+                if ($attempt >= $maxRetries) {
+                    throw new \Exception("Failed to fetch page {$page} after {$maxRetries} attempts: " . $e->getMessage());
+                }
+
+                // Exponential backoff: 60s, 120s, 240s, 480s
+                $delay = $baseDelay * pow(2, $attempt - 1);
+                echo "  ⚠️  Connection failed (attempt {$attempt}/{$maxRetries}). Retrying in {$delay} seconds..." . PHP_EOL;
+                sleep($delay);
+            }
+        }
 
         if ($response === false) {
             return [];
@@ -84,10 +106,20 @@ class Q3DFRecords {
     private function getRecords($recordsTable) {
         $records = [];
 
+        if (!$recordsTable) {
+            return $records;
+        }
+
         $recordsParts = $recordsTable->getElementsByTagName('tr');
 
-        foreach($recordsParts as $recordPart) {
-            $records[] = $this->getRecord($recordPart);
+        foreach($recordsParts as $index => $recordPart) {
+            try {
+                $records[] = $this->getRecord($recordPart);
+            } catch (\Exception $e) {
+                // Skip malformed records but log the error
+                echo "  ⚠️  Skipping malformed record at index {$index}: " . $e->getMessage() . PHP_EOL;
+                continue;
+            }
         }
 
         return $records;
@@ -96,16 +128,35 @@ class Q3DFRecords {
     private function getRecord($recordPart) {
         $parts = $recordPart->getElementsByTagName('td');
 
-        $date = $this->parse_date($parts->item(0)->textContent);
+        // Verify we have all required elements (at least 6 columns)
+        if ($parts->length < 6) {
+            throw new \Exception("Invalid record structure: expected at least 6 columns, got {$parts->length}");
+        }
 
-        $player = $this->get_player($parts->item(1));
+        $dateElement = $parts->item(0);
+        $playerElement = $parts->item(1);
+        $timeElement = $parts->item(2);
+        $mapElement = $parts->item(3);
+        $physicsElement = $parts->item(5);
 
-        $time = $this->parse_time($parts->item(2)->textContent);
+        if (!$dateElement || !$playerElement || !$timeElement || !$mapElement || !$physicsElement) {
+            throw new \Exception("Invalid record structure: missing required elements");
+        }
 
-        $map = trim($parts->item(3)->textContent);
+        $date = $this->parse_date($dateElement->textContent);
 
-        $physics = $parts->item(5)->textContent;
+        $player = $this->get_player($playerElement);
+
+        $time = $this->parse_time($timeElement->textContent);
+
+        $map = trim($mapElement->textContent);
+
+        $physics = $physicsElement->textContent;
         $physicsParts = explode('-', $physics);
+
+        if (count($physicsParts) < 2) {
+            throw new \Exception("Invalid physics format: {$physics}");
+        }
 
         $player['time'] = $time;
         $player['map'] = $map;
@@ -126,8 +177,13 @@ class Q3DFRecords {
         return $carbonDate;
     }
 
-    private function get_player($part) {
-        $flag = $this->xpath->query('.//img[@class="flag"]', $part)->item(0);
+    private function get_player($playerColumn) {
+        // Get flag from player column
+        $flag = $this->xpath->query('.//img[@class="flag"]', $playerColumn)->item(0);
+
+        if (!$flag) {
+            throw new \Exception("Missing flag element in player data");
+        }
 
         $country = explode('.', basename($flag->getAttribute('src')))[0];
 
@@ -135,13 +191,33 @@ class Q3DFRecords {
             $country = '_404';
         }
 
-        $name = $this->xpath->query('.//span[@class="visname"]', $part)->item(0);
+        // Get player link from player column
+        $a = $this->xpath->query('.//a[@class="userlink"]', $playerColumn)->item(0);
 
-        $a = $this->xpath->query('.//a[@class="userlink"]', $part)->item(0);
-        $mdd_id = explode('?id=', basename($a->getAttribute('href')))[1];
+        if (!$a) {
+            throw new \Exception("Missing player link element");
+        }
+
+        $href = $a->getAttribute('href');
+        if (!$href || strpos($href, '?id=') === false) {
+            throw new \Exception("Invalid player link format: {$href}");
+        }
+
+        $mdd_id = explode('?id=', basename($href))[1];
+
+        // Get name from inside the <a> tag
+        $name = $this->xpath->query('.//span[@class="visname"]', $a)->item(0);
+
+        // If name is empty or doesn't exist, use "Unknown"
+        $playerName = $name ? $this->get_q3_string($name) : 'Unknown';
+
+        // If name is still empty after processing, use "Unknown"
+        if (trim($playerName) === '') {
+            $playerName = 'Unknown';
+        }
 
         return [
-            'name'      =>  $this->get_q3_string($name),
+            'name'      =>  $playerName,
             'country'   =>  strtoupper($country),
             'mdd_id'    =>  intval($mdd_id)
         ];
@@ -166,6 +242,10 @@ class Q3DFRecords {
     }
 
     private function get_q3_string($node) {
+        if (!$node) {
+            return '';
+        }
+
         $parts = $this->html_to_q3($node);
 
         $result = '';
@@ -179,6 +259,10 @@ class Q3DFRecords {
 
     private function html_to_q3($node) {
         $result = [];
+
+        if (!$node || !$node->childNodes) {
+            return $result;
+        }
 
         foreach($node->childNodes as $child) {
             if ($child->nodeName === '#text') {

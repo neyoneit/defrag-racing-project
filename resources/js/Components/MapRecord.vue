@@ -60,7 +60,12 @@
         if (isOfflineRecord.value) {
             return props.record.player_name || props.record.name;
         }
-        // For online demos in Demos Top, use player_name from demo
+        // For online demos assigned to records, ALWAYS use the 'name' field from backend
+        // Backend sets this to record owner's name (either user.name or record.name)
+        if (isOnlineDemo.value && props.record.record_id && props.record.name) {
+            return props.record.name;
+        }
+        // For online demos NOT assigned to records (fallback-assigned), use player_name from demo
         if (isOnlineDemo.value) {
             return props.record.player_name || props.record.name;
         }

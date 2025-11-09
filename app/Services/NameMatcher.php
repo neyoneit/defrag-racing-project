@@ -5,9 +5,16 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserAlias;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class NameMatcher
 {
+    /**
+     * Cached user data to avoid N+1 queries
+     * Format: ['user_id' => ['plain_name' => ..., 'aliases' => [...]]]
+     */
+    protected ?array $userCache = null;
+
     /**
      * Strip Quake 3 color codes from a name
      * Removes patterns like ^0-^9, ^[, ^]
@@ -20,6 +27,45 @@ class NameMatcher
 
         // Trim whitespace
         return trim($stripped);
+    }
+
+    /**
+     * Load all users and their aliases into memory cache
+     * This eliminates N+1 queries when matching multiple demos
+     */
+    protected function loadUserCache(): void
+    {
+        if ($this->userCache !== null) {
+            return; // Already loaded
+        }
+
+        // Try to get from cache first (5 minute cache)
+        $this->userCache = Cache::remember('name_matcher_users', 300, function () {
+            $cache = [];
+
+            // Load all users with their aliases in a single query with eager loading
+            $users = User::with(['aliases' => function ($query) {
+                $query->where('is_approved', true);
+            }])->get();
+
+            foreach ($users as $user) {
+                $cache[$user->id] = [
+                    'plain_name' => $user->plain_name,
+                    'aliases' => $user->aliases->pluck('alias')->toArray(),
+                ];
+            }
+
+            return $cache;
+        });
+    }
+
+    /**
+     * Clear the user cache (useful when users or aliases are updated)
+     */
+    public function clearCache(): void
+    {
+        $this->userCache = null;
+        Cache::forget('name_matcher_users');
     }
 
     /**
@@ -96,6 +142,7 @@ class NameMatcher
 
     /**
      * Match demo name against a specific user's name and aliases
+     * Uses cached data instead of database queries
      *
      * @param string $demoPlayerName Name from demo
      * @param int $userId User ID to check against
@@ -103,34 +150,33 @@ class NameMatcher
      */
     public function matchAgainstUser(string $demoPlayerName, int $userId): array
     {
-        $user = User::find($userId);
+        // Load cache if not already loaded
+        $this->loadUserCache();
 
-        if (!$user) {
+        // Check if user exists in cache
+        if (!isset($this->userCache[$userId])) {
             return ['confidence' => 0, 'matched_name' => null];
         }
 
+        $userData = $this->userCache[$userId];
         $bestConfidence = 0;
         $matchedName = null;
 
         // Check against plain_name
-        if ($user->plain_name) {
-            $confidence = $this->calculateConfidence($demoPlayerName, $user->plain_name);
+        if (!empty($userData['plain_name'])) {
+            $confidence = $this->calculateConfidence($demoPlayerName, $userData['plain_name']);
             if ($confidence > $bestConfidence) {
                 $bestConfidence = $confidence;
-                $matchedName = $user->plain_name;
+                $matchedName = $userData['plain_name'];
             }
         }
 
         // Check against user's approved aliases
-        $aliases = UserAlias::where('user_id', $userId)
-            ->where('is_approved', true)
-            ->get();
-
-        foreach ($aliases as $alias) {
-            $confidence = $this->calculateConfidence($demoPlayerName, $alias->alias);
+        foreach ($userData['aliases'] as $alias) {
+            $confidence = $this->calculateConfidence($demoPlayerName, $alias);
             if ($confidence > $bestConfidence) {
                 $bestConfidence = $confidence;
-                $matchedName = $alias->alias;
+                $matchedName = $alias;
             }
         }
 
@@ -142,6 +188,7 @@ class NameMatcher
 
     /**
      * Match demo name globally across all users
+     * Uses cached data instead of loading all users from database
      *
      * @param string $demoPlayerName Name from demo
      * @param int|null $excludeUserId User ID to exclude from search (already checked)
@@ -149,6 +196,9 @@ class NameMatcher
      */
     public function matchGlobally(string $demoPlayerName, ?int $excludeUserId = null): array
     {
+        // Load cache if not already loaded
+        $this->loadUserCache();
+
         $bestMatch = [
             'user_id' => null,
             'confidence' => 0,
@@ -156,18 +206,24 @@ class NameMatcher
             'matched_name' => null,
         ];
 
-        // Get all users (excluding the uploader if already checked)
-        $users = User::when($excludeUserId, function ($query) use ($excludeUserId) {
-            return $query->where('id', '!=', $excludeUserId);
-        })->get();
+        // Iterate through cached users instead of database query
+        foreach ($this->userCache as $userId => $userData) {
+            // Skip excluded user
+            if ($userId === $excludeUserId) {
+                continue;
+            }
 
-        foreach ($users as $user) {
-            $match = $this->matchAgainstUser($demoPlayerName, $user->id);
+            $match = $this->matchAgainstUser($demoPlayerName, $userId);
 
             if ($match['confidence'] > $bestMatch['confidence']) {
-                $bestMatch['user_id'] = $user->id;
+                $bestMatch['user_id'] = $userId;
                 $bestMatch['confidence'] = $match['confidence'];
                 $bestMatch['matched_name'] = $match['matched_name'];
+            }
+
+            // Early exit if we found a perfect match
+            if ($bestMatch['confidence'] === 100) {
+                break;
             }
         }
 
@@ -177,6 +233,7 @@ class NameMatcher
     /**
      * Get all potential matches above a minimum confidence threshold
      * Useful for admin review interfaces
+     * Uses cached data instead of loading all users from database
      *
      * @param string $demoPlayerName Name from demo
      * @param int $minConfidence Minimum confidence threshold (default 50)
@@ -184,17 +241,18 @@ class NameMatcher
      */
     public function getAllMatches(string $demoPlayerName, int $minConfidence = 50): Collection
     {
+        // Load cache if not already loaded
+        $this->loadUserCache();
+
         $matches = collect();
 
-        $users = User::all();
-
-        foreach ($users as $user) {
-            $match = $this->matchAgainstUser($demoPlayerName, $user->id);
+        foreach ($this->userCache as $userId => $userData) {
+            $match = $this->matchAgainstUser($demoPlayerName, $userId);
 
             if ($match['confidence'] >= $minConfidence) {
                 $matches->push([
-                    'user_id' => $user->id,
-                    'user_name' => $user->plain_name,
+                    'user_id' => $userId,
+                    'user_name' => $userData['plain_name'],
                     'confidence' => $match['confidence'],
                     'matched_name' => $match['matched_name'],
                 ]);

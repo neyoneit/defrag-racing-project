@@ -487,6 +487,17 @@
         return functions[abbr.toLowerCase().trim()] || abbr;
     };
 
+    const formatTime = (milliseconds) => {
+        const minutes = Math.floor(milliseconds / 60000);
+        const seconds = Math.floor((milliseconds % 60000) / 1000);
+        const ms = milliseconds % 1000;
+
+        if (minutes > 0) {
+            return `${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+        }
+        return `${seconds}:${ms.toString().padStart(3, '0')}`;
+    };
+
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);
 
@@ -866,7 +877,7 @@
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -888,7 +899,7 @@
 
                     <!-- VQ3 Pagination -->
                     <div class="border-t border-white/5 bg-transparent p-3" v-if="getVq3Records.total > getVq3Records.per_page">
-                        <Pagination pageName="vq3Page" :last_page="getVq3Records.last_page" :current_page="getVq3Records.current_page" :link="getVq3Records.first_page_url" />
+                        <Pagination pageName="vq3Page" :last_page="getVq3Records.last_page" :current_page="getVq3Records.current_page" :link="getVq3Records.first_page_url" :only="['vq3Records', 'vq3OldRecords', 'vq3OfflineRecords']" />
                     </div>
                 </div>
 
@@ -916,7 +927,7 @@
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.id" :record="record" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -938,7 +949,7 @@
 
                     <!-- CPM Pagination -->
                     <div class="border-t border-white/5 bg-transparent p-3" v-if="getCpmRecords.total > getCpmRecords.per_page">
-                        <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" />
+                        <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" :only="['cpmRecords', 'cpmOldRecords', 'cpmOfflineRecords']" />
                     </div>
                 </div> <!-- Close CPM Leaderboard -->
                 </div> <!-- Close md:flex container -->

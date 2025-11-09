@@ -170,26 +170,112 @@ const changeStatusFilter = (status) => {
 
 // Use server-provided counts instead of counting current page
 const demoCountsComputed = computed(() => {
-    return props.demoCounts || {
+    const counts = props.demoCounts || {
         all: 0,
         online: 0,
         offline: 0,
         assigned: 0,
+        fallback_assigned: 0,
         processed: 0,
         failed: 0,
+        online_assigned: 0,
+        online_fallback_assigned: 0,
+        online_processed: 0,
+        online_failed: 0,
+        offline_assigned: 0,
+        offline_fallback_assigned: 0,
+        offline_processed: 0,
+        offline_failed: 0,
     };
+
+    // Return counts based on active tab
+    if (activeTab.value === 'online') {
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.online_assigned,
+            fallback_assigned: counts.online_fallback_assigned,
+            processed: counts.online_processed,
+            failed: counts.online_failed,
+        };
+    } else if (activeTab.value === 'offline') {
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.offline_assigned,
+            fallback_assigned: counts.offline_fallback_assigned,
+            processed: counts.offline_processed,
+            failed: counts.offline_failed,
+        };
+    } else {
+        // 'all' tab - show total counts
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.assigned,
+            fallback_assigned: counts.fallback_assigned,
+            processed: counts.processed,
+            failed: counts.failed,
+        };
+    }
 });
 
 // Browse counts computed
 const browseCountsComputed = computed(() => {
-    return props.browseCounts || {
+    const counts = props.browseCounts || {
         all: 0,
         online: 0,
         offline: 0,
         assigned: 0,
+        fallback_assigned: 0,
         processed: 0,
         failed: 0,
+        online_assigned: 0,
+        online_fallback_assigned: 0,
+        online_processed: 0,
+        online_failed: 0,
+        offline_assigned: 0,
+        offline_fallback_assigned: 0,
+        offline_processed: 0,
+        offline_failed: 0,
     };
+
+    // Return counts based on active browse tab
+    if (activeBrowseTab.value === 'online') {
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.online_assigned,
+            fallback_assigned: counts.online_fallback_assigned,
+            processed: counts.online_processed,
+            failed: counts.online_failed,
+        };
+    } else if (activeBrowseTab.value === 'offline') {
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.offline_assigned,
+            fallback_assigned: counts.offline_fallback_assigned,
+            processed: counts.offline_processed,
+            failed: counts.offline_failed,
+        };
+    } else {
+        // 'all' tab - show total counts
+        return {
+            all: counts.all,
+            online: counts.online,
+            offline: counts.offline,
+            assigned: counts.assigned,
+            fallback_assigned: counts.fallback_assigned,
+            processed: counts.processed,
+            failed: counts.failed,
+        };
+    }
 });
 
 // Function to change browse tab filter (ONLINE/OFFLINE/ALL)
@@ -1148,6 +1234,15 @@ watch(selectedPhysics, () => {
                                     Assigned <span class="ml-1 opacity-75">({{ demoCountsComputed.assigned }})</span>
                                 </button>
                                 <button
+                                    @click="changeStatusFilter('fallback-assigned')"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    :class="activeStatusFilter === 'fallback-assigned'
+                                        ? 'bg-orange-600 text-white'
+                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                                >
+                                    Fallback <span class="ml-1 opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
+                                </button>
+                                <button
                                     @click="changeStatusFilter('processed')"
                                     class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                                     :class="activeStatusFilter === 'processed'
@@ -1383,10 +1478,11 @@ watch(selectedPhysics, () => {
                                                         'bg-blue-900/50 text-blue-200': demo.status === 'processing',
                                                         'bg-green-900/50 text-green-200': demo.status === 'processed',
                                                         'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
+                                                        'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned',
                                                         'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
-                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'failed'].includes(demo.status)
+                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed'].includes(demo.status)
                                                     }"
-                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) ? showTooltip(demo, $event) : null"
+                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
                                                     @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                                 >
@@ -1395,6 +1491,9 @@ watch(selectedPhysics, () => {
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                     <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <svg v-if="demo.status === 'fallback-assigned' && demo.offline_record" class="w-3 h-3 ml-1 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                 </span>
@@ -1423,7 +1522,7 @@ watch(selectedPhysics, () => {
                                                 Reprocess
                                             </button>
                                             <button
-                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && (demo.status === 'processed' || demo.status === 'failed') && !demo.record_id"
+                                                v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && (demo.status === 'processed' || demo.status === 'failed' || demo.status === 'fallback-assigned') && !demo.record_id"
                                                 @click="openAssignModal(demo)"
                                                 class="inline-flex items-center px-3 py-1.5 bg-green-600/20 text-green-300 text-xs font-medium rounded-md hover:bg-green-600/30 transition-colors duration-200"
                                             >
@@ -1529,6 +1628,15 @@ watch(selectedPhysics, () => {
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
                                 Assigned <span class="ml-1 opacity-75">({{ browseCountsComputed.assigned }})</span>
+                            </button>
+                            <button
+                                @click="changeBrowseStatusFilter('fallback-assigned')"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                :class="activeBrowseStatus === 'fallback-assigned'
+                                    ? 'bg-orange-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                Fallback <span class="ml-1 opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('processed')"
@@ -1645,9 +1753,10 @@ watch(selectedPhysics, () => {
                                         <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
                                             :class="{
                                                 'bg-purple-900/50 text-purple-200': demo.status === 'assigned',
+                                                'bg-orange-900/50 text-orange-200': demo.status === 'fallback-assigned',
                                                 'bg-yellow-900/50 text-yellow-200': demo.status === 'processed',
                                                 'bg-red-900/50 text-red-200': demo.status === 'failed',
-                                                'bg-gray-900/50 text-gray-300': !['assigned', 'processed', 'failed'].includes(demo.status)
+                                                'bg-gray-900/50 text-gray-300': !['assigned', 'fallback-assigned', 'processed', 'failed'].includes(demo.status)
                                             }">
                                             {{ demo.status ? demo.status.charAt(0).toUpperCase() + demo.status.slice(1) : '-' }}
                                         </span>
@@ -1882,6 +1991,38 @@ watch(selectedPhysics, () => {
                     <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
                     <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
                     <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fallback-Assigned Demo Tooltip (Offline Record - Rematchable) -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'fallback-assigned' && hoveredDemo.offline_record"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '400px'
+            }"
+        >
+            <div class="bg-gray-900 border border-orange-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-orange-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    Fallback Offline Record (Rematchable):
+                </div>
+                <div class="space-y-1 text-gray-300 mb-2">
+                    <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.id }}</span></div>
+                    <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
+                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.offline_record.player_name }}</span></div>
+                    <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
+                    <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
+                    <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
+                    <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                </div>
+                <div class="text-[10px] text-orange-200/70 border-t border-orange-600/30 pt-2 mt-2">
+                    ⚠️ This online demo created a fallback offline record but can still be matched to an online record later.
                 </div>
             </div>
         </div>
