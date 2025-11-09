@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from console_string_utils import get_time_span
-from demo_names import DemoNames
+from demo_names import DemoNames, normalize_name
 from ext import Ext
 from demoparser import const
 from game_info import GameInfo
@@ -135,7 +135,7 @@ class Demo:
                     player_country = f"{self.names.fName}.{self.country}"
                 old_name = self._remove_substr(old_name, player_country, from_start=False)
             old_name = old_name.replace('[dm]', '').replace('[spect]', '')
-            normalized_name = DemoNames.normalize_name(self.playerName)
+            normalized_name = normalize_name(self.playerName)
             patterns = [
                 f"({normalized_name}.{self.country})",
                 f"({normalized_name})",
@@ -158,7 +158,8 @@ class Demo:
             old_name = self._remove_substr(old_name, self.validity)
             old_name = self._remove_double(old_name)
             old_name = old_name.replace('[]', '').replace('()', '')
-            old_name = re.sub(r"(^[^[a-zA-Z0-9\\(\\)\\]\\[]|[^[a-zA-Z0-9\\(\\)\\]\\[]$)", '', old_name)
+            # Remove non-alphanumeric characters (except parentheses and brackets) from start/end
+            old_name = re.sub(r"(^[^a-zA-Z0-9()\[\]]+|[^a-zA-Z0-9()\[\]]+$)", '', old_name)
             old_name = old_name.replace(' ', '_')
             demoname = f"{self.mapName}[{self.modphysic}]({player_country}){old_name}"
             demoname = demoname.replace(').)', ')').replace('.)', ')')
