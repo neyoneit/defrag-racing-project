@@ -23,6 +23,13 @@ def get_time_span(value: str) -> timedelta:
         seconds, millis = parts
     else:
         raise ValueError('Invalid time format')
+
+    # Strip non-numeric characters from each component
+    # This handles cases like "984!!!" or "984(" that appear in some demos
+    minutes = re.sub(r'[^0-9]', '', minutes)
+    seconds = re.sub(r'[^0-9]', '', seconds)
+    millis = re.sub(r'[^0-9]', '', millis)
+
     return timedelta(minutes=int(minutes), seconds=int(seconds), milliseconds=int(millis))
 
 
