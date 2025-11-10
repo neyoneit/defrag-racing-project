@@ -187,14 +187,15 @@
                 v-html="q3tohtml(displayName)"
             ></span>
 
-            <!-- Offline Demo Badge (shown in Demos Top section) -->
-            <span v-if="isOfflineRecord" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
+            <!-- Badge for demos in Demos Top - shows verification type or validity flag -->
+            <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
                 OFFLINE
             </span>
-
-            <!-- Online Demo Badge (shown in Demos Top section) -->
-            <span v-if="isOnlineDemo" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
+            <span v-else-if="record.verification_type === 'ONLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
                 ONLINE
+            </span>
+            <span v-else-if="record.verification_type" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
+                {{ record.verification_type }}
             </span>
         </component>
 

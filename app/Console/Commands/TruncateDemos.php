@@ -96,6 +96,26 @@ class TruncateDemos extends Command
         $this->info('✅ All demos and offline records have been deleted!');
         $this->info("Deleted {$demoCount} uploaded demos and {$offlineRecordCount} offline records");
 
+        // Restart queue workers to load latest code changes
+        $this->newLine();
+        $this->info('Restarting queue workers to load latest code...');
+
+        // First signal any existing workers to stop
+        $this->call('queue:restart');
+
+        // Wait a moment for workers to shut down
+        sleep(2);
+
+        // Start fresh workers (8 workers by default)
+        $workers = 8;
+        $this->info("Starting {$workers} fresh queue workers...");
+
+        for ($i = 1; $i <= $workers; $i++) {
+            exec('docker exec -d defrag-racing-project-laravel.test-1 php artisan queue:work redis --queue=demos --tries=3 --timeout=300 --sleep=3');
+        }
+
+        $this->info("✓ Started {$workers} queue workers with latest code");
+
         return 0;
     }
 }

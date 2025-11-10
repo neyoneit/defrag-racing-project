@@ -334,11 +334,17 @@ class MapsController extends Controller
 
         // Get offline records collection
         $offlineItems = $offlineRecords->getCollection()->map(function ($record) {
-            // Determine verification status based on demo status
-            // 'verified' = online record from q3df.org (shouldn't happen here since those have record_id)
-            // 'community' = online demo that created offline_record as fallback (status='fallback-assigned')
-            // 'offline' = true offline demo (df/fs/fc, status='assigned')
-            $verificationType = ($record->demo->status === 'fallback-assigned') ? 'community' : 'offline';
+            // Determine flag type based on gametype and validity
+            // If validity_flag is set, use that as the flag
+            // Otherwise: mdf/mfs/mfc = ONLINE, df/fs/fc = OFFLINE
+            $flagType = 'OFFLINE'; // Default
+            if ($record->validity_flag) {
+                // Validity flag takes priority (e.g., "client_finish=false")
+                $flagType = $record->validity_flag;
+            } elseif ($record->gametype && str_starts_with($record->gametype, 'm')) {
+                // Online demo (mdf, mfs, mfc)
+                $flagType = 'ONLINE';
+            }
 
             return (object) [
                 'id' => $record->id,
@@ -347,13 +353,13 @@ class MapsController extends Controller
                 'player_name' => $record->player_name,
                 'date_set' => $record->date_set,
                 'demo' => $record->demo,
-                'demo_id' => $record->demo_id, // Add for isOfflineRecord check
-                'record_id' => null, // Offline records don't have record_id
-                'user' => null, // Offline demos have no user - use demo file country for flag
-                'country' => $record->demo->country, // Pass country from demo file
+                'demo_id' => $record->demo_id,
+                'record_id' => null,
+                'user' => null,
+                'country' => $record->demo->country,
                 'rank' => $record->rank,
-                'is_online' => false, // Flag for offline demos
-                'verification_type' => $verificationType, // New field for badge display
+                'is_online' => str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
+                'verification_type' => $flagType, // ONLINE/OFFLINE or validity flag
             ];
         });
 

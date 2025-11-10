@@ -102,9 +102,13 @@ class DemosController extends Controller
                 }
 
                 if ($filterStatus === 'assigned') {
-                    $query->where('status', 'assigned');
+                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
+                } elseif ($filterStatus === 'fallback-assigned') {
+                    $query->where('status', 'fallback-assigned');
                 } elseif ($filterStatus === 'processed') {
                     $query->where('status', 'processed');
+                } elseif ($filterStatus === 'failed-validity') {
+                    $query->where('status', 'failed-validity');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
                 }
@@ -158,7 +162,7 @@ class DemosController extends Controller
 
                 // Apply sorting
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -175,16 +179,19 @@ class DemosController extends Controller
                     'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
                     'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
                     'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
+                    'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
                     'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
                     // Status counts for ONLINE tab
                     'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
                     'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
                     'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+                    'online_failed_validity' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
                     'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
                     // Status counts for OFFLINE tab
                     'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
                     'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
                     'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+                    'offline_failed_validity' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
                     'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
                 ];
             } else {
@@ -201,8 +208,12 @@ class DemosController extends Controller
 
                 if ($filterStatus === 'assigned') {
                     $query->whereIn('status', ['assigned', 'fallback-assigned']);
+                } elseif ($filterStatus === 'fallback-assigned') {
+                    $query->where('status', 'fallback-assigned');
                 } elseif ($filterStatus === 'processed') {
                     $query->where('status', 'processed');
+                } elseif ($filterStatus === 'failed-validity') {
+                    $query->where('status', 'failed-validity');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
                 }
@@ -217,7 +228,7 @@ class DemosController extends Controller
 
                 // Apply sorting
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed')");
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -234,16 +245,19 @@ class DemosController extends Controller
                     'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
                     'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
                     'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
+                    'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
                     'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
                     // Status counts for ONLINE tab
                     'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
                     'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
                     'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+                    'online_failed_validity' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
                     'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
                     // Status counts for OFFLINE tab
                     'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
                     'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
                     'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+                    'offline_failed_validity' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
                     'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
                 ];
             }
@@ -260,13 +274,17 @@ class DemosController extends Controller
         // Apply status filter first
         if ($browseStatus === 'assigned') {
             $query->whereIn('status', ['assigned', 'fallback-assigned']);
+        } elseif ($browseStatus === 'fallback-assigned') {
+            $query->where('status', 'fallback-assigned');
         } elseif ($browseStatus === 'processed') {
             $query->where('status', 'processed');
+        } elseif ($browseStatus === 'failed-validity') {
+            $query->where('status', 'failed-validity');
         } elseif ($browseStatus === 'failed') {
             $query->where('status', 'failed');
         } else {
-            // Show all statuses: assigned, fallback-assigned, processed, failed
-            $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed']);
+            // Show all statuses: assigned, fallback-assigned, processed, failed-validity, failed
+            $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
         }
 
         // Apply browse tab filters (online/offline)
@@ -288,7 +306,7 @@ class DemosController extends Controller
             ->paginate(20, ['*'], 'browsePage');
 
         // Calculate counts for browse section filters
-        $browseBaseQuery = UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed']);
+        $browseBaseQuery = UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
         $browseCounts = [
             'all' => (clone $browseBaseQuery)->count(),
             'online' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->count(),
@@ -297,16 +315,19 @@ class DemosController extends Controller
             'assigned' => (clone $browseBaseQuery)->where('status', 'assigned')->count(),
             'fallback_assigned' => (clone $browseBaseQuery)->where('status', 'fallback-assigned')->count(),
             'processed' => (clone $browseBaseQuery)->where('status', 'processed')->count(),
+            'failed_validity' => (clone $browseBaseQuery)->where('status', 'failed-validity')->count(),
             'failed' => (clone $browseBaseQuery)->where('status', 'failed')->count(),
             // Status counts for ONLINE tab
             'online_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
             'online_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
             'online_processed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
+            'online_failed_validity' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
             'online_failed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
             // Status counts for OFFLINE tab
             'offline_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
             'offline_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
             'offline_processed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
+            'offline_failed_validity' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
             'offline_failed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
         ];
 

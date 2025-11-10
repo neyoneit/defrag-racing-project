@@ -123,7 +123,9 @@ class Demo:
         if self.time.total_seconds() > 0:
             minutes = int(self.time.total_seconds() // 60)
             seconds = int(self.time.total_seconds() % 60)
-            milliseconds = int(self.time.microseconds / 1000)
+            # Extract milliseconds from the fractional part of seconds
+            # Round to avoid floating point precision issues
+            milliseconds = round((self.time.total_seconds() % 1) * 1000)
             demoname = f"{self.mapName}[{self.modphysic}]{minutes:02}.{seconds:02}.{milliseconds:03}({player_country})"
             self.hasCorrectName = True
         else:
@@ -224,17 +226,12 @@ class Demo:
         filename = demo.normalizedFileName
         country_and_name = Demo._get_name_and_country(filename)
         country_name_parsed = Demo._try_get_name_and_country(country_and_name, names)
-        import sys
-        print(f"DEBUG: filename={filename}", file=sys.stderr)
-        print(f"DEBUG: country_and_name={country_and_name}", file=sys.stderr)
-        print(f"DEBUG: country_name_parsed={country_name_parsed}", file=sys.stderr)
         normal_name = names.chooseNormalName()
         if not normal_name or normal_name == DemoNames.defaultName:
             names.setBracketsName(country_name_parsed[0])
         demo.playerName = names.chooseNormalName()
         demo.names = names
         demo.country = normalize_country_code(country_name_parsed[1])
-        print(f"DEBUG: demo.country={demo.country}", file=sys.stderr)
         lower_filename = filename.lower()
         if 'tool_assisted=true' in lower_filename or Ext.ContainsAnySplitted(country_and_name, *Demo.tasTriggers) or Ext.ContainsAnySplitted(demo.playerName, *Demo.tasTriggers):
             demo.isTas = True
@@ -341,7 +338,7 @@ class Demo:
 
     @staticmethod
     def _try_get_time_from_file_name(filename: str) -> Optional[timedelta]:
-        parts = re.split(r"[\\[\\]()_]", filename)
+        parts = re.split(r"[\[\]()_]", filename)
         for part in parts:
             res = Demo._try_get_time_from_brackets(part)
             if res:

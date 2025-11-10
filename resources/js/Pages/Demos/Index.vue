@@ -177,14 +177,17 @@ const demoCountsComputed = computed(() => {
         assigned: 0,
         fallback_assigned: 0,
         processed: 0,
+        failed_validity: 0,
         failed: 0,
         online_assigned: 0,
         online_fallback_assigned: 0,
         online_processed: 0,
+        online_failed_validity: 0,
         online_failed: 0,
         offline_assigned: 0,
         offline_fallback_assigned: 0,
         offline_processed: 0,
+        offline_failed_validity: 0,
         offline_failed: 0,
     };
 
@@ -197,6 +200,7 @@ const demoCountsComputed = computed(() => {
             assigned: counts.online_assigned,
             fallback_assigned: counts.online_fallback_assigned,
             processed: counts.online_processed,
+            failed_validity: counts.online_failed_validity,
             failed: counts.online_failed,
         };
     } else if (activeTab.value === 'offline') {
@@ -207,6 +211,7 @@ const demoCountsComputed = computed(() => {
             assigned: counts.offline_assigned,
             fallback_assigned: counts.offline_fallback_assigned,
             processed: counts.offline_processed,
+            failed_validity: counts.offline_failed_validity,
             failed: counts.offline_failed,
         };
     } else {
@@ -218,6 +223,7 @@ const demoCountsComputed = computed(() => {
             assigned: counts.assigned,
             fallback_assigned: counts.fallback_assigned,
             processed: counts.processed,
+            failed_validity: counts.failed_validity,
             failed: counts.failed,
         };
     }
@@ -232,14 +238,17 @@ const browseCountsComputed = computed(() => {
         assigned: 0,
         fallback_assigned: 0,
         processed: 0,
+        failed_validity: 0,
         failed: 0,
         online_assigned: 0,
         online_fallback_assigned: 0,
         online_processed: 0,
+        online_failed_validity: 0,
         online_failed: 0,
         offline_assigned: 0,
         offline_fallback_assigned: 0,
         offline_processed: 0,
+        offline_failed_validity: 0,
         offline_failed: 0,
     };
 
@@ -252,6 +261,7 @@ const browseCountsComputed = computed(() => {
             assigned: counts.online_assigned,
             fallback_assigned: counts.online_fallback_assigned,
             processed: counts.online_processed,
+            failed_validity: counts.online_failed_validity,
             failed: counts.online_failed,
         };
     } else if (activeBrowseTab.value === 'offline') {
@@ -262,6 +272,7 @@ const browseCountsComputed = computed(() => {
             assigned: counts.offline_assigned,
             fallback_assigned: counts.offline_fallback_assigned,
             processed: counts.offline_processed,
+            failed_validity: counts.offline_failed_validity,
             failed: counts.offline_failed,
         };
     } else {
@@ -273,6 +284,7 @@ const browseCountsComputed = computed(() => {
             assigned: counts.assigned,
             fallback_assigned: counts.fallback_assigned,
             processed: counts.processed,
+            failed_validity: counts.failed_validity,
             failed: counts.failed,
         };
     }
@@ -604,6 +616,7 @@ const getStatusColor = (status) => {
         case 'processing': return 'text-blue-500';
         case 'processed': return 'text-green-500';
         case 'assigned': return 'text-purple-500';
+        case 'failed-validity': return 'text-orange-500';
         case 'failed': return 'text-red-500';
         default: return 'text-gray-500';
     }
@@ -642,6 +655,7 @@ const groupedDemos = computed(() => {
     const groups = {
         assigned: [],
         processed: [],
+        'failed-validity': [],
         failed: [],
         processing: [],
         pending: [],
@@ -1252,6 +1266,15 @@ watch(selectedPhysics, () => {
                                     Processed <span class="ml-1 opacity-75">({{ demoCountsComputed.processed }})</span>
                                 </button>
                                 <button
+                                    @click="changeStatusFilter('failed-validity')"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    :class="activeStatusFilter === 'failed-validity'
+                                        ? 'bg-orange-600 text-white'
+                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                                >
+                                    Invalid <span class="ml-1 opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
+                                </button>
+                                <button
                                     @click="changeStatusFilter('failed')"
                                     class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
                                     :class="activeStatusFilter === 'failed'
@@ -1478,11 +1501,11 @@ watch(selectedPhysics, () => {
                                                         'bg-blue-900/50 text-blue-200': demo.status === 'processing',
                                                         'bg-green-900/50 text-green-200': demo.status === 'processed',
                                                         'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
-                                                        'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned',
+                                                        'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
                                                         'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
-                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed'].includes(demo.status)
+                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed'].includes(demo.status)
                                                     }"
-                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
                                                     @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                                 >
@@ -1646,6 +1669,15 @@ watch(selectedPhysics, () => {
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
                                 Processed <span class="ml-1 opacity-75">({{ browseCountsComputed.processed }})</span>
+                            </button>
+                            <button
+                                @click="changeBrowseStatusFilter('failed-validity')"
+                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                :class="activeBrowseStatus === 'failed-validity'
+                                    ? 'bg-orange-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                Invalid <span class="ml-1 opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('failed')"
@@ -1936,6 +1968,31 @@ watch(selectedPhysics, () => {
                     Error Details:
                 </div>
                 <div class="font-mono text-[11px] text-red-200 whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{{ hoveredDemo.processing_output }}</div>
+            </div>
+        </div>
+
+        <!-- Failed-Validity Demo Tooltip -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'failed-validity' && hoveredDemo.validity"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '400px'
+            }"
+        >
+            <div class="bg-gray-900 border border-orange-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-orange-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    Invalid Settings:
+                </div>
+                <div class="space-y-1 text-orange-200">
+                    <div v-for="(value, key) in (typeof hoveredDemo.validity === 'string' ? JSON.parse(hoveredDemo.validity) : hoveredDemo.validity)" :key="key">
+                        <span class="font-semibold">{{ key }}:</span> <span class="font-mono">{{ value }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 

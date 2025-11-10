@@ -68,6 +68,21 @@ class DemoProcessorService
             $format = config('app.demo_compression_format', '7z');
             $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.' . $format;
 
+            // Determine status based on validity
+            // If demo has ANY validity issues, mark as failed-validity
+            Log::info('Checking validity for demo', [
+                'demo_id' => $demo->id,
+                'validity' => $metadata['validity'] ?? 'NULL',
+                'validity_type' => gettype($metadata['validity'] ?? null),
+            ]);
+            $hasValidityIssues = !empty($metadata['validity']);
+            $status = $hasValidityIssues ? 'failed-validity' : 'processed';
+            Log::info('Status determined', [
+                'demo_id' => $demo->id,
+                'hasValidityIssues' => $hasValidityIssues,
+                'status' => $status,
+            ]);
+
             // Update demo record with metadata
             $demo->update([
                 'processed_filename' => $compressedFilename,
@@ -81,7 +96,7 @@ class DemoProcessorService
                 'record_date' => $metadata['record_date'] ?? null,
                 'validity' => $metadata['validity'] ?? null,
                 'processing_output' => $output,
-                'status' => 'processed',
+                'status' => $status,
             ]);
 
             // Clean up temp files from storage/app/demos/temp/{demo_id}/
@@ -99,12 +114,30 @@ class DemoProcessorService
             // Ensure we have the latest attributes from DB after the update call
             $demo = $demo->fresh();
 
-            if ($demo->is_offline) {
-                // Create offline record for offline demos
-                $this->createOfflineRecord($demo, $compressedLocalPath);
+            Log::info('DEBUG: After fresh(), checking status', [
+                'demo_id' => $demo->id,
+                'status' => $demo->status,
+                'is_offline' => $demo->is_offline,
+                'will_skip_to_validity_branch' => $demo->status === 'failed-validity',
+            ]);
+
+            if ($demo->status !== 'failed-validity') {
+                if ($demo->is_offline) {
+                    // Create offline record for offline demos
+                    $this->createOfflineRecord($demo, $compressedLocalPath);
+                } else {
+                    // Auto-assign online demos to existing records
+                    $this->autoAssignToRecord($demo, $compressedLocalPath);
+                }
             } else {
-                // Auto-assign online demos to existing records
-                $this->autoAssignToRecord($demo, $compressedLocalPath);
+                // For failed-validity demos, create offline record with validity flags
+                // These will appear in the leaderboard but with validity issues marked
+                $this->createOfflineRecord($demo, $compressedLocalPath, useValidityAsFlag: true);
+
+                Log::info('Created offline record for demo with validity issues', [
+                    'demo_id' => $demo->id,
+                    'validity' => $demo->validity,
+                ]);
             }
 
             return $demo;
@@ -183,7 +216,20 @@ class DemoProcessorService
                 $metadata['player'] = $jsonData['player_name'];
             }
             if (isset($jsonData['physics'])) {
-                $metadata['physics'] = strtoupper($jsonData['physics']);
+                // Physics format from Python: "mdf.cpm" or "mdf.vq3.tr"
+                // Extract just the gameplay physics (CPM or VQ3) for the physics field
+                $physicsParts = explode('.', strtoupper($jsonData['physics']));
+                // The gameplay physics is the second part (index 1): MDF.CPM -> CPM, MDF.VQ3 -> VQ3
+                $metadata['physics'] = $physicsParts[1] ?? strtoupper($jsonData['physics']);
+                // If there's a third part (.TR), append it: CPM.TR or VQ3.TR
+                if (isset($physicsParts[2])) {
+                    $metadata['physics'] .= '.' . $physicsParts[2];
+                }
+                Log::info('DEBUG: Physics parsed from JSON', [
+                    'input' => $jsonData['physics'],
+                    'parts' => $physicsParts,
+                    'result' => $metadata['physics'],
+                ]);
             }
             if (isset($jsonData['time_seconds'])) {
                 $metadata['time_ms'] = (int)($jsonData['time_seconds'] * 1000);
@@ -205,6 +251,14 @@ class DemoProcessorService
                 }
                 if (!isset($metadata['physics'])) {
                     $metadata['physics'] = strtoupper($matches[3]); // VQ3 or CPM
+                    Log::info('DEBUG: Physics set from filename fallback', [
+                        'physics' => $metadata['physics'],
+                    ]);
+                } else {
+                    Log::info('DEBUG: Physics already set from JSON, not using fallback', [
+                        'existing_physics' => $metadata['physics'],
+                        'filename_would_be' => strtoupper($matches[3]),
+                    ]);
                 }
 
                 // Calculate time in milliseconds (fallback if not from JSON)
@@ -329,14 +383,14 @@ class DemoProcessorService
         $tempCompressedPath = storage_path('app/temp_' . uniqid() . '.' . $format);
 
         if ($format === '7z') {
-            // Use 7z command with fastest compression for maximum speed
-            // -mx=1 = fastest compression (prioritize speed over ratio)
+            // Use 7z command with normal compression for good balance
+            // -mx=5 = normal compression (good balance between speed and ratio)
             // -mmt=4 = use 4 threads for compression (parallelization)
             $escapedTemp = escapeshellarg($tempFile);
             $escapedOutput = escapeshellarg($tempCompressedPath);
             $escapedFilename = escapeshellarg($processedFilename);
 
-            exec("7z a -t7z -mx=1 -mmt=4 $escapedOutput $escapedTemp 2>&1", $output, $returnCode);
+            exec("7z a -t7z -mx=5 -mmt=4 $escapedOutput $escapedTemp 2>&1", $output, $returnCode);
 
             if ($returnCode !== 0) {
                 throw new \Exception('Failed to create 7z archive: ' . implode("\n", $output));
@@ -592,7 +646,7 @@ class DemoProcessorService
      * Create offline record from demo
      * Offline demos (df, fs, fc) get their own leaderboards separate from online records
      */
-    protected function createOfflineRecord(UploadedDemo $demo, $compressedLocalPath)
+    protected function createOfflineRecord(UploadedDemo $demo, $compressedLocalPath, bool $useValidityAsFlag = false)
     {
         if (!$demo->map_name || !$demo->physics || !$demo->gametype || !$demo->time_ms) {
             Log::warning('Cannot create offline record - missing required fields', [
@@ -605,45 +659,78 @@ class DemoProcessorService
             return;
         }
 
-        // Check if offline record already exists for this demo
-        $existingRecord = OfflineRecord::where('demo_id', $demo->id)->first();
-        if ($existingRecord) {
-            Log::info('Offline record already exists for demo', [
-                'demo_id' => $demo->id,
-                'record_id' => $existingRecord->id,
-            ]);
-            return;
+        // Determine validity flag if this is a failed-validity demo
+        $validityFlag = null;
+        if ($useValidityAsFlag && $demo->validity) {
+            // Parse validity JSON to get the first flag
+            $validity = is_string($demo->validity) ? json_decode($demo->validity, true) : $demo->validity;
+            if (!empty($validity)) {
+                // Get the first validity issue as the flag (e.g., "client_finish=false")
+                $firstKey = array_key_first($validity);
+                $validityFlag = "{$firstKey}={$validity[$firstKey]}";
+            }
         }
 
         // Calculate rank by counting how many faster times exist for this map/physics/gametype
-        $fasterTimes = OfflineRecord::where('map_name', $demo->map_name)
+        // For validity demos, also filter by validity_flag to create separate leaderboards
+        $query = OfflineRecord::where('map_name', $demo->map_name)
             ->where('physics', $demo->physics)
             ->where('gametype', $demo->gametype)
-            ->where('time_ms', '<', $demo->time_ms)
-            ->count();
+            ->where('time_ms', '<', $demo->time_ms);
 
+        if ($validityFlag) {
+            $query->where('validity_flag', $validityFlag);
+        } else {
+            $query->whereNull('validity_flag');
+        }
+
+        $fasterTimes = $query->count();
         $rank = $fasterTimes + 1;
 
         // Upload to Backblaze for offline records too
         $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
 
-        // Create the offline record
+        // Create the offline record using firstOrCreate to handle race conditions
+        // Multiple workers might try to create the same offline record simultaneously
         // Use record_date from demo metadata if available, otherwise fall back to upload date
-        $offlineRecord = OfflineRecord::create([
-            'map_name' => $demo->map_name,
-            'physics' => $demo->physics,
-            'gametype' => $demo->gametype,
-            'time_ms' => $demo->time_ms,
-            'player_name' => $demo->player_name,
-            'demo_id' => $demo->id,
-            'rank' => $rank,
-            'date_set' => $demo->record_date ?? $demo->created_at,
-        ]);
+        try {
+            $offlineRecord = OfflineRecord::firstOrCreate(
+                ['demo_id' => $demo->id],
+                [
+                    'map_name' => $demo->map_name,
+                    'physics' => $demo->physics,
+                    'gametype' => $demo->gametype,
+                    'validity_flag' => $validityFlag,
+                    'time_ms' => $demo->time_ms,
+                    'player_name' => $demo->player_name,
+                    'rank' => $rank,
+                    'date_set' => $demo->record_date ?? $demo->created_at,
+                ]
+            );
+
+            Log::info('Offline record created or found for demo', [
+                'demo_id' => $demo->id,
+                'record_id' => $offlineRecord->id,
+                'was_existing' => $offlineRecord->wasRecentlyCreated ? 'no' : 'yes',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create offline record', [
+                'demo_id' => $demo->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
         // Determine status based on whether this is an online demo (rematchable) or offline demo (final)
         // Online demos (mdf/mfs/mfc) that create offline_record should use 'fallback-assigned' (can be rematched later)
         // Offline demos (df/fs/fc) should use 'assigned' (final, won't be rematched)
-        $status = ($demo->gametype && str_starts_with($demo->gametype, 'm')) ? 'fallback-assigned' : 'assigned';
+        // IMPORTANT: Don't change status if it's already 'failed-validity' - keep that status!
+        if ($demo->status !== 'failed-validity') {
+            $status = ($demo->gametype && str_starts_with($demo->gametype, 'm')) ? 'fallback-assigned' : 'assigned';
+        } else {
+            // Keep failed-validity status for demos with validity issues
+            $status = 'failed-validity';
+        }
 
         // Update demo with uploaded path and appropriate status
         $demo->update([
@@ -658,12 +745,32 @@ class DemoProcessorService
 
         // Update ranks for all records slower than this one
         // (increment their rank by 1 since a new faster/equal record was inserted)
-        OfflineRecord::where('map_name', $demo->map_name)
+        Log::info('DEBUG: About to update ranks', [
+            'demo_id' => $demo->id,
+            'map_name' => $demo->map_name,
+            'physics' => $demo->physics,
+            'demo->gametype (ORIGINAL)' => $demo->gametype,
+            'validityFlag' => $validityFlag,
+            'useValidityAsFlag' => $useValidityAsFlag,
+            'offlineRecord->gametype' => $offlineRecord->gametype,
+            'offlineRecord->validity_flag' => $offlineRecord->validity_flag,
+        ]);
+
+        $rankQuery = OfflineRecord::where('map_name', $demo->map_name)
             ->where('physics', $demo->physics)
             ->where('gametype', $demo->gametype)
             ->where('time_ms', '>=', $demo->time_ms)
-            ->where('id', '!=', $offlineRecord->id)
-            ->increment('rank');
+            ->where('id', '!=', $offlineRecord->id);
+
+        if ($validityFlag) {
+            $rankQuery->where('validity_flag', $validityFlag);
+        } else {
+            $rankQuery->whereNull('validity_flag');
+        }
+
+        $rankQuery->increment('rank');
+
+        Log::info('DEBUG: Ranks updated');
 
         Log::info('Offline record created and uploaded', [
             'demo_id' => $demo->id,

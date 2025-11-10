@@ -13,6 +13,7 @@ class OfflineRecord extends Model
         'map_name',
         'physics',
         'gametype',
+        'validity_flag',
         'time_ms',
         'player_name',
         'demo_id',
