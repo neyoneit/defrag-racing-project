@@ -34,6 +34,7 @@ class PlayerModel extends Model
         'available_skins',
         'approval_status',
         'hidden',
+        'is_nsfw',
         'main_file',
     ];
 
@@ -41,6 +42,7 @@ class PlayerModel extends Model
         'has_sounds' => 'boolean',
         'has_ctf_skins' => 'boolean',
         'hidden' => 'boolean',
+        'is_nsfw' => 'boolean',
         'downloads' => 'integer',
         'poly_count' => 'integer',
         'vert_count' => 'integer',

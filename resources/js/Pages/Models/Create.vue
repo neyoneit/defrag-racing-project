@@ -7,6 +7,7 @@ const form = useForm({
     description: '',
     category: 'player',
     model_file: null,
+    is_nsfw: false,
 });
 
 const fileInput = ref(null);
@@ -103,6 +104,18 @@ const submitForm = () => {
                                 <option value="weapon">🔫 Weapon Model</option>
                             </select>
                             <p v-if="form.errors.category" class="mt-2 text-sm text-red-400">{{ form.errors.category }}</p>
+                        </div>
+
+                        <!-- NSFW -->
+                        <div>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    v-model="form.is_nsfw"
+                                    class="w-5 h-5 rounded border-white/20 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0 cursor-pointer">
+                                <span class="text-sm font-bold text-white group-hover:text-red-400 transition-colors">Mark as NSFW (18+)</span>
+                            </label>
+                            <p class="mt-1 text-xs text-gray-500 ml-8">Content will be blurred and require age confirmation to view</p>
                         </div>
 
                         <!-- Description -->

@@ -55,6 +55,10 @@ const props = defineProps({
     baseModelName: {
         type: String,
         default: null
+    },
+    baseModelFilePath: {
+        type: String,
+        default: null
     }
 });
 
@@ -286,7 +290,7 @@ async function loadModel() {
             // Pass skinPackBasePath for skin/mixed packs that override base model skins
             // Pass baseModelName so loader knows what base model to load first
             // Pass modelId so loader can fetch ALL shader files from the pk3
-            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath, props.baseModelName, props.modelId);
+            model = await loader.loadPlayerModel(baseDir, modelName, props.skinName, props.skinPackBasePath, props.baseModelName, props.modelId, props.baseModelFilePath);
         } else if (props.isWeapon) {
             // Load composite weapon model (main + hand + barrel + flash)
             // For weapons, load shaders from models.shader before loading the model

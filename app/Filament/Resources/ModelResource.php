@@ -57,13 +57,21 @@ class ModelResource extends Resource
                     ->required(),
                 Forms\Components\Toggle::make('has_ctf_skins')
                     ->required(),
-                Forms\Components\Toggle::make('approved')
+                Forms\Components\Select::make('approval_status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ])
                     ->required()
-                    ->label('Approved')
-                    ->helperText('Approve this model to make it visible on the site'),
+                    ->default('pending'),
                 Forms\Components\Toggle::make('hidden')
                     ->label('Hidden')
                     ->helperText('Hide this model from public listings')
+                    ->default(false),
+                Forms\Components\Toggle::make('is_nsfw')
+                    ->label('NSFW')
+                    ->helperText('Mark as NSFW (18+) content')
                     ->default(false),
             ]);
     }
@@ -101,10 +109,21 @@ class ModelResource extends Resource
                         'item' => 'primary',
                         default => 'gray',
                     }),
-                Tables\Columns\IconColumn::make('approved')
-                    ->boolean()
+                Tables\Columns\TextColumn::make('approval_status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'approved' => 'success',
+                        'pending' => 'warning',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
                     ->sortable(),
                 Tables\Columns\IconColumn::make('hidden')
+                    ->boolean()
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('is_nsfw')
+                    ->label('NSFW')
                     ->boolean()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('downloads')
@@ -123,11 +142,12 @@ class ModelResource extends Resource
                         'shadow' => 'Shadow',
                         'item' => 'Item',
                     ]),
-                Tables\Filters\TernaryFilter::make('approved')
-                    ->label('Approval Status')
-                    ->placeholder('All models')
-                    ->trueLabel('Approved only')
-                    ->falseLabel('Pending approval only'),
+                Tables\Filters\SelectFilter::make('approval_status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
                 Tables\Filters\TernaryFilter::make('hidden')
                     ->label('Visibility')
                     ->placeholder('All models')
@@ -140,14 +160,14 @@ class ModelResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['approved' => true]))
-                    ->visible(fn (PlayerModel $record) => !$record->approved),
-                Tables\Actions\Action::make('unapprove')
+                    ->action(fn (PlayerModel $record) => $record->update(['approval_status' => 'approved']))
+                    ->visible(fn (PlayerModel $record) => $record->approval_status !== 'approved'),
+                Tables\Actions\Action::make('reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['approved' => false]))
-                    ->visible(fn (PlayerModel $record) => $record->approved),
+                    ->action(fn (PlayerModel $record) => $record->update(['approval_status' => 'rejected']))
+                    ->visible(fn (PlayerModel $record) => $record->approval_status !== 'rejected'),
                 Tables\Actions\Action::make('hide')
                     ->icon('heroicon-o-eye-slash')
                     ->color('warning')
@@ -223,7 +243,7 @@ class ModelResource extends Resource
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
-                        ->action(fn ($records) => $records->each->update(['approved' => true])),
+                        ->action(fn ($records) => $records->each->update(['approval_status' => 'approved'])),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

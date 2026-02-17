@@ -29,8 +29,8 @@ class ScrapeQ3dfModels extends Command
             // Load previously downloaded files list
             $downloadedHistoryPath = 'bulk-upload/downloaded_history.json';
             $downloadedHistory = [];
-            if (Storage::exists($downloadedHistoryPath)) {
-                $downloadedHistory = json_decode(Storage::get($downloadedHistoryPath), true) ?? [];
+            if (Storage::disk('local')->exists($downloadedHistoryPath)) {
+                $downloadedHistory = json_decode(Storage::disk('local')->get($downloadedHistoryPath), true) ?? [];
                 $this->info('Loaded history: ' . count($downloadedHistory) . ' previously downloaded files');
             }
 
@@ -46,7 +46,7 @@ class ScrapeQ3dfModels extends Command
                 }
 
                 $url = $page === 0 ? 'https://ws.q3df.org/models/?show=50' : "https://ws.q3df.org/models/?model=&page={$page}&show=50";
-                $this->info("Fetching page " . ($page + 1) . " (page index {$page})...");
+                $this->info("Fetching page " . ($page + 1) . " (page index {$page}): {$url}");
 
                 $response = Http::get($url);
 
@@ -59,13 +59,17 @@ class ScrapeQ3dfModels extends Command
 
                 // Parse the HTML to extract model information
                 $pageModels = $this->parseModelsPage($html);
+                foreach ($pageModels as &$pm) {
+                    $pm['page'] = $page + 1;
+                }
+                unset($pm);
                 $this->info("Found " . count($pageModels) . " models on page " . ($page + 1));
 
                 $allModels = array_merge($allModels, $pageModels);
 
-                // Small delay between page requests to be nice to the server
+                // Delay between page requests to avoid rate limiting
                 if ($i < $pages - 1) {
-                    sleep(1);
+                    sleep(3);
                 }
             }
 
@@ -112,7 +116,7 @@ class ScrapeQ3dfModels extends Command
                 $processed++;
 
                 $importCount = $imported + 1;
-                $this->info("[{$importCount}/{$limit}] Processing: {$modelData['pk3_file']}");
+                $this->info("[{$importCount}/{$limit}] Processing: {$modelData['pk3_file']} -> {$modelData['pk3_url']}");
 
                 // Download and import the PK3 file
                 try {
@@ -132,7 +136,7 @@ class ScrapeQ3dfModels extends Command
                         $this->info("  ✓ Imported: {$result['model_name']} (ID: {$result['model_id']})");
                     } else {
                         $failed++;
-                        $failedModels[] = ['pk3' => $modelData['pk3_file'], 'error' => $result['error']];
+                        $failedModels[] = ['pk3' => $modelData['pk3_file'], 'url' => $modelData['pk3_url'], 'page' => $modelData['page'] ?? '?', 'error' => $result['error']];
                         $this->error("  ✗ Failed: {$result['error']}");
                     }
                 } catch (\Exception $e) {
@@ -143,13 +147,13 @@ class ScrapeQ3dfModels extends Command
                         'error' => $errorMsg,
                         'trace' => $e->getTraceAsString()
                     ]);
-                    $failedModels[] = ['pk3' => $modelData['pk3_file'], 'error' => $errorMsg];
+                    $failedModels[] = ['pk3' => $modelData['pk3_file'], 'url' => $modelData['pk3_url'], 'page' => $modelData['page'] ?? '?', 'error' => $errorMsg];
                     $this->error("  ✗ Error: " . $errorMsg);
                 }
             }
 
             // Save downloaded history
-            Storage::put($downloadedHistoryPath, json_encode($downloadedHistory, JSON_PRETTY_PRINT));
+            Storage::disk('local')->put($downloadedHistoryPath, json_encode($downloadedHistory, JSON_PRETTY_PRINT));
 
             // Append failed models to persistent log file
             if (!empty($failedModels)) {
@@ -158,15 +162,15 @@ class ScrapeQ3dfModels extends Command
                 $logEntries = [];
 
                 foreach ($failedModels as $failedModel) {
-                    $logEntries[] = "[{$timestamp}] {$failedModel['pk3']}: {$failedModel['error']}";
+                    $logEntries[] = "[{$timestamp}] [page {$failedModel['page']}] {$failedModel['pk3']} ({$failedModel['url']}): {$failedModel['error']}";
                 }
 
                 // Append to existing log file
-                if (Storage::exists($failedLogPath)) {
-                    $existingLog = Storage::get($failedLogPath);
-                    Storage::put($failedLogPath, $existingLog . "\n" . implode("\n", $logEntries));
+                if (Storage::disk('local')->exists($failedLogPath)) {
+                    $existingLog = Storage::disk('local')->get($failedLogPath);
+                    Storage::disk('local')->put($failedLogPath, $existingLog . "\n" . implode("\n", $logEntries));
                 } else {
-                    Storage::put($failedLogPath, implode("\n", $logEntries));
+                    Storage::disk('local')->put($failedLogPath, implode("\n", $logEntries));
                 }
             }
 
@@ -215,16 +219,23 @@ class ScrapeQ3dfModels extends Command
             // Extract download URL and filename
             // Format: <a href="/models/downloads/scorn-myriane_da202-redbluefix.zip">scorn-myriane_da202-redbluefix.zip</a>
             if (!preg_match('/<a href="(\/models\/downloads\/[^"]+\.(pk3|zip))">([^<]+)<\/a>/', $containerHtml, $downloadMatch)) {
+                $this->line("Skipped (no download link): {$modelName}");
                 continue;
             }
 
             $pk3Url = 'https://ws.q3df.org' . $downloadMatch[1];
             $pk3File = trim($downloadMatch[3]);
 
-            // Fetch the model detail page to get author
+            // Fetch the model detail page to get author (with rate limit protection)
             $author = 'Unknown';
             try {
-                $detailResponse = Http::timeout(10)->get($modelDetailUrl);
+                sleep(1); // Rate limit: wait before fetching detail page
+                $detailResponse = Http::timeout(10)->withOptions(['verify' => false])->get($modelDetailUrl);
+                if ($detailResponse->status() === 429) {
+                    $this->warn("  Rate limited on detail page, waiting 10s...");
+                    sleep(10);
+                    $detailResponse = Http::timeout(10)->withOptions(['verify' => false])->get($modelDetailUrl);
+                }
                 if ($detailResponse->successful()) {
                     $detailHtml = $detailResponse->body();
                     // Extract author: <td>Author</td><td><a href="...">SCORN</a></td>
@@ -250,15 +261,29 @@ class ScrapeQ3dfModels extends Command
     private function downloadAndImportPk3($modelData, $userId)
     {
         try {
-            // Download the PK3 file (3 minute timeout for large files, 3 retries)
-            $response = Http::timeout(180)
-                ->retry(3, 1000) // Retry 3 times with 1 second delay
-                ->withOptions(['verify' => false]) // Skip SSL verification for ws.q3df.org
-                ->get($modelData['pk3_url']);
+            // Rate limit: wait before downloading
+            sleep(2);
+
+            // Download the PK3 file (3 minute timeout for large files, retry with backoff on 429)
+            $maxRetries = 2;
+            $response = null;
+            for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+                $response = Http::timeout(180)
+                    ->withOptions(['verify' => false])
+                    ->get($modelData['pk3_url']);
+
+                if ($response->status() === 429) {
+                    $waitTime = 10;
+                    $this->warn("  Rate limited (429), waiting {$waitTime}s... (attempt {$attempt}/{$maxRetries})");
+                    sleep($waitTime);
+                    continue;
+                }
+                break; // Got a non-429 response
+            }
 
             if (!$response->successful()) {
                 $statusCode = $response->status();
-                $errorBody = substr($response->body(), 0, 200); // First 200 chars of error
+                $errorBody = substr($response->body(), 0, 200);
                 \Log::error("Download failed for {$modelData['pk3_file']}", [
                     'url' => $modelData['pk3_url'],
                     'status' => $statusCode,
@@ -268,8 +293,18 @@ class ScrapeQ3dfModels extends Command
             }
 
             // Verify we got actual content
-            if ($response->body() === null || strlen($response->body()) === 0) {
+            $bodyLen = strlen($response->body());
+            $firstBytes = substr($response->body(), 0, 4);
+            $isZip = ($firstBytes === "PK\x03\x04");
+            $this->line("  Downloaded: {$bodyLen} bytes, HTTP {$response->status()}, ZIP magic: " . ($isZip ? 'YES' : 'NO (' . bin2hex($firstBytes) . ')'));
+
+            if ($response->body() === null || $bodyLen === 0) {
                 return ['success' => false, 'error' => 'Downloaded file is empty'];
+            }
+
+            if (!$isZip) {
+                $preview = substr($response->body(), 0, 200);
+                return ['success' => false, 'error' => "Not a valid ZIP/PK3 file ({$bodyLen} bytes). Content: " . substr($preview, 0, 100)];
             }
 
             $originalName = $modelData['pk3_file'];
@@ -286,8 +321,14 @@ class ScrapeQ3dfModels extends Command
 
             // Save temporarily
             $tempPath = 'models/temp/' . $slug . '.pk3';
-            Storage::put($tempPath, $response->body());
+            $this->line("  Saving to temp: {$tempPath}");
+            try {
+                Storage::disk('local')->put($tempPath, $response->body());
+            } catch (\Exception $storageEx) {
+                return ['success' => false, 'error' => "Storage::put failed: " . $storageEx->getMessage()];
+            }
             $tempFullPath = storage_path('app/' . $tempPath);
+            $this->line("  Temp full path: {$tempFullPath}, exists: " . (file_exists($tempFullPath) ? 'yes' : 'no') . ", size: " . (file_exists($tempFullPath) ? filesize($tempFullPath) : 'N/A'));
 
             // Create extraction directory
             if (!file_exists($extractPath)) {
@@ -298,7 +339,28 @@ class ScrapeQ3dfModels extends Command
             $pk3Found = false;
             $pk3PathForDownload = null;
 
-            if ($zip->open($tempFullPath) === TRUE) {
+            // Debug: verify temp file
+            $savedSize = filesize($tempFullPath);
+            $this->line("  Saved to: {$tempFullPath} ({$savedSize} bytes, exists: " . (file_exists($tempFullPath) ? 'yes' : 'no') . ")");
+
+            $openResult = $zip->open($tempFullPath);
+            if ($openResult !== TRUE) {
+                $errorCodes = [
+                    ZipArchive::ER_EXISTS => 'ER_EXISTS',
+                    ZipArchive::ER_INCONS => 'ER_INCONS',
+                    ZipArchive::ER_INVAL => 'ER_INVAL',
+                    ZipArchive::ER_MEMORY => 'ER_MEMORY',
+                    ZipArchive::ER_NOENT => 'ER_NOENT',
+                    ZipArchive::ER_NOZIP => 'ER_NOZIP',
+                    ZipArchive::ER_OPEN => 'ER_OPEN',
+                    ZipArchive::ER_READ => 'ER_READ',
+                    ZipArchive::ER_SEEK => 'ER_SEEK',
+                ];
+                $errorName = $errorCodes[$openResult] ?? "UNKNOWN({$openResult})";
+                $this->error("  ZipArchive::open() error: {$errorName}");
+            }
+
+            if ($openResult === TRUE) {
                 // Check if this is a ZIP containing PK3 files
                 $containsPK3 = false;
                 $pk3FileName = null;
@@ -338,6 +400,7 @@ class ScrapeQ3dfModels extends Command
                         if ($pk3Zip->open($pk3File) === TRUE) {
                             $pk3Zip->extractTo($extractPath);
                             $pk3Zip->close();
+                            $this->lowercaseFileExtensions($extractPath);
                         }
                     }
 
@@ -358,6 +421,7 @@ class ScrapeQ3dfModels extends Command
                     if ($hasProperStructure) {
                         $zip->extractTo($extractPath);
                         $zip->close();
+                        $this->lowercaseFileExtensions($extractPath);
                         $pk3Found = true;
 
                         $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
@@ -367,7 +431,7 @@ class ScrapeQ3dfModels extends Command
                     }
                 }
 
-                Storage::delete($tempPath);
+                Storage::disk('local')->delete($tempPath);
 
                 if ($pk3Found) {
                     // Auto-detect ALL model names (PK3 might contain multiple models)
@@ -887,7 +951,9 @@ class ScrapeQ3dfModels extends Command
         $baseQ3Models = [
             'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
             'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
-            'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel'
+            'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
+            'ranger', 'bitterman', 'brandon', 'carmack', 'cash', 'light',
+            'medium', 'paulj', 'tim', 'xian'
         ];
 
         if (in_array(strtolower($baseModel), $baseQ3Models)) {
@@ -1052,6 +1118,29 @@ class ScrapeQ3dfModels extends Command
         $hasShaders = count(glob($modelPath . '/*.{shader,shaderx}', GLOB_BRACE)) > 0;
 
         return $hasSkinFile || $hasTextures || $hasShaders;
+    }
+
+    private function lowercaseFileExtensions($dir)
+    {
+        if (!file_exists($dir)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $ext = $file->getExtension();
+                $lower = strtolower($ext);
+                if ($ext !== $lower) {
+                    $oldPath = $file->getPathname();
+                    $newPath = substr($oldPath, 0, -strlen($ext)) . $lower;
+                    rename($oldPath, $newPath);
+                }
+            }
+        }
     }
 
     private function deleteDirectory($dir)

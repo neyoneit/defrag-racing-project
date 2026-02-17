@@ -1162,7 +1162,7 @@ export class MD3Loader {
      * @param {string|null} baseModelName - Name of the base model this is based on (from DB)
      * @returns {Promise<THREE.Group>} - Complete player model
      */
-    async loadPlayerModel(baseUrl, modelName, skinName = 'default', skinPackBasePath = null, baseModelName = null, modelId = null) {
+    async loadPlayerModel(baseUrl, modelName, skinName = 'default', skinPackBasePath = null, baseModelName = null, modelId = null, baseModelFilePath = null) {
         // Ensure baseUrl ends with /
         if (!baseUrl.endsWith('/')) {
             baseUrl += '/';
@@ -1210,7 +1210,8 @@ export class MD3Loader {
                 'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
                 'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
                 'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
-                'bitterman'
+                'ranger', 'bitterman', 'brandon', 'carmack', 'cash', 'light',
+                'medium', 'paulj', 'tim', 'xian'
             ];
             const isBaseQ3Model = baseQ3Models.includes(actualBaseModelName.toLowerCase());
 
@@ -1222,13 +1223,16 @@ export class MD3Loader {
                 this.fallbackBaseUrl = '/baseq3/';
                 console.log(`👤 Loading base model from baseq3: ${actualBaseModelName}, will apply PK3 from: ${baseUrl}`);
             } else if (shouldLoadBaseModel) {
-                // Custom base model (from another PK3) - but it's NOT in baseq3
-                // This means it's actually a complete custom model, so load from PK3
-                mainPlayerPath = baseUrl;
-                skinBasePath = baseUrl;
+                // Custom base model (from another PK3) - load MD3s from base model path
+                if (baseModelFilePath) {
+                    mainPlayerPath = `/storage/${baseModelFilePath}/`;
+                } else {
+                    mainPlayerPath = baseUrl;
+                }
+                skinBasePath = skinPackBasePath || baseUrl;
                 // Set fallback URL for shader textures - if texture not found in PK3, try baseq3
                 this.fallbackBaseUrl = '/baseq3/';
-                console.log(`👤 Loading custom complete model: ${actualBaseModelName} from PK3: ${baseUrl}`);
+                console.log(`👤 Loading custom base model MD3s from: ${mainPlayerPath}, skins from: ${skinBasePath}`);
             } else {
                 // Complete model - load everything from PK3
                 mainPlayerPath = baseUrl;

@@ -70,7 +70,7 @@ class ModelsController extends Controller
             $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'); // newest (default)
         }
 
-        $models = $query->paginate(12);
+        $models = $query->paginate(12)->withQueryString();
         $timings['models_query'] = round((microtime(true) - $start) * 1000, 2);
 
         // Add resolved MD3 paths to each model for optimized rendering
@@ -108,6 +108,10 @@ class ModelsController extends Controller
             if (str_starts_with($model->file_path, 'baseq3/')) {
                 return "/{$model->file_path}/head.md3";
             }
+            // Check if file_path already includes full path (new format)
+            if (str_contains($model->file_path, '/models/players/') || str_contains($model->file_path, '/Models/Players/')) {
+                return "/storage/{$model->file_path}/head.md3";
+            }
             return "/storage/{$model->file_path}/models/players/{$model->base_model}/head.md3";
         }
 
@@ -115,6 +119,9 @@ class ModelsController extends Controller
         if ($model->base_model_file_path) {
             if (str_starts_with($model->base_model_file_path, 'baseq3/')) {
                 return "/{$model->base_model_file_path}/head.md3";
+            }
+            if (str_contains($model->base_model_file_path, '/models/players/') || str_contains($model->base_model_file_path, '/Models/Players/')) {
+                return "/storage/{$model->base_model_file_path}/head.md3";
             }
             return "/storage/{$model->base_model_file_path}/models/players/{$model->base_model}/head.md3";
         }
@@ -146,6 +153,7 @@ class ModelsController extends Controller
             'description' => 'nullable|string',
             'category' => 'required|in:player,weapon,shadow',
             'model_file' => 'required|file|mimes:zip,pk3|max:51200', // 50MB max - ZIP or PK3 files
+            'is_nsfw' => 'nullable|boolean',
         ]);
 
         $uploadedFile = $request->file('model_file');
@@ -162,8 +170,8 @@ class ModelsController extends Controller
             mkdir($pk3StoragePath, 0755, true);
         }
 
-        // Store original file temporarily in private storage
-        $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension());
+        // Store original file temporarily in private storage (must be local for ZipArchive)
+        $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension(), 'local');
         $tempFullPath = storage_path('app/' . $tempPath);
 
         // Create extraction directory
@@ -272,7 +280,7 @@ class ModelsController extends Controller
             }
 
             // Clean up temp file
-            Storage::delete($tempPath);
+            Storage::disk('local')->delete($tempPath);
 
             if ($pk3Found) {
                 // Auto-detect ALL model names (PK3 might contain multiple models)
@@ -412,6 +420,7 @@ class ModelsController extends Controller
                             'has_ctf_skins' => false,
                             'available_skins' => json_encode($availableSkins),
                             'approval_status' => 'pending',
+                            'is_nsfw' => $request->is_nsfw ?? false,
                         ]);
 
                         \Log::info('Weapon model created:', ['id' => $model->id]);
@@ -474,6 +483,7 @@ class ModelsController extends Controller
                                 'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
                                 'available_skins' => json_encode([$skinName]), // Store only this skin
                                 'approval_status' => 'pending', // Requires admin approval
+                                'is_nsfw' => $request->is_nsfw ?? false,
                             ]);
 
                             $createdModels[] = $model;
@@ -557,8 +567,8 @@ class ModelsController extends Controller
                     mkdir($pk3StoragePath, 0755, true);
                 }
 
-                // Store original file temporarily
-                $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension());
+                // Store original file temporarily (must be local for ZipArchive)
+                $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension(), 'local');
                 $tempFullPath = storage_path('app/' . $tempPath);
 
                 // Create extraction directory
@@ -638,7 +648,7 @@ class ModelsController extends Controller
                         }
                     }
 
-                    Storage::delete($tempPath);
+                    Storage::disk('local')->delete($tempPath);
 
                     if ($pk3Found) {
                         // Auto-detect ALL model names (PK3 might contain multiple models)
@@ -899,6 +909,11 @@ class ModelsController extends Controller
         $isOwnerOrAdmin = Auth::check() && (Auth::id() === $model->user_id || Auth::user()->is_admin);
         if (($model->approval_status !== 'approved' || $model->hidden) && !$isOwnerOrAdmin) {
             abort(404);
+        }
+
+        // NSFW gate: require login for NSFW models
+        if ($model->is_nsfw && !$isOwnerOrAdmin && !Auth::check()) {
+            return redirect()->route('login');
         }
 
         // For skin/mixed packs, use stored base_model_file_path if available
@@ -1194,7 +1209,7 @@ class ModelsController extends Controller
             // Save the GIF file
             $gifFile = $request->file('gif');
             $filename = "model_{$id}.gif";
-            $gifFile->storeAs('public/thumbnails', $filename);
+            $gifFile->storeAs('public/thumbnails', $filename, 'local');
 
             $updateData = ['thumbnail' => "thumbnails/{$filename}"];
 
@@ -1202,7 +1217,7 @@ class ModelsController extends Controller
             if ($request->hasFile('head_icon')) {
                 $headIconFile = $request->file('head_icon');
                 $headIconFilename = "model_{$id}_head.png";
-                $headIconFile->storeAs('public/thumbnails', $headIconFilename);
+                $headIconFile->storeAs('public/thumbnails', $headIconFilename, 'local');
                 $updateData['head_icon'] = "thumbnails/{$headIconFilename}";
                 \Log::info("Head icon saved for model {$id}");
             }
@@ -1261,7 +1276,7 @@ class ModelsController extends Controller
             // Save head icon
             $headIconFile = $request->file('head_icon');
             $headIconFilename = "model_{$id}_head.png";
-            $headIconFile->storeAs('public/thumbnails', $headIconFilename);
+            $headIconFile->storeAs('public/thumbnails', $headIconFilename, 'local');
 
             // Update model with head icon path
             $model->update(['head_icon' => "thumbnails/{$headIconFilename}"]);
@@ -1385,5 +1400,14 @@ class ModelsController extends Controller
         }
 
         return response()->json(['shaders' => $shaderFiles]);
+    }
+
+    public function confirmNsfw()
+    {
+        $user = Auth::user();
+        $user->nsfw_confirmed = true;
+        $user->save();
+
+        return back();
     }
 }

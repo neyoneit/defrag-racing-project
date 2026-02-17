@@ -1,6 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted } from 'vue';
+
+const page = usePage();
 import ModelViewer from '@/Components/ModelViewer.vue';
 
 const props = defineProps({
@@ -163,6 +165,11 @@ const skinFilePath = computed(() => {
     // For skin/mixed packs: base_model is the folder with the actual files
     const modelName = props.model.base_model || props.model.name;
 
+    // Check if file_path already includes full path (new format with case-sensitive folders)
+    if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+        return `/storage/${props.model.file_path}/head_${currentSkin.value}.skin`;
+    }
+
     return `/storage/${props.model.file_path}/models/players/${modelName}/head_${currentSkin.value}.skin`;
 });
 
@@ -173,6 +180,10 @@ const skinPackBasePath = computed(() => {
 
     // Return the skin pack's extracted directory path
     if (props.model.file_path && !props.model.file_path.startsWith('baseq3/')) {
+        // Check if file_path already includes full path (new format)
+        if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+            return `/storage/${props.model.file_path}`;
+        }
         const modelName = props.model.base_model || props.model.name;
         return `/storage/${props.model.file_path}/models/players/${modelName}`;
     }
@@ -1009,10 +1020,44 @@ const getBoxClass = (type) => {
     };
     return classes[type] || 'bg-white/5 border-white/10';
 };
+
+const needsNsfwGate = computed(() => {
+    return props.model.is_nsfw && !page.props.auth.user?.nsfw_confirmed;
+});
+
+const confirmingNsfw = ref(false);
+
+const confirmNsfw = () => {
+    confirmingNsfw.value = true;
+    router.post(route('user.confirm-nsfw'), {}, {
+        preserveScroll: true,
+        onFinish: () => {
+            confirmingNsfw.value = false;
+        },
+    });
+};
 </script>
 
 <template>
     <Head :title="model.name" />
+
+    <!-- NSFW Age Gate Modal -->
+    <div v-if="needsNsfwGate && !isThumbnailMode" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="max-w-md mx-auto p-8 bg-gray-900/90 border border-red-500/30 rounded-2xl text-center shadow-2xl">
+            <div class="text-5xl mb-4">🔞</div>
+            <h2 class="text-2xl font-black text-white mb-3">Age-Restricted Content</h2>
+            <p class="text-gray-400 mb-6">This model contains NSFW content. You must confirm that you are at least 18 years old to view it.</p>
+            <div class="flex gap-3 justify-center">
+                <Link :href="route('models.index')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">
+                    Go Back
+                </Link>
+                <button @click="confirmNsfw" :disabled="confirmingNsfw" class="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors">
+                    {{ confirmingNsfw ? 'Confirming...' : 'I am 18+' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen relative'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
         <!-- Fade shadow at top (absolute positioned behind everything) -->
         <div v-if="!isThumbnailMode" class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
@@ -1102,6 +1147,7 @@ const getBoxClass = (type) => {
                                 :skin-pack-base-path="skinPackBasePath"
                                 :skin-name="currentSkin"
                                 :base-model-name="model.base_model"
+                                :base-model-file-path="baseModelData?.file_path"
                                 :load-full-player="!isWeaponModel"
                                 :is-weapon="isWeaponModel"
                                 :auto-rotate="autoRotate"
@@ -1572,6 +1618,17 @@ const getBoxClass = (type) => {
                                 {{ gifProgress }}
                             </span>
                         </button>
+
+                        <!-- Admin Edit Link -->
+                        <a
+                            v-if="$page.props.auth?.user?.admin"
+                            :href="`/defraghq/models/${model.id}/edit`"
+                            class="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg hover:shadow-amber-500/50 text-lg flex items-center justify-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                            Admin Edit
+                        </a>
 
                         <p v-if="!isBaseQ3Model" class="text-center text-gray-500 text-sm mt-2">
                             Extract to your Quake 3 baseq3 directory

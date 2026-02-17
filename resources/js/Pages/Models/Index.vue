@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
+import Pagination from '@/Components/Basic/Pagination.vue';
 
 const props = defineProps({
     models: Object,
@@ -302,7 +303,7 @@ const getModelTypeBadgeClass = (type) => {
                     <!-- Models Grid -->
                     <div v-if="models.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <Link v-for="(model, index) in models.data" :key="model.id"
-                              :href="route('models.show', model.id)"
+                              :href="model.is_nsfw && !$page.props.auth.user ? route('login') : route('models.show', model.id)"
                               class="group backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
                             <!-- Thumbnail -->
@@ -312,7 +313,7 @@ const getModelTypeBadgeClass = (type) => {
                                     v-if="model.thumbnail"
                                     :src="`/storage/${model.thumbnail}`"
                                     :alt="model.name"
-                                    class="w-full h-full object-cover"
+                                    :class="['w-full h-full object-cover', model.is_nsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']"
                                     :loading="index < 8 ? 'eager' : 'lazy'"
                                     decoding="async"
                                     fetchpriority="auto"
@@ -322,8 +323,20 @@ const getModelTypeBadgeClass = (type) => {
                                     {{ model.category === 'player' ? '🏃' : model.category === 'weapon' ? '🔫' : '👤' }}
                                 </div>
 
+                                <!-- NSFW overlay -->
+                                <div v-if="model.is_nsfw && !$page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40">
+                                    <span class="px-4 py-2 bg-red-600/80 backdrop-blur-sm rounded-lg text-sm font-black text-white border border-red-500/50">
+                                        NSFW
+                                    </span>
+                                </div>
+
                                 <!-- Badges -->
                                 <div class="absolute top-3 right-3 flex flex-col gap-2 items-end">
+                                    <!-- NSFW Badge -->
+                                    <div v-if="model.is_nsfw" class="px-3 py-1 bg-red-600/80 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-red-500/40">
+                                        NSFW
+                                    </div>
+
                                     <!-- Category Badge -->
                                     <div class="px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-white/20">
                                         {{ model.category }}
@@ -388,23 +401,13 @@ const getModelTypeBadgeClass = (type) => {
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="models.data.length > 0 && (models.links.length > 3)" class="mt-8 flex justify-center gap-2 flex-wrap">
-                        <template v-for="link in models.links" :key="link.label">
-                            <Link v-if="link.url"
-                                  :href="link.url"
-                                  :class="[
-                                      'px-4 py-2 rounded-lg font-medium transition-all',
-                                      link.active
-                                          ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                          : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
-                                  ]"
-                                  v-html="link.label">
-                            </Link>
-                            <span v-else
-                                  class="px-4 py-2 rounded-lg font-medium transition-all bg-white/5 text-gray-600 cursor-not-allowed"
-                                  v-html="link.label">
-                            </span>
-                        </template>
+                    <div v-if="models.data.length > 0 && models.last_page > 1" class="mt-8">
+                        <Pagination
+                            :current_page="models.current_page"
+                            :last_page="models.last_page"
+                            :link="models.first_page_url"
+                            :only="['models']"
+                        />
                     </div>
 
                     <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
