@@ -656,8 +656,37 @@ const generateGifThumbnail = async () => {
         return;
     }
 
+    if (isGeneratingGif.value) {
+        showErrorNotification('GIF generation already in progress');
+        return;
+    }
+
     isGeneratingGif.value = true;
     gifProgress.value = 'Preparing...';
+
+    let gif = null;
+    let tempCanvas = null;
+
+    const cleanup = () => {
+        // Free GIF encoder and its workers
+        if (gif) {
+            try {
+                gif.abort();
+                // Terminate any remaining free workers
+                if (gif.freeWorkers && Array.isArray(gif.freeWorkers)) {
+                    gif.freeWorkers.forEach(w => w.terminate());
+                    gif.freeWorkers = [];
+                }
+            } catch (e) { /* ignore */ }
+            gif = null;
+        }
+        // Release temp canvas
+        if (tempCanvas) {
+            tempCanvas.width = 0;
+            tempCanvas.height = 0;
+            tempCanvas = null;
+        }
+    };
 
     try {
         // Get the renderer and canvas from ModelViewer
@@ -674,21 +703,17 @@ const generateGifThumbnail = async () => {
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
 
-        console.log('Canvas dimensions:', canvasWidth, 'x', canvasHeight);
-
         // Use smaller resolution for GIF (300x300 for smaller file size)
         const gifWidth = 300;
         const gifHeight = 300;
 
-        console.log('GIF dimensions:', gifWidth, 'x', gifHeight);
-
         // Dynamically import gif.js
         const GIF = (await import('gif.js')).default;
 
-        // Create GIF encoder with reduced dimensions for smaller file size
-        const gif = new GIF({
-            workers: 2,
-            quality: 10, // 1-30, higher = lower quality but smaller file (10 = good quality)
+        // Create GIF encoder - use 1 worker to reduce memory pressure
+        gif = new GIF({
+            workers: 1,
+            quality: 10,
             width: gifWidth,
             height: gifHeight,
             workerScript: '/gif.worker.js'
@@ -696,7 +721,6 @@ const generateGifThumbnail = async () => {
 
         // Save the current camera position and target
         const originalPosition = camera.position.clone();
-        const originalRotation = camera.rotation.clone();
 
         // Get the controls target (what the camera is looking at - the model center)
         const controls = viewer3D.value.getControls();
@@ -712,10 +736,8 @@ const generateGifThumbnail = async () => {
         // Get the starting angle based on current camera position relative to target
         const startAngle = Math.atan2(dx, dz);
 
-        console.log('Radius:', radius, 'Height:', height, 'Start angle:', startAngle);
-
         // Create a temporary canvas for resizing frames
-        const tempCanvas = document.createElement('canvas');
+        tempCanvas = document.createElement('canvas');
         tempCanvas.width = gifWidth;
         tempCanvas.height = gifHeight;
         const tempCtx = tempCanvas.getContext('2d');
@@ -731,172 +753,157 @@ const generateGifThumbnail = async () => {
             const angle = startAngle + (i * rotationStep);
             camera.position.x = target.x + Math.sin(angle) * radius;
             camera.position.z = target.z + Math.cos(angle) * radius;
-            camera.position.y = target.y + height; // Keep same height relative to target
+            camera.position.y = target.y + height;
 
-            // Use THREE.Vector3 for lookAt
             camera.lookAt(target.x, target.y, target.z);
-
-            // Update camera matrix and force a render
             camera.updateMatrixWorld();
             scene.updateMatrixWorld(true);
 
             // Wait for next frame to ensure rendering is complete
             await new Promise(resolve => requestAnimationFrame(resolve));
-
-            // Render the scene
             renderer.render(scene, camera);
-
-            // Wait one more frame to ensure pixel data is ready
             await new Promise(resolve => requestAnimationFrame(resolve));
 
-            // Resize the canvas to the smaller GIF dimensions (simple 2D downsampling)
+            // Resize the canvas to the smaller GIF dimensions
             tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
 
             // Add the resized frame to GIF
-            gif.addFrame(tempCanvas, { copy: true, delay: 83 }); // 83ms = ~12fps
+            gif.addFrame(tempCanvas, { copy: true, delay: 83 });
 
-            // Small delay to let browser breathe
-            await new Promise(resolve => setTimeout(resolve, 20));
+            // Yield to browser to prevent UI freeze
+            await new Promise(resolve => setTimeout(resolve, 50));
         }
 
         gifProgress.value = 'Encoding GIF...';
 
-        // Render the GIF
-        gif.on('finished', async (blob) => {
-            gifProgress.value = 'Generating head icon...';
+        // Wrap gif.render() in a promise so we can await it
+        const gifBlob = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('GIF encoding timed out after 60 seconds'));
+            }, 60000);
 
-            // Generate 64x64 head icon PNG using FOV-based auto-fit
-            let headIconBlob = null;
-            try {
-                const THREE = await import('three');
+            gif.on('finished', (blob) => {
+                clearTimeout(timeout);
+                resolve(blob);
+            });
 
-                const model = viewer3D.value.getModel();
-                if (!model) {
-                    throw new Error('Model not loaded');
-                }
+            gif.on('progress', (p) => {
+                gifProgress.value = `Encoding: ${Math.round(p * 100)}%`;
+            });
 
-                // Find the head mesh (highest Y position = topmost part)
-                console.log('=== GIF: FINDING HEAD MESH ===');
-                let headMesh = null;
-                let highestY = -Infinity;
-
-                model.traverse((child) => {
-                    if (child.isMesh) {
-                        const worldPos = new THREE.Vector3();
-                        child.getWorldPosition(worldPos);
-                        if (worldPos.y > highestY) {
-                            highestY = worldPos.y;
-                            headMesh = child;
-                        }
-                    }
-                });
-
-                if (!headMesh) {
-                    throw new Error('Could not find head mesh');
-                }
-
-                console.log('GIF: Selected head at Y:', highestY);
-
-                // Get head bounding box
-                const headBox = new THREE.Box3().setFromObject(headMesh);
-                const headCenter = headBox.getCenter(new THREE.Vector3());
-                const headSize = headBox.getSize(new THREE.Vector3());
-
-                // Calculate camera distance to fit head perfectly in frame (FOV-based)
-                const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
-                const fov = camera.fov * (Math.PI / 180);
-                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-                cameraZ *= 1.5; // 50% padding
-
-                console.log('GIF: Head camera distance:', cameraZ, 'for max dimension:', maxDim);
-
-                // Update controls target to focus on head center (same as standalone button)
-                if (controls) {
-                    controls.target.set(headCenter.x, headCenter.y, headCenter.z);
-                    controls.update();
-                }
-
-                // Position camera in front of head
-                camera.position.set(
-                    headCenter.x,
-                    headCenter.y,
-                    headCenter.z + cameraZ
-                );
-                camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
-
-                // Force render
-                camera.updateMatrixWorld();
-                scene.updateMatrixWorld(true);
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                renderer.render(scene, camera);
-                await new Promise(resolve => requestAnimationFrame(resolve));
-
-                // Create 64x64 canvas for head icon
-                const headCanvas = document.createElement('canvas');
-                headCanvas.width = 64;
-                headCanvas.height = 64;
-                const headCtx = headCanvas.getContext('2d');
-                headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
-
-                // Convert to blob
-                headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
-
-                // Restore camera AND controls target back to original position
-                camera.position.copy(originalPosition);
-                camera.lookAt(target.x, target.y, target.z);
-
-                if (controls) {
-                    controls.target.set(target.x, target.y, target.z);
-                    controls.update();
-                }
-            } catch (error) {
-                console.error('Head icon generation error:', error);
-                // Continue even if head icon fails
-            }
-
-            gifProgress.value = 'Uploading...';
-
-            // Upload to server
-            const formData = new FormData();
-            formData.append('gif', blob, `model_${props.model.id}.gif`);
-            if (headIconBlob) {
-                formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
-            }
-
-            try {
-                const response = await fetch(route('models.saveThumbnail', props.model.id), {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    gifProgress.value = 'Done!';
-                    showSuccessNotification('Thumbnail generated successfully!');
-                } else {
-                    throw new Error(data.message || 'Failed to save thumbnail');
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                showErrorNotification('Failed to upload thumbnail: ' + error.message);
-            }
-
-            isGeneratingGif.value = false;
+            gif.render();
         });
 
-        gif.on('progress', (p) => {
-            gifProgress.value = `Encoding: ${Math.round(p * 100)}%`;
+        // Free GIF encoder immediately after encoding - this is the big memory win
+        cleanup();
+
+        gifProgress.value = 'Generating head icon...';
+
+        // Generate 64x64 head icon PNG
+        let headIconBlob = null;
+        try {
+            const THREE = await import('three');
+
+            const model = viewer3D.value.getModel();
+            if (!model) {
+                throw new Error('Model not loaded');
+            }
+
+            let headMesh = null;
+            let highestY = -Infinity;
+
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    const worldPos = new THREE.Vector3();
+                    child.getWorldPosition(worldPos);
+                    if (worldPos.y > highestY) {
+                        highestY = worldPos.y;
+                        headMesh = child;
+                    }
+                }
+            });
+
+            if (!headMesh) {
+                throw new Error('Could not find head mesh');
+            }
+
+            const headBox = new THREE.Box3().setFromObject(headMesh);
+            const headCenter = headBox.getCenter(new THREE.Vector3());
+            const headSize = headBox.getSize(new THREE.Vector3());
+
+            const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.5;
+
+            if (controls) {
+                controls.target.set(headCenter.x, headCenter.y, headCenter.z);
+                controls.update();
+            }
+
+            camera.position.set(headCenter.x, headCenter.y, headCenter.z + cameraZ);
+            camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
+
+            camera.updateMatrixWorld();
+            scene.updateMatrixWorld(true);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            renderer.render(scene, camera);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            const headCanvas = document.createElement('canvas');
+            headCanvas.width = 64;
+            headCanvas.height = 64;
+            const headCtx = headCanvas.getContext('2d');
+            headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
+
+            headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
+
+            // Release head canvas
+            headCanvas.width = 0;
+            headCanvas.height = 0;
+        } catch (error) {
+            console.error('Head icon generation error:', error);
+        }
+
+        // Restore camera position
+        camera.position.copy(originalPosition);
+        camera.lookAt(target.x, target.y, target.z);
+        if (controls) {
+            controls.target.set(target.x, target.y, target.z);
+            controls.update();
+        }
+
+        gifProgress.value = 'Uploading...';
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append('gif', gifBlob, `model_${props.model.id}.gif`);
+        if (headIconBlob) {
+            formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
+        }
+
+        const response = await fetch(route('models.saveThumbnail', props.model.id), {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
         });
 
-        gif.render();
+        const data = await response.json();
+
+        if (data.success) {
+            gifProgress.value = 'Done!';
+            showSuccessNotification('Thumbnail generated successfully!');
+        } else {
+            throw new Error(data.message || 'Failed to save thumbnail');
+        }
 
     } catch (error) {
         console.error('GIF generation error:', error);
         showErrorNotification('Failed to generate thumbnail: ' + error.message);
+        cleanup();
+    } finally {
         isGeneratingGif.value = false;
     }
 };

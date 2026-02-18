@@ -1131,57 +1131,6 @@ class ModelsController extends Controller
     }
 
     /**
-     * Generate animated GIF thumbnail for a model
-     */
-    public function generateThumbnail($id)
-    {
-        $model = PlayerModel::findOrFail($id);
-
-        // Check permission - only owner or admin
-        if (!Auth::check() || (Auth::id() !== $model->user_id && !Auth::user()->admin)) {
-            abort(403);
-        }
-
-        try {
-            $framesDir = storage_path("app/temp/model_{$id}_frames");
-
-            // Create frames directory
-            if (!file_exists($framesDir)) {
-                mkdir($framesDir, 0755, true);
-            }
-
-            // Render thumbnail using server-side Three.js
-            $gifPath = storage_path("app/public/thumbnails/model_{$id}.gif");
-            $thumbnailsDir = storage_path("app/public/thumbnails");
-
-            if (!file_exists($thumbnailsDir)) {
-                mkdir($thumbnailsDir, 0755, true);
-            }
-
-            $result = \Illuminate\Support\Facades\Process::timeout(120)->run([
-                'node',
-                base_path('renderModelThumbnail.cjs'),
-                $id,
-                $gifPath
-            ]);
-
-            if (!$result->successful()) {
-                \Log::error("Failed to render thumbnail for model {$id}: " . $result->errorOutput());
-                return response()->json(['error' => 'Failed to render thumbnail: ' . $result->errorOutput()], 500);
-            }
-
-            // Update model with thumbnail path
-            $model->update(['thumbnail' => "thumbnails/model_{$id}.gif"]);
-
-            return response()->json(['success' => true, 'thumbnail' => "thumbnails/model_{$id}.gif"]);
-
-        } catch (\Exception $e) {
-            \Log::error("Error generating thumbnail for model {$id}: " . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
      * Save browser-generated GIF thumbnail for a model
      */
     public function saveThumbnail($id, Request $request)

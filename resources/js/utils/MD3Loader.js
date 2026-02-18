@@ -306,7 +306,7 @@ export class MD3Loader {
             const parts = trimmed.split(',');
             if (parts.length === 2) {
                 const surfaceName = parts[0].trim();
-                let texturePath = parts[1].trim();
+                let texturePath = parts[1].trim().replace(/\\/g, '/');
 
                 // Convert relative path to absolute URL
                 // If texture path starts with models/, use it as-is from storage root
@@ -399,8 +399,8 @@ export class MD3Loader {
             if (this.skinData && this.skinData[skinSurfaceName]) {
                 const texturePath = this.skinData[skinSurfaceName];
 
-                // Skip nodraw surfaces
-                if (texturePath.includes('/nodraw') || texturePath.includes('common/nodraw')) {
+                // Skip nodraw and null texture surfaces (e.g. hidden wings)
+                if (texturePath.includes('/nodraw') || texturePath.includes('common/nodraw') || texturePath.match(/\/null\.(tga|jpg|png)$/i)) {
                     mesh.visible = false;
                 } else {
                     // Extract shader name from texture path
@@ -1012,6 +1012,7 @@ export class MD3Loader {
                 switch (baseStage.blendFunc) {
                     case 'add':
                         material.blending = THREE.AdditiveBlending;
+                        material.transparent = true;
                         break;
                     case 'blend':
                         material.blending = THREE.NormalBlending;
@@ -1019,6 +1020,7 @@ export class MD3Loader {
                         break;
                     case 'filter':
                         material.blending = THREE.MultiplyBlending;
+                        material.transparent = true;
                         break;
                 }
             } else if (typeof baseStage.blendFunc === 'object') {
@@ -1026,7 +1028,24 @@ export class MD3Loader {
                 const { src, dst } = baseStage.blendFunc;
                 if (src === 'GL_ONE' && dst === 'GL_ONE') {
                     material.blending = THREE.AdditiveBlending;
+                    material.transparent = true;
+                } else if (src === 'GL_DST_COLOR' && dst === 'GL_ZERO') {
+                    material.blending = THREE.MultiplyBlending;
+                    material.transparent = true;
+                } else if (src === 'GL_ZERO' && dst === 'GL_SRC_COLOR') {
+                    material.blending = THREE.MultiplyBlending;
+                    material.transparent = true;
+                } else if (src === 'GL_SRC_ALPHA' && dst === 'GL_ONE_MINUS_SRC_ALPHA') {
+                    material.blending = THREE.NormalBlending;
+                    material.transparent = true;
+                } else if (src === 'GL_ONE' && dst === 'GL_ZERO') {
+                    // Opaque - default blending
                 }
+            }
+
+            // Transparent blended materials should not write to depth buffer
+            if (material.transparent) {
+                material.depthWrite = false;
             }
         }
 
@@ -1106,45 +1125,76 @@ export class MD3Loader {
                     console.log(`🔍 Checking mesh: ${surfaceName}, has mapping: ${!!textureMapping}, material type: ${child.material.type}`);
 
                     if (textureMapping) {
+                        // Hide surfaces with null texture (e.g. hidden wings)
+                        if (textureMapping.match(/\/null\.(tga|jpg|png)$/i)) {
+                            child.visible = false;
+                            return;
+                        }
+
                         // textureMapping is already a resolved path from parseSkin
                         const texturePath = textureMapping;
-                        console.log(`🎨 Replacing texture on ${surfaceName} with skin pack texture: ${texturePath}`);
 
-                        // Load the new texture
-                        const loader = texturePath.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
-                        loader.load(
-                            texturePath,
-                            (texture) => {
-                                texture.flipY = false;
-                                texture.wrapS = THREE.RepeatWrapping;
-                                texture.wrapT = THREE.RepeatWrapping;
+                        // Check if there's a Q3 shader for this texture
+                        let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
+                        const shaderMatch = shaderName.match(/models\/(players|weapons2)\/[^\/]+\/.+$/);
+                        if (shaderMatch) {
+                            shaderName = shaderMatch[0];
+                        }
+                        // Also try lowercase version for case-insensitive shader lookup
+                        const shader = this.shaders.get(shaderName) || this.shaders.get(shaderName.toLowerCase());
 
-                                // Handle both basic materials and shader materials
-                                if (child.material.uniforms && child.material.uniforms.map0) {
-                                    // Q3 Shader material - replace map0 uniform
-                                    if (child.material.uniforms.map0.value) {
-                                        child.material.uniforms.map0.value.dispose();
-                                    }
-                                    child.material.uniforms.map0.value = texture;
-                                    console.log(`✅ Applied skin pack texture to shader material ${surfaceName} (map0)`);
-                                } else if (child.material.map) {
-                                    // Basic material - replace map property
-                                    child.material.map.dispose();
-                                    child.material.map = texture;
-                                    console.log(`✅ Applied skin pack texture to basic material ${surfaceName} (map)`);
-                                } else {
-                                    // Material has no map property, try to set it
-                                    child.material.map = texture;
-                                    console.log(`✅ Set skin pack texture on material ${surfaceName} (no previous map)`);
+                        if (shader) {
+                            console.log(`🎨 Found Q3 shader for skin texture "${shaderName}" on ${surfaceName}`, shader);
+                            // Create full shader material (with blend modes, animations, etc.)
+                            this.shaderMaterialSystem.createMaterialForShader(
+                                shader,
+                                texturePath,
+                                surfaceName
+                            ).then(shaderMaterial => {
+                                if (shaderMaterial === null) {
+                                    child.visible = false;
+                                    child.material.dispose();
+                                    return;
                                 }
+                                child.material.dispose();
+                                child.material = shaderMaterial;
+                                console.log(`✅ Applied Q3 shader material to ${surfaceName}`);
+                            }).catch(err => {
+                                console.warn(`Failed to create shader material for skin ${surfaceName}:`, err);
+                            });
+                        } else {
+                            console.log(`🎨 No shader for "${shaderName}" - replacing texture directly on ${surfaceName}`);
 
-                                child.material.needsUpdate = true;
-                            },
-                            undefined,
-                            (error) => {
-                                console.warn(`⚠️ Failed to load skin pack texture ${texturePath}:`, error);
-                            }
-                        );
+                            // No shader - just swap the texture
+                            const loader = texturePath.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
+                            loader.load(
+                                texturePath,
+                                (texture) => {
+                                    texture.flipY = false;
+                                    texture.wrapS = THREE.RepeatWrapping;
+                                    texture.wrapT = THREE.RepeatWrapping;
+
+                                    // Handle both basic materials and shader materials
+                                    if (child.material.uniforms && child.material.uniforms.map0) {
+                                        if (child.material.uniforms.map0.value) {
+                                            child.material.uniforms.map0.value.dispose();
+                                        }
+                                        child.material.uniforms.map0.value = texture;
+                                    } else if (child.material.map) {
+                                        child.material.map.dispose();
+                                        child.material.map = texture;
+                                    } else {
+                                        child.material.map = texture;
+                                    }
+
+                                    child.material.needsUpdate = true;
+                                },
+                                undefined,
+                                (error) => {
+                                    console.warn(`⚠️ Failed to load skin pack texture ${texturePath}:`, error);
+                                }
+                            );
+                        }
                     }
                 }
             });

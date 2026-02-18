@@ -309,11 +309,30 @@ export class Q3ShaderMaterialSystem {
             return false;
         })();
 
+        // Check if ANY stage uses multiply/filter blending (gl_zero + gl_src_color or gl_dst_color + gl_zero)
+        const hasMultiplyBlending = (() => {
+            for (const stage of stages) {
+                const blendFunc = stage.blendFunc;
+                if (!blendFunc) continue;
+
+                if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'filter') {
+                    return true;
+                }
+                if (typeof blendFunc === 'object' && blendFunc !== null) {
+                    if ((blendFunc.src === 'GL_ZERO' && blendFunc.dst === 'GL_SRC_COLOR') ||
+                        (blendFunc.src === 'GL_DST_COLOR' && blendFunc.dst === 'GL_ZERO')) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        })();
+
         // Parse alphaFunc and depthWrite from first stage
         const firstStage = stages[0];
         let alphaTest = 0.0;
-        // Default: disable depth write for additive OR alpha blending
-        let depthWrite = !hasAdditiveBlending && !hasAlphaBlending;
+        // Default: disable depth write for additive, alpha, or multiply blending
+        let depthWrite = !hasAdditiveBlending && !hasAlphaBlending && !hasMultiplyBlending;
 
         if (firstStage.alphaFunc) {
             // Convert Q3 alphaFunc to Three.js alphaTest value
@@ -571,11 +590,11 @@ export class Q3ShaderMaterialSystem {
             fragmentShader: this.getFragmentShader(),
 
             side: shader.cull ? this.getCullMode(shader.cull) : THREE.DoubleSide,
-            transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasAlphaGenEffects, // Enable transparency
+            transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasMultiplyBlending || hasAlphaGenEffects, // Enable transparency
             alphaTest: alphaTest, // Set alpha test threshold
             depthWrite: depthWrite,
             depthTest: true,
-            blending: hasAdditiveBlending ? THREE.AdditiveBlending : THREE.NormalBlending,
+            blending: hasAdditiveBlending ? THREE.AdditiveBlending : (hasMultiplyBlending ? THREE.MultiplyBlending : THREE.NormalBlending),
             lights: false, // We handle lighting manually
         });
 
@@ -1294,6 +1313,7 @@ export class Q3ShaderMaterialSystem {
             else if (dst === 'GL_SRC_ALPHA') dstFactor = 2;
             else if (dst === 'GL_ONE_MINUS_SRC_ALPHA') dstFactor = 3;
             else if (dst === 'GL_DST_COLOR') dstFactor = 4;
+            else if (dst === 'GL_SRC_COLOR') dstFactor = 4; // Same as GL_DST_COLOR in inter-stage blending
 
             return [srcFactor, dstFactor, 1, 0];
         }
@@ -1608,9 +1628,11 @@ export class Q3ShaderMaterialSystem {
                 material.blending = THREE.NormalBlending;
                 material.transparent = true;
                 material.alphaTest = 0.01;
-            } else if (src === 'GL_DST_COLOR' && dst === 'GL_ZERO') {
+            } else if ((src === 'GL_DST_COLOR' && dst === 'GL_ZERO') ||
+                       (src === 'GL_ZERO' && dst === 'GL_SRC_COLOR')) {
                 material.blending = THREE.MultiplyBlending;
                 material.transparent = true;
+                material.depthWrite = false;
             }
         }
     }

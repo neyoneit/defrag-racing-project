@@ -64,7 +64,6 @@ Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->mid
 Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->where('id', '[0-9]+')->name('models.shaders');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
-Route::post('/models/{id}/generate-thumbnail', [ModelsController::class, 'generateThumbnail'])->middleware('auth')->name('models.generateThumbnail');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
 Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
 Route::post('/user/confirm-nsfw', [ModelsController::class, 'confirmNsfw'])->middleware('auth')->name('user.confirm-nsfw');

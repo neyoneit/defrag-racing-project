@@ -64,6 +64,7 @@ return [
     'swoole' => [
         'options' => [
             'package_max_length' => 10 * 1024 * 1024 * 1024, // 10GB
+            'max_request' => 500, // Recycle workers after 500 requests to prevent memory leaks
         ],
     ],
 

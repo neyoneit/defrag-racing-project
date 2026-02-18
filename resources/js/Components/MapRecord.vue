@@ -112,17 +112,17 @@
         }
         if (!isMyRecord.value && !props.record.oldtop) {
             if (props.record.rank === 1) {
-                return 'text-yellow-500 group-hover:text-yellow-400';
+                return 'text-yellow-400 group-hover:text-yellow-300';
             }
             if (props.record.rank === 2) {
-                return 'text-gray-300 group-hover:text-gray-200';
+                return 'text-gray-200 group-hover:text-gray-100';
             }
             if (props.record.rank === 3) {
-                return 'text-orange-600 group-hover:text-orange-500';
+                return 'text-orange-400 group-hover:text-orange-300';
             }
-            return 'text-gray-600 group-hover:text-white';
+            return 'text-gray-300 group-hover:text-white';
         }
-        return 'text-gray-600 group-hover:text-white';
+        return 'text-gray-300 group-hover:text-white';
     });
 
 </script>

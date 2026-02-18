@@ -29,18 +29,32 @@ class RecordsController extends Controller
             return $query;
         };
 
-        // Get VQ3 records (50 per page)
+        // Get VQ3 records (50 per page) with calculated rank
         $vq3Records = $baseQuery()
             ->where('physics', 'vq3')
             ->with('user', 'map')
+            ->selectRaw('records.*,
+                (SELECT COUNT(*) + 1
+                 FROM records r2
+                 WHERE r2.mapname = records.mapname
+                 AND r2.physics = records.physics
+                 AND r2.mode = records.mode
+                 AND r2.time < records.time) as `rank`')
             ->orderBy('date_set', 'DESC')
             ->paginate(50, ['*'], 'vq3_page')
             ->withQueryString();
 
-        // Get CPM records (50 per page)
+        // Get CPM records (50 per page) with calculated rank
         $cpmRecords = $baseQuery()
             ->where('physics', 'cpm')
             ->with('user', 'map')
+            ->selectRaw('records.*,
+                (SELECT COUNT(*) + 1
+                 FROM records r2
+                 WHERE r2.mapname = records.mapname
+                 AND r2.physics = records.physics
+                 AND r2.mode = records.mode
+                 AND r2.time < records.time) as `rank`')
             ->orderBy('date_set', 'DESC')
             ->paginate(50, ['*'], 'cpm_page')
             ->withQueryString();
