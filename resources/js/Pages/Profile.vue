@@ -918,8 +918,8 @@
                     <div v-if="cpm_competitors?.better?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                         <h4 class="text-xs font-bold text-green-400 uppercase tracking-wide mb-2">Better Players</h4>
                         <div class="space-y-2">
-                            <button v-for="player in cpm_competitors.better" :key="player.id"
-                                  @click="loadBeatableRecords(player.id, player.plain_name)"
+                            <Link v-for="player in cpm_competitors.better" :key="player.id"
+                                  :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
                                   class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-green-500/20 border border-white/10 hover:border-green-500/30 transition-all group cursor-pointer">
                                 <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
                                      class="w-8 h-8 rounded-full"
@@ -929,7 +929,7 @@
                                     <div class="text-xs text-gray-400">{{ player.wrs }} WRs • {{ player.total_records }} records</div>
                                 </div>
                                 <div class="text-xs font-bold text-green-400">+{{ Math.round(player.score - cpm_competitors.my_score) }}</div>
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -937,8 +937,8 @@
                     <div v-if="cpm_competitors?.worse?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                         <h4 class="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Target Practice</h4>
                         <div class="space-y-2">
-                            <button v-for="player in cpm_competitors.worse" :key="player.id"
-                                  @click="loadBeatableRecords(player.id, player.plain_name)"
+                            <Link v-for="player in cpm_competitors.worse" :key="player.id"
+                                  :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
                                   class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-orange-500/20 border border-white/10 hover:border-orange-500/30 transition-all group cursor-pointer">
                                 <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
                                      class="w-8 h-8 rounded-full"
@@ -948,7 +948,7 @@
                                     <div class="text-xs text-gray-400">{{ player.wrs }} WRs • {{ player.total_records }} records</div>
                                 </div>
                                 <div class="text-xs font-bold text-orange-400">-{{ Math.round(cpm_competitors.my_score - player.score) }}</div>
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -956,8 +956,8 @@
                     <div v-if="cpm_rivals?.beaten?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                         <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2">You Dominate</h4>
                         <div class="space-y-2">
-                            <button v-for="rival in cpm_rivals.beaten" :key="rival.id"
-                                  @click="loadBeatableRecords(rival.id, rival.plain_name)"
+                            <Link v-for="rival in cpm_rivals.beaten" :key="rival.id"
+                                  :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
                                   class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/30 transition-all group cursor-pointer">
                                 <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
                                      class="w-8 h-8 rounded-full"
@@ -967,7 +967,7 @@
                                     <div class="text-xs text-gray-400">Beaten on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-blue-400">{{ rival.times_beaten }}×</div>
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -975,8 +975,8 @@
                     <div v-if="cpm_rivals?.beaten_by?.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                         <h4 class="text-xs font-bold text-red-400 uppercase tracking-wide mb-2">They Dominate You</h4>
                         <div class="space-y-2">
-                            <button v-for="rival in cpm_rivals.beaten_by" :key="rival.id"
-                                  @click="loadBeatableRecords(rival.id, rival.plain_name)"
+                            <Link v-for="rival in cpm_rivals.beaten_by" :key="rival.id"
+                                  :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
                                   class="w-full flex items-center gap-3 p-2 rounded-lg bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 transition-all group cursor-pointer">
                                 <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
                                      class="w-8 h-8 rounded-full"
@@ -986,7 +986,7 @@
                                     <div class="text-xs text-gray-400">Beat you on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-red-400">{{ rival.times_beaten }}×</div>
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>
