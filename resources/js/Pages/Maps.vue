@@ -162,7 +162,7 @@
 
             <!-- Pagination -->
             <div v-if="maps.total > maps.per_page" class="flex justify-center mt-8">
-                <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" />
+                <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" :only="['maps']" />
             </div>
         </div>
     </div>

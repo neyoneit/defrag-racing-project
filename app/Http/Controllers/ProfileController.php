@@ -544,10 +544,28 @@ class ProfileController extends Controller {
         $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1));
         $totalMaps = DB::table('maps')->count();
 
+        // For MDD profiles without a linked web account, create a minimal user object
+        $linkedUser = $user->user ?? (object) [
+            'id' => null,
+            'name' => $user->name,
+            'country' => $user->country,
+            'profile_photo_path' => null,
+            'profile_background_path' => null,
+            'color' => '#ffffff',
+            'avatar_effect' => 'none',
+            'name_effect' => 'none',
+            'avatar_border_color' => '#6b7280',
+            'discord_name' => null,
+            'twitch_name' => null,
+            'twitter_name' => null,
+            'is_live' => false,
+            'clan' => null,
+        ];
+
         return Inertia::render('Profile')
             ->with('vq3Records', $vq3Records)
             ->with('cpmRecords', $cpmRecords)
-            ->with('user', $user->user)
+            ->with('user', $linkedUser)
             ->with('type', $type)
             ->with('cpm_world_records', $worldRecordsCpm)
             ->with('vq3_world_records', $worldRecordsVq3)
@@ -558,7 +576,13 @@ class ProfileController extends Controller {
             ->with('vq3_rivals', $vq3Rivals)
             ->with('unplayed_maps', $unplayedMaps)
             ->with('total_maps', $totalMaps)
-            ->with('hasProfile', true);
+            ->with('hasProfile', true)
+            ->with('aliases', [])
+            ->with('alias_suggestions', [])
+            ->with('can_suggest_alias', false)
+            ->with('can_manage_aliases', false)
+            ->with('user_maplists', [])
+            ->with('topDownloadedDemos', []);
     }
 
     public function latestRecords($mddId) {

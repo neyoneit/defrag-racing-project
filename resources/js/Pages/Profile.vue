@@ -59,6 +59,13 @@
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
 
+    const profileRoute = (params = {}) => {
+        if (props.user?.id) {
+            return route('profile.index', { id: props.user.id, ...params });
+        }
+        return route('profile.mdd', { userId: props.profile.id, ...params });
+    };
+
     const options = ref({
         'latest': {
             label: 'Latest Records',
@@ -246,7 +253,8 @@
         loadingBeatable.value = true;
 
         try {
-            const response = await fetch(`/api/profile/${props.user.id}/beatable-records/${rivalMddId}?physics=cpm`);
+            const profileId = props.user?.id || props.profile?.id;
+            const response = await fetch(`/api/profile/${profileId}/beatable-records/${rivalMddId}?physics=cpm`);
             const data = await response.json();
             beatableRecords.value = data;
         } catch (error) {
@@ -299,11 +307,12 @@
 
         try {
             // Fetch VQ3 comparison
-            const vq3Response = await fetch(`/api/profile/${props.user.id}/compare/${rivalUserId}?physics=vq3`);
+            const profileId = props.user?.id || props.profile?.id;
+            const vq3Response = await fetch(`/api/profile/${profileId}/compare/${rivalUserId}?physics=vq3`);
             vq3Comparison.value = await vq3Response.json();
 
             // Fetch CPM comparison
-            const cpmResponse = await fetch(`/api/profile/${props.user.id}/compare/${rivalUserId}?physics=cpm`);
+            const cpmResponse = await fetch(`/api/profile/${profileId}/compare/${rivalUserId}?physics=cpm`);
             cpmComparison.value = await cpmResponse.json();
         } catch (error) {
             console.error('Error loading comparison:', error);
@@ -402,7 +411,7 @@
 
         suggestionInProgress.value = true;
 
-        router.post(route('alias-suggestions.store', props.user.id), {
+        router.post(route('alias-suggestions.store', props.user?.id || props.profile?.id), {
             alias: suggestedAlias.value,
             note: suggestionNote.value,
         }, {
@@ -783,17 +792,30 @@
                                 </svg>
                                 Known Aliases
                             </h3>
-                            <!-- Suggest Alias button (for other profiles) -->
-                            <button
-                                v-if="can_suggest_alias"
-                                @click="openSuggestionModal"
-                                class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
-                            >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                Suggest Alias
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <!-- Edit button (own profile) -->
+                                <Link
+                                    v-if="can_manage_aliases"
+                                    :href="route('profile.show')"
+                                    class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-white/5 transition-all"
+                                    title="Edit aliases"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                    </svg>
+                                </Link>
+                                <!-- Suggest Alias button (for other profiles) -->
+                                <button
+                                    v-if="can_suggest_alias"
+                                    @click="openSuggestionModal"
+                                    class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    Suggest Alias
+                                </button>
+                            </div>
                         </div>
                         <p class="text-xs text-gray-400 mb-4">Alternative nicknames used by this player</p>
 
@@ -845,7 +867,7 @@
                                 <span v-html="q3tohtml(alias.alias)"></span>
                                 <!-- Report button (only show for other users viewing profile) -->
                                 <button
-                                    v-if="$page.props.auth.user && $page.props.auth.user.id !== user.id"
+                                    v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id"
                                     @click="reportAlias(alias)"
                                     class="text-gray-400 hover:text-red-400 transition-colors"
                                     title="Report this alias"
@@ -1043,7 +1065,7 @@
                 <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
                     <!-- Previous Button -->
                     <Link v-if="unplayed_maps.current_page > 1"
-                          :href="route('profile.index', {id: user.id, unplayed_page: unplayed_maps.current_page - 1})"
+                          :href="profileRoute({unplayed_page: unplayed_maps.current_page - 1})"
                           preserve-scroll
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         ‹ Prev
@@ -1052,7 +1074,7 @@
                     <!-- Page Numbers -->
                     <template v-for="page in unplayed_maps.last_page" :key="page">
                         <Link v-if="page === 1 || page === unplayed_maps.last_page || (page >= unplayed_maps.current_page - 2 && page <= unplayed_maps.current_page + 2)"
-                              :href="route('profile.index', {id: user.id, unplayed_page: page})"
+                              :href="profileRoute({unplayed_page: page})"
                               preserve-scroll
                               class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
                               :class="unplayed_maps.current_page === page
@@ -1066,7 +1088,7 @@
 
                     <!-- Next Button -->
                     <Link v-if="unplayed_maps.current_page < unplayed_maps.last_page"
-                          :href="route('profile.index', {id: user.id, unplayed_page: unplayed_maps.current_page + 1})"
+                          :href="profileRoute({unplayed_page: unplayed_maps.current_page + 1})"
                           preserve-scroll
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         Next ›

@@ -89,11 +89,7 @@ class WebController extends Controller
 
             $url = "https://dl.defrag.racing/downloads/maps/" . $filename;
 
-            $temp = tempnam(sys_get_temp_dir(), $filename);
-            copy($url, $temp);
-
-
-            return response()->download($temp, $filename)->deleteFileAfterSend(true);
+            return redirect($url);
         }
 
         abort(404);

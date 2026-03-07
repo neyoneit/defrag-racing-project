@@ -63,6 +63,14 @@ PRODUCTION_CREDENTIALS.md
 /app/Console/Commands/RenamePlayer.php
 *.sql
 
+# Documentation/instruction files (local only)
+ODFE_GETDFSTATUS.md
+GETDFSTATUS_WEB_RECAP.md
+VPS_ACCESS.md
+
+# Local docker config
+/docker/
+
 # MediaWiki - Don't commit LocalSettings.php (contains secrets)
 /wiki/LocalSettings.php
 /wiki/extensions/*
