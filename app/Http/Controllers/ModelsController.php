@@ -1351,6 +1351,23 @@ class ModelsController extends Controller
         return response()->json(['shaders' => $shaderFiles]);
     }
 
+    public function batchGenerateGifs()
+    {
+        if (!Auth::check() || !Auth::user()->admin) {
+            abort(403);
+        }
+
+        $models = PlayerModel::select('id', 'name', 'category', 'model_type', 'file_path', 'base_model', 'base_model_file_path', 'thumbnail', 'head_icon', 'main_file', 'available_skins')
+            ->approved()
+            ->where('hidden', false)
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return Inertia::render('Models/BatchGenerateGifs', [
+            'models' => $models,
+        ]);
+    }
+
     public function confirmNsfw()
     {
         $user = Auth::user();

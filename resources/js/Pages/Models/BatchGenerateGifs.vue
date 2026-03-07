@@ -1,0 +1,618 @@
+<script setup>
+import { Head, usePage } from '@inertiajs/vue3';
+import { ref, computed, nextTick } from 'vue';
+import ModelViewer from '@/Components/ModelViewer.vue';
+
+const page = usePage();
+
+const props = defineProps({
+    models: Array,
+});
+
+const modelIdsInput = ref('');
+const isProcessing = ref(false);
+const currentModelIndex = ref(-1);
+const currentModel = ref(null);
+const viewer3D = ref(null);
+const viewerLoaded = ref(false);
+const loadGeneration = ref(0); // Track which load cycle we're on to prevent race conditions
+const results = ref([]);
+const overallProgress = ref('');
+const currentStatus = ref('');
+
+// Track completed IDs in localStorage to survive page refreshes
+const STORAGE_KEY = 'batch_gif_completed_ids';
+function getCompletedIds() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+    } catch { return new Set(); }
+}
+function markCompleted(id) {
+    const completed = getCompletedIds();
+    completed.add(id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
+}
+function clearCompleted() {
+    localStorage.removeItem(STORAGE_KEY);
+}
+const completedCount = ref(getCompletedIds().size);
+
+// Parse model IDs from input
+const selectedModelIds = computed(() => {
+    return modelIdsInput.value
+        .split(/[,\s]+/)
+        .map(id => parseInt(id.trim()))
+        .filter(id => !isNaN(id) && id > 0);
+});
+
+// Find model data by ID
+function findModel(id) {
+    return props.models.find(m => m.id === id);
+}
+
+// Compute model file path (same logic as Show.vue)
+function getModelFilePath(model) {
+    if (model.category === 'weapon') {
+        if (!model.file_path) return null;
+        const mainFile = model.main_file || `${model.base_model || model.name}.md3`;
+        if (model.file_path.startsWith('baseq3/')) {
+            return `/${model.file_path}/${mainFile}`;
+        }
+        return `/storage/${model.file_path}/${mainFile}`;
+    }
+
+    if (!model.file_path) return null;
+    if (model.file_path.startsWith('baseq3/')) {
+        return `/${model.file_path}/head.md3`;
+    }
+    if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+        return `/storage/${model.file_path}/head.md3`;
+    }
+    const modelName = model.base_model || model.name;
+    return `/storage/${model.file_path}/models/players/${modelName}/head.md3`;
+}
+
+// Get first available skin name for model
+function getFirstSkin(model) {
+    const skins = model.available_skins;
+    if (typeof skins === 'string') {
+        try {
+            const parsed = JSON.parse(skins);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+        } catch (e) { /* ignore */ }
+    }
+    if (Array.isArray(skins) && skins.length > 0) return skins[0];
+    return 'default';
+}
+
+// Compute skin file path
+function getSkinFilePath(model) {
+    if (model.category === 'weapon') return null;
+    if (!model.file_path) return null;
+
+    const skinName = getFirstSkin(model);
+    if (model.file_path.startsWith('baseq3/')) {
+        return `/${model.file_path}/head_${skinName}.skin`;
+    }
+    const modelName = model.base_model || model.name;
+    if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+        return `/storage/${model.file_path}/head_${skinName}.skin`;
+    }
+    return `/storage/${model.file_path}/models/players/${modelName}/head_${skinName}.skin`;
+}
+
+// Get skin pack base path for mixed/skin packs
+function getSkinPackBasePath(model) {
+    const baseModelData = getBaseModelData(model);
+    if (!baseModelData) return null;
+    if (model.file_path && !model.file_path.startsWith('baseq3/')) {
+        if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+            return `/storage/${model.file_path}`;
+        }
+        const modelName = model.base_model || model.name;
+        return `/storage/${model.file_path}/models/players/${modelName}`;
+    }
+    return null;
+}
+
+// Get base model data for skin/mixed packs
+function getBaseModelData(model) {
+    if (model.model_type === 'complete' || !model.base_model) return null;
+    if (model.base_model_file_path) {
+        return { name: model.base_model, file_path: model.base_model_file_path };
+    }
+    // Try to find base model in the models list
+    const base = props.models.find(m => m.name === model.base_model && m.model_type === 'complete');
+    if (base) {
+        return { name: base.name, file_path: base.file_path };
+    }
+    return null;
+}
+
+// Generate GIF for a single model (extracted from Show.vue logic)
+async function generateGifForModel() {
+    const viewer = viewer3D.value;
+    if (!viewer) throw new Error('Viewer not available');
+
+    const renderer = viewer.getRenderer();
+    const scene = viewer.getScene();
+    const camera = viewer.getCamera();
+
+    if (!renderer || !scene || !camera) {
+        throw new Error('Could not access 3D viewer components');
+    }
+
+    const canvas = renderer.domElement;
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    const gifWidth = 300;
+    const gifHeight = 300;
+
+    const GIF = (await import('gif.js')).default;
+
+    const gif = new GIF({
+        workers: 1,
+        quality: 10,
+        width: gifWidth,
+        height: gifHeight,
+        workerScript: '/gif.worker.js'
+    });
+
+    const controls = viewer.getControls();
+    const originalPosition = camera.position.clone();
+    const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
+
+    const modelObj = viewer.getModel();
+    const pivot = viewer.getModelCenter();
+    const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+
+    const dx = originalPosition.x - target.x;
+    const dy = originalPosition.y - target.y;
+    const dz = originalPosition.z - target.z;
+    const radius = Math.sqrt(dx * dx + dz * dz);
+    const height = dy;
+    const startAngle = Math.atan2(dx, dz);
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = gifWidth;
+    tempCanvas.height = gifHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    const numFrames = 24;
+    const rotationStep = (Math.PI * 2) / numFrames;
+
+    for (let i = 0; i < numFrames; i++) {
+        currentStatus.value = `Capturing frame ${i + 1}/${numFrames}...`;
+
+        const angle = startAngle + (i * rotationStep);
+        camera.position.x = target.x + Math.sin(angle) * radius;
+        camera.position.z = target.z + Math.cos(angle) * radius;
+        camera.position.y = target.y + height;
+
+        camera.lookAt(target.x, target.y, target.z);
+        camera.updateMatrixWorld();
+        scene.updateMatrixWorld(true);
+
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        renderer.render(scene, camera);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
+        gif.addFrame(tempCanvas, { copy: true, delay: 83 });
+
+        await new Promise(resolve => setTimeout(resolve, 30));
+    }
+
+    currentStatus.value = 'Encoding GIF...';
+
+    const gifBlob = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('GIF encoding timed out'));
+        }, 60000);
+
+        gif.on('finished', (blob) => {
+            clearTimeout(timeout);
+            resolve(blob);
+        });
+        gif.render();
+    });
+
+    // Cleanup GIF encoder
+    try {
+        gif.abort();
+        if (gif.freeWorkers) gif.freeWorkers.forEach(w => w.terminate());
+    } catch (e) { /* ignore */ }
+
+    // Generate head icon
+    currentStatus.value = 'Generating head icon...';
+    let headIconBlob = null;
+    try {
+        const THREE = await import('three');
+        const model = viewer.getModel();
+        if (model) {
+            let headMesh = null;
+            let highestY = -Infinity;
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    const worldPos = new THREE.Vector3();
+                    child.getWorldPosition(worldPos);
+                    if (worldPos.y > highestY) {
+                        highestY = worldPos.y;
+                        headMesh = child;
+                    }
+                }
+            });
+
+            if (headMesh) {
+                const headBox = new THREE.Box3().setFromObject(headMesh);
+                const headCenter = headBox.getCenter(new THREE.Vector3());
+                const headSize = headBox.getSize(new THREE.Vector3());
+                const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
+
+                camera.position.set(headCenter.x, headCenter.y, headCenter.z + cameraZ);
+                camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
+                camera.updateMatrixWorld();
+                scene.updateMatrixWorld(true);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+                renderer.render(scene, camera);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                const headCanvas = document.createElement('canvas');
+                headCanvas.width = 64;
+                headCanvas.height = 64;
+                const headCtx = headCanvas.getContext('2d');
+                headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
+                headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
+                headCanvas.width = 0;
+                headCanvas.height = 0;
+            }
+        }
+    } catch (e) {
+        console.error('Head icon error:', e);
+    }
+
+    // Restore camera
+    camera.position.copy(originalPosition);
+    camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+    if (controls) {
+        controls.target.copy(originalTarget);
+        controls.update();
+    }
+
+    // Release temp canvas
+    tempCanvas.width = 0;
+    tempCanvas.height = 0;
+
+    return { gifBlob, headIconBlob };
+}
+
+// Upload GIF + head icon for a model
+async function uploadThumbnail(modelId, gifBlob, headIconBlob) {
+    const formData = new FormData();
+    formData.append('gif', gifBlob, `model_${modelId}.gif`);
+    if (headIconBlob) {
+        formData.append('head_icon', headIconBlob, `model_${modelId}_head.png`);
+    }
+
+    const response = await fetch(route('models.saveThumbnail', modelId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    });
+
+    const data = await response.json();
+    if (!data.success) {
+        throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+}
+
+// Wait for model viewer to emit loaded (with generation check to prevent race conditions)
+function waitForViewerLoaded(expectedGeneration) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            clearInterval(interval);
+            reject(new Error('Model load timed out (30s)'));
+        }, 30000);
+
+        const interval = setInterval(() => {
+            // Abort if generation changed (means a different model started loading)
+            if (loadGeneration.value !== expectedGeneration) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                reject(new Error('Load generation mismatch - stale event'));
+                return;
+            }
+            if (viewerLoaded.value) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                // Textures load async (fire-and-forget in MD3Loader) so we need generous wait
+                setTimeout(resolve, 3000);
+            }
+        }, 100);
+    });
+}
+
+const onViewerLoaded = () => {
+    viewerLoaded.value = true;
+};
+
+const onViewerError = (err) => {
+    console.error('Viewer error:', err);
+    viewerLoaded.value = false;
+};
+
+// Main batch process
+async function startBatch() {
+    const ids = selectedModelIds.value;
+    if (ids.length === 0) return;
+
+    isProcessing.value = true;
+    results.value = [];
+
+    for (let i = 0; i < ids.length; i++) {
+        const modelId = ids[i];
+        const modelData = findModel(modelId);
+
+        currentModelIndex.value = i;
+        overallProgress.value = `Processing ${i + 1}/${ids.length}: Model #${modelId}`;
+
+        // Skip already completed models
+        if (getCompletedIds().has(modelId)) {
+            results.value.push({ id: modelId, name: findModel(modelId)?.name || `#${modelId}`, status: 'skipped', message: 'Already done' });
+            continue;
+        }
+
+        if (!modelData) {
+            results.value.push({ id: modelId, name: `#${modelId}`, status: 'error', message: 'Model not found' });
+            continue;
+        }
+
+        const modelPath = getModelFilePath(modelData);
+        if (!modelPath) {
+            results.value.push({ id: modelId, name: modelData.name, status: 'error', message: 'No file path' });
+            continue;
+        }
+
+        // Set current model to trigger ModelViewer render
+        currentStatus.value = 'Loading model...';
+        viewerLoaded.value = false;
+        loadGeneration.value++;
+        const thisGeneration = loadGeneration.value;
+        currentModel.value = null;
+        await nextTick();
+        // Extra wait to ensure old viewer is fully destroyed
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        currentModel.value = modelData;
+        await nextTick();
+
+        try {
+            // Wait for model to load (with generation check)
+            await waitForViewerLoaded(thisGeneration);
+
+            // Generate GIF
+            currentStatus.value = 'Generating GIF...';
+            const { gifBlob, headIconBlob } = await generateGifForModel();
+
+            // Upload
+            currentStatus.value = 'Uploading...';
+            await uploadThumbnail(modelId, gifBlob, headIconBlob);
+
+            markCompleted(modelId);
+            completedCount.value = getCompletedIds().size;
+            results.value.push({ id: modelId, name: modelData.name, status: 'success', message: 'Done' });
+        } catch (err) {
+            console.error(`Error processing model ${modelId}:`, err);
+            results.value.push({ id: modelId, name: modelData.name, status: 'error', message: err.message });
+        }
+
+        // Unload model between iterations to free memory
+        currentModel.value = null;
+        await nextTick();
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    isProcessing.value = false;
+    currentModelIndex.value = -1;
+    const successCount = results.value.filter(r => r.status === 'success').length;
+    const skippedCount = results.value.filter(r => r.status === 'skipped').length;
+    overallProgress.value = `Finished! ${successCount} generated, ${skippedCount} skipped, ${ids.length - successCount - skippedCount} failed`;
+    currentStatus.value = '';
+}
+
+// Quick-fill helpers
+function fillAllWithoutGif() {
+    const ids = props.models.filter(m => !m.thumbnail).map(m => m.id);
+    modelIdsInput.value = ids.join(', ');
+}
+
+function fillAll() {
+    modelIdsInput.value = props.models.map(m => m.id).join(', ');
+}
+
+async function startAll() {
+    modelIdsInput.value = props.models.map(m => m.id).join(', ');
+    await nextTick();
+    startBatch();
+}
+
+async function startAlreadyGenerated() {
+    modelIdsInput.value = props.models.filter(m => m.thumbnail).map(m => m.id).join(', ');
+    await nextTick();
+    startBatch();
+}
+</script>
+
+<template>
+    <Head title="Batch Generate GIF Thumbnails" />
+
+    <div class="min-h-screen bg-gray-900 text-white p-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-bold mb-6">Batch Generate GIF Thumbnails</h1>
+
+            <!-- Input -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Model IDs (comma or space separated)
+                </label>
+                <textarea
+                    v-model="modelIdsInput"
+                    :disabled="isProcessing"
+                    class="w-full bg-gray-700 text-white rounded px-4 py-2 h-24 font-mono text-sm"
+                    placeholder="e.g. 3529, 3544, 3550"
+                ></textarea>
+
+                <div class="flex gap-3 mt-3">
+                    <button
+                        @click="startBatch"
+                        :disabled="isProcessing || selectedModelIds.length === 0"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded font-medium"
+                    >
+                        {{ isProcessing ? 'Processing...' : `Generate (${selectedModelIds.length} models)` }}
+                    </button>
+                    <button
+                        @click="fillAllWithoutGif"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
+                    >
+                        Fill: Missing thumbnails ({{ models.filter(m => !m.thumbnail).length }})
+                    </button>
+                    <button
+                        @click="fillAll"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
+                    >
+                        Fill: All ({{ models.length }})
+                    </button>
+                    <button
+                        v-if="completedCount > 0"
+                        @click="clearCompleted(); completedCount = 0;"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
+                    >
+                        Clear progress ({{ completedCount }} done)
+                    </button>
+                    <button
+                        @click="startAlreadyGenerated"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-700 rounded text-sm font-medium"
+                    >
+                        Regenerate existing ({{ models.filter(m => m.thumbnail).length }})
+                    </button>
+                    <button
+                        @click="startAll"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 rounded text-sm font-medium"
+                    >
+                        Regenerate ALL ({{ models.length }})
+                    </button>
+                </div>
+
+                <!-- Parsed IDs preview -->
+                <div v-if="selectedModelIds.length > 0" class="mt-3 text-sm text-gray-400">
+                    Parsed IDs: {{ selectedModelIds.join(', ') }}
+                </div>
+            </div>
+
+            <!-- Progress -->
+            <div v-if="overallProgress" class="bg-gray-800 rounded-lg p-6 mb-6">
+                <div class="text-lg font-medium">{{ overallProgress }}</div>
+                <div v-if="currentStatus" class="text-sm text-gray-400 mt-1">{{ currentStatus }}</div>
+            </div>
+
+            <!-- Render preview (600x600 canvas, displayed at 300x300) -->
+            <div v-if="currentModel" class="mb-6">
+                <div class="text-sm text-gray-400 mb-2">
+                    Rendering: {{ currentModel.name }} (#{{ currentModel.id }})
+                </div>
+                <div style="width: 800px; height: 800px;">
+                    <div ref="viewerContainer" style="width: 800px; height: 800px;">
+                        <ModelViewer
+                            ref="viewer3D"
+                            :model-path="getModelFilePath(currentModel)"
+                            :model-id="currentModel.id"
+                            :skin-path="getSkinFilePath(currentModel)"
+                            :skin-pack-base-path="getSkinPackBasePath(currentModel)"
+                            :skin-name="getFirstSkin(currentModel)"
+                            :load-full-player="currentModel.category !== 'weapon'"
+                            :is-weapon="currentModel.category === 'weapon'"
+                            :auto-rotate="false"
+                            :show-grid="false"
+                            :enable-sounds="false"
+                            :thumbnail-mode="true"
+                            :base-model-name="currentModel.model_type !== 'complete' ? currentModel.base_model : null"
+                            :base-model-file-path="getBaseModelData(currentModel)?.file_path || null"
+                            @loaded="onViewerLoaded"
+                            @error="onViewerError"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div v-if="results.length > 0" class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-lg font-medium mb-4">Results</h2>
+                <div class="space-y-2">
+                    <div
+                        v-for="result in results"
+                        :key="result.id"
+                        class="flex items-center gap-3 text-sm"
+                    >
+                        <span
+                            :class="{
+                                'text-green-400': result.status === 'success',
+                                'text-red-400': result.status === 'error',
+                                'text-gray-500': result.status === 'skipped'
+                            }"
+                            class="font-mono w-10"
+                        >
+                            {{ result.status === 'success' ? 'OK' : result.status === 'skipped' ? 'SKIP' : 'FAIL' }}
+                        </span>
+                        <span class="text-gray-300">#{{ result.id }}</span>
+                        <span class="text-white">{{ result.name }}</span>
+                        <span v-if="result.status !== 'success'" class="text-xs" :class="result.status === 'error' ? 'text-red-400' : 'text-gray-500'">
+                            {{ result.message }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model list reference -->
+            <details class="mt-6">
+                <summary class="cursor-pointer text-gray-400 hover:text-gray-300 text-sm">
+                    Show all models ({{ models.length }})
+                </summary>
+                <div class="mt-2 bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <table class="w-full text-sm">
+                        <thead class="text-gray-400">
+                            <tr>
+                                <th class="text-left py-1 px-2">ID</th>
+                                <th class="text-left py-1 px-2">Name</th>
+                                <th class="text-left py-1 px-2">Category</th>
+                                <th class="text-left py-1 px-2">Has GIF</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="m in models" :key="m.id" class="border-t border-gray-700">
+                                <td class="py-1 px-2 font-mono text-gray-400">{{ m.id }}</td>
+                                <td class="py-1 px-2">{{ m.name }}</td>
+                                <td class="py-1 px-2 text-gray-400">{{ m.category }}</td>
+                                <td class="py-1 px-2">
+                                    <span v-if="m.thumbnail" class="text-green-400">Yes</span>
+                                    <span v-else class="text-red-400">No</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </div>
+
+    </div>
+</template>

@@ -121,7 +121,7 @@
         <!-- First & Previous Group - Fixed Width -->
         <div class="flex items-center gap-1 mr-1 w-20 justify-end">
             <button v-if="current_page != 1" @click="goToPage(1)"
-                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5" />
                 </svg>
@@ -129,7 +129,7 @@
             <div v-else class="h-10 w-10"></div>
 
             <button v-if="current_page != 1" @click="goToPage(current_page - 1)"
-                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                 </svg>
@@ -140,15 +140,14 @@
         <!-- Page Numbers Before (Desktop) - Fixed Width Container -->
         <div v-if="screenWidth >= 640" class="flex items-center gap-1 w-20 justify-end">
             <button v-for="page in before" :key="page.label" @click="goToPage(page.label)"
-                class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <span class="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">{{ page.label }}</span>
             </button>
         </div>
 
         <!-- Current Page - Input Only -->
         <div class="relative mx-1">
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 blur-md opacity-30"></div>
-            <div class="relative h-10 w-16 flex items-center justify-center bg-gradient-to-br from-blue-600/30 to-purple-600/30 border border-blue-400/30 rounded-xl backdrop-blur-sm">
+            <div class="relative h-10 w-16 flex items-center justify-center bg-blue-600/20 border border-blue-400/30 rounded-xl">
                 <input
                     v-model="newPage"
                     @change="changePage"
@@ -162,7 +161,7 @@
         <!-- Page Numbers After (Desktop) - Fixed Width Container -->
         <div v-if="screenWidth >= 640" class="flex items-center gap-1 w-20 justify-start">
             <button v-for="page in after" :key="page.label" @click="goToPage(page.label)"
-                class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <span class="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">{{ page.label }}</span>
             </button>
         </div>
@@ -170,7 +169,7 @@
         <!-- Next & Last Group - Fixed Width -->
         <div class="flex items-center gap-1 ml-1 w-20 justify-start">
             <button v-if="current_page < last_page" @click="goToPage(current_page + 1)"
-                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
@@ -178,7 +177,7 @@
             <div v-else class="h-10 w-10"></div>
 
             <button v-if="current_page < last_page" @click="goToPage(last_page)"
-                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/[0.02] hover:from-blue-600/20 hover:to-purple-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
+                class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
                 </svg>

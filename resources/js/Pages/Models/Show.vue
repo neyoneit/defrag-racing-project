@@ -472,7 +472,14 @@ const downloadModel = () => {
 };
 
 const goBack = () => {
-    window.history.back();
+    // If previous page was on our site, go back (preserves pagination/filters)
+    // Otherwise navigate to models index
+    const referrer = document.referrer;
+    if (referrer && new URL(referrer).origin === window.location.origin) {
+        window.history.back();
+    } else {
+        router.visit(route('models.index'));
+    }
 };
 
 // GIF Generation (browser-based)
@@ -719,21 +726,27 @@ const generateGifThumbnail = async () => {
             workerScript: '/gif.worker.js'
         });
 
-        // Save the current camera position and target
+        // Use current camera position from preview (no fitToView - keep what user sees)
+
+        // Save the current camera position
         const originalPosition = camera.position.clone();
-
-        // Get the controls target (what the camera is looking at - the model center)
         const controls = viewer3D.value.getControls();
-        const target = controls?.target ? { x: controls.target.x, y: controls.target.y, z: controls.target.z } : { x: 0, y: 30, z: 0 };
+        const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
 
-        // Calculate camera distance from the target (not from origin)
+        // Use model origin (0,0,0) for XZ rotation pivot, bbox center Y for height
+        // Model origin is the natural rotation center for Q3 models
+        const modelObj = viewer3D.value.getModel();
+        const pivot = viewer3D.value.getModelCenter();
+        const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+
+        // Calculate camera distance from the pivot
         const dx = originalPosition.x - target.x;
         const dy = originalPosition.y - target.y;
         const dz = originalPosition.z - target.z;
         const radius = Math.sqrt(dx * dx + dz * dz); // Horizontal distance
-        const height = dy; // Vertical offset from target
+        const height = dy; // Vertical offset from pivot
 
-        // Get the starting angle based on current camera position relative to target
+        // Get the starting angle based on current camera position relative to pivot
         const startAngle = Math.atan2(dx, dz);
 
         // Create a temporary canvas for resizing frames
@@ -865,11 +878,11 @@ const generateGifThumbnail = async () => {
             console.error('Head icon generation error:', error);
         }
 
-        // Restore camera position
+        // Restore camera position and original target
         camera.position.copy(originalPosition);
-        camera.lookAt(target.x, target.y, target.z);
+        camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
         if (controls) {
-            controls.target.set(target.x, target.y, target.z);
+            controls.target.copy(originalTarget);
             controls.update();
         }
 

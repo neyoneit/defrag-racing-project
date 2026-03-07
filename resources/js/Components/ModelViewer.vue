@@ -67,6 +67,8 @@ const emit = defineEmits(['loaded', 'error', 'animationsReady', 'soundsReady']);
 const canvas = ref(null);
 let scene, camera, renderer, controls, animationFrameId;
 let model = null;
+let modelCenter = new THREE.Vector3(); // Geometric center for rotation pivot
+let manualAutoRotate = false;
 let animationManager = null;
 let soundManager = null;
 let clock = new THREE.Clock();
@@ -250,8 +252,8 @@ function initScene() {
     controls.dampingFactor = 0.05;
     controls.minDistance = 1; // Allow zooming very close (was 20)
     controls.maxDistance = 300;
-    controls.autoRotate = props.autoRotate;
-    controls.autoRotateSpeed = 2.0;
+    controls.autoRotate = false; // We handle rotation manually around modelCenter
+    manualAutoRotate = props.autoRotate;
 
     // Set control target based on model type
     if (props.isWeapon) {
@@ -265,6 +267,12 @@ async function loadModel() {
     try {
         loading.value = true;
         error.value = null;
+
+        // Reset weapon view state for fresh load
+        weaponViewState.basePosition.set(0, 0, 0);
+        weaponViewState.baseRotation.set(0, 0, 0);
+        manualAutoRotate = false;
+        modelCenter.set(0, 0, 0);
 
         // Stop and clean up any existing weapon sounds before loading new model
         if (model && model.userData && model.userData.animation && model.userData.animation.sounds) {
@@ -383,15 +391,26 @@ async function loadModel() {
         // Q3 MD3 models coordinate system conversion:
         // Q3: +X = forward, +Z = up, +Y = left
         // Three.js: +X = right, +Y = up, +Z = backward (towards camera)
-        // Rotate to stand upright and face camera
-        model.rotation.x = -Math.PI / 2;  // Stand upright
-        model.rotation.z = -Math.PI / 2;  // Turn to face camera
+        // Rotate to stand upright
+        model.rotation.x = -Math.PI / 2;  // Stand upright (Q3 Z-up → Three.js Y-up)
+        if (props.isWeapon) {
+            model.rotation.z = 0;  // Weapons: barrel points right when viewed from front
+        } else {
+            model.rotation.z = -Math.PI / 2;  // Players: face camera
+        }
 
         // Force matrix update after rotation
         model.updateMatrixWorld(true);
 
-        // Calculate scale after rotation
-        const box = new THREE.Box3().setFromObject(model);
+        // Calculate scale after rotation (mesh-only bbox to match fitToView)
+        const box = new THREE.Box3();
+        model.traverse((child) => {
+            if (child.isMesh && child.geometry) {
+                const meshBox = new THREE.Box3().setFromObject(child);
+                if (!meshBox.isEmpty()) box.union(meshBox);
+            }
+        });
+        if (box.isEmpty()) box.setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
         const scale = 50 / maxDim;
@@ -400,21 +419,15 @@ async function loadModel() {
         // Force matrix update after scale
         model.updateMatrixWorld(true);
 
-        // For weapons: center the model at its bounding box center first
-        // This ensures all weapons align consistently regardless of their internal pivot points
+        // For weapons: position and lock basePosition for weapon view animation
         if (props.isWeapon) {
-            const centeredBox = new THREE.Box3().setFromObject(model);
-            const center = centeredBox.getCenter(new THREE.Vector3());
-
-            // Offset the model so its bounding box center is at the origin
-            model.position.set(-center.x, -center.y, -center.z);
-            model.updateMatrixWorld(true);
-
-            // Now position all weapons at the same Y height (centered at their bounding box)
             model.position.set(0, props.thumbnailMode ? 10 : 20, 0);
+            // Lock weapon view state so animate loop doesn't overwrite position
+            weaponViewState.basePosition.copy(model.position);
+            weaponViewState.baseRotation.copy(model.rotation);
         } else {
-            // Player models: position higher for detail view
-            model.position.set(0, props.thumbnailMode ? 0 : 30, 0);
+            // Player models: fitToView handles camera positioning
+            model.position.set(0, 0, 0);
         }
 
         scene.add(model);
@@ -508,6 +521,9 @@ async function loadModel() {
             emit('animationsReady', availableAnimations.value);
         }
 
+        // Auto-fit camera to show entire model
+        fitToView(props.thumbnailMode ? 1.05 : 1.03);
+
         loading.value = false;
         emit('loaded', model);
     } catch (err) {
@@ -522,13 +538,7 @@ async function loadModel() {
 function updateWeaponViewAnimation(time, deltaTime) {
     if (!model) return;
 
-    // Store base position/rotation if not set
-    if (weaponViewState.basePosition.length() === 0) {
-        weaponViewState.basePosition.copy(model.position);
-        weaponViewState.baseRotation.copy(model.rotation);
-    }
-
-    // Reset to base position/rotation
+    // Reset to base position/rotation (set during loadModel)
     model.position.copy(weaponViewState.basePosition);
     model.rotation.copy(weaponViewState.baseRotation);
 
@@ -569,6 +579,28 @@ function animate() {
 
     // Update shader animations (tcMod)
     updateShaderAnimations(time);
+
+    // Manual auto-rotate: orbit camera around model's origin (0,0,0) in XZ plane
+    // Model origin is the natural rotation center for Q3 models (not bbox center which
+    // can be offset by asymmetric geometry like weapons/swords)
+    if (manualAutoRotate && controls && camera && model) {
+        const rotateSpeed = 2.0;
+        const angle = rotateSpeed * deltaTime;
+        const pivotX = model.position.x; // always 0
+        const pivotZ = model.position.z; // always 0
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+
+        const dx = camera.position.x - pivotX;
+        const dz = camera.position.z - pivotZ;
+        camera.position.x = pivotX + dx * cosA - dz * sinA;
+        camera.position.z = pivotZ + dx * sinA + dz * cosA;
+
+        const tx = controls.target.x - pivotX;
+        const tz = controls.target.z - pivotZ;
+        controls.target.x = pivotX + tx * cosA - tz * sinA;
+        controls.target.z = pivotZ + tx * sinA + tz * cosA;
+    }
 
     if (controls) {
         controls.update();
@@ -693,10 +725,12 @@ function setWireframe(enabled) {
     });
 }
 
-// Method to set auto-rotate
+// Method to set auto-rotate (rotates around model's geometric center)
 function setAutoRotate(enabled) {
+    manualAutoRotate = enabled;
+    // Don't use controls.autoRotate - we handle rotation manually around modelCenter
     if (controls) {
-        controls.autoRotate = enabled;
+        controls.autoRotate = false;
     }
 }
 
@@ -931,6 +965,124 @@ function handleKeyUp(event) {
     }
 }
 
+// Fit camera to show entire model at maximum zoom using screen-space projection.
+// Instead of estimating from bounding box, we project actual vertices to measure
+// real screen coverage, then adjust camera distance to fill viewport uniformly.
+function fitToView(paddingFactor = 1.1) {
+    if (!model || !camera || !controls || !renderer) return;
+
+    // Ensure correct aspect ratio
+    const renderSize = new THREE.Vector2();
+    renderer.getSize(renderSize);
+    if (renderSize.x > 0 && renderSize.y > 0) {
+        camera.aspect = renderSize.x / renderSize.y;
+        camera.updateProjectionMatrix();
+    }
+
+    // Tick animation so we measure the actual animated pose
+    if (animationManager && animationManager.playing) {
+        animationManager.update(1 / 60);
+    }
+    model.updateMatrixWorld(true);
+
+    // Step 1: Rough bbox for initial camera placement (mesh-only to exclude tags)
+    const box = new THREE.Box3();
+    model.traverse((child) => {
+        if (child.isMesh && child.geometry) {
+            const meshBox = new THREE.Box3().setFromObject(child);
+            if (!meshBox.isEmpty()) box.union(meshBox);
+        }
+    });
+    if (box.isEmpty()) box.setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    modelCenter.copy(center); // Store for rotation pivot
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    const initialDist = (maxDim / 2) / Math.tan(fov / 2) * 2;
+
+    // Position camera: use model origin for XZ (correct rotation pivot), bbox center Y
+    camera.position.set(model.position.x, center.y, model.position.z + initialDist);
+    controls.target.set(model.position.x, center.y, model.position.z);
+    controls.update();
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+
+    // Step 2: Iterative NDC projection to converge on perfect fit
+    // Each iteration: project vertices, measure NDC bounds, adjust camera
+    const targetExtent = 2 / paddingFactor;
+    const tempVec = new THREE.Vector3();
+
+    for (let iter = 0; iter < 3; iter++) {
+        camera.updateMatrixWorld();
+        camera.updateProjectionMatrix();
+
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+
+        model.traverse((child) => {
+            if (child.isMesh && child.geometry && child.geometry.attributes.position) {
+                const positions = child.geometry.attributes.position;
+                const morphAttrs = child.geometry.morphAttributes.position;
+                const influences = child.morphTargetInfluences;
+                const hasMorph = morphAttrs && influences && morphAttrs.length > 0;
+                child.updateWorldMatrix(true, false);
+                for (let i = 0; i < positions.count; i++) {
+                    tempVec.fromBufferAttribute(positions, i);
+                    if (hasMorph) {
+                        const bx = tempVec.x, by = tempVec.y, bz = tempVec.z;
+                        for (let m = 0; m < influences.length; m++) {
+                            if (influences[m] > 0 && morphAttrs[m]) {
+                                tempVec.x += influences[m] * (morphAttrs[m].getX(i) - bx);
+                                tempVec.y += influences[m] * (morphAttrs[m].getY(i) - by);
+                                tempVec.z += influences[m] * (morphAttrs[m].getZ(i) - bz);
+                            }
+                        }
+                    }
+                    tempVec.applyMatrix4(child.matrixWorld);
+                    tempVec.project(camera);
+                    if (tempVec.z >= -1 && tempVec.z <= 1) {
+                        minX = Math.min(minX, tempVec.x);
+                        maxX = Math.max(maxX, tempVec.x);
+                        minY = Math.min(minY, tempVec.y);
+                        maxY = Math.max(maxY, tempVec.y);
+                    }
+                }
+            }
+        });
+
+        if (minX === Infinity) return;
+
+        const ndcWidth = maxX - minX;
+        const ndcHeight = maxY - minY;
+        const ndcExtent = Math.max(ndcWidth, ndcHeight);
+        const ndcCenterX = (minX + maxX) / 2;
+        const ndcCenterY = (minY + maxY) / 2;
+
+        // Current camera distance to target
+        const currentDist = camera.position.distanceTo(controls.target);
+
+        // Adjust distance: larger ndcExtent → move further, smaller → move closer
+        const zoomRatio = ndcExtent / targetExtent;
+        const newDist = currentDist * zoomRatio;
+
+        // Convert NDC center offset to world offset at current distance
+        const worldHalfH = currentDist * Math.tan(fov / 2);
+        const worldHalfW = worldHalfH * camera.aspect;
+        const offsetX = ndcCenterX * worldHalfW;
+        const offsetY = ndcCenterY * worldHalfH;
+
+        // Only shift target Y (vertical centering), keep XZ at model origin for correct rotation pivot
+        const newTargetX = controls.target.x; // don't shift XZ - keep at model origin
+        const newTargetY = controls.target.y + offsetY;
+        const newTargetZ = controls.target.z;
+
+        camera.position.set(newTargetX, newTargetY, newTargetZ + newDist);
+        controls.target.set(newTargetX, newTargetY, newTargetZ);
+        controls.update();
+    }
+}
+
 // Expose methods for parent component
 defineExpose({
     getModel: () => model,
@@ -938,6 +1090,7 @@ defineExpose({
     getCamera: () => camera,
     getRenderer: () => renderer,
     getControls: () => controls,
+    getModelCenter: () => modelCenter,
     getAnimationManager: () => animationManager,
     getSoundManager: () => soundManager,
     playLegsAnimation: (name) => animationManager?.playLegsAnimation(name),
@@ -1044,7 +1197,8 @@ defineExpose({
     setBackLightIntensity,
     setBackLightColor,
     setBackLightPosition,
-    getLightSettings
+    getLightSettings,
+    fitToView
 });
 </script>
 
