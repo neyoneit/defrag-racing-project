@@ -934,9 +934,9 @@ class ModelsController extends Controller
                 $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (cached)';
             } else {
                 // Fallback: query database (old models without base_model_file_path)
-                $existingModel = PlayerModel::where('name', $model->base_model)
+                $existingModel = PlayerModel::whereRaw('LOWER(base_model) = ?', [strtolower($model->base_model)])
                     ->where('model_type', 'complete')
-                    ->first(['name', 'file_path']);
+                    ->first(['name', 'file_path', 'base_model']);
 
                 if ($existingModel) {
                     $baseModelData = [
