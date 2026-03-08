@@ -344,7 +344,7 @@ export class MD3Loader {
             const parts = trimmed.split(',');
             if (parts.length === 2) {
                 const surfaceName = parts[0].trim();
-                let texturePath = parts[1].trim().replace(/\\/g, '/');
+                let texturePath = parts[1].trim().replace(/\\/g, '/').replace(/^"|"$/g, '');
 
                 // Convert relative path to absolute URL
                 // If texture path starts with models/, use it as-is from storage root
@@ -479,7 +479,8 @@ export class MD3Loader {
                             material.dispose();
 
                         }).catch(err => {
-                            console.warn(`Failed to create shader material for ${surface.name}:`, err);
+                            console.warn(`Failed to create shader material for ${surface.name} - hiding surface`);
+                            mesh.visible = false;
                         }).finally(() => { this.pendingTextures--; });
                     } else {
                         console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size}) - loading texture directly for surface: ${surface.name}`);
@@ -488,7 +489,8 @@ export class MD3Loader {
                         this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).then(() => {
                             console.log(`✅ Texture loaded and applied to ${surface.name}: ${texturePath}`);
                         }).catch(err => {
-                            console.warn(`❌ Failed to load texture for ${surface.name}:`, err);
+                            console.warn(`❌ Failed to load texture for ${surface.name} - hiding surface`);
+                            mesh.visible = false;
                         }).finally(() => { this.pendingTextures--; });
                     }
                 }
