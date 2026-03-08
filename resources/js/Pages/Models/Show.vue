@@ -1320,9 +1320,14 @@ const confirmNsfw = () => {
                         <div class="mb-6">
                             <div class="flex items-start justify-between mb-2">
                                 <h1 class="text-4xl font-black text-white">{{ model.name }}</h1>
-                                <span class="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-sm font-bold text-blue-400">
-                                    {{ model.category }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span v-if="model.is_nsfw" class="px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-full text-sm font-bold text-red-400">
+                                        NSFW
+                                    </span>
+                                    <span class="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-sm font-bold text-blue-400">
+                                        {{ model.category }}
+                                    </span>
+                                </div>
                             </div>
                             <div class="text-gray-400">
                                 <p v-if="model.author">
