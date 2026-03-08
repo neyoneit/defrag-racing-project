@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+// Set to true to enable verbose console logging for debugging shader materials
+const DEBUG = false;
+
 /**
  * Q3ShaderMaterial - Handles Quake 3 shader rendering with custom GLSL shaders
  *
@@ -22,7 +25,7 @@ export class Q3ShaderMaterialSystem {
     async createMaterialForShader(shader, defaultTexturePath, surfaceName) {
         // Check for surfaceparm nodraw - these surfaces should not be rendered
         if (shader && shader.surfaceParms && shader.surfaceParms.includes('nodraw')) {
-            console.log(`🚫 Skipping surface with nodraw: ${surfaceName}`);
+            DEBUG && console.log(`🚫 Skipping surface with nodraw: ${surfaceName}`);
             return null; // Return null to signal that this mesh should not be rendered
         }
 
@@ -348,13 +351,13 @@ export class Q3ShaderMaterialSystem {
 
         // Only override depthWrite to true if explicitly set in shader
         if (firstStage.depthWrite) {
-            console.log(`⚠️ Shader has explicit depthWrite, overriding default`);
+            DEBUG && console.log(`⚠️ Shader has explicit depthWrite, overriding default`);
             depthWrite = true;
         }
 
         // Debug logging for lightning2 shader
         if (surfaceName && surfaceName.includes('lightning2')) {
-            console.log(`🔍 lightning2 depthWrite settings:`, {
+            DEBUG && console.log(`🔍 lightning2 depthWrite settings:`, {
                 hasAdditiveBlending,
                 hasAlphaBlending,
                 calculatedDepthWrite: depthWrite,
@@ -608,7 +611,7 @@ export class Q3ShaderMaterialSystem {
 
         // Debug: Log blend modes for lightning2 shader
         if (surfaceName && surfaceName.includes('lightning2')) {
-            console.log(`🔍 Shader "${surfaceName}" blend modes:`,
+            DEBUG && console.log(`🔍 Shader "${surfaceName}" blend modes:`,
                 `Stage0: [${stageData[0]?.blendFunc.join(', ')}]`,
                 stageData[1] ? `Stage1: [${stageData[1]?.blendFunc.join(', ')}]` : 'no stage1'
             );
