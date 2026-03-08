@@ -184,8 +184,9 @@ function getBaseModelData(model) {
     if (model.base_model_file_path) {
         return { name: model.base_model, file_path: model.base_model_file_path };
     }
-    // Try to find base model in the models list
-    const base = props.models.find(m => m.name === model.base_model && m.model_type === 'complete');
+    // Try to find base model in the models list (case-insensitive, base_model is lowercase)
+    const baseName = model.base_model.toLowerCase();
+    const base = props.models.find(m => m.name.toLowerCase() === baseName && m.model_type === 'complete');
     if (base) {
         return { name: base.name, file_path: base.file_path };
     }
