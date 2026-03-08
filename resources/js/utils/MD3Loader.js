@@ -234,8 +234,9 @@ export class MD3Loader {
             const text = await response.text();
             this.skinData = this.parseSkin(text, url);
         } catch (error) {
-            // Skin file not found - try fallback like Quake 3
-            // e.g. head_rainbow_blue.skin → head_rainbow.skin
+            // Skin file not found - try fallbacks:
+            // 1. Strip last underscore suffix: head_rainbow_blue.skin → head_rainbow.skin
+            // 2. Append _default: upper_atrdgtlbass.skin → upper_atrdgtlbass_default.skin
             const fallbackUrl = this.getSkinFallbackUrl(url);
             if (fallbackUrl) {
                 try {
@@ -246,6 +247,19 @@ export class MD3Loader {
                     return;
                 } catch (e) {
                     // Fallback also failed
+                }
+            }
+            // Try appending _default suffix (some models use upper_name_default.skin instead of upper_name.skin)
+            const defaultUrl = url.replace(/\.skin$/i, '_default.skin');
+            if (defaultUrl !== url) {
+                try {
+                    DEBUG && console.log(`🔄 Skin not found: ${url}, trying _default: ${defaultUrl}`);
+                    const defaultResponse = await this.fetchCaseInsensitive(defaultUrl);
+                    const text = await defaultResponse.text();
+                    this.skinData = this.parseSkin(text, defaultUrl);
+                    return;
+                } catch (e) {
+                    // _default fallback also failed
                 }
             }
             console.warn('Failed to load skin file:', error);
