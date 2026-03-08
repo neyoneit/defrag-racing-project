@@ -109,7 +109,7 @@ class ModelsController extends Controller
                 return "/{$model->file_path}/head.md3";
             }
             // Check if file_path already includes full path (new format)
-            if (str_contains($model->file_path, '/models/players/') || str_contains($model->file_path, '/Models/Players/')) {
+            if (stripos($model->file_path, '/models/players/') !== false) {
                 return "/storage/{$model->file_path}/head.md3";
             }
             return "/storage/{$model->file_path}/models/players/{$model->base_model}/head.md3";
@@ -120,7 +120,7 @@ class ModelsController extends Controller
             if (str_starts_with($model->base_model_file_path, 'baseq3/')) {
                 return "/{$model->base_model_file_path}/head.md3";
             }
-            if (str_contains($model->base_model_file_path, '/models/players/') || str_contains($model->base_model_file_path, '/Models/Players/')) {
+            if (stripos($model->base_model_file_path, '/models/players/') !== false) {
                 return "/storage/{$model->base_model_file_path}/head.md3";
             }
             return "/storage/{$model->base_model_file_path}/models/players/{$model->base_model}/head.md3";

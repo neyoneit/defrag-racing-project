@@ -128,7 +128,7 @@ function getModelFilePath(model) {
     if (model.file_path.startsWith('baseq3/')) {
         return `/${model.file_path}/head.md3`;
     }
-    if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+    if (model.file_path.toLowerCase().includes('/models/players/')) {
         return `/storage/${model.file_path}/head.md3`;
     }
     const modelName = model.base_model || model.name;
@@ -158,7 +158,7 @@ function getSkinFilePath(model) {
         return `/${model.file_path}/head_${skinName}.skin`;
     }
     const modelName = model.base_model || model.name;
-    if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+    if (model.file_path.toLowerCase().includes('/models/players/')) {
         return `/storage/${model.file_path}/head_${skinName}.skin`;
     }
     return `/storage/${model.file_path}/models/players/${modelName}/head_${skinName}.skin`;
@@ -169,7 +169,7 @@ function getSkinPackBasePath(model) {
     const baseModelData = getBaseModelData(model);
     if (!baseModelData) return null;
     if (model.file_path && !model.file_path.startsWith('baseq3/')) {
-        if (model.file_path.includes('/models/players/') || model.file_path.includes('/Models/Players/')) {
+        if (model.file_path.toLowerCase().includes('/models/players/')) {
             return `/storage/${model.file_path}`;
         }
         const modelName = model.base_model || model.name;

@@ -140,7 +140,7 @@ const modelFilePath = computed(() => {
     }
 
     // Check if file_path includes full path (new format with case-sensitive folders)
-    if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+    if (props.model.file_path.toLowerCase().includes('/models/players/')) {
         return `/storage/${props.model.file_path}/head.md3`;
     }
 
@@ -167,7 +167,7 @@ const skinFilePath = computed(() => {
     const modelName = props.model.base_model || props.model.name;
 
     // Check if file_path already includes full path (new format with case-sensitive folders)
-    if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+    if (props.model.file_path.toLowerCase().includes('/models/players/')) {
         return `/storage/${props.model.file_path}/head_${currentSkin.value}.skin`;
     }
 
@@ -182,7 +182,7 @@ const skinPackBasePath = computed(() => {
     // Return the skin pack's extracted directory path
     if (props.model.file_path && !props.model.file_path.startsWith('baseq3/')) {
         // Check if file_path already includes full path (new format)
-        if (props.model.file_path.includes('/models/players/') || props.model.file_path.includes('/Models/Players/')) {
+        if (props.model.file_path.toLowerCase().includes('/models/players/')) {
             return `/storage/${props.model.file_path}`;
         }
         const modelName = props.model.base_model || props.model.name;
