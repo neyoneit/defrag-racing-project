@@ -469,8 +469,8 @@ export class MD3Loader {
                 let texturePath = parts[1].trim().replace(/\\/g, '/').replace(/^"|"$/g, '');
 
                 // Convert relative path to absolute URL
-                // If texture path starts with models/, use it as-is from storage root
-                if (texturePath.startsWith('models/')) {
+                // Q3 absolute paths start with models/, textures/, or gfx/
+                if (texturePath.startsWith('models/') || texturePath.startsWith('textures/') || texturePath.startsWith('gfx/')) {
                     // Check if this is a base Q3 model (in public/baseq3)
                     if (baseUrl.includes('/baseq3/')) {
                         // Base Q3 models: /baseq3/models/players/xxx/
