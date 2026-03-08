@@ -1591,8 +1591,9 @@ export class MD3Loader {
             if (shouldLoadBaseModel && isBaseQ3Model && !isBaseQ3Path) {
                 DEBUG && console.log(`👤 Step 2B: Trying to load PK3 overrides from: ${baseUrl}`);
 
-                // Try to replace lower with PK3 version (if exists)
-                try {
+                // Try to replace lower with PK3 version (if exists in manifest)
+                const hasLowerInPk3 = this.resolvePathFromManifest(`${baseUrl}lower.md3`);
+                if (hasLowerInPk3) try {
                     const pk3LowerUrl = `${baseUrl}lower.md3`;
                     const pk3LowerSkinUrl = `${baseUrl}lower_${skinName}.skin`;
                     const pk3Lower = await this.load(pk3LowerUrl, pk3LowerSkinUrl);
@@ -1621,9 +1622,10 @@ export class MD3Loader {
                     DEBUG && console.log(`ℹ️ No PK3 lower.md3 - using base model lower`);
                 }
 
-                // Try to replace upper with PK3 version (if exists)
+                // Try to replace upper with PK3 version (if exists in manifest)
                 const currentLower = playerGroup.children.find(c => c.name === 'lower');
-                if (currentLower) {
+                const hasUpperInPk3 = this.resolvePathFromManifest(`${baseUrl}upper.md3`);
+                if (currentLower && hasUpperInPk3) {
                     try {
                         const pk3UpperUrl = `${baseUrl}upper.md3`;
                         const pk3UpperSkinUrl = `${baseUrl}upper_${skinName}.skin`;
@@ -1662,9 +1664,10 @@ export class MD3Loader {
                     }
                 }
 
-                // Try to replace head with PK3 version (if exists)
+                // Try to replace head with PK3 version (if exists in manifest)
                 const currentUpper = currentLower?.children.find(c => c.name === 'upper');
-                if (currentUpper) {
+                const hasHeadInPk3 = this.resolvePathFromManifest(`${baseUrl}head.md3`);
+                if (currentUpper && hasHeadInPk3) {
                     try {
                         const pk3HeadUrl = `${baseUrl}head.md3`;
                         const pk3HeadSkinUrl = `${baseUrl}head_${skinName}.skin`;
@@ -1747,10 +1750,11 @@ export class MD3Loader {
                 }
             }
 
-            // ALWAYS try to load from PK3 and override
+            // Try to load from PK3 and override (only if file exists in manifest)
             const pk3AnimConfigUrl = `${baseUrl}animation.cfg`;
+            const hasAnimInPk3 = this.resolvePathFromManifest(pk3AnimConfigUrl);
             DEBUG && console.log(`🎬 STEP 3B: Loading animation.cfg from PK3: ${pk3AnimConfigUrl}`);
-            const pk3Animations = await this.loadAnimationConfig(pk3AnimConfigUrl);
+            const pk3Animations = hasAnimInPk3 ? await this.loadAnimationConfig(pk3AnimConfigUrl) : null;
             if (pk3Animations) {
                 playerGroup.userData.animations = pk3Animations;
                 DEBUG && console.log(`✅ Loaded animation config from PK3 (override)`);
