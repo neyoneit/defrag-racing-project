@@ -639,9 +639,9 @@ export class Q3ShaderMaterialSystem {
             texturePath = this.resolveTexturePath(stage.map, defaultTexturePath);
         }
 
-        // Load texture
+        // Load texture (pass fallbackBaseUrl so base Q3 textures can be found)
         try {
-            await this.loader.loadTextureForMesh(texturePath, material);
+            await this.loader.loadTextureForMesh(texturePath, material, this.loader.fallbackBaseUrl);
         } catch (error) {
             // Silently fail - texture loading errors are not critical
         }
