@@ -291,20 +291,18 @@ export class Q3ShaderMaterialSystem {
             return false;
         })();
 
-        // Check if ANY stage uses alpha blending - needs transparency
+        // Check if stage 0 uses alpha blending - only stage 0 determines material transparency
+        // Later stages' blendFunc is inter-stage blending handled inside the fragment shader
         const hasAlphaBlending = (() => {
-            // Check all stages, not just the base stage
-            for (const stage of stages) {
-                const blendFunc = stage.blendFunc;
-                if (!blendFunc) continue;
+            const blendFunc = stages[0]?.blendFunc;
+            if (!blendFunc) return false;
 
-                if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'blend') {
-                    return true;
-                }
-                if (typeof blendFunc === 'object' && blendFunc !== null &&
-                    (blendFunc.src === 'GL_SRC_ALPHA' || blendFunc.dst === 'GL_ONE_MINUS_SRC_ALPHA')) {
-                    return true;
-                }
+            if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'blend') {
+                return true;
+            }
+            if (typeof blendFunc === 'object' && blendFunc !== null &&
+                (blendFunc.src === 'GL_SRC_ALPHA' || blendFunc.dst === 'GL_ONE_MINUS_SRC_ALPHA')) {
+                return true;
             }
             return false;
         })();

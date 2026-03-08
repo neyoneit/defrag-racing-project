@@ -24,7 +24,7 @@ const consecutiveErrors = ref(0);
 const viewerError = ref(null);
 
 // Auto-refresh after N models to reclaim WebGL contexts and prevent browser degradation
-const MODELS_PER_CYCLE = 10;
+const MODELS_PER_CYCLE = 5;
 const BATCH_STATE_KEY = 'batch_gif_state';
 
 // Track completed IDs in localStorage to survive page refreshes
