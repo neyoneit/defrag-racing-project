@@ -93,13 +93,15 @@ export class Q3ShaderMaterialSystem {
                     // Pass fallback URL from MD3Loader to shader texture loading
                     texture = await this.loadTexture(texturePath, this.loader.fallbackBaseUrl);
                 } catch (error) {
-                    // For additive blending stages, use black fallback (so it doesn't add unwanted brightness)
-                    // For other stages, use white fallback
+                    // Q3 engine skips stages with missing textures (pStage->active = qfalse).
+                    // We emulate this by using a transparent fallback — alpha-blended stages
+                    // contribute nothing, and opaque stages show as transparent (invisible).
+                    // For additive blending, black is the neutral element (adds nothing).
                     const isAdditive = stage.blendFunc === 'add' ||
                                       (typeof stage.blendFunc === 'object' &&
                                        stage.blendFunc.src === 'GL_ONE' &&
                                        stage.blendFunc.dst === 'GL_ONE');
-                    texture = isAdditive ? this.createBlackTexture() : this.createWhiteTexture();
+                    texture = isAdditive ? this.createBlackTexture() : this.createTransparentTexture();
                 }
             }
 
@@ -1512,6 +1514,17 @@ export class Q3ShaderMaterialSystem {
     /**
      * Create a 1x1 black texture as fallback (for additive blending stages)
      */
+    createTransparentTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        // Canvas is transparent by default (rgba 0,0,0,0)
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
+    }
+
     createBlackTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 1;
