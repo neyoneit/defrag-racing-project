@@ -534,8 +534,29 @@ export class MD3Loader {
                         // We want: /storage/models/extracted/worm-123/
                         const match = baseUrl.match(/(\/storage\/models\/extracted\/[^\/]+)/);
                         if (match) {
-                            texturePath = match[1] + '/' + texturePath;
-                            DEBUG && console.log(`✅ Resolved texture path: ${texturePath} (from baseUrl: ${baseUrl})`);
+                            // Check if texture exists in PK3 manifest before prepending storage path.
+                            // Textures like "models/powerups/instant/quad" are baseq3 assets,
+                            // not part of the PK3, so they should stay as bare Q3-relative paths.
+                            const existsInPk3 = this.manifest && this.manifest.has(texturePath.toLowerCase());
+                            // Also check with common extensions if no extension provided
+                            const hasExt = texturePath.match(/\.(tga|jpg|png|jpeg)$/i);
+                            let foundInPk3 = existsInPk3;
+                            if (!foundInPk3 && !hasExt && this.manifest) {
+                                for (const ext of ['tga', 'jpg', 'png']) {
+                                    if (this.manifest.has((texturePath + '.' + ext).toLowerCase())) {
+                                        foundInPk3 = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (foundInPk3) {
+                                texturePath = match[1] + '/' + texturePath;
+                                DEBUG && console.log(`✅ Resolved texture path (PK3): ${texturePath}`);
+                            } else {
+                                // Not in PK3 - keep as bare Q3 path for baseq3 resolution
+                                DEBUG && console.log(`ℹ️ Texture "${texturePath}" not in PK3, keeping as Q3-relative path for baseq3 fallback`);
+                            }
                         } else {
                             console.warn(`❌ Failed to match baseUrl pattern: ${baseUrl}`);
                         }
@@ -622,7 +643,8 @@ export class MD3Loader {
                     // e.g. /storage/.../models/players/niria/slashskate -> models/players/niria/slashskate
                     // e.g. /storage/.../textures/base_wall/chrome_env -> textures/base_wall/chrome_env
                     // e.g. /storage/.../gfx/misc/console01 -> gfx/misc/console01
-                    const match = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/i);
+                    // e.g. models/powerups/instant/quad -> models/powerups/instant/quad (already Q3-relative)
+                    const match = shaderName.match(/(models\/(?:players|weapons2|powerups|weapons|mapobjects|flags|gibs)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/i);
                     if (match) {
                         shaderName = match[0];
                     }
@@ -1263,7 +1285,7 @@ export class MD3Loader {
         }
 
         // Try baseq3 manifest (as fallback)
-        if (this.baseq3Manifest && fallbackBaseUrl) {
+        if (this.baseq3Manifest) {
             let relativePath;
             if (url.startsWith('/baseq3/')) {
                 relativePath = url.substring('/baseq3/'.length);
@@ -1274,6 +1296,9 @@ export class MD3Loader {
                 if (firstSlash !== -1) {
                     relativePath = afterExtracted.substring(firstSlash + 1);
                 }
+            } else if (!url.startsWith('/') && (url.startsWith('models/') || url.startsWith('textures/') || url.startsWith('gfx/'))) {
+                // Bare Q3-relative path (e.g., from skin files referencing baseq3 assets)
+                relativePath = url;
             }
             if (relativePath) {
                 const result = tryManifestLookup(this.baseq3Manifest, relativePath, '/baseq3/');

@@ -599,14 +599,17 @@ export class Q3ShaderMaterialSystem {
             // Q3 default cull is CT_FRONT_SIDED (glCullFace(GL_FRONT)) = show back faces
             // This is critical for models with _ot (outline) surfaces that have inverted normals
             side: shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide,
-            transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasMultiplyBlending || hasAlphaGenEffects, // Enable transparency
+            transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasAlphaGenEffects, // Enable transparency
             alphaTest: alphaTest, // Set alpha test threshold
-            depthWrite: depthWrite,
+            depthWrite: hasMultiplyBlending ? true : depthWrite, // Multiply shaders should write depth (they're visually opaque)
             depthTest: true,
             // For additive blending, use CustomBlending to separate RGB and alpha blending.
             // RGB: ONE + ONE (additive), Alpha: ONE + ONE (accumulate alpha so canvas stays opaque).
             // Without this, additive materials with low-alpha textures become invisible on alpha:true canvas.
-            blending: hasAdditiveBlending ? THREE.CustomBlending : (hasMultiplyBlending ? THREE.MultiplyBlending : THREE.NormalBlending),
+            // Note: multiply/filter blending is NOT applied at material level - it would multiply with
+            // the background (black = invisible). Instead, stage compositing is handled inside the
+            // fragment shader, and the final result is rendered opaquely.
+            blending: hasAdditiveBlending ? THREE.CustomBlending : THREE.NormalBlending,
             ...(hasAdditiveBlending ? {
                 blendEquation: THREE.AddEquation,
                 blendSrc: THREE.OneFactor,
@@ -615,7 +618,6 @@ export class Q3ShaderMaterialSystem {
                 blendSrcAlpha: THREE.OneFactor,
                 blendDstAlpha: THREE.OneFactor,
             } : {}),
-            premultipliedAlpha: hasMultiplyBlending,
             lights: false, // We handle lighting manually
         });
 
@@ -1584,13 +1586,24 @@ export class Q3ShaderMaterialSystem {
             if (defaultPath.includes('/baseq3/')) {
                 // Base Q3 model
                 return '/baseq3/' + mapPath;
-            } else {
-                // User-uploaded model
+            } else if (defaultPath.includes('/extracted/')) {
+                // User-uploaded model - try PK3 first, then baseq3 fallback
                 const match = defaultPath.match(/(.*?\/models\/extracted\/[^\/]+)\//);
                 if (match) {
+                    // Check if file exists in PK3 manifest first
+                    if (this.loader.manifest) {
+                        const resolved = this.loader.manifest.get(mapPath.toLowerCase());
+                        if (resolved) {
+                            return match[1] + '/' + resolved;
+                        }
+                    }
+                    // Try PK3 path (may work if texture is in the PK3)
                     return match[1] + '/' + mapPath;
                 }
             }
+            // Bare Q3-relative path (e.g., skin references like "models/powerups/instant/quad")
+            // or unresolved - fall back to baseq3
+            return '/baseq3/' + mapPath;
         }
 
         // Otherwise use default path
