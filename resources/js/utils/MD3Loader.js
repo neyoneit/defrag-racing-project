@@ -666,9 +666,12 @@ export class MD3Loader {
                         }).finally(() => { this.pendingTextures--; });
                     }
                 }
-            } else if (!this.skinData && surface.shaders && surface.shaders.length > 0) {
-                // No skin file - use MD3's embedded shader names (for weapons, items, etc.)
+            } else if (surface.shaders && surface.shaders.length > 0) {
+                // No skin mapping for this surface - use MD3's embedded shader names
+                // This handles: weapons (no skin file), and surfaces not listed in skin files
+                // (e.g. sarge's h_cigar, u_rshoulder which use baseq3 textures)
                 const embeddedShaderName = surface.shaders[0].name;
+                DEBUG && console.log(`🔧 Surface "${surface.name}" has no skin mapping, using embedded shader: "${embeddedShaderName}"`);
                 DEBUG && console.log(`📦 No skin file - using embedded shader name: "${embeddedShaderName}" for surface: ${surface.name}`);
 
                 // The embedded shader name might be empty or a default placeholder
@@ -736,7 +739,7 @@ export class MD3Loader {
                         DEBUG && console.log(`🔫 Attempting to load weapon texture: ${texturePath}`);
 
                         this.pendingTextures++;
-                        this.loadTextureForMesh(texturePath, material, null).then(() => {
+                        this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).then(() => {
                             DEBUG && console.log(`✅ Texture loaded for ${surface.name}: ${texturePath}`);
                         }).catch(err => {
                             console.warn(`❌ Failed to load embedded shader texture for ${surface.name}:`, err);
@@ -925,6 +928,23 @@ export class MD3Loader {
         for (let i = 0; i < surface.numShaders; i++) {
             const shader = {};
             shader.name = this.readString(view, offset, 64);
+
+            // Some baseq3 MD3 files have a corrupted first byte (null) in shader names
+            // e.g. \0odels/players/sarge/band.tga instead of models/players/sarge/band.tga
+            // Try reading from offset+1 if name is empty but there's data after the null
+            if (!shader.name && view.getUint8(offset) === 0 && view.getUint8(offset + 1) !== 0) {
+                const recovered = this.readString(view, offset + 1, 63);
+                // Check if it looks like a truncated path (missing first char)
+                if (recovered.includes('/')) {
+                    // Try common prefixes: models/, textures/, gfx/
+                    if (recovered.startsWith('odels/')) shader.name = 'm' + recovered;
+                    else if (recovered.startsWith('extures/')) shader.name = 't' + recovered;
+                    else if (recovered.startsWith('fx/')) shader.name = 'g' + recovered;
+                    else shader.name = recovered;
+                    DEBUG && console.log(`🔧 Recovered corrupted shader name: "${shader.name}" for surface`);
+                }
+            }
+
             shader.shaderIndex = view.getInt32(offset + 64, true);
             shaders.push(shader);
             offset += 68;
