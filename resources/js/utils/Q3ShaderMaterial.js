@@ -603,7 +603,18 @@ export class Q3ShaderMaterialSystem {
             alphaTest: alphaTest, // Set alpha test threshold
             depthWrite: depthWrite,
             depthTest: true,
-            blending: hasAdditiveBlending ? THREE.AdditiveBlending : (hasMultiplyBlending ? THREE.MultiplyBlending : THREE.NormalBlending),
+            // For additive blending, use CustomBlending to separate RGB and alpha blending.
+            // RGB: ONE + ONE (additive), Alpha: ONE + ONE (accumulate alpha so canvas stays opaque).
+            // Without this, additive materials with low-alpha textures become invisible on alpha:true canvas.
+            blending: hasAdditiveBlending ? THREE.CustomBlending : (hasMultiplyBlending ? THREE.MultiplyBlending : THREE.NormalBlending),
+            ...(hasAdditiveBlending ? {
+                blendEquation: THREE.AddEquation,
+                blendSrc: THREE.OneFactor,
+                blendDst: THREE.OneFactor,
+                blendEquationAlpha: THREE.AddEquation,
+                blendSrcAlpha: THREE.OneFactor,
+                blendDstAlpha: THREE.OneFactor,
+            } : {}),
             premultipliedAlpha: hasMultiplyBlending,
             lights: false, // We handle lighting manually
         });
@@ -1601,8 +1612,7 @@ export class Q3ShaderMaterialSystem {
 
         // Sort directive OVERRIDES blend function
         if (shader.sort === 'additive') {
-            material.blending = THREE.AdditiveBlending;
-            material.transparent = true;
+            this.setAdditiveBlending(material);
             material.depthWrite = false;
         }
     }
@@ -1634,12 +1644,25 @@ export class Q3ShaderMaterialSystem {
     /**
      * Apply blend function to material
      */
+    setAdditiveBlending(material) {
+        // Use CustomBlending to separate RGB and alpha channels.
+        // RGB: ONE + ONE (additive glow), Alpha: ONE + ONE (accumulate so canvas stays opaque).
+        // Plain AdditiveBlending on an alpha:true WebGL canvas makes low-alpha textures invisible.
+        material.blending = THREE.CustomBlending;
+        material.blendEquation = THREE.AddEquation;
+        material.blendSrc = THREE.OneFactor;
+        material.blendDst = THREE.OneFactor;
+        material.blendEquationAlpha = THREE.AddEquation;
+        material.blendSrcAlpha = THREE.OneFactor;
+        material.blendDstAlpha = THREE.OneFactor;
+        material.transparent = true;
+    }
+
     applyBlendFunc(material, blendFunc) {
         if (typeof blendFunc === 'string') {
             switch (blendFunc.toLowerCase()) {
                 case 'add':
-                    material.blending = THREE.AdditiveBlending;
-                    material.transparent = true;
+                    this.setAdditiveBlending(material);
                     break;
                 case 'blend':
                     material.blending = THREE.NormalBlending;
@@ -1654,8 +1677,7 @@ export class Q3ShaderMaterialSystem {
             const { src, dst } = blendFunc;
 
             if (src === 'GL_ONE' && dst === 'GL_ONE') {
-                material.blending = THREE.AdditiveBlending;
-                material.transparent = true;
+                this.setAdditiveBlending(material);
                 material.depthWrite = false;
             } else if (src === 'GL_SRC_ALPHA' && dst === 'GL_ONE_MINUS_SRC_ALPHA') {
                 material.blending = THREE.NormalBlending;
@@ -1679,7 +1701,7 @@ export class Q3ShaderMaterialSystem {
         if (mode === 'lightingdiffuse') {
             material.emissive = new THREE.Color(0x000000);
         } else if (mode === 'identity' || mode === 'identitylighting') {
-            if (material.blending !== THREE.AdditiveBlending) {
+            if (material.blending !== THREE.AdditiveBlending && material.blending !== THREE.CustomBlending) {
                 material.emissive = new THREE.Color(0x888888);
                 material.emissiveIntensity = 0.5;
             }
