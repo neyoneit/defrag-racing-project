@@ -37,6 +37,8 @@ export class Q3ShaderMaterialSystem {
         // Check if single stage has effects that need custom shader
         const needsCustomShader = shader.stages.length > 1 ||
             (shader.stages.length === 1 && (
+                // Check for tcGen environment (reflection-mapped UVs, needs custom vertex shader)
+                shader.stages[0].tcGen === 'environment' ||
                 // Check for tcMod animations
                 (shader.stages[0].tcMod && shader.stages[0].tcMod.some(mod =>
                     mod.type === 'stretch' || mod.type === 'turbulent' || mod.type === 'rotate' ||
