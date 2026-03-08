@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AliasSuggestion;
 use App\Models\User;
 use App\Models\UserAlias;
-use App\Notifications\AliasSuggestionReceived;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -60,11 +60,15 @@ class AliasSuggestionController extends Controller
             'status' => 'pending',
         ]);
 
-        // Load the suggestedBy relationship for the notification
-        $suggestion->load('suggestedBy');
-
         // Send notification to the user
-        $user->notify(new AliasSuggestionReceived($suggestion));
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'alias_suggestion',
+            'before' => Auth::user()->name,
+            'headline' => 'suggested you add the alias',
+            'after' => $request->alias,
+            'url' => route('profile.index', $user->id),
+        ]);
 
         return back()->with('success', 'Alias suggestion sent successfully!');
     }

@@ -36,7 +36,7 @@ class AliasSuggestionReceived extends LaravelNotification
     /**
      * Store notification in custom database table
      */
-    public function toDatabase(object $notifiable): void
+    public function toDatabase(object $notifiable): array
     {
         $suggester = $this->suggestion->suggestedBy;
 
@@ -48,6 +48,12 @@ class AliasSuggestionReceived extends LaravelNotification
             'after' => $this->suggestion->alias,
             'url' => route('profile.index', $notifiable->id),
         ]);
+
+        return [
+            'suggestion_id' => $this->suggestion->id,
+            'alias' => $this->suggestion->alias,
+            'suggested_by' => $this->suggestion->suggested_by_user_id,
+        ];
     }
 
     /**
