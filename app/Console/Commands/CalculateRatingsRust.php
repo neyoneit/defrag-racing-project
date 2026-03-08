@@ -11,7 +11,7 @@ class CalculateRatingsRust extends Command
     protected $description = 'Calculate ratings using Rust (100x faster than SQL)';
 
     // All available categories
-    const CATEGORIES = ['overall', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg', 'strafe'];
+    const CATEGORIES = ['overall', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg', 'strafe', 'lg'];
 
     public function handle()
     {

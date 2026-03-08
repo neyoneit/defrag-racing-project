@@ -71,6 +71,7 @@ fn map_matches_category(map: &MapInfo, category: &str) -> bool {
         "plasma" | "pg" => map.weapons.contains("pg"),
         "grenade" | "gl" => map.weapons.contains("gl"),
         "bfg" => map.weapons.contains("bfg"),
+        "lg" => map.weapons.contains("lg"),
         "slick" => map.functions.contains("slick"),
         "tele" => map.functions.contains("tele"),
         "strafe" => {

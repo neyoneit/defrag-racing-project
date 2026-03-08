@@ -52,34 +52,29 @@
         { value: 'bfg', label: 'BFG', icon: '💥', image: '/images/weapons/iconw_bfg.svg', color: 'blue' },
     ];
 
-    const sortByGametype = (gtValue) => {
-        gametype.value = gtValue;
-
+    const reloadRankings = () => {
         router.reload({
             data: {
-                gametype: gtValue,
+                gametype: gametype.value,
+                rankingtype: rankingtype.value,
+                category: category.value,
             }
         })
+    }
+
+    const sortByGametype = (gtValue) => {
+        gametype.value = gtValue;
+        reloadRankings();
     }
 
     const selectRankingType = (rt) => {
         rankingtype.value = rt;
-
-        router.reload({
-            data: {
-                rankingtype: rt,
-            }
-        })
+        reloadRankings();
     }
 
     const selectCategory = (cat) => {
         category.value = cat;
-
-        router.reload({
-            data: {
-                category: cat,
-            }
-        })
+        reloadRankings();
     }
 
     watchEffect(() => {
@@ -276,7 +271,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                 </div>
-                                <div class="text-lg">There are no VQ3 Ratings</div>
+                                <div class="text-lg">{{ rankingtype === 'active_players' ? 'No active VQ3 players in the last 3 months' : 'There are no VQ3 Ratings' }}</div>
                             </div>
                         </div>
                     </div>
@@ -304,7 +299,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                 </div>
-                                <div class="text-lg">There are no CPM Ratings</div>
+                                <div class="text-lg">{{ rankingtype === 'active_players' ? 'No active CPM players in the last 3 months' : 'There are no CPM Ratings' }}</div>
                             </div>
                         </div>
                     </div>
