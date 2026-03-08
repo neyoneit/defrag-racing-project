@@ -122,29 +122,29 @@
 
         <!-- First & Previous Group - Fixed Width -->
         <div class="flex items-center gap-1 mr-1 w-20 justify-end">
-            <button v-if="current_page != 1" @click="goToPage(1)"
+            <a v-if="current_page != 1" :href="getUrl(1)" @click.prevent="goToPage(1)"
                 class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5" />
                 </svg>
-            </button>
+            </a>
             <div v-else class="h-10 w-10"></div>
 
-            <button v-if="current_page != 1" @click="goToPage(current_page - 1)"
+            <a v-if="current_page != 1" :href="getUrl(current_page - 1)" @click.prevent="goToPage(current_page - 1)"
                 class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                 </svg>
-            </button>
+            </a>
             <div v-else class="h-10 w-10"></div>
         </div>
 
         <!-- Page Numbers Before (Desktop) - Fixed Width Container -->
         <div v-if="screenWidth >= 640" class="flex items-center gap-1 w-20 justify-end">
-            <button v-for="page in before" :key="page.label" @click="goToPage(page.label)"
+            <a v-for="page in before" :key="page.label" :href="getUrl(page.label)" @click.prevent="goToPage(page.label)"
                 class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <span class="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">{{ page.label }}</span>
-            </button>
+            </a>
         </div>
 
         <!-- Current Page - Input Only -->
@@ -162,28 +162,28 @@
 
         <!-- Page Numbers After (Desktop) - Fixed Width Container -->
         <div v-if="screenWidth >= 640" class="flex items-center gap-1 w-20 justify-start">
-            <button v-for="page in after" :key="page.label" @click="goToPage(page.label)"
+            <a v-for="page in after" :key="page.label" :href="getUrl(page.label)" @click.prevent="goToPage(page.label)"
                 class="group relative h-10 min-w-10 px-3 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <span class="text-sm font-bold text-gray-400 group-hover:text-white transition-colors">{{ page.label }}</span>
-            </button>
+            </a>
         </div>
 
         <!-- Next & Last Group - Fixed Width -->
         <div class="flex items-center gap-1 ml-1 w-20 justify-start">
-            <button v-if="current_page < last_page" @click="goToPage(current_page + 1)"
+            <a v-if="current_page < last_page" :href="getUrl(current_page + 1)" @click.prevent="goToPage(current_page + 1)"
                 class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-            </button>
+            </a>
             <div v-else class="h-10 w-10"></div>
 
-            <button v-if="current_page < last_page" @click="goToPage(last_page)"
+            <a v-if="current_page < last_page" :href="getUrl(last_page)" @click.prevent="goToPage(last_page)"
                 class="group relative h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-blue-600/20 border border-white/5 hover:border-blue-500/30 transition-all duration-300 hover:scale-110">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m5.25 4.5 7.5 7.5-7.5 7.5m6-15 7.5 7.5-7.5 7.5" />
                 </svg>
-            </button>
+            </a>
             <div v-else class="h-10 w-10"></div>
         </div>
 
