@@ -355,7 +355,7 @@ export class MD3Loader {
             // ALWAYS load baseq3 shaders FIRST as the foundation (like Quake engine does)
             // This ensures all models have the default Q3 shaders available
             try {
-                await this.loadShaderFile('/baseq3/scripts/models.shader');
+                await this.loadShaderFile('/baseq3/scripts/all_baseq3.shader');
                 DEBUG && console.log(`✅ Loaded baseq3 model shaders (foundation) - ${this.shaders.size} shaders total`);
             } catch (e) {
                 console.warn('⚠️ Failed to load baseq3 model shaders:', e);
@@ -399,7 +399,7 @@ export class MD3Loader {
             // ALWAYS load baseq3 shaders FIRST as the foundation (like Quake engine does)
             // This ensures all weapons have the default Q3 shaders available
             try {
-                await this.loadShaderFile('/baseq3/scripts/models.shader');
+                await this.loadShaderFile('/baseq3/scripts/all_baseq3.shader');
                 DEBUG && console.log(`✅ Loaded baseq3 weapon shaders (foundation) - ${this.shaders.size} shaders total`);
             } catch (e) {
                 console.warn('⚠️ Failed to load baseq3 weapon shaders:', e);
@@ -572,17 +572,16 @@ export class MD3Loader {
                     // Remove extension first
                     let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
 
-                    // Normalize to Q3 format: extract just "models/players/xxx/texture" or "models/weapons2/xxx/texture" part
-                    // texturePath: /storage/models/extracted/xxx/models/players/niria/slashskate.TGA
-                    // shaderName should be: models/players/niria/slashskate
-                    // texturePath: /storage/models/extracted/xxx/models/weapons2/plasma/plasma.TGA
-                    // shaderName should be: models/weapons2/plasma/plasma
-                    const match = shaderName.match(/models\/(players|weapons2)\/[^\/]+\/.+$/);
+                    // Normalize to Q3 format: extract the Q3-relative path
+                    // e.g. /storage/.../models/players/niria/slashskate -> models/players/niria/slashskate
+                    // e.g. /storage/.../textures/base_wall/chrome_env -> textures/base_wall/chrome_env
+                    // e.g. /storage/.../gfx/misc/console01 -> gfx/misc/console01
+                    const match = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/);
                     if (match) {
                         shaderName = match[0];
                     }
 
-                    const shader = this.shaders.get(shaderName);
+                    const shader = this.shaders.get(shaderName) || this.shaders.get(shaderName.toLowerCase());
 
                     if (shader) {
                         DEBUG && console.log(`🎨 Found shader for "${shaderName}"`, shader);
@@ -1378,7 +1377,7 @@ export class MD3Loader {
 
                         // Check if there's a Q3 shader for this texture
                         let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
-                        const shaderMatch = shaderName.match(/models\/(players|weapons2)\/[^\/]+\/.+$/);
+                        const shaderMatch = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/);
                         if (shaderMatch) {
                             shaderName = shaderMatch[0];
                         }

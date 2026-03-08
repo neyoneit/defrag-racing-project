@@ -397,7 +397,9 @@ export class Q3ShaderMaterialSystem {
             if (deform.type === 'wave' && !hasDeformWave) {
                 hasDeformWave = true;
                 // params: [spread, waveFunc, base, amplitude, phase, frequency]
-                deformWaveSpread = parseFloat(deform.params[0]) || 0;
+                // Q3 engine: deformationSpread = 1.0 / div (tr_shader.c:1192)
+                const divValue = parseFloat(deform.params[0]) || 0;
+                deformWaveSpread = divValue !== 0 ? 1.0 / divValue : 100.0;
                 const waveFunc = (deform.params[1] || 'sin').toLowerCase();
                 if (waveFunc === 'triangle') deformWaveFuncType = 1;
                 else if (waveFunc === 'square') deformWaveFuncType = 2;
