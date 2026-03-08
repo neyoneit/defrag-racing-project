@@ -641,12 +641,33 @@ export class Q3ShaderMaterialSystem {
      * Create material for single-stage shader
      */
     async createSingleStageMaterial(shader, stage, defaultTexturePath, surfaceName) {
-        const material = new THREE.MeshPhongMaterial({
-            color: 0xffffff,
-            side: shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide,
-            transparent: false,
-            depthWrite: true,
-        });
+        // rgbGen identity/identitylighting = fullbright (no scene lighting at all)
+        // Use MeshBasicMaterial which is inherently fullbright - no emissive hacks needed
+        const isFullbright = stage.rgbGen &&
+            (stage.rgbGen.toLowerCase() === 'identity' || stage.rgbGen.toLowerCase() === 'identitylighting');
+
+        const side = shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide;
+
+        let material;
+        if (isFullbright) {
+            material = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                side: side,
+                transparent: false,
+                depthWrite: true,
+            });
+        } else {
+            material = new THREE.MeshPhongMaterial({
+                color: 0xffffff,
+                side: side,
+                transparent: false,
+                depthWrite: true,
+            });
+        }
+
+        // Apply shader properties BEFORE loading texture so transparency/blending
+        // is set up when the texture is assigned (Three.js needs this to use alpha)
+        this.applyShaderProperties(material, shader, stage);
 
         // Determine texture path
         let texturePath = defaultTexturePath;
@@ -660,9 +681,6 @@ export class Q3ShaderMaterialSystem {
         } catch (error) {
             // Silently fail - texture loading errors are not critical
         }
-
-        // Apply shader properties
-        this.applyShaderProperties(material, shader, stage);
 
         // Store shader data for animation
         material.userData.shader = shader;
@@ -1667,10 +1685,12 @@ export class Q3ShaderMaterialSystem {
                 case 'blend':
                     material.blending = THREE.NormalBlending;
                     material.transparent = true;
+                    material.depthWrite = false;
                     break;
                 case 'filter':
                     material.blending = THREE.MultiplyBlending;
                     material.transparent = true;
+                    material.depthWrite = false;
                     break;
             }
         } else if (typeof blendFunc === 'object') {
@@ -1682,6 +1702,7 @@ export class Q3ShaderMaterialSystem {
             } else if (src === 'GL_SRC_ALPHA' && dst === 'GL_ONE_MINUS_SRC_ALPHA') {
                 material.blending = THREE.NormalBlending;
                 material.transparent = true;
+                material.depthWrite = false;
                 material.alphaTest = 0.01;
             } else if ((src === 'GL_DST_COLOR' && dst === 'GL_ZERO') ||
                        (src === 'GL_ZERO' && dst === 'GL_SRC_COLOR')) {
@@ -1701,9 +1722,16 @@ export class Q3ShaderMaterialSystem {
         if (mode === 'lightingdiffuse') {
             material.emissive = new THREE.Color(0x000000);
         } else if (mode === 'identity' || mode === 'identitylighting') {
-            if (material.blending !== THREE.AdditiveBlending && material.blending !== THREE.CustomBlending) {
-                material.emissive = new THREE.Color(0x888888);
-                material.emissiveIntensity = 0.5;
+            // rgbGen identity = fullbright, no scene lighting
+            // For MeshBasicMaterial: already fullbright, just keep color white
+            // For MeshPhongMaterial: use emissive trick
+            if (material.isMeshBasicMaterial) {
+                material.color.set(0xffffff);
+            } else {
+                material.color.set(0x000000);
+                material.emissive = new THREE.Color(0xffffff);
+                material.emissiveIntensity = 1.0;
+                material.userData.needsEmissiveMap = true;
             }
         } else if (mode === 'vertex') {
             material.vertexColors = true;

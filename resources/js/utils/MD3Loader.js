@@ -661,7 +661,7 @@ export class MD3Loader {
                         this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).then(() => {
                             DEBUG && console.log(`✅ Texture loaded and applied to ${surface.name}: ${texturePath}`);
                         }).catch(err => {
-                            console.warn(`❌ Failed to load texture for ${surface.name} - hiding surface`);
+                            DEBUG && console.warn(`❌ Failed to load texture for ${surface.name} - hiding surface`);
                             mesh.visible = false;
                         }).finally(() => { this.pendingTextures--; });
                     }
@@ -1107,6 +1107,19 @@ export class MD3Loader {
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
             texture.flipY = false;
+
+            // Ensure TGA textures with alpha channel are properly set to RGBA format
+            // Some versions of Three.js TGALoader may incorrectly set format to RGB
+            if (ext.toLowerCase() === 'tga' && texture.image) {
+                const imgData = texture.image.data || texture.image;
+                const pixelCount = texture.image.width * texture.image.height;
+                const expectedRGBA = pixelCount * 4;
+                if (imgData.length === expectedRGBA && texture.format !== THREE.RGBAFormat) {
+                    texture.format = THREE.RGBAFormat;
+                    texture.needsUpdate = true;
+                }
+            }
+
             material.map = texture;
             material.needsUpdate = true;
             this.applyShaderEffects(material, url);
@@ -1379,9 +1392,17 @@ export class MD3Loader {
                 // Use default lighting
                 material.emissive = new THREE.Color(0x000000);
             } else if (baseStage.rgbGen === 'identity') {
-                // Full brightness
-                material.emissive = new THREE.Color(0xffffff);
-                material.emissiveIntensity = 0.5;
+                // Full brightness - no scene lighting (fullbright)
+                if (material.isMeshBasicMaterial) {
+                    material.color.set(0xffffff);
+                } else {
+                    material.color.set(0x000000);
+                    material.emissive = new THREE.Color(0xffffff);
+                    material.emissiveIntensity = 1.0;
+                    if (material.map) {
+                        material.emissiveMap = material.map;
+                    }
+                }
             }
         }
 

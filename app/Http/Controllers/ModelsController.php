@@ -1492,10 +1492,20 @@ class ModelsController extends Controller
         // So we need to extract the "models/extracted/XXX" part (first 3 path segments)
         $pathParts = explode('/', $model->file_path);
         $extractPath = storage_path('app/public/' . implode('/', array_slice($pathParts, 0, 3)));
-        $scriptsPath = $extractPath . '/scripts';
+
+        // Case-insensitive scripts directory lookup (PK3 files may have SCRIPTS, Scripts, scripts, etc.)
+        $scriptsPath = null;
+        if (is_dir($extractPath)) {
+            foreach (scandir($extractPath) as $dir) {
+                if (strcasecmp($dir, 'scripts') === 0) {
+                    $scriptsPath = $extractPath . '/' . $dir;
+                    break;
+                }
+            }
+        }
 
         $shaderFiles = [];
-        if (is_dir($scriptsPath)) {
+        if ($scriptsPath && is_dir($scriptsPath)) {
             $allShaders = array_merge(
                 glob($scriptsPath . '/*.shader') ?: [],
                 glob($scriptsPath . '/*.shaderx') ?: []
