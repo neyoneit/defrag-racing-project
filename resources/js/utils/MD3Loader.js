@@ -589,7 +589,7 @@ export class MD3Loader {
             const geometry = this.createGeometry(surface); // Use first frame
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff,
-                side: THREE.DoubleSide,
+                side: THREE.BackSide, // Q3 models use CW winding (opposite to Three.js CCW default)
                 specular: 0x222222,
                 shininess: 20,
             });
@@ -1576,8 +1576,9 @@ export class MD3Loader {
             await this.loadBaseq3Manifest();
             await this.loadManifest(baseUrl);
 
-            // If custom base model, also load its manifest for fallback texture resolution
-            if (shouldLoadBaseModel && baseModelFilePath && !isBaseQ3Model) {
+            // Load base model manifest for fallback texture resolution
+            // Works for skin packs (geometry + textures from base) AND complete models with cross-PK3 texture deps
+            if (baseModelFilePath && !isBaseQ3Model) {
                 await this.loadBaseModelManifest(`/storage/${baseModelFilePath}/`);
             }
 
@@ -1603,7 +1604,23 @@ export class MD3Loader {
             let mainPlayerPath;
             let skinBasePath;
 
-            if (shouldLoadBaseModel && isBaseQ3Model) {
+            // Determine if this is a texture-only dependency (complete model that references textures from another PK3)
+            // vs a skin pack that needs geometry from the base model
+            // skinPackBasePath is null for complete models, set for skin/mixed packs
+            const isTextureOnlyDep = shouldLoadBaseModel && !skinPackBasePath && baseModelFilePath;
+
+            if (isTextureOnlyDep) {
+                // Complete model with cross-PK3 texture dependency - use own MD3s, fallback textures from base model
+                mainPlayerPath = baseUrl;
+                skinBasePath = baseUrl;
+                const baseModelMatch = baseModelFilePath.match(/(models\/extracted\/[^\/]+)\//);
+                if (baseModelMatch) {
+                    this.fallbackBaseUrl = `/storage/${baseModelMatch[1]}/`;
+                } else {
+                    this.fallbackBaseUrl = '/baseq3/';
+                }
+                DEBUG && console.log(`👤 Loading complete model from PK3: ${baseUrl}, texture fallback from: ${this.fallbackBaseUrl}`);
+            } else if (shouldLoadBaseModel && isBaseQ3Model) {
                 // Base model from baseq3, skins from PK3
                 mainPlayerPath = `/baseq3/models/players/${actualBaseModelName}/`;
                 skinBasePath = baseUrl;

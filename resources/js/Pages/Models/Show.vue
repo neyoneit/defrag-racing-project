@@ -176,8 +176,8 @@ const skinFilePath = computed(() => {
 
 // Get the base path for skin pack files (for skin/mixed packs that override base model skins)
 const skinPackBasePath = computed(() => {
-    // Only needed if this is a skin/mixed pack (has baseModelData)
-    if (!props.baseModelData) return null;
+    // Only needed for skin/mixed packs (not complete models with texture dependencies)
+    if (!props.baseModelData || props.model.model_type === 'complete') return null;
 
     // Return the skin pack's extracted directory path
     if (props.model.file_path && !props.model.file_path.startsWith('baseq3/')) {

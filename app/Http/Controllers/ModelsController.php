@@ -920,32 +920,31 @@ class ModelsController extends Controller
             return redirect()->route('login');
         }
 
-        // For skin/mixed packs, use stored base_model_file_path if available
-        // Otherwise fall back to querying the database (for backwards compatibility)
+        // Resolve base model data for texture/geometry fallback
+        // base_model_file_path: works for any model type (skin packs AND complete models with texture dependencies)
+        // Fallback query: only for skin/mixed packs without cached path
         $start = microtime(true);
         $baseModelData = null;
-        if ($model->model_type !== 'complete' && $model->base_model) {
-            if ($model->base_model_file_path) {
-                // Use stored path (optimized)
-                $baseModelData = [
-                    'name' => $model->base_model,
-                    'file_path' => $model->base_model_file_path,
-                ];
-                $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (cached)';
-            } else {
-                // Fallback: query database (old models without base_model_file_path)
-                $existingModel = PlayerModel::whereRaw('LOWER(base_model) = ?', [strtolower($model->base_model)])
-                    ->where('model_type', 'complete')
-                    ->first(['name', 'file_path', 'base_model']);
+        if ($model->base_model_file_path) {
+            // Use stored path (optimized) - works for skin packs and complete models with cross-PK3 texture deps
+            $baseModelData = [
+                'name' => $model->base_model,
+                'file_path' => $model->base_model_file_path,
+            ];
+            $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (cached)';
+        } elseif ($model->model_type !== 'complete' && $model->base_model) {
+            // Fallback: query database (old skin/mixed packs without base_model_file_path)
+            $existingModel = PlayerModel::whereRaw('LOWER(base_model) = ?', [strtolower($model->base_model)])
+                ->where('model_type', 'complete')
+                ->first(['name', 'file_path', 'base_model']);
 
-                if ($existingModel) {
-                    $baseModelData = [
-                        'name' => $existingModel->name,
-                        'file_path' => $existingModel->file_path,
-                    ];
-                }
-                $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (db query)';
+            if ($existingModel) {
+                $baseModelData = [
+                    'name' => $existingModel->name,
+                    'file_path' => $existingModel->file_path,
+                ];
             }
+            $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (db query)';
         } else {
             $timings['base_model_resolution'] = '0 (not needed)';
         }
