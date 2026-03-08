@@ -755,6 +755,7 @@ const generateGifThumbnail = async () => {
 
         // ---- 2. IDLE GIF (LEGS_IDLE + TORSO_STAND) ----
         let idleBlob = null;
+        let gestureBlob = null;
         const animManager = viewer3D.value.getAnimationManager();
         if (animManager) {
             // Pause viewer's own animation loop to prevent double-advancing
