@@ -309,20 +309,20 @@ export class Q3ShaderMaterialSystem {
             return false;
         })();
 
-        // Check if ANY stage uses multiply/filter blending (gl_zero + gl_src_color or gl_dst_color + gl_zero)
+        // Check if multiply/filter blending is used - but ONLY on the FIRST stage
+        // Later stages' blendFunc is handled inside the fragment shader via blendColors()
+        // Setting material.blending to MultiplyBlending for later stages causes double-darkening
         const hasMultiplyBlending = (() => {
-            for (const stage of stages) {
-                const blendFunc = stage.blendFunc;
-                if (!blendFunc) continue;
+            const blendFunc = stages[0]?.blendFunc;
+            if (!blendFunc) return false;
 
-                if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'filter') {
+            if (typeof blendFunc === 'string' && blendFunc.toLowerCase() === 'filter') {
+                return true;
+            }
+            if (typeof blendFunc === 'object' && blendFunc !== null) {
+                if ((blendFunc.src === 'GL_ZERO' && blendFunc.dst === 'GL_SRC_COLOR') ||
+                    (blendFunc.src === 'GL_DST_COLOR' && blendFunc.dst === 'GL_ZERO')) {
                     return true;
-                }
-                if (typeof blendFunc === 'object' && blendFunc !== null) {
-                    if ((blendFunc.src === 'GL_ZERO' && blendFunc.dst === 'GL_SRC_COLOR') ||
-                        (blendFunc.src === 'GL_DST_COLOR' && blendFunc.dst === 'GL_ZERO')) {
-                        return true;
-                    }
                 }
             }
             return false;
@@ -589,15 +589,17 @@ export class Q3ShaderMaterialSystem {
             vertexShader: this.getVertexShader(),
             fragmentShader: this.getFragmentShader(),
 
-            side: shader.cull ? this.getCullMode(shader.cull) : THREE.DoubleSide,
+            // Q3 default cull is CT_FRONT_SIDED (glCullFace(GL_FRONT)) = show back faces
+            // This is critical for models with _ot (outline) surfaces that have inverted normals
+            side: shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide,
             transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasMultiplyBlending || hasAlphaGenEffects, // Enable transparency
             alphaTest: alphaTest, // Set alpha test threshold
             depthWrite: depthWrite,
             depthTest: true,
             blending: hasAdditiveBlending ? THREE.AdditiveBlending : (hasMultiplyBlending ? THREE.MultiplyBlending : THREE.NormalBlending),
+            premultipliedAlpha: hasMultiplyBlending,
             lights: false, // We handle lighting manually
         });
-
 
         // Store shader data for animation
         material.userData.shader = shader;
@@ -623,7 +625,7 @@ export class Q3ShaderMaterialSystem {
     async createSingleStageMaterial(shader, stage, defaultTexturePath, surfaceName) {
         const material = new THREE.MeshPhongMaterial({
             color: 0xffffff,
-            side: shader.cull ? this.getCullMode(shader.cull) : THREE.DoubleSide,
+            side: shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide,
             transparent: false,
             depthWrite: true,
         });
@@ -774,9 +776,14 @@ export class Q3ShaderMaterialSystem {
                 vNormal = normalize(normalMatrix * deformedNormal);
                 vPosition = (modelViewMatrix * vec4(deformedPosition, 1.0)).xyz;
 
-                // Calculate environment-mapped UVs (sphere mapping)
-                vec3 viewNormal = normalize(vNormal);
-                vEnvUv = viewNormal.xy * 0.5 + 0.5;
+                // Calculate environment-mapped UVs (Q3 tcGen environment)
+                // Q3 formula: reflect view direction off normal, use Y/Z of reflected vector
+                // In view space: camera is at origin, viewDir = normalize(-viewPos)
+                vec3 viewDir = normalize(-vPosition);
+                vec3 viewNorm = normalize(vNormal);
+                float d = dot(viewNorm, viewDir);
+                vec3 reflected = 2.0 * d * viewNorm - viewDir;
+                vEnvUv = vec2(0.5 + reflected.x * 0.5, 0.5 - reflected.y * 0.5);
 
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(deformedPosition, 1.0);
             }
@@ -1140,11 +1147,6 @@ export class Q3ShaderMaterialSystem {
                     color.a = alphaGenWaveParams0.x;
                 }
 
-                // Debug: For testing, skip stage 1 blending to see if stage 0 scroll works
-                // (Remove this after testing)
-                // gl_FragColor = color;
-                // return;
-
                 // Blend additional stages on top
                 if (numStages > 1) {
                     vec2 uv1 = (tcGenType1 == 1) ? vEnvUv : vUv;
@@ -1293,7 +1295,7 @@ export class Q3ShaderMaterialSystem {
                 case 'blend':
                     return [2, 3, 1, 0]; // GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
                 case 'filter':
-                    return [0, 1, 1, 0]; // GL_ZERO, GL_SRC_COLOR (multiply)
+                    return [4, 0, 1, 0]; // GL_DST_COLOR, GL_ZERO (multiply/filter)
                 default:
                     return [1, 0, 1, 0];
             }
@@ -1408,62 +1410,34 @@ export class Q3ShaderMaterialSystem {
                 loader.load(
                     testUrl,
                     (texture) => {
-                        texture.flipY = false;
-
-                        // IMPORTANT: Ensure TGA textures with alpha channels use RGBA format
-                        // TGALoader returns RGBA format automatically for 32-bit TGAs
-                        // Just verify and log
+                        // TGALoader returns a regular Texture with image = {data, width, height}
+                        // but without the isDataTexture flag. This causes Three.js to use the
+                        // wrong upload path for WebGL. Mark it as DataTexture so Three.js
+                        // correctly uses texImage2D with raw pixel data.
                         if (ext.toLowerCase() === 'tga' && texture.image && texture.image.data) {
-                            // TGALoader creates an object with {data: Uint8Array, width, height}
-                            // Check if it has 4 channels (RGBA) - data length should be width * height * 4
-                            const expectedRGBA = texture.image.width * texture.image.height * 4;
-                            const actualLength = texture.image.data.length;
-
-                            if (actualLength === expectedRGBA) {
-                                // Has alpha channel - check if any pixel has transparency
-                                let hasTransparency = false;
-                                let minAlpha = 255;
-                                let maxAlpha = 0;
-                                let transparentPixels = 0;
-                                let totalPixels = texture.image.width * texture.image.height;
-
-                                for (let i = 3; i < texture.image.data.length; i += 4) {
-                                    const alpha = texture.image.data[i];
-                                    minAlpha = Math.min(minAlpha, alpha);
-                                    maxAlpha = Math.max(maxAlpha, alpha);
-                                    if (alpha < 255) {
-                                        hasTransparency = true;
-                                        transparentPixels++;
-                                    }
-                                }
-
-                                if (hasTransparency || testUrl.includes('lightning2')) {
-                                    console.log(`🔍 TGA texture "${testUrl.split('/').pop()}":`, {
-                                        hasTransparency,
-                                        alphaRange: `${minAlpha}-${maxAlpha}`,
-                                        transparentPixels: `${transparentPixels}/${totalPixels} (${(transparentPixels/totalPixels*100).toFixed(1)}%)`,
-                                        format: texture.format,
-                                        formatName: texture.format === THREE.RGBAFormat ? 'RGBA' : 'RGB'
-                                    });
-                                }
+                            texture.isDataTexture = true;
+                            const w = texture.image.width, h = texture.image.height;
+                            const pixelCount = w * h;
+                            const dataLen = texture.image.data.length;
+                            const channels = dataLen / pixelCount;
+                            // Ensure format matches actual channel count
+                            if (channels === 3) {
+                                texture.format = THREE.RGBFormat;
+                            } else if (channels === 4) {
+                                texture.format = THREE.RGBAFormat;
                             }
+                            texture.type = THREE.UnsignedByteType;
                         }
 
-                        // Debug: Check if lightning2 texture has alpha channel
-                        if (testUrl.includes('lightning2')) {
-                            console.log(`🔍 Loaded lightning2 texture:`, {
-                                url: testUrl,
-                                format: texture.format,
-                                hasAlpha: texture.format === THREE.RGBAFormat,
-                                formatName: texture.format === THREE.RGBAFormat ? 'RGBA' : 'RGB',
-                                image: texture.image
-                            });
-                        }
+                        texture.flipY = false;
+                        texture.minFilter = THREE.LinearFilter;
+                        texture.magFilter = THREE.LinearFilter;
+                        texture.generateMipmaps = false;
+                        texture.needsUpdate = true;
 
                         if (tryingFallbackPath || currentIndex > 0) {
                             console.log(`✅ Image fallback worked`);
                         }
-                        // Store in static cache
                         Q3ShaderMaterialSystem.textureCache.set(url, texture);
                         resolve(texture);
                     },
