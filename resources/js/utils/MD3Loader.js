@@ -897,24 +897,29 @@ export class MD3Loader {
      */
     async loadTextureForMesh(url, material, fallbackBaseUrl = null) {
         const lastDot = url.lastIndexOf('.');
-        if (lastDot === -1) {
-            throw new Error('Invalid texture URL: ' + url);
-        }
+        const lastSlash = url.lastIndexOf('/');
 
-        const extension = url.substring(lastDot + 1);
-        const basePath = url.substring(0, lastDot);
-        const filename = url.substring(url.lastIndexOf('/') + 1);
+        // Check if there's a real extension (dot must be after last slash)
+        const hasExtension = lastDot !== -1 && lastDot > lastSlash;
+
+        const extension = hasExtension ? url.substring(lastDot + 1) : '';
+        const basePath = hasExtension ? url.substring(0, lastDot) : url;
+        const filename = url.substring(lastSlash + 1);
 
         // Try multiple extension variants
-        // Order: lowercase original, uppercase original, jpg, JPG, jpeg, JPEG, png, PNG
-        const extensionsToTry = [
-            extension.toLowerCase(),
-            extension.toUpperCase(),
-        ];
-
-        // If original extension is .tga, also try jpg/jpeg/png as fallbacks
-        if (extension.toLowerCase() === 'tga') {
-            extensionsToTry.push('jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG');
+        let extensionsToTry;
+        if (!hasExtension) {
+            // No extension - try all common Q3 texture formats (like Quake 3 engine does)
+            extensionsToTry = ['tga', 'TGA', 'jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG'];
+        } else {
+            extensionsToTry = [
+                extension.toLowerCase(),
+                extension.toUpperCase(),
+            ];
+            // If original extension is .tga, also try jpg/jpeg/png as fallbacks
+            if (extension.toLowerCase() === 'tga') {
+                extensionsToTry.push('jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG');
+            }
         }
 
         let lastError = null;
@@ -958,7 +963,10 @@ export class MD3Loader {
                 }
             }
 
-            const fallbackBasePath = fallbackBaseUrl + relativePath.substring(0, relativePath.lastIndexOf('.'));
+            const relLastDot = relativePath.lastIndexOf('.');
+            const relLastSlash = relativePath.lastIndexOf('/');
+            const relHasExt = relLastDot !== -1 && relLastDot > relLastSlash;
+            const fallbackBasePath = fallbackBaseUrl + (relHasExt ? relativePath.substring(0, relLastDot) : relativePath);
 
             for (const ext of extensionsToTry) {
                 try {
