@@ -19,6 +19,16 @@ export class MD3Loader {
         this.shaderMaterialSystem = new Q3ShaderMaterialSystem(this);
         this.fallbackBaseUrl = null; // Fallback base URL for missing textures (e.g., baseq3 path)
         this.pathCache = new Map(); // Cache for case-insensitive path resolutions
+        this.abortController = new AbortController(); // Abort pending fetches on dispose
+        this.pendingTextures = 0; // Track number of textures still loading
+    }
+
+    /**
+     * Abort all pending fetch requests
+     */
+    abort() {
+        this.abortController.abort();
+        this.abortController = new AbortController();
     }
 
     /**
@@ -31,7 +41,7 @@ export class MD3Loader {
     async fetchCaseInsensitive(url) {
         // Server-side handles all case-insensitive resolution now
         // Just fetch once - no more trying multiple variations!
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: this.abortController.signal });
         if (!response.ok) {
             throw new Error(`File not found: ${url}`);
         }
@@ -67,17 +77,45 @@ export class MD3Loader {
     async loadSkin(url) {
         try {
             const response = await this.fetchCaseInsensitive(url);
-            if (!response.ok) {
-                // 404 or other error - no skin file exists
-                this.skinData = null;
-                return;
-            }
             const text = await response.text();
             this.skinData = this.parseSkin(text, url);
         } catch (error) {
+            // Skin file not found - try fallback like Quake 3
+            // e.g. head_rainbow_blue.skin → head_rainbow.skin
+            const fallbackUrl = this.getSkinFallbackUrl(url);
+            if (fallbackUrl) {
+                try {
+                    console.log(`🔄 Skin not found: ${url}, trying fallback: ${fallbackUrl}`);
+                    const fallbackResponse = await this.fetchCaseInsensitive(fallbackUrl);
+                    const text = await fallbackResponse.text();
+                    this.skinData = this.parseSkin(text, fallbackUrl);
+                    return;
+                } catch (e) {
+                    // Fallback also failed
+                }
+            }
             console.warn('Failed to load skin file:', error);
             this.skinData = null;
         }
+    }
+
+    /**
+     * Get fallback skin URL by stripping the last underscore suffix from skin name
+     * e.g. head_rainbow_blue.skin → head_rainbow.skin
+     * This mimics Quake 3 behavior where skin variants fall back to the default skin
+     */
+    getSkinFallbackUrl(url) {
+        // Match pattern: (head|upper|lower)_skinname.skin
+        const match = url.match(/^(.*\/(head|upper|lower))_(.+)(\.skin)$/i);
+        if (!match) return null;
+
+        const [, prefix, , skinName, ext] = match;
+        // Only fallback if skin name contains underscore (e.g. rainbow_blue → rainbow)
+        const lastUnderscore = skinName.lastIndexOf('_');
+        if (lastUnderscore === -1) return null;
+
+        const baseSkinName = skinName.substring(0, lastUnderscore);
+        return `${prefix}_${baseSkinName}${ext}`;
     }
 
     /**
@@ -422,6 +460,7 @@ export class MD3Loader {
                     if (shader) {
                         console.log(`🎨 Found shader for "${shaderName}"`, shader);
                         // Apply shader properties and load texture
+                        this.pendingTextures++;
                         this.shaderMaterialSystem.createMaterialForShader(
                             shader,
                             texturePath,
@@ -441,15 +480,16 @@ export class MD3Loader {
 
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
-                        });
+                        }).finally(() => { this.pendingTextures--; });
                     } else {
                         console.log(`⚠️ No shader found for "${shaderName}" (total shaders: ${this.shaders.size}) - loading texture directly for surface: ${surface.name}`);
                         // No shader, just load texture (with fallback if available)
+                        this.pendingTextures++;
                         this.loadTextureForMesh(texturePath, material, this.fallbackBaseUrl).then(() => {
                             console.log(`✅ Texture loaded and applied to ${surface.name}: ${texturePath}`);
                         }).catch(err => {
                             console.warn(`❌ Failed to load texture for ${surface.name}:`, err);
-                        });
+                        }).finally(() => { this.pendingTextures--; });
                     }
                 }
             } else if (!this.skinData && surface.shaders && surface.shaders.length > 0) {
@@ -486,6 +526,7 @@ export class MD3Loader {
                         }
 
                         // Apply shader properties and load texture
+                        this.pendingTextures++;
                         this.shaderMaterialSystem.createMaterialForShader(
                             shader,
                             texturePath,
@@ -504,7 +545,7 @@ export class MD3Loader {
 
                         }).catch(err => {
                             console.warn(`Failed to create shader material for ${surface.name}:`, err);
-                        });
+                        }).finally(() => { this.pendingTextures--; });
                     } else {
                         console.log(`⚠️ No shader found for "${shaderName}" - loading texture directly for surface: ${surface.name}`);
                         // No shader - load texture directly
@@ -520,11 +561,12 @@ export class MD3Loader {
 
                         console.log(`🔫 Attempting to load weapon texture: ${texturePath}`);
 
+                        this.pendingTextures++;
                         this.loadTextureForMesh(texturePath, material, null).then(() => {
                             console.log(`✅ Texture loaded for ${surface.name}: ${texturePath}`);
                         }).catch(err => {
                             console.warn(`❌ Failed to load embedded shader texture for ${surface.name}:`, err);
-                        });
+                        }).finally(() => { this.pendingTextures--; });
                     }
                 } else {
                     console.log(`⚠️ Embedded shader name is empty or default for ${surface.name}`);
@@ -1146,6 +1188,7 @@ export class MD3Loader {
                         if (shader) {
                             console.log(`🎨 Found Q3 shader for skin texture "${shaderName}" on ${surfaceName}`, shader);
                             // Create full shader material (with blend modes, animations, etc.)
+                            this.pendingTextures++;
                             this.shaderMaterialSystem.createMaterialForShader(
                                 shader,
                                 texturePath,
@@ -1161,15 +1204,17 @@ export class MD3Loader {
                                 console.log(`✅ Applied Q3 shader material to ${surfaceName}`);
                             }).catch(err => {
                                 console.warn(`Failed to create shader material for skin ${surfaceName}:`, err);
-                            });
+                            }).finally(() => { this.pendingTextures--; });
                         } else {
                             console.log(`🎨 No shader for "${shaderName}" - replacing texture directly on ${surfaceName}`);
 
                             // No shader - just swap the texture
-                            const loader = texturePath.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
-                            loader.load(
+                            this.pendingTextures++;
+                            const texLoader = texturePath.toLowerCase().endsWith('.tga') ? this.tgaLoader : this.textureLoader;
+                            texLoader.load(
                                 texturePath,
                                 (texture) => {
+                                    this.pendingTextures--;
                                     texture.flipY = false;
                                     texture.wrapS = THREE.RepeatWrapping;
                                     texture.wrapT = THREE.RepeatWrapping;
@@ -1191,6 +1236,7 @@ export class MD3Loader {
                                 },
                                 undefined,
                                 (error) => {
+                                    this.pendingTextures--;
                                     console.warn(`⚠️ Failed to load skin pack texture ${texturePath}:`, error);
                                 }
                             );

@@ -66,6 +66,7 @@ const currentLegsAnim = ref(null);
 const currentTorsoAnim = ref(null);
 const showWireframe = ref(false);
 const autoRotate = ref(false);
+const bgColor = ref('black');
 const animationSpeed = ref(1.0); // FPS multiplier
 const manualFrame = ref(0);
 const maxFrames = ref(10); // Will be updated based on animation
@@ -472,11 +473,11 @@ const downloadModel = () => {
 };
 
 const goBack = () => {
-    // If previous page was on our site, go back (preserves pagination/filters)
-    // Otherwise navigate to models index
-    const referrer = document.referrer;
-    if (referrer && new URL(referrer).origin === window.location.origin) {
-        window.history.back();
+    // Return to the exact page the user came from (preserves pagination/filters)
+    const backUrl = sessionStorage.getItem('models_back_url');
+    if (backUrl) {
+        sessionStorage.removeItem('models_back_url');
+        router.visit(backUrl);
     } else {
         router.visit(route('models.index'));
     }
@@ -1139,6 +1140,16 @@ const confirmNsfw = () => {
                                 ]">
                                     {{ showWireframe ? '📐 Wireframe ON' : '📐 Wireframe OFF' }}
                                 </button>
+                                <div class="flex items-center bg-gray-500/20 rounded-lg border border-gray-500/30 overflow-hidden">
+                                    <button @click="bgColor = 'black'" :class="[
+                                        'px-3 py-1 text-xs font-semibold transition-all',
+                                        bgColor === 'black' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-300'
+                                    ]">⬛</button>
+                                    <button @click="bgColor = 'white'" :class="[
+                                        'px-3 py-1 text-xs font-semibold transition-all',
+                                        bgColor === 'white' ? 'bg-gray-300 text-black' : 'text-gray-400 hover:text-gray-300'
+                                    ]">⬜</button>
+                                </div>
                             </div>
 
                             <!-- Skin Selector -->
@@ -1171,6 +1182,7 @@ const confirmNsfw = () => {
                                 :load-full-player="!isWeaponModel"
                                 :is-weapon="isWeaponModel"
                                 :auto-rotate="autoRotate"
+                                :background-color="bgColor"
                                 :show-grid="!isThumbnailMode"
                                 :enable-sounds="true"
                                 @loaded="onViewerLoaded"

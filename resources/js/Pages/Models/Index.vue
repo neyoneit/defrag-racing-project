@@ -15,6 +15,18 @@ const props = defineProps({
     load_times: Object,
 });
 
+// Save current page URL to sessionStorage so "Back to models" returns here
+function saveBackUrl() {
+    const params = new URLSearchParams();
+    if (props.category) params.set('category', props.category);
+    if (props.sort) params.set('sort', props.sort);
+    if (props.search) params.set('search', props.search);
+    if (props.myUploads) params.set('my_uploads', '1');
+    if (props.models.current_page > 1) params.set('page', props.models.current_page);
+    const query = params.toString();
+    sessionStorage.setItem('models_back_url', '/models' + (query ? '?' + query : ''));
+}
+
 // Frontend timing metrics
 const frontendTimings = ref({
     mount_to_ready: 0,
@@ -304,6 +316,7 @@ const getModelTypeBadgeClass = (type) => {
                     <div v-if="models.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <Link v-for="(model, index) in models.data" :key="model.id"
                               :href="model.is_nsfw && !$page.props.auth.user ? route('login') : route('models.show', model.id)"
+                              @click="saveBackUrl()"
                               class="group backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
                             <!-- Thumbnail -->

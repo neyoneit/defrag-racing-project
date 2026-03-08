@@ -48,6 +48,10 @@ const props = defineProps({
         type: Boolean,
         default: true
     },
+    backgroundColor: {
+        type: String,
+        default: 'black'
+    },
     thumbnailMode: {
         type: Boolean,
         default: false
@@ -139,6 +143,11 @@ onUnmounted(() => {
         cancelAnimationFrame(animationFrameId);
     }
 
+    // Abort all pending fetch requests in the loader
+    if (loader) {
+        loader.abort();
+    }
+
     // Clean up sound manager
     if (soundManager) {
         soundManager.dispose();
@@ -158,36 +167,44 @@ onUnmounted(() => {
         model.userData.animation.sounds = [];
     }
 
-    // Clean up Three.js resources
-    if (renderer) {
-        renderer.dispose();
-    }
-
-    if (controls) {
-        controls.dispose();
-    }
-
-    // Dispose geometries and materials
-    if (model) {
-        model.traverse((child) => {
-            if (child.geometry) {
-                child.geometry.dispose();
-            }
+    // Dispose geometries, materials, and textures from scene
+    if (scene) {
+        scene.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
             if (child.material) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(material => material.dispose());
-                } else {
-                    child.material.dispose();
-                }
+                const materials = Array.isArray(child.material) ? child.material : [child.material];
+                materials.forEach(material => {
+                    ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'envMap', 'lightMap', 'bumpMap', 'displacementMap', 'specularMap'].forEach(prop => {
+                        if (material[prop]) material[prop].dispose();
+                    });
+                    material.dispose();
+                });
             }
         });
+        scene.clear();
     }
+
+    // Dispose renderer and controls
+    if (controls) controls.dispose();
+    if (renderer) renderer.dispose();
+
+    // Null all references so GC can reclaim WebGL context
+    renderer = null;
+    scene = null;
+    camera = null;
+    model = null;
+    controls = null;
+    animationManager = null;
+    soundManager = null;
+    ambientLight = null;
+    directionalLight = null;
+    backLight = null;
 });
 
 function initScene() {
     // Create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000); // Black background
+    scene.background = new THREE.Color(props.backgroundColor === 'white' ? 0xffffff : 0x000000);
     // Fog disabled - was causing models and projectiles to darken when zooming out
     // scene.fog = new THREE.Fog(0x000000, 50, 200);
 
@@ -662,40 +679,35 @@ function onWindowResize() {
     renderer.setSize(width, height);
 }
 
-// Watch for model path changes
-watch(() => props.modelPath, () => {
-    if (model) {
-        scene.remove(model);
-        model.traverse((child) => {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(m => m.dispose());
-                } else {
-                    child.material.dispose();
-                }
-            }
-        });
+// Watch for skin changes (reload model with new skin)
+watch(() => props.backgroundColor, (newBg) => {
+    if (scene) {
+        scene.background = new THREE.Color(newBg === 'white' ? 0xffffff : 0x000000);
     }
-    loadModel();
 });
 
-// Watch for skin changes (reload model with new skin)
-watch(() => props.skinName, () => {
-    if (model) {
-        scene.remove(model);
-        model.traverse((child) => {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) {
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(m => m.dispose());
-                } else {
-                    child.material.dispose();
+watch(() => props.skinName, (newSkin, oldSkin) => {
+    if (!scene || !renderer) return;
+    if (newSkin && newSkin !== oldSkin) {
+        if (model) {
+            scene.remove(model);
+            model.traverse((child) => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    const mats = Array.isArray(child.material) ? child.material : [child.material];
+                    mats.forEach(m => {
+                        ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap', 'emissiveMap', 'alphaMap', 'envMap'].forEach(prop => {
+                            if (m[prop]) m[prop].dispose();
+                        });
+                        m.dispose();
+                    });
                 }
-            }
-        });
+            });
+            model = null;
+        }
+        loader.skinData = null;
+        loadModel();
     }
-    loadModel();
 });
 
 // Method to toggle wireframe mode
@@ -1091,6 +1103,7 @@ defineExpose({
     getRenderer: () => renderer,
     getControls: () => controls,
     getModelCenter: () => modelCenter,
+    getPendingTextures: () => loader.pendingTextures,
     getAnimationManager: () => animationManager,
     getSoundManager: () => soundManager,
     playLegsAnimation: (name) => animationManager?.playLegsAnimation(name),

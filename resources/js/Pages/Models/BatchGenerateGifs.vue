@@ -1,6 +1,6 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
 
 const page = usePage();
@@ -11,6 +11,7 @@ const props = defineProps({
 
 const modelIdsInput = ref('');
 const isProcessing = ref(false);
+const stopRequested = ref(false);
 const currentModelIndex = ref(-1);
 const currentModel = ref(null);
 const viewer3D = ref(null);
@@ -19,6 +20,12 @@ const loadGeneration = ref(0); // Track which load cycle we're on to prevent rac
 const results = ref([]);
 const overallProgress = ref('');
 const currentStatus = ref('');
+const consecutiveErrors = ref(0);
+const viewerError = ref(null);
+
+// Auto-refresh after N models to reclaim WebGL contexts and prevent browser degradation
+const MODELS_PER_CYCLE = 10;
+const BATCH_STATE_KEY = 'batch_gif_state';
 
 // Track completed IDs in localStorage to survive page refreshes
 const STORAGE_KEY = 'batch_gif_completed_ids';
@@ -36,6 +43,62 @@ function clearCompleted() {
     localStorage.removeItem(STORAGE_KEY);
 }
 const completedCount = ref(getCompletedIds().size);
+
+// Track failed IDs in localStorage to survive auto-refreshes
+const FAILED_KEY = 'batch_gif_failed_ids';
+function getFailedIds() {
+    try {
+        return JSON.parse(localStorage.getItem(FAILED_KEY) || '[]');
+    } catch { return []; }
+}
+function markFailed(id, name, message) {
+    const failed = getFailedIds();
+    // Don't duplicate
+    if (!failed.find(f => f.id === id)) {
+        failed.push({ id, name, message });
+        localStorage.setItem(FAILED_KEY, JSON.stringify(failed));
+    }
+}
+function clearFailed() {
+    localStorage.removeItem(FAILED_KEY);
+}
+const failedList = ref(getFailedIds());
+
+// Save/restore batch state for auto-refresh continuation
+function saveBatchState(ids, startIndex) {
+    localStorage.setItem(BATCH_STATE_KEY, JSON.stringify({ ids, startIndex }));
+}
+function loadBatchState() {
+    try {
+        const state = JSON.parse(localStorage.getItem(BATCH_STATE_KEY));
+        if (state && Array.isArray(state.ids) && typeof state.startIndex === 'number') {
+            return state;
+        }
+    } catch { /* ignore */ }
+    return null;
+}
+function clearBatchState() {
+    localStorage.removeItem(BATCH_STATE_KEY);
+}
+
+// Cache GIF module to avoid re-importing each iteration
+let cachedGifModule = null;
+async function getGifModule() {
+    if (!cachedGifModule) {
+        cachedGifModule = (await import('gif.js')).default;
+    }
+    return cachedGifModule;
+}
+
+// Auto-resume on page load if batch state exists
+onMounted(() => {
+    const state = loadBatchState();
+    if (state) {
+        modelIdsInput.value = state.ids.join(', ');
+        overallProgress.value = `Auto-resuming batch from model ${state.startIndex + 1}/${state.ids.length}...`;
+        nextTick(() => startBatch(state.startIndex));
+    }
+});
 
 // Parse model IDs from input
 const selectedModelIds = computed(() => {
@@ -149,10 +212,10 @@ async function generateGifForModel() {
     const gifWidth = 300;
     const gifHeight = 300;
 
-    const GIF = (await import('gif.js')).default;
+    const GIF = await getGifModule();
 
     const gif = new GIF({
-        workers: 1,
+        workers: 4,
         quality: 10,
         width: gifWidth,
         height: gifHeight,
@@ -312,13 +375,29 @@ async function uploadThumbnail(modelId, gifBlob, headIconBlob) {
     return data;
 }
 
-// Wait for model viewer to emit loaded (with generation check to prevent race conditions)
+// Wait for all pending textures to finish loading (max 10s)
+function waitForTextures() {
+    return new Promise((resolve) => {
+        const maxWait = setTimeout(resolve, 10000);
+        const check = setInterval(() => {
+            const pending = viewer3D.value?.getPendingTextures?.() ?? 0;
+            if (pending <= 0) {
+                clearInterval(check);
+                clearTimeout(maxWait);
+                // Small extra wait for GPU upload
+                setTimeout(resolve, 300);
+            }
+        }, 100);
+    });
+}
+
+// Wait for model viewer to emit loaded or error (with generation check to prevent race conditions)
 function waitForViewerLoaded(expectedGeneration) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             clearInterval(interval);
-            reject(new Error('Model load timed out (30s)'));
-        }, 30000);
+            reject(new Error('Model load timed out (15s)'));
+        }, 15000);
 
         const interval = setInterval(() => {
             // Abort if generation changed (means a different model started loading)
@@ -328,11 +407,20 @@ function waitForViewerLoaded(expectedGeneration) {
                 reject(new Error('Load generation mismatch - stale event'));
                 return;
             }
+            // Detect error immediately instead of waiting for timeout
+            if (viewerError.value) {
+                clearInterval(interval);
+                clearTimeout(timeout);
+                const err = viewerError.value;
+                viewerError.value = null;
+                reject(new Error(`Model load failed: ${err}`));
+                return;
+            }
             if (viewerLoaded.value) {
                 clearInterval(interval);
                 clearTimeout(timeout);
-                // Textures load async (fire-and-forget in MD3Loader) so we need generous wait
-                setTimeout(resolve, 3000);
+                // Wait for all pending textures to finish loading
+                waitForTextures().then(resolve);
             }
         }, 100);
     });
@@ -344,18 +432,45 @@ const onViewerLoaded = () => {
 
 const onViewerError = (err) => {
     console.error('Viewer error:', err);
+    viewerError.value = err?.message || String(err);
     viewerLoaded.value = false;
 };
 
 // Main batch process
-async function startBatch() {
+async function startBatch(startFrom = 0) {
     const ids = selectedModelIds.value;
     if (ids.length === 0) return;
 
     isProcessing.value = true;
-    results.value = [];
+    stopRequested.value = false;
+    consecutiveErrors.value = 0;
+    if (startFrom === 0) {
+        results.value = [];
+    }
+    // Clear failed entries only for models we're about to process (from startFrom onwards)
+    const idsToProcess = new Set(ids.slice(startFrom));
+    const previousFailed = getFailedIds().filter(f => !idsToProcess.has(f.id));
+    localStorage.setItem(FAILED_KEY, JSON.stringify(previousFailed));
+    failedList.value = previousFailed;
+    let processedThisCycle = 0;
 
-    for (let i = 0; i < ids.length; i++) {
+    for (let i = startFrom; i < ids.length; i++) {
+        // Check if stop was requested
+        if (stopRequested.value) {
+            clearBatchState();
+            overallProgress.value = `Stopped at ${i}/${ids.length}`;
+            break;
+        }
+
+        // Auto-refresh to reclaim WebGL contexts after N models
+        if (processedThisCycle >= MODELS_PER_CYCLE) {
+            currentStatus.value = `Auto-refreshing browser to free memory (processed ${processedThisCycle} this cycle)...`;
+            saveBatchState(ids, i);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            window.location.reload();
+            return; // Page will reload and auto-resume from onMounted
+        }
+
         const modelId = ids[i];
         const modelData = findModel(modelId);
 
@@ -369,25 +484,34 @@ async function startBatch() {
         }
 
         if (!modelData) {
+            markFailed(modelId, `#${modelId}`, 'Model not found');
             results.value.push({ id: modelId, name: `#${modelId}`, status: 'error', message: 'Model not found' });
             continue;
         }
 
         const modelPath = getModelFilePath(modelData);
         if (!modelPath) {
+            markFailed(modelId, modelData.name, 'No file path');
             results.value.push({ id: modelId, name: modelData.name, status: 'error', message: 'No file path' });
             continue;
         }
 
-        // Set current model to trigger ModelViewer render
+        // Cooldown after consecutive errors to let browser recover
+        if (consecutiveErrors.value >= 3) {
+            currentStatus.value = `Cooldown (${consecutiveErrors.value} consecutive errors)... waiting 10s`;
+            await new Promise(resolve => setTimeout(resolve, 10000));
+            consecutiveErrors.value = 0;
+        }
+
+        // Unmount old viewer, mount new one
         currentStatus.value = 'Loading model...';
         viewerLoaded.value = false;
+        viewerError.value = null;
         loadGeneration.value++;
         const thisGeneration = loadGeneration.value;
         currentModel.value = null;
         await nextTick();
-        // Extra wait to ensure old viewer is fully destroyed
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         currentModel.value = modelData;
         await nextTick();
@@ -406,24 +530,39 @@ async function startBatch() {
 
             markCompleted(modelId);
             completedCount.value = getCompletedIds().size;
+            consecutiveErrors.value = 0;
+            processedThisCycle++;
             results.value.push({ id: modelId, name: modelData.name, status: 'success', message: 'Done' });
         } catch (err) {
             console.error(`Error processing model ${modelId}:`, err);
+            consecutiveErrors.value++;
+            processedThisCycle++;
+            markFailed(modelId, modelData.name, err.message);
             results.value.push({ id: modelId, name: modelData.name, status: 'error', message: err.message });
         }
 
-        // Unload model between iterations to free memory
-        currentModel.value = null;
-        await nextTick();
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Wait between models - longer after errors to let browser recover
+        const waitTime = consecutiveErrors.value > 0 ? 3000 : 300;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
+    // Batch complete (not interrupted by auto-refresh)
+    clearBatchState();
+    failedList.value = getFailedIds();
+    currentModel.value = null;
     isProcessing.value = false;
+    stopRequested.value = false;
     currentModelIndex.value = -1;
     const successCount = results.value.filter(r => r.status === 'success').length;
     const skippedCount = results.value.filter(r => r.status === 'skipped').length;
     overallProgress.value = `Finished! ${successCount} generated, ${skippedCount} skipped, ${ids.length - successCount - skippedCount} failed`;
     currentStatus.value = '';
+}
+
+function stopBatch() {
+    stopRequested.value = true;
+    clearBatchState();
+    currentStatus.value = 'Stopping after current model...';
 }
 
 // Quick-fill helpers
@@ -436,16 +575,29 @@ function fillAll() {
     modelIdsInput.value = props.models.map(m => m.id).join(', ');
 }
 
+function fillFailed() {
+    const failed = getFailedIds();
+    modelIdsInput.value = failed.map(f => f.id).join(', ');
+}
+
+async function retryFailed() {
+    const failed = getFailedIds();
+    if (failed.length === 0) return;
+    modelIdsInput.value = failed.map(f => f.id).join(', ');
+    await nextTick();
+    startBatch(0);
+}
+
 async function startAll() {
     modelIdsInput.value = props.models.map(m => m.id).join(', ');
     await nextTick();
-    startBatch();
+    startBatch(0);
 }
 
 async function startAlreadyGenerated() {
     modelIdsInput.value = props.models.filter(m => m.thumbnail).map(m => m.id).join(', ');
     await nextTick();
-    startBatch();
+    startBatch(0);
 }
 </script>
 
@@ -468,13 +620,22 @@ async function startAlreadyGenerated() {
                     placeholder="e.g. 3529, 3544, 3550"
                 ></textarea>
 
-                <div class="flex gap-3 mt-3">
+                <div class="flex flex-wrap gap-3 mt-3">
                     <button
-                        @click="startBatch"
-                        :disabled="isProcessing || selectedModelIds.length === 0"
+                        v-if="!isProcessing"
+                        @click="startBatch(0)"
+                        :disabled="selectedModelIds.length === 0"
                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 rounded font-medium"
                     >
-                        {{ isProcessing ? 'Processing...' : `Generate (${selectedModelIds.length} models)` }}
+                        Generate ({{ selectedModelIds.length }} models)
+                    </button>
+                    <button
+                        v-else
+                        @click="stopBatch"
+                        :disabled="stopRequested"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded font-medium"
+                    >
+                        {{ stopRequested ? 'Stopping...' : 'Stop Batch' }}
                     </button>
                     <button
                         @click="fillAllWithoutGif"
@@ -491,12 +652,28 @@ async function startAlreadyGenerated() {
                         Fill: All ({{ models.length }})
                     </button>
                     <button
-                        v-if="completedCount > 0"
-                        @click="clearCompleted(); completedCount = 0;"
+                        v-if="failedList.length > 0"
+                        @click="fillFailed"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 rounded text-sm font-medium"
+                    >
+                        Fill: Failed ({{ failedList.length }})
+                    </button>
+                    <button
+                        v-if="failedList.length > 0"
+                        @click="retryFailed"
+                        :disabled="isProcessing"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-700 rounded text-sm font-medium"
+                    >
+                        Retry Failed ({{ failedList.length }})
+                    </button>
+                    <button
+                        v-if="completedCount > 0 || failedList.length > 0"
+                        @click="clearCompleted(); clearFailed(); completedCount = 0; failedList = [];"
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Clear progress ({{ completedCount }} done)
+                        Clear progress ({{ completedCount }} done, {{ failedList.length }} failed)
                     </button>
                     <button
                         @click="startAlreadyGenerated"
@@ -526,7 +703,7 @@ async function startAlreadyGenerated() {
                 <div v-if="currentStatus" class="text-sm text-gray-400 mt-1">{{ currentStatus }}</div>
             </div>
 
-            <!-- Render preview (600x600 canvas, displayed at 300x300) -->
+            <!-- Render preview -->
             <div v-if="currentModel" class="mb-6">
                 <div class="text-sm text-gray-400 mb-2">
                     Rendering: {{ currentModel.name }} (#{{ currentModel.id }})
@@ -579,6 +756,18 @@ async function startAlreadyGenerated() {
                         <span v-if="result.status !== 'success'" class="text-xs" :class="result.status === 'error' ? 'text-red-400' : 'text-gray-500'">
                             {{ result.message }}
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Persistent failed models list -->
+            <div v-if="failedList.length > 0 && !isProcessing" class="bg-red-900/20 border border-red-500/30 rounded-lg p-6 mb-6">
+                <h2 class="text-lg font-medium text-red-400 mb-3">Failed models ({{ failedList.length }})</h2>
+                <div class="space-y-1 max-h-64 overflow-y-auto">
+                    <div v-for="f in failedList" :key="f.id" class="flex items-center gap-3 text-sm">
+                        <span class="text-red-400 font-mono w-16">#{{ f.id }}</span>
+                        <span class="text-white">{{ f.name }}</span>
+                        <span class="text-xs text-red-400/70">{{ f.message }}</span>
                     </div>
                 </div>
             </div>

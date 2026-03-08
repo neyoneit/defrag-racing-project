@@ -61,6 +61,8 @@
             preserveState: true,
             only: props.only,
             onSuccess: () => {
+                // Update browser URL so it reflects the current page
+                window.history.replaceState(window.history.state, '', url);
                 // Restore scroll position after navigation
                 window.scrollTo(0, scrollPosition);
             }
