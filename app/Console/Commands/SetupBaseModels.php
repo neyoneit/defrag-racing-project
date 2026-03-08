@@ -58,6 +58,21 @@ class SetupBaseModels extends Command
 
         $this->info('Base Q3 data installed to: ' . $extractPath);
 
+        // Generate file manifest for case-insensitive lookups
+        $this->info('Generating file manifest...');
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($extractPath, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $relativePath = str_replace($extractPath . '/', '', $file->getPathname());
+                $files[] = $relativePath;
+            }
+        }
+        file_put_contents($extractPath . '/manifest.json', json_encode($files));
+        $this->info('✓ Generated manifest with ' . count($files) . ' files');
+
         // List the installed base models
         $playersPath = $extractPath . '/models/players';
         if (is_dir($playersPath)) {

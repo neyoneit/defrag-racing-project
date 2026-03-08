@@ -21,6 +21,125 @@ export class MD3Loader {
         this.pathCache = new Map(); // Cache for case-insensitive path resolutions
         this.abortController = new AbortController(); // Abort pending fetches on dispose
         this.pendingTextures = 0; // Track number of textures still loading
+        this.manifest = null; // File manifest for case-insensitive lookups (lowercase key -> original path)
+        this.baseq3Manifest = null; // Baseq3 file manifest
+    }
+
+    /**
+     * Load file manifest from extracted PK3 directory.
+     * Builds a lowercase -> original path map for instant case-insensitive lookups.
+     */
+    async loadManifest(baseUrl) {
+        // Derive manifest URL from baseUrl (go up to extraction root)
+        // baseUrl is like: /storage/models/extracted/slug/models/players/Name/
+        // manifest is at: /storage/models/extracted/slug/manifest.json
+        let manifestUrl;
+        if (baseUrl.includes('/extracted/')) {
+            const extractedIndex = baseUrl.indexOf('/extracted/');
+            const afterExtracted = baseUrl.substring(extractedIndex + '/extracted/'.length);
+            const firstSlash = afterExtracted.indexOf('/');
+            if (firstSlash !== -1) {
+                manifestUrl = baseUrl.substring(0, extractedIndex + '/extracted/'.length + firstSlash) + '/manifest.json';
+            }
+        }
+
+        if (!manifestUrl) return;
+
+        try {
+            const response = await fetch(manifestUrl);
+            if (response.ok) {
+                const files = await response.json();
+                this.manifest = new Map();
+                for (const file of files) {
+                    this.manifest.set(file.toLowerCase(), file);
+                }
+            }
+        } catch (e) {
+            // Manifest not available, will fall back to brute-force
+        }
+    }
+
+    /**
+     * Load baseq3 file manifest (cached statically across instances).
+     */
+    async loadBaseq3Manifest() {
+        // Use static cache to avoid reloading for every model
+        if (MD3Loader._baseq3Manifest) {
+            this.baseq3Manifest = MD3Loader._baseq3Manifest;
+            return;
+        }
+
+        try {
+            const response = await fetch('/baseq3/manifest.json');
+            if (response.ok) {
+                const files = await response.json();
+                const map = new Map();
+                for (const file of files) {
+                    map.set(file.toLowerCase(), file);
+                }
+                MD3Loader._baseq3Manifest = map;
+                this.baseq3Manifest = map;
+            }
+        } catch (e) {
+            // Manifest not available
+        }
+    }
+
+    /**
+     * Resolve a texture path using manifests. Returns the correct URL or null if not found.
+     * @param {string} url - Full URL like /storage/models/extracted/slug/textures/sfx/file.tga
+     * @returns {string|null} - Resolved URL with correct case, or null
+     */
+    resolvePathFromManifest(url) {
+        // Try PK3 manifest first
+        if (this.manifest && url.includes('/extracted/')) {
+            const extractedIndex = url.indexOf('/extracted/');
+            const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+            const firstSlash = afterExtracted.indexOf('/');
+            if (firstSlash !== -1) {
+                const prefix = url.substring(0, extractedIndex + '/extracted/'.length + firstSlash + 1);
+                const relativePath = afterExtracted.substring(firstSlash + 1);
+                const resolved = this.manifest.get(relativePath.toLowerCase());
+                if (resolved) {
+                    return prefix + resolved;
+                }
+            }
+        }
+
+        // Try baseq3 manifest
+        if (this.baseq3Manifest && url.startsWith('/baseq3/')) {
+            const relativePath = url.substring('/baseq3/'.length);
+            const resolved = this.baseq3Manifest.get(relativePath.toLowerCase());
+            if (resolved) {
+                return '/baseq3/' + resolved;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if a relative path exists in PK3 manifest (case-insensitive).
+     * @param {string} relativePath - Path relative to extraction root
+     * @returns {string|null} - Resolved path or null
+     */
+    resolveRelativePathFromManifest(relativePath) {
+        if (this.manifest) {
+            return this.manifest.get(relativePath.toLowerCase()) || null;
+        }
+        return null;
+    }
+
+    /**
+     * Check if a relative path exists in baseq3 manifest (case-insensitive).
+     * @param {string} relativePath - Path relative to baseq3 root
+     * @returns {string|null} - Resolved path or null
+     */
+    resolveBaseq3PathFromManifest(relativePath) {
+        if (this.baseq3Manifest) {
+            return this.baseq3Manifest.get(relativePath.toLowerCase()) || null;
+        }
+        return null;
     }
 
     /**
@@ -904,61 +1023,66 @@ export class MD3Loader {
         // Check if there's a real extension (dot must be after last slash)
         const hasExtension = lastDot !== -1 && lastDot > lastSlash;
 
-        const extension = hasExtension ? url.substring(lastDot + 1) : '';
         const basePath = hasExtension ? url.substring(0, lastDot) : url;
-        const filename = url.substring(lastSlash + 1);
 
-        // Try multiple extension variants
+        // MANIFEST FAST PATH: Try to resolve via manifest first (no HTTP requests needed)
+        const resolvedUrl = this._resolveTextureViaManifest(url, fallbackBaseUrl);
+        if (resolvedUrl) {
+            const ext = resolvedUrl.substring(resolvedUrl.lastIndexOf('.') + 1);
+            const loader = ext.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
+            const texture = await this.tryLoadTexture(loader, resolvedUrl);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.flipY = false;
+            material.map = texture;
+            material.needsUpdate = true;
+            this.applyShaderEffects(material, url);
+            return texture;
+        }
+
+        // If manifest is available but file not found, it truly doesn't exist - skip brute-force
+        if (this.manifest || this.baseq3Manifest) {
+            throw new Error(`Texture not found in manifest: ${url}`);
+        }
+
+        // FALLBACK: No manifest available - use brute-force extension search
+        const extension = hasExtension ? url.substring(lastDot + 1) : '';
+
         let extensionsToTry;
         if (!hasExtension) {
-            // No extension - try all common Q3 texture formats (like Quake 3 engine does)
-            extensionsToTry = ['tga', 'TGA', 'jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG'];
+            extensionsToTry = ['tga', 'jpg', 'png'];
         } else {
-            extensionsToTry = [
-                extension.toLowerCase(),
-                extension.toUpperCase(),
-            ];
-            // If original extension is .tga, also try jpg/jpeg/png as fallbacks
+            extensionsToTry = [extension];
             if (extension.toLowerCase() === 'tga') {
-                extensionsToTry.push('jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG');
+                extensionsToTry.push('jpg', 'png');
             }
         }
 
         let lastError = null;
 
-        // First try the original path with all extensions
         for (const ext of extensionsToTry) {
             try {
                 const testUrl = basePath + '.' + ext;
                 const loader = ext.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
-
                 const texture = await this.tryLoadTexture(loader, testUrl);
                 texture.wrapS = THREE.RepeatWrapping;
                 texture.wrapT = THREE.RepeatWrapping;
                 texture.flipY = false;
                 material.map = texture;
                 material.needsUpdate = true;
-
-                // Apply shader effects if available
                 this.applyShaderEffects(material, url);
-
                 return texture;
             } catch (error) {
                 lastError = error;
-                // Continue to next extension
             }
         }
 
-        // If original path failed and we have a fallback base URL, try loading from there
+        // Try fallback base URL
         if (fallbackBaseUrl) {
-            // Extract the relative path from the original URL (everything after /storage/models/extracted/xxx/)
-            // e.g., /storage/models/extracted/xxx/textures/sfx/file.tga -> textures/sfx/file
             let relativePath = url;
             if (url.includes('/extracted/')) {
-                // Find the part after /extracted/xxx/
                 const extractedIndex = url.indexOf('/extracted/');
                 const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-                // Skip the PK3 folder name (e.g., "anarki-model-skin-mysticsurfer-1760897528-8328/")
                 const firstSlashAfterExtracted = afterExtracted.indexOf('/');
                 if (firstSlashAfterExtracted !== -1) {
                     relativePath = afterExtracted.substring(firstSlashAfterExtracted + 1);
@@ -974,29 +1098,87 @@ export class MD3Loader {
                 try {
                     const testUrl = fallbackBasePath + '.' + ext;
                     const loader = ext.toLowerCase() === 'tga' ? this.tgaLoader : this.textureLoader;
-
                     const texture = await this.tryLoadTexture(loader, testUrl);
                     texture.wrapS = THREE.RepeatWrapping;
                     texture.wrapT = THREE.RepeatWrapping;
                     texture.flipY = false;
                     material.map = texture;
                     material.needsUpdate = true;
-
-                    // Apply shader effects if available
                     this.applyShaderEffects(material, url);
-
-                    console.log(`✅ Image fallback worked`);
                     return texture;
                 } catch (error) {
                     lastError = error;
-                    // Continue to next extension
                 }
             }
         }
 
-        // If we get here, all attempts failed
-        console.warn(`Failed to load texture (tried extensions: ${extensionsToTry.join(', ')}) for ${basePath}${fallbackBaseUrl ? ' and fallback ' + fallbackBaseUrl + filename.substring(0, filename.lastIndexOf('.')) : ''}`);
+        console.warn(`Failed to load texture for ${basePath}`);
         throw lastError;
+    }
+
+    /**
+     * Try to resolve a texture URL via manifests (PK3 + baseq3).
+     * Handles extensionless paths and wrong-case extensions.
+     * @returns {string|null} Resolved full URL or null
+     */
+    _resolveTextureViaManifest(url, fallbackBaseUrl) {
+        const imageExtensions = ['tga', 'jpg', 'jpeg', 'png'];
+        const lastDot = url.lastIndexOf('.');
+        const lastSlash = url.lastIndexOf('/');
+        const hasExtension = lastDot !== -1 && lastDot > lastSlash;
+
+        // Helper: try to find a file in a manifest by base path (without extension)
+        const tryManifestLookup = (manifest, basePath, prefix) => {
+            if (!manifest) return null;
+
+            // First try exact path (with extension)
+            if (hasExtension) {
+                const resolved = manifest.get(basePath.toLowerCase());
+                if (resolved) return prefix + resolved;
+            }
+
+            // Try each image extension
+            const baseNoExt = hasExtension ? basePath.substring(0, basePath.lastIndexOf('.')) : basePath;
+            for (const ext of imageExtensions) {
+                const resolved = manifest.get((baseNoExt + '.' + ext).toLowerCase());
+                if (resolved) return prefix + resolved;
+            }
+            return null;
+        };
+
+        // Try PK3 manifest
+        if (this.manifest && url.includes('/extracted/')) {
+            const extractedIndex = url.indexOf('/extracted/');
+            const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+            const firstSlash = afterExtracted.indexOf('/');
+            if (firstSlash !== -1) {
+                const prefix = url.substring(0, extractedIndex + '/extracted/'.length + firstSlash + 1);
+                const relativePath = afterExtracted.substring(firstSlash + 1);
+                const result = tryManifestLookup(this.manifest, relativePath, prefix);
+                if (result) return result;
+            }
+        }
+
+        // Try baseq3 manifest (as fallback)
+        if (this.baseq3Manifest && fallbackBaseUrl) {
+            let relativePath;
+            if (url.startsWith('/baseq3/')) {
+                relativePath = url.substring('/baseq3/'.length);
+            } else if (url.includes('/extracted/')) {
+                const extractedIndex = url.indexOf('/extracted/');
+                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+                const firstSlash = afterExtracted.indexOf('/');
+                if (firstSlash !== -1) {
+                    relativePath = afterExtracted.substring(firstSlash + 1);
+                }
+            }
+            if (relativePath) {
+                const result = tryManifestLookup(this.baseq3Manifest, relativePath, '/baseq3/');
+                if (result) return result;
+            }
+        }
+
+        return null;
     }
 
     // Helper method to load texture with proper error handling and case-insensitive path resolution
@@ -1289,6 +1471,10 @@ export class MD3Loader {
         const shouldLoadBaseModel = !!baseModelName;
 
         try {
+            // STEP 0: Load file manifests for case-insensitive lookups
+            await this.loadBaseq3Manifest();
+            await this.loadManifest(baseUrl);
+
             // STEP 1: Load ALL shaders (not filtered by model name)
             // Load baseq3 shaders foundation
             try {
@@ -3207,3 +3393,6 @@ export class MD3Loader {
         return arrayBuffer;
     }
 }
+
+// Static cache for baseq3 manifest (shared across all MD3Loader instances)
+MD3Loader._baseq3Manifest = null;

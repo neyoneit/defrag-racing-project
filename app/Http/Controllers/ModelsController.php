@@ -241,6 +241,7 @@ class ModelsController extends Controller
                     if ($pk3Zip->open($pk3File) === TRUE) {
                         $pk3Zip->extractTo($extractPath);
                         $pk3Zip->close();
+                        $this->generateFileManifest($extractPath);
                     } else {
                         \Log::error('Failed to open PK3 file for extraction: ' . $pk3File);
                     }
@@ -270,6 +271,7 @@ class ModelsController extends Controller
                     $zip->extractTo($extractPath);
                     $zip->close();
                     $pk3Found = true;
+                    $this->generateFileManifest($extractPath);
 
                     // Store the PK3 in PRIVATE storage for downloads
                     $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
@@ -620,6 +622,7 @@ class ModelsController extends Controller
                             if ($pk3Zip->open($pk3File) === TRUE) {
                                 $pk3Zip->extractTo($extractPath);
                                 $pk3Zip->close();
+                                $this->generateFileManifest($extractPath);
                             }
                         }
 
@@ -640,6 +643,7 @@ class ModelsController extends Controller
                             $zip->extractTo($extractPath);
                             $zip->close();
                             $pk3Found = true;
+                            $this->generateFileManifest($extractPath);
 
                             $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
                             copy($tempFullPath, storage_path('app/' . $pk3PathForDownload));
@@ -1304,6 +1308,28 @@ class ModelsController extends Controller
         // Fallback: return null (will need to be resolved at runtime)
         // This happens when someone uploads a skin for a model that hasn't been uploaded yet
         return null;
+    }
+
+    /**
+     * Generate a file manifest (JSON) for extracted PK3 contents.
+     * Lists all files with their exact paths for case-insensitive frontend lookups.
+     */
+    private function generateFileManifest($extractPath)
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($extractPath, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                // Get path relative to extractPath
+                $relativePath = str_replace($extractPath . '/', '', $file->getPathname());
+                $files[] = $relativePath;
+            }
+        }
+
+        file_put_contents($extractPath . '/manifest.json', json_encode($files));
     }
 
     /**

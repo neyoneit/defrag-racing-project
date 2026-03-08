@@ -1329,33 +1329,111 @@ export class Q3ShaderMaterialSystem {
     loadTexture(url, fallbackBaseUrl = null) {
         // Check static cache first
         if (Q3ShaderMaterialSystem.textureCache.has(url)) {
-            console.log(`♻️ Using cached texture: ${url}`);
             return Promise.resolve(Q3ShaderMaterialSystem.textureCache.get(url));
         }
 
+        // MANIFEST FAST PATH: Try to resolve via manifest (no HTTP requests needed)
+        const resolvedUrl = this.loader._resolveTextureViaManifest(url, fallbackBaseUrl);
+        if (resolvedUrl) {
+            return this._loadTextureFromUrl(resolvedUrl, url);
+        }
+
+        // If manifest is available but file not found, it truly doesn't exist - skip brute-force
+        if (this.loader.manifest || this.loader.baseq3Manifest) {
+            return Promise.reject(new Error(`Texture not found in manifest: ${url}`));
+        }
+
+        // FALLBACK: No manifest available - use extension search
+        return this._loadTextureWithExtensionSearch(url, fallbackBaseUrl);
+    }
+
+    /**
+     * Load a texture from a known-good URL (resolved via manifest).
+     */
+    _loadTextureFromUrl(resolvedUrl, cacheKey) {
+        return new Promise((resolve, reject) => {
+            const ext = resolvedUrl.substring(resolvedUrl.lastIndexOf('.') + 1);
+            const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
+
+            // For TGA: use fetch + blob to handle case-insensitive server paths
+            if (ext.toLowerCase() === 'tga') {
+                fetch(resolvedUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to fetch: ${resolvedUrl}`);
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const objectUrl = URL.createObjectURL(blob);
+                        loader.load(objectUrl, (texture) => {
+                            URL.revokeObjectURL(objectUrl);
+                            this._setupTexture(texture, ext);
+                            Q3ShaderMaterialSystem.textureCache.set(cacheKey, texture);
+                            resolve(texture);
+                        }, undefined, () => {
+                            URL.revokeObjectURL(objectUrl);
+                            reject(new Error(`Failed to load texture: ${resolvedUrl}`));
+                        });
+                    })
+                    .catch(reject);
+            } else {
+                loader.load(resolvedUrl, (texture) => {
+                    this._setupTexture(texture, ext);
+                    Q3ShaderMaterialSystem.textureCache.set(cacheKey, texture);
+                    resolve(texture);
+                }, undefined, () => {
+                    reject(new Error(`Failed to load texture: ${resolvedUrl}`));
+                });
+            }
+        });
+    }
+
+    /**
+     * Setup texture properties (shared between manifest and fallback paths).
+     */
+    _setupTexture(texture, ext) {
+        if (ext.toLowerCase() === 'tga' && texture.image && texture.image.data) {
+            texture.isDataTexture = true;
+            const w = texture.image.width, h = texture.image.height;
+            const pixelCount = w * h;
+            const dataLen = texture.image.data.length;
+            const channels = dataLen / pixelCount;
+            if (channels === 3) {
+                texture.format = THREE.RGBFormat;
+            } else if (channels === 4) {
+                texture.format = THREE.RGBAFormat;
+            }
+            texture.type = THREE.UnsignedByteType;
+        }
+        texture.flipY = false;
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        texture.generateMipmaps = false;
+        texture.needsUpdate = true;
+    }
+
+    /**
+     * Fallback: Load texture by trying multiple extensions (when no manifest available).
+     */
+    _loadTextureWithExtensionSearch(url, fallbackBaseUrl) {
         return new Promise((resolve, reject) => {
             const lastDot = url.lastIndexOf('.');
             const basePath = url.substring(0, lastDot + 1);
-            const filename = url.substring(url.lastIndexOf('/') + 1);
 
-            // Try these extensions in order (like Q3 engine)
-            const fallbackExtensions = ['tga', 'TGA', 'jpg', 'JPG', 'jpeg', 'JPEG', 'png', 'PNG'];
+            // Reduced set - no need for uppercase variants, server handles case-insensitivity
+            const fallbackExtensions = ['tga', 'jpg', 'png'];
 
             let currentIndex = 0;
             let tryingFallbackPath = false;
 
             const tryNextExtension = async () => {
                 if (currentIndex >= fallbackExtensions.length) {
-                    // If we were trying the original path and fallback is available, switch to fallback
                     if (!tryingFallbackPath && fallbackBaseUrl) {
-                        console.log(`⚠️ Original path failed, trying fallback: ${fallbackBaseUrl}`);
                         tryingFallbackPath = true;
                         currentIndex = 0;
                         tryNextExtension();
                         return;
                     }
-                    // All attempts exhausted
-                    reject(new Error(`Failed to load texture: ${url} (tried all formats${fallbackBaseUrl ? ' and fallback' : ''})`));
+                    reject(new Error(`Failed to load texture: ${url}`));
                     return;
                 }
 
@@ -1363,85 +1441,45 @@ export class Q3ShaderMaterialSystem {
                 let testUrl;
 
                 if (tryingFallbackPath) {
-                    // Build fallback path with full relative path preserved
-                    // Extract the relative path from the original URL (everything after /storage/models/extracted/xxx/)
-                    // e.g., /storage/models/extracted/xxx/textures/sfx/file.tga -> textures/sfx/file
                     let relativePath = url;
                     if (url.includes('/extracted/')) {
-                        // Find the part after /extracted/xxx/
                         const extractedIndex = url.indexOf('/extracted/');
                         const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-                        // Skip the PK3 folder name (e.g., "anarki-model-skin-mysticsurfer-1760897528-8328/")
                         const firstSlashAfterExtracted = afterExtracted.indexOf('/');
                         if (firstSlashAfterExtracted !== -1) {
                             relativePath = afterExtracted.substring(firstSlashAfterExtracted + 1);
                         }
                     }
-
-                    // Remove extension from relativePath and add new extension
                     const relativePathWithoutExt = relativePath.substring(0, relativePath.lastIndexOf('.'));
                     testUrl = fallbackBaseUrl + relativePathWithoutExt + '.' + ext;
                 } else {
-                    // Try original path with current extension
                     testUrl = basePath + ext;
                 }
 
-                // Pre-check if file exists using HEAD request to avoid 404 console spam
                 try {
                     const response = await fetch(testUrl, { method: 'HEAD' });
                     if (!response.ok) {
-                        // File doesn't exist, try next extension silently
                         currentIndex++;
                         tryNextExtension();
                         return;
                     }
                 } catch (error) {
-                    // Network error or file doesn't exist, try next extension
                     currentIndex++;
                     tryNextExtension();
                     return;
                 }
 
-                // File exists! Now load it with the appropriate loader
                 const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
 
                 loader.load(
                     testUrl,
                     (texture) => {
-                        // TGALoader returns a regular Texture with image = {data, width, height}
-                        // but without the isDataTexture flag. This causes Three.js to use the
-                        // wrong upload path for WebGL. Mark it as DataTexture so Three.js
-                        // correctly uses texImage2D with raw pixel data.
-                        if (ext.toLowerCase() === 'tga' && texture.image && texture.image.data) {
-                            texture.isDataTexture = true;
-                            const w = texture.image.width, h = texture.image.height;
-                            const pixelCount = w * h;
-                            const dataLen = texture.image.data.length;
-                            const channels = dataLen / pixelCount;
-                            // Ensure format matches actual channel count
-                            if (channels === 3) {
-                                texture.format = THREE.RGBFormat;
-                            } else if (channels === 4) {
-                                texture.format = THREE.RGBAFormat;
-                            }
-                            texture.type = THREE.UnsignedByteType;
-                        }
-
-                        texture.flipY = false;
-                        texture.minFilter = THREE.LinearFilter;
-                        texture.magFilter = THREE.LinearFilter;
-                        texture.generateMipmaps = false;
-                        texture.needsUpdate = true;
-
-                        if (tryingFallbackPath || currentIndex > 0) {
-                            console.log(`✅ Image fallback worked`);
-                        }
+                        this._setupTexture(texture, ext);
                         Q3ShaderMaterialSystem.textureCache.set(url, texture);
                         resolve(texture);
                     },
                     undefined,
                     () => {
-                        // Failed, try next extension
                         currentIndex++;
                         tryNextExtension();
                     }

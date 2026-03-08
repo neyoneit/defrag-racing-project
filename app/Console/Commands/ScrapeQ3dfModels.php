@@ -401,6 +401,7 @@ class ScrapeQ3dfModels extends Command
                             $pk3Zip->extractTo($extractPath);
                             $pk3Zip->close();
                             $this->lowercaseFileExtensions($extractPath);
+                            $this->generateFileManifest($extractPath);
                         }
                     }
 
@@ -422,6 +423,7 @@ class ScrapeQ3dfModels extends Command
                         $zip->extractTo($extractPath);
                         $zip->close();
                         $this->lowercaseFileExtensions($extractPath);
+                        $this->generateFileManifest($extractPath);
                         $pk3Found = true;
 
                         $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
@@ -1141,6 +1143,23 @@ class ScrapeQ3dfModels extends Command
                 }
             }
         }
+    }
+
+    private function generateFileManifest($extractPath)
+    {
+        $files = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($extractPath, \RecursiveDirectoryIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isFile()) {
+                $relativePath = str_replace($extractPath . '/', '', $file->getPathname());
+                $files[] = $relativePath;
+            }
+        }
+
+        file_put_contents($extractPath . '/manifest.json', json_encode($files));
     }
 
     private function deleteDirectory($dir)
