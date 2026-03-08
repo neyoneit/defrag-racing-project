@@ -544,6 +544,8 @@ export class MD3Loader {
             const material = new THREE.MeshPhongMaterial({
                 color: 0xffffff,
                 side: THREE.DoubleSide,
+                specular: 0x222222,
+                shininess: 20,
             });
 
             const mesh = new THREE.Mesh(geometry, material);
@@ -1417,12 +1419,13 @@ export class MD3Loader {
                                     texture.wrapS = THREE.RepeatWrapping;
                                     texture.wrapT = THREE.RepeatWrapping;
 
-                                    // Handle both basic materials and shader materials
-                                    if (child.material.uniforms && child.material.uniforms.map0) {
-                                        if (child.material.uniforms.map0.value) {
-                                            child.material.uniforms.map0.value.dispose();
+                                    // Handle both basic materials and custom shader materials
+                                    if (child.material.uniforms && child.material.uniforms.tStage0) {
+                                        // Custom Q3 multi-stage shader material — swap stage 0 texture
+                                        if (child.material.uniforms.tStage0.value) {
+                                            child.material.uniforms.tStage0.value.dispose();
                                         }
-                                        child.material.uniforms.map0.value = texture;
+                                        child.material.uniforms.tStage0.value = texture;
                                     } else if (child.material.map) {
                                         child.material.map.dispose();
                                         child.material.map = texture;

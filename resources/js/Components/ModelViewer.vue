@@ -246,6 +246,9 @@ function initScene() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Q3 overbright bits: lighting result is multiplied by 2, giving punchier colors
+    renderer.toneMapping = THREE.LinearToneMapping;
+    renderer.toneMappingExposure = 1.6;
 
     // Add lights
     ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
