@@ -258,9 +258,9 @@ class ModelsController extends Controller
 
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $filename = $zip->getNameIndex($i);
-                    if (strpos($filename, 'models/players/') === 0 ||
-                        strpos($filename, 'models/weapons2/') === 0 ||
-                        strpos($filename, 'sound/player/') === 0) {
+                    if (stripos($filename, 'models/players/') === 0 ||
+                        stripos($filename, 'models/weapons2/') === 0 ||
+                        stripos($filename, 'sound/player/') === 0) {
                         $hasProperStructure = true;
                         break;
                     }
@@ -633,7 +633,7 @@ class ModelsController extends Controller
 
                         for ($i = 0; $i < $zip->numFiles; $i++) {
                             $filename = $zip->getNameIndex($i);
-                            if (strpos($filename, 'models/players/') === 0 || strpos($filename, 'sound/player/') === 0) {
+                            if (stripos($filename, 'models/players/') === 0 || stripos($filename, 'sound/player/') === 0) {
                                 $hasProperStructure = true;
                                 break;
                             }
@@ -754,14 +754,43 @@ class ModelsController extends Controller
     }
 
     /**
+     * Find the models/players directory path, handling case variations (e.g. models/PLAYERS)
+     */
+    private function findPlayersPath($extractPath)
+    {
+        $playersPath = $extractPath . '/models/players';
+        if (is_dir($playersPath)) {
+            return $playersPath;
+        }
+
+        // Try case-insensitive: find 'models' dir first, then 'players' inside it
+        $modelsDir = null;
+        foreach (scandir($extractPath) as $entry) {
+            if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'models' && is_dir($extractPath . '/' . $entry)) {
+                $modelsDir = $extractPath . '/' . $entry;
+                break;
+            }
+        }
+        if (!$modelsDir) return null;
+
+        foreach (scandir($modelsDir) as $entry) {
+            if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'players' && is_dir($modelsDir . '/' . $entry)) {
+                return $modelsDir . '/' . $entry;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Detect model name from extracted files
      * Looks for models/players/{name}/ directory
      */
     private function detectModelName($extractPath)
     {
-        $playersPath = $extractPath . '/models/players';
+        $playersPath = $this->findPlayersPath($extractPath);
 
-        if (!is_dir($playersPath)) {
+        if (!$playersPath) {
             return null;
         }
 
@@ -782,9 +811,9 @@ class ModelsController extends Controller
      */
     private function detectAllModelNames($extractPath)
     {
-        $playersPath = $extractPath . '/models/players';
+        $playersPath = $this->findPlayersPath($extractPath);
 
-        if (!is_dir($playersPath)) {
+        if (!$playersPath) {
             return [];
         }
 
@@ -806,7 +835,26 @@ class ModelsController extends Controller
      */
     private function detectAllWeaponNames($extractPath)
     {
+        // Case-insensitive: find models/weapons2 directory
         $weaponsPath = $extractPath . '/models/weapons2';
+        if (!is_dir($weaponsPath)) {
+            // Try case-insensitive lookup
+            $modelsDir = null;
+            foreach (scandir($extractPath) as $entry) {
+                if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'models' && is_dir($extractPath . '/' . $entry)) {
+                    $modelsDir = $extractPath . '/' . $entry;
+                    break;
+                }
+            }
+            if ($modelsDir) {
+                foreach (scandir($modelsDir) as $entry) {
+                    if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'weapons2' && is_dir($modelsDir . '/' . $entry)) {
+                        $weaponsPath = $modelsDir . '/' . $entry;
+                        break;
+                    }
+                }
+            }
+        }
 
         if (!is_dir($weaponsPath)) {
             return [];
@@ -831,7 +879,10 @@ class ModelsController extends Controller
      */
     private function checkForMd3Files($extractPath, $modelName)
     {
-        $modelPath = $extractPath . '/models/players/' . $modelName;
+        $playersPath = $this->findPlayersPath($extractPath);
+        if (!$playersPath) return false;
+
+        $modelPath = $playersPath . '/' . $modelName;
 
         if (!is_dir($modelPath)) {
             return false;
@@ -867,7 +918,8 @@ class ModelsController extends Controller
         $hasShaders = false;
 
         // Check for skin files
-        $modelPath = $extractPath . '/models/players/' . $modelName;
+        $playersPath = $this->findPlayersPath($extractPath);
+        $modelPath = $playersPath ? $playersPath . '/' . $modelName : $extractPath . '/models/players/' . $modelName;
         if (is_dir($modelPath)) {
             $skinFiles = glob($modelPath . '/*.skin');
             $textureFiles = array_merge(
@@ -1062,7 +1114,8 @@ class ModelsController extends Controller
         }
 
         // Parse available skins from skin files
-        $modelPath = $extractPath . '/models/players/' . $modelName;
+        $playersPath = $this->findPlayersPath($extractPath);
+        $modelPath = $playersPath ? $playersPath . '/' . $modelName : $extractPath . '/models/players/' . $modelName;
         if (is_dir($modelPath)) {
             $skinFiles = glob($modelPath . '/*_*.skin');
             $skins = [];

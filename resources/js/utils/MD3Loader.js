@@ -312,7 +312,7 @@ export class MD3Loader {
     async loadShaders(baseUrl) {
         try {
             // Try to load shader files from scripts directory
-            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/i, 'scripts/');
 
             // Fetch directory listing to find .shader files
             // Since we can't list directories, we'll try common shader file patterns
@@ -394,7 +394,7 @@ export class MD3Loader {
             // Get the scripts directory URL
             // For base Q3 models: /baseq3/models/players/major/ -> /baseq3/scripts/
             // For user models: /storage/models/extracted/xxx/models/players/niria/ -> /storage/models/extracted/xxx/scripts/
-            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+            const scriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/i, 'scripts/');
 
             const isBaseQ3 = baseUrl.includes('/baseq3/');
 
@@ -622,7 +622,7 @@ export class MD3Loader {
                     // e.g. /storage/.../models/players/niria/slashskate -> models/players/niria/slashskate
                     // e.g. /storage/.../textures/base_wall/chrome_env -> textures/base_wall/chrome_env
                     // e.g. /storage/.../gfx/misc/console01 -> gfx/misc/console01
-                    const match = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/);
+                    const match = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/i);
                     if (match) {
                         shaderName = match[0];
                     }
@@ -1460,7 +1460,7 @@ export class MD3Loader {
 
                         // Check if there's a Q3 shader for this texture
                         let shaderName = texturePath.replace(/\.(tga|jpg|png)$/i, '');
-                        const shaderMatch = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/);
+                        const shaderMatch = shaderName.match(/(models\/(?:players|weapons2)\/[^\/]+\/.+|textures\/.+|gfx\/.+)$/i);
                         if (shaderMatch) {
                             shaderName = shaderMatch[0];
                         }
@@ -1592,7 +1592,7 @@ export class MD3Loader {
             }
 
             // Load PK3 shaders to override (from baseUrl)
-            const pk3ScriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/, 'scripts/');
+            const pk3ScriptsUrl = baseUrl.replace(/models\/players\/[^\/]+\/$/i, 'scripts/');
             const beforeCount = this.shaders.size;
             await this.loadShadersForModel(pk3ScriptsUrl, null, modelId);
             const afterCount = this.shaders.size;
