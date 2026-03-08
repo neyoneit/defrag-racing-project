@@ -696,9 +696,10 @@ async function startAlreadyGenerated() {
                 </div>
 
                 <!-- Parsed IDs preview -->
-                <div v-if="selectedModelIds.length > 0" class="mt-3 text-sm text-gray-400">
-                    Parsed IDs: {{ selectedModelIds.join(', ') }}
-                </div>
+                <details v-if="selectedModelIds.length > 0" class="mt-3 text-sm text-gray-400">
+                    <summary class="cursor-pointer hover:text-gray-300">Parsed IDs ({{ selectedModelIds.length }})</summary>
+                    <div class="mt-1 max-h-32 overflow-y-auto">{{ selectedModelIds.join(', ') }}</div>
+                </details>
             </div>
 
             <!-- Progress -->
