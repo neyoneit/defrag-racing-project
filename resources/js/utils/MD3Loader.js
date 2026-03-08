@@ -63,6 +63,36 @@ export class MD3Loader {
     }
 
     /**
+     * Load manifest for a custom base model (for fallback texture resolution).
+     */
+    async loadBaseModelManifest(baseModelUrl) {
+        let manifestUrl;
+        if (baseModelUrl.includes('/extracted/')) {
+            const extractedIndex = baseModelUrl.indexOf('/extracted/');
+            const afterExtracted = baseModelUrl.substring(extractedIndex + '/extracted/'.length);
+            const firstSlash = afterExtracted.indexOf('/');
+            if (firstSlash !== -1) {
+                manifestUrl = baseModelUrl.substring(0, extractedIndex + '/extracted/'.length + firstSlash) + '/manifest.json';
+            }
+        }
+        if (!manifestUrl) return;
+
+        try {
+            const response = await fetch(manifestUrl);
+            if (response.ok) {
+                const files = await response.json();
+                this.baseModelManifest = new Map();
+                this.baseModelManifestPrefix = baseModelUrl.substring(0, baseModelUrl.indexOf('/extracted/') + '/extracted/'.length + baseModelUrl.substring(baseModelUrl.indexOf('/extracted/') + '/extracted/'.length).indexOf('/') + 1);
+                for (const file of files) {
+                    this.baseModelManifest.set(file.toLowerCase(), file);
+                }
+            }
+        } catch (e) {
+            // Manifest not available
+        }
+    }
+
+    /**
      * Load baseq3 file manifest (cached statically across instances).
      */
     async loadBaseq3Manifest() {
@@ -162,8 +192,10 @@ export class MD3Loader {
      */
     async fetchCaseInsensitive(url) {
         // Server-side handles all case-insensitive resolution now
-        // Just fetch once - no more trying multiple variations!
-        const response = await fetch(url, { signal: this.abortController.signal });
+        // Encode special characters in path segments (e.g. apostrophes in "she'k")
+        // while preserving / separators and query strings
+        const encodedUrl = url.split('/').map(segment => encodeURIComponent(segment)).join('/');
+        const response = await fetch(encodedUrl, { signal: this.abortController.signal });
         if (!response.ok) {
             throw new Error(`File not found: ${url}`);
         }
@@ -1166,6 +1198,23 @@ export class MD3Loader {
             }
         }
 
+        // Try custom base model manifest (for skin packs with custom base models)
+        if (this.baseModelManifest && this.baseModelManifestPrefix) {
+            let relativePath;
+            if (url.includes('/extracted/')) {
+                const extractedIndex = url.indexOf('/extracted/');
+                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+                const firstSlash = afterExtracted.indexOf('/');
+                if (firstSlash !== -1) {
+                    relativePath = afterExtracted.substring(firstSlash + 1);
+                }
+            }
+            if (relativePath) {
+                const result = tryManifestLookup(this.baseModelManifest, relativePath, this.baseModelManifestPrefix);
+                if (result) return result;
+            }
+        }
+
         // Try baseq3 manifest (as fallback)
         if (this.baseq3Manifest && fallbackBaseUrl) {
             let relativePath;
@@ -1478,10 +1527,25 @@ export class MD3Loader {
         const actualBaseModelName = baseModelName || modelName;
         const shouldLoadBaseModel = !!baseModelName;
 
+        // List of base Q3 models from pak0-pak8.pk3
+        const baseQ3Models = [
+            'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
+            'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
+            'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
+            'ranger', 'bitterman', 'brandon', 'carmack', 'cash', 'light',
+            'medium', 'paulj', 'tim', 'xian'
+        ];
+        const isBaseQ3Model = baseQ3Models.includes(actualBaseModelName.toLowerCase());
+
         try {
             // STEP 0: Load file manifests for case-insensitive lookups
             await this.loadBaseq3Manifest();
             await this.loadManifest(baseUrl);
+
+            // If custom base model, also load its manifest for fallback texture resolution
+            if (shouldLoadBaseModel && baseModelFilePath && !isBaseQ3Model) {
+                await this.loadBaseModelManifest(`/storage/${baseModelFilePath}/`);
+            }
 
             // STEP 1: Load ALL shaders (not filtered by model name)
             // Load baseq3 shaders foundation
@@ -1505,16 +1569,6 @@ export class MD3Loader {
             let mainPlayerPath;
             let skinBasePath;
 
-            // List of base Q3 models from pak0-pak8.pk3
-            const baseQ3Models = [
-                'sarge', 'grunt', 'major', 'visor', 'slash', 'biker', 'tankjr',
-                'orbb', 'crash', 'razor', 'doom', 'klesk', 'anarki', 'xaero',
-                'mynx', 'hunter', 'bones', 'sorlag', 'lucy', 'keel', 'uriel',
-                'ranger', 'bitterman', 'brandon', 'carmack', 'cash', 'light',
-                'medium', 'paulj', 'tim', 'xian'
-            ];
-            const isBaseQ3Model = baseQ3Models.includes(actualBaseModelName.toLowerCase());
-
             if (shouldLoadBaseModel && isBaseQ3Model) {
                 // Base model from baseq3, skins from PK3
                 mainPlayerPath = `/baseq3/models/players/${actualBaseModelName}/`;
@@ -1530,9 +1584,19 @@ export class MD3Loader {
                     mainPlayerPath = baseUrl;
                 }
                 skinBasePath = skinPackBasePath || baseUrl;
-                // Set fallback URL for shader textures - if texture not found in PK3, try baseq3
-                this.fallbackBaseUrl = '/baseq3/';
-                DEBUG && console.log(`👤 Loading custom base model MD3s from: ${mainPlayerPath}, skins from: ${skinBasePath}`);
+                // Set fallback URL for shader textures - try base model's PK3 first, then baseq3
+                // Extract the base model's root path (up to and including the extracted dir name)
+                if (baseModelFilePath) {
+                    const baseModelMatch = baseModelFilePath.match(/(models\/extracted\/[^\/]+)\//);
+                    if (baseModelMatch) {
+                        this.fallbackBaseUrl = `/storage/${baseModelMatch[1]}/`;
+                    } else {
+                        this.fallbackBaseUrl = '/baseq3/';
+                    }
+                } else {
+                    this.fallbackBaseUrl = '/baseq3/';
+                }
+                DEBUG && console.log(`👤 Loading custom base model MD3s from: ${mainPlayerPath}, skins from: ${skinBasePath}, fallback: ${this.fallbackBaseUrl}`);
             } else {
                 // Complete model - load everything from PK3
                 mainPlayerPath = baseUrl;

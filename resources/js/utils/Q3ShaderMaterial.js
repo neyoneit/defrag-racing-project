@@ -1360,13 +1360,15 @@ export class Q3ShaderMaterialSystem {
      * Load a texture from a known-good URL (resolved via manifest).
      */
     _loadTextureFromUrl(resolvedUrl, cacheKey) {
+        // Encode special characters in path segments (e.g. apostrophes in "she'k")
+        const encodedUrl = resolvedUrl.split('/').map(segment => encodeURIComponent(segment)).join('/');
         return new Promise((resolve, reject) => {
             const ext = resolvedUrl.substring(resolvedUrl.lastIndexOf('.') + 1);
             const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
 
             // For TGA: use fetch + blob to handle case-insensitive server paths
             if (ext.toLowerCase() === 'tga') {
-                fetch(resolvedUrl)
+                fetch(encodedUrl)
                     .then(response => {
                         if (!response.ok) throw new Error(`Failed to fetch: ${resolvedUrl}`);
                         return response.blob();
@@ -1385,7 +1387,7 @@ export class Q3ShaderMaterialSystem {
                     })
                     .catch(reject);
             } else {
-                loader.load(resolvedUrl, (texture) => {
+                loader.load(encodedUrl, (texture) => {
                     this._setupTexture(texture, ext);
                     Q3ShaderMaterialSystem.textureCache.set(cacheKey, texture);
                     resolve(texture);
@@ -1465,8 +1467,9 @@ export class Q3ShaderMaterialSystem {
                     testUrl = basePath + ext;
                 }
 
+                const encodedTestUrl = testUrl.split('/').map(s => encodeURIComponent(s)).join('/');
                 try {
-                    const response = await fetch(testUrl, { method: 'HEAD' });
+                    const response = await fetch(encodedTestUrl, { method: 'HEAD' });
                     if (!response.ok) {
                         currentIndex++;
                         tryNextExtension();
@@ -1481,7 +1484,7 @@ export class Q3ShaderMaterialSystem {
                 const loader = (ext.toLowerCase() === 'tga') ? this.loader.tgaLoader : this.loader.textureLoader;
 
                 loader.load(
-                    testUrl,
+                    encodedTestUrl,
                     (texture) => {
                         this._setupTexture(texture, ext);
                         Q3ShaderMaterialSystem.textureCache.set(url, texture);

@@ -730,6 +730,7 @@ const generateGifThumbnail = async () => {
             workerScript: '/gif.worker.js'
         });
         const numRotateFrames = 36;
+        let shaderTime = 0; // Track shader time for wave/scroll effects across all GIFs
         for (let i = 0; i < numRotateFrames; i++) {
             gifProgress.value = `[Rotate] Frame ${i + 1}/${numRotateFrames}`;
             const angle = startAngle + (i * (Math.PI * 2) / numRotateFrames);
@@ -739,6 +740,8 @@ const generateGifThumbnail = async () => {
             camera.lookAt(target.x, target.y, target.z);
             camera.updateMatrixWorld();
             scene.updateMatrixWorld(true);
+            shaderTime += 0.083; // ~83ms per frame (12fps rotate)
+            viewer3D.value.updateShaderAnimations(shaderTime);
             await new Promise(resolve => requestAnimationFrame(resolve));
             captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
             rotateGif.addFrame(tempCanvas, { copy: true, delay: 83 });
@@ -768,9 +771,14 @@ const generateGifThumbnail = async () => {
                 const torsoData = anims.torso?.['TORSO_STAND'] || anims.both?.['TORSO_STAND'];
 
                 if (legsData || torsoData) {
-                    // LOOPING (idle): use native fps, capture exactly numFrames — same as real-time viewer
+                    // LOOPING (idle): use native fps, ensure minimum ~3s duration for shader effects visibility
                     const animFps = legsData?.fps || torsoData?.fps || 15;
-                    const numFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+                    const baseFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+                    const minDurationSec = 3;
+                    const minFrames = Math.ceil(minDurationSec * animFps);
+                    // Repeat animation cycles to fill minimum duration (must be multiple of baseFrames for seamless loop)
+                    const numCycles = Math.max(1, Math.ceil(minFrames / baseFrames));
+                    const numFrames = baseFrames * numCycles;
                     const frameDelay = Math.round(1000 / animFps);
                     const dt = 1 / animFps;
 
@@ -802,6 +810,8 @@ const generateGifThumbnail = async () => {
                     for (let i = 0; i < numFrames; i++) {
                         gifProgress.value = `[Idle] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
                         if (i > 0) animManager.update(dt);
+                        shaderTime += dt;
+                        viewer3D.value.updateShaderAnimations(shaderTime);
                         scene.updateMatrixWorld(true);
                         await new Promise(resolve => requestAnimationFrame(resolve));
                         captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
@@ -868,6 +878,8 @@ const generateGifThumbnail = async () => {
                     for (let i = 0; i < numFrames; i++) {
                         gifProgress.value = `[Gesture] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
                         if (i > 0) animManager.update(dt);
+                        shaderTime += dt;
+                        viewer3D.value.updateShaderAnimations(shaderTime);
                         scene.updateMatrixWorld(true);
                         await new Promise(resolve => requestAnimationFrame(resolve));
                         captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);

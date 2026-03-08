@@ -706,7 +706,7 @@ async function startBatchForce() {
 
 // Quick-fill helpers
 function fillAllWithoutGif() {
-    const ids = props.models.filter(m => !m.idle_gif && !m.rotate_gif).map(m => m.id);
+    const ids = props.models.filter(m => !m.idle_gif || !m.rotate_gif || !m.gesture_gif).map(m => m.id);
     modelIdsInput.value = ids.join(', ');
 }
 
@@ -734,7 +734,7 @@ async function startAll() {
 }
 
 async function startAlreadyGenerated() {
-    modelIdsInput.value = props.models.filter(m => m.idle_gif || m.rotate_gif || m.thumbnail).map(m => m.id).join(', ');
+    modelIdsInput.value = props.models.filter(m => m.idle_gif || m.rotate_gif || m.gesture_gif || m.thumbnail).map(m => m.id).join(', ');
     await nextTick();
     startBatch(0);
 }
@@ -789,7 +789,7 @@ async function startAlreadyGenerated() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif && !m.rotate_gif).length }})
+                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif || !m.rotate_gif || !m.gesture_gif).length }})
                     </button>
                     <button
                         @click="fillAll"

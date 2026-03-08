@@ -1409,7 +1409,7 @@ class ModelsController extends Controller
             abort(403);
         }
 
-        $models = PlayerModel::select('id', 'name', 'category', 'model_type', 'file_path', 'base_model', 'base_model_file_path', 'thumbnail', 'head_icon', 'main_file', 'available_skins')
+        $models = PlayerModel::select('id', 'name', 'category', 'model_type', 'file_path', 'base_model', 'base_model_file_path', 'thumbnail', 'head_icon', 'main_file', 'available_skins', 'idle_gif', 'rotate_gif', 'gesture_gif')
             ->approved()
             ->where('hidden', false)
             ->orderBy('id', 'desc')

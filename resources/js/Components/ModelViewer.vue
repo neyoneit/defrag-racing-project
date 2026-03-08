@@ -1121,6 +1121,7 @@ defineExpose({
     resetToIdle: () => animationManager?.resetToIdle(),
     pauseAnimationLoop: () => { animationPaused = true; },
     resumeAnimationLoop: () => { animationPaused = false; },
+    updateShaderAnimations: (time) => updateShaderAnimations(time),
     getAvailableAnimations: () => availableAnimations.value,
     playSound: (name, options) => {
         // For player models, use soundManager
