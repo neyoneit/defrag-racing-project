@@ -261,6 +261,10 @@ async function generateGifForModel() {
         renderer.render(scene, camera);
         await new Promise(resolve => requestAnimationFrame(resolve));
 
+        // Fill with opaque black first to prevent GIF frame accumulation
+        // (renderer has alpha:true, so transparent areas would bleed between frames)
+        tempCtx.fillStyle = '#000000';
+        tempCtx.fillRect(0, 0, gifWidth, gifHeight);
         tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
         gif.addFrame(tempCanvas, { copy: true, delay: 83 });
 
