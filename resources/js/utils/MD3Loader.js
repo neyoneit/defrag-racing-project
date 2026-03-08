@@ -500,7 +500,7 @@ export class MD3Loader {
      */
     parseSkin(content, baseUrl) {
         const skinMap = {};
-        const lines = content.split('\n');
+        const lines = content.split(/\r\n|\r|\n/);
 
         // Get the base directory from the skin URL
         const baseDir = baseUrl.substring(0, baseUrl.lastIndexOf('/') + 1);
@@ -3256,7 +3256,7 @@ export class MD3Loader {
             both: {}
         };
 
-        const lines = content.split('\n');
+        const lines = content.split(/\r\n|\r|\n/);
 
         let lineNumber = 0;
         for (const line of lines) {

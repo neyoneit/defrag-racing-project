@@ -11,7 +11,7 @@ export class Q3ShaderParser {
      * Parse a shader file content
      */
     parseShaderFile(content) {
-        const lines = content.split('\n');
+        const lines = content.split(/\r\n|\r|\n/);
         let currentShader = null;
         let currentStage = null;
         let braceDepth = 0;
