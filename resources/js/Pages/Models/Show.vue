@@ -1345,6 +1345,33 @@ const confirmNsfw = () => {
                             </div>
                         </div>
 
+                        <!-- CROSS-PK3 TEXTURE DEPENDENCY WARNING -->
+                        <div v-if="baseModelData?.is_texture_dependency" class="backdrop-blur-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl p-4 border border-amber-500/20 mb-6">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div class="text-sm">
+                                    <p class="text-amber-200 font-semibold mb-1">Texture Dependency</p>
+                                    <p class="text-gray-300">
+                                        This model requires the
+                                        <Link :href="route('models.show', baseModelData.id)" class="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
+                                            {{ baseModelData.display_name || baseModelData.name }}
+                                        </Link>
+                                        player model — its textures reference files from that PK3.
+                                    </p>
+                                    <a v-if="baseModelData.zip_path"
+                                       :href="`/storage/${baseModelData.zip_path}`"
+                                       class="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                        </svg>
+                                        Download {{ baseModelData.display_name || baseModelData.name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- ANIMATION BUTTONS -->
                         <div v-if="animationsReady" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
                             <h3 class="text-sm font-bold text-white mb-3">Animations</h3>

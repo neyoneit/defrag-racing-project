@@ -931,6 +931,18 @@ class ModelsController extends Controller
                 'name' => $model->base_model,
                 'file_path' => $model->base_model_file_path,
             ];
+            // For complete models with cross-PK3 texture deps, fetch base model ID and download info
+            if ($model->model_type === 'complete') {
+                $depModel = PlayerModel::where('file_path', $model->base_model_file_path)
+                    ->where('id', '!=', $model->id)
+                    ->first(['id', 'name', 'zip_path']);
+                if ($depModel) {
+                    $baseModelData['id'] = $depModel->id;
+                    $baseModelData['display_name'] = $depModel->name;
+                    $baseModelData['zip_path'] = $depModel->zip_path;
+                    $baseModelData['is_texture_dependency'] = true;
+                }
+            }
             $timings['base_model_resolution'] = round((microtime(true) - $start) * 1000, 2) . ' (cached)';
         } elseif ($model->model_type !== 'complete' && $model->base_model) {
             // Fallback: query database (old skin/mixed packs without base_model_file_path)
