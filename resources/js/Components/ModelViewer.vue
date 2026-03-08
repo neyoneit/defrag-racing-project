@@ -74,6 +74,7 @@ let model = null;
 let modelCenter = new THREE.Vector3(); // Geometric center for rotation pivot
 let manualAutoRotate = false;
 let animationManager = null;
+let animationPaused = false;
 let soundManager = null;
 let clock = new THREE.Clock();
 const loader = new MD3Loader();
@@ -579,8 +580,8 @@ function animate() {
     const deltaTime = clock.getDelta();
     const time = clock.getElapsedTime();
 
-    // Update animation manager
-    if (animationManager) {
+    // Update animation manager (skip when external code is controlling animation directly)
+    if (animationManager && !animationPaused) {
         animationManager.update(deltaTime);
     }
 
@@ -1115,6 +1116,8 @@ defineExpose({
     },
     stopAnimations: () => animationManager?.stop(),
     resetToIdle: () => animationManager?.resetToIdle(),
+    pauseAnimationLoop: () => { animationPaused = true; },
+    resumeAnimationLoop: () => { animationPaused = false; },
     getAvailableAnimations: () => availableAnimations.value,
     playSound: (name, options) => {
         // For player models, use soundManager

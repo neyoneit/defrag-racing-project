@@ -658,6 +658,14 @@ const generateHeadIcon = async () => {
     isGeneratingHeadIcon.value = false;
 };
 
+// --- GIF generation helpers (shared with Show.vue) ---
+function captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight) {
+    renderer.render(scene, camera);
+    tempCtx.fillStyle = '#000000';
+    tempCtx.fillRect(0, 0, gifWidth, gifHeight);
+    tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, gifWidth, gifHeight);
+}
+
 const generateGifThumbnail = async () => {
     if (!viewer3D.value) {
         showErrorNotification('3D model is not loaded yet');
@@ -672,32 +680,7 @@ const generateGifThumbnail = async () => {
     isGeneratingGif.value = true;
     gifProgress.value = 'Preparing...';
 
-    let gif = null;
-    let tempCanvas = null;
-
-    const cleanup = () => {
-        // Free GIF encoder and its workers
-        if (gif) {
-            try {
-                gif.abort();
-                // Terminate any remaining free workers
-                if (gif.freeWorkers && Array.isArray(gif.freeWorkers)) {
-                    gif.freeWorkers.forEach(w => w.terminate());
-                    gif.freeWorkers = [];
-                }
-            } catch (e) { /* ignore */ }
-            gif = null;
-        }
-        // Release temp canvas
-        if (tempCanvas) {
-            tempCanvas.width = 0;
-            tempCanvas.height = 0;
-            tempCanvas = null;
-        }
-    };
-
     try {
-        // Get the renderer and canvas from ModelViewer
         const renderer = viewer3D.value.getRenderer();
         const scene = viewer3D.value.getScene();
         const camera = viewer3D.value.getCamera();
@@ -706,198 +689,265 @@ const generateGifThumbnail = async () => {
             throw new Error('Could not access 3D viewer components');
         }
 
-        // Get actual canvas dimensions
         const canvas = renderer.domElement;
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-
-        // Use smaller resolution for GIF (300x300 for smaller file size)
         const gifWidth = 300;
         const gifHeight = 300;
 
-        // Dynamically import gif.js
-        const GIF = (await import('gif.js')).default;
+        const controls = viewer3D.value.getControls();
+        const originalPosition = camera.position.clone();
+        const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
 
-        // Create GIF encoder - use 1 worker to reduce memory pressure
-        gif = new GIF({
+        const modelObj = viewer3D.value.getModel();
+        const pivot = viewer3D.value.getModelCenter();
+        const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+
+        const dx = originalPosition.x - target.x;
+        const dy = originalPosition.y - target.y;
+        const dz = originalPosition.z - target.z;
+        const radius = Math.sqrt(dx * dx + dz * dz);
+        const height = dy;
+        const startAngle = Math.atan2(dx, dz);
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = gifWidth;
+        tempCanvas.height = gifHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        const restoreCamera = () => {
+            camera.position.copy(originalPosition);
+            camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+            if (controls) { controls.target.copy(originalTarget); controls.update(); }
+        };
+
+        // ---- 1. ROTATE GIF ----
+        gifProgress.value = '[1/4] Rotate GIF...';
+        const GIF = (await import('gif.js')).default;
+        const rotateGif = new GIF({
             workers: 1,
             quality: 10,
             width: gifWidth,
             height: gifHeight,
             workerScript: '/gif.worker.js'
         });
-
-        // Use current camera position from preview (no fitToView - keep what user sees)
-
-        // Save the current camera position
-        const originalPosition = camera.position.clone();
-        const controls = viewer3D.value.getControls();
-        const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
-
-        // Use model origin (0,0,0) for XZ rotation pivot, bbox center Y for height
-        // Model origin is the natural rotation center for Q3 models
-        const modelObj = viewer3D.value.getModel();
-        const pivot = viewer3D.value.getModelCenter();
-        const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
-
-        // Calculate camera distance from the pivot
-        const dx = originalPosition.x - target.x;
-        const dy = originalPosition.y - target.y;
-        const dz = originalPosition.z - target.z;
-        const radius = Math.sqrt(dx * dx + dz * dz); // Horizontal distance
-        const height = dy; // Vertical offset from pivot
-
-        // Get the starting angle based on current camera position relative to pivot
-        const startAngle = Math.atan2(dx, dz);
-
-        // Create a temporary canvas for resizing frames
-        tempCanvas = document.createElement('canvas');
-        tempCanvas.width = gifWidth;
-        tempCanvas.height = gifHeight;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // Capture 24 frames (2 second loop at 12fps)
-        const numFrames = 24;
-        const rotationStep = (Math.PI * 2) / numFrames;
-
-        for (let i = 0; i < numFrames; i++) {
-            gifProgress.value = `Capturing frame ${i + 1}/${numFrames}...`;
-
-            // Rotate the camera around the target, starting from current position
-            const angle = startAngle + (i * rotationStep);
+        const numRotateFrames = 36;
+        for (let i = 0; i < numRotateFrames; i++) {
+            gifProgress.value = `[Rotate] Frame ${i + 1}/${numRotateFrames}`;
+            const angle = startAngle + (i * (Math.PI * 2) / numRotateFrames);
             camera.position.x = target.x + Math.sin(angle) * radius;
             camera.position.z = target.z + Math.cos(angle) * radius;
             camera.position.y = target.y + height;
-
             camera.lookAt(target.x, target.y, target.z);
             camera.updateMatrixWorld();
             scene.updateMatrixWorld(true);
-
-            // Wait for next frame to ensure rendering is complete
             await new Promise(resolve => requestAnimationFrame(resolve));
-            renderer.render(scene, camera);
-            await new Promise(resolve => requestAnimationFrame(resolve));
-
-            // Fill with opaque black first to prevent GIF frame accumulation
-            // (renderer has alpha:true, so transparent areas would bleed between frames)
-            tempCtx.fillStyle = '#000000';
-            tempCtx.fillRect(0, 0, gifWidth, gifHeight);
-            tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
-
-            // Add the resized frame to GIF
-            gif.addFrame(tempCanvas, { copy: true, delay: 83 });
-
-            // Yield to browser to prevent UI freeze
+            captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+            rotateGif.addFrame(tempCanvas, { copy: true, delay: 83 });
             await new Promise(resolve => setTimeout(resolve, 50));
         }
-
-        gifProgress.value = 'Encoding GIF...';
-
-        // Wrap gif.render() in a promise so we can await it
-        const gifBlob = await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('GIF encoding timed out after 60 seconds'));
-            }, 60000);
-
-            gif.on('finished', (blob) => {
-                clearTimeout(timeout);
-                resolve(blob);
-            });
-
-            gif.on('progress', (p) => {
-                gifProgress.value = `Encoding: ${Math.round(p * 100)}%`;
-            });
-
-            gif.render();
+        restoreCamera();
+        gifProgress.value = 'Encoding rotate GIF...';
+        const rotateBlob = await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+            rotateGif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
+            rotateGif.on('progress', (p) => { gifProgress.value = `Encoding rotate: ${Math.round(p * 100)}%`; });
+            rotateGif.render();
         });
 
-        // Free GIF encoder immediately after encoding - this is the big memory win
-        cleanup();
+        // ---- 2. IDLE GIF (LEGS_IDLE + TORSO_STAND) ----
+        let idleBlob = null;
+        const animManager = viewer3D.value.getAnimationManager();
+        if (animManager) {
+            // Pause viewer's own animation loop to prevent double-advancing
+            viewer3D.value.pauseAnimationLoop();
 
-        gifProgress.value = 'Generating head icon...';
+            try {
+                gifProgress.value = '[2/4] Idle GIF...';
+                const anims = viewer3D.value.getAvailableAnimations();
+                const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
+                const torsoData = anims.torso?.['TORSO_STAND'] || anims.both?.['TORSO_STAND'];
 
-        // Generate 64x64 head icon PNG
+                if (legsData || torsoData) {
+                    // LOOPING (idle): use native fps, capture exactly numFrames — same as real-time viewer
+                    const animFps = legsData?.fps || torsoData?.fps || 15;
+                    const numFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+                    const frameDelay = Math.round(1000 / animFps);
+                    const dt = 1 / animFps;
+
+                    camera.position.x = target.x;
+                    camera.position.z = target.z + radius;
+                    camera.position.y = target.y + height * 0.5;
+                    camera.lookAt(target.x, target.y, target.z);
+                    camera.updateMatrixWorld();
+
+                    animManager.stop();
+                    if (legsData) animManager.playLegsAnimation('LEGS_IDLE');
+                    if (torsoData) animManager.playTorsoAnimation('TORSO_STAND');
+                    animManager.playing = true;
+                    animManager.legsTime = 0; animManager.torsoTime = 0;
+                    animManager.legsFrame = 0; animManager.torsoFrame = 0;
+
+                    // Initialize mesh vertices to frame 0 — without this,
+                    // the first GIF frame shows stale vertex data causing a loop stutter
+                    animManager.update(0);
+
+                    const GIF = (await import('gif.js')).default;
+                    const gif = new GIF({
+                        workers: 1,
+                        quality: 10,
+                        width: gifWidth,
+                        height: gifHeight,
+                        workerScript: '/gif.worker.js'
+                    });
+                    for (let i = 0; i < numFrames; i++) {
+                        gifProgress.value = `[Idle] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
+                        if (i > 0) animManager.update(dt);
+                        scene.updateMatrixWorld(true);
+                        await new Promise(resolve => requestAnimationFrame(resolve));
+                        captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+                        gif.addFrame(tempCanvas, { copy: true, delay: frameDelay });
+                        await new Promise(resolve => setTimeout(resolve, 30));
+                    }
+                    animManager.stop();
+                    animManager.resetToIdle();
+                    restoreCamera();
+
+                    gifProgress.value = 'Encoding idle GIF...';
+                    idleBlob = await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+                        gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
+                        gif.on('progress', (p) => { gifProgress.value = `Encoding idle: ${Math.round(p * 100)}%`; });
+                        gif.render();
+                    });
+                }
+            } catch (e) {
+                console.warn('Idle GIF failed:', e.message);
+                restoreCamera();
+            }
+
+            // ---- 3. GESTURE GIF (LEGS_IDLE + TORSO_GESTURE) ----
+            try {
+                gifProgress.value = '[3/4] Gesture GIF...';
+                const anims = viewer3D.value.getAvailableAnimations();
+                const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
+                const torsoData = anims.torso?.['TORSO_GESTURE'] || anims.both?.['TORSO_GESTURE'];
+
+                if (torsoData) {
+                    // Gesture is one-shot — capture ALL frames, no intro skip
+                    // Use higher fps of the two animations so no frames are skipped
+                    const animFps = Math.max(legsData?.fps || 0, torsoData.fps) || 15;
+                    const legsDuration = legsData ? legsData.numFrames / legsData.fps : 0;
+                    const torsoDuration = torsoData.numFrames / torsoData.fps;
+                    const numFrames = Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2);
+                    const frameDelay = Math.round(1000 / animFps);
+                    const dt = 1 / animFps;
+
+                    camera.position.x = target.x;
+                    camera.position.z = target.z + radius;
+                    camera.position.y = target.y + height * 0.5;
+                    camera.lookAt(target.x, target.y, target.z);
+                    camera.updateMatrixWorld();
+
+                    animManager.stop();
+                    if (legsData) animManager.playLegsAnimation('LEGS_IDLE');
+                    animManager.playTorsoAnimation('TORSO_GESTURE');
+                    animManager.playing = true;
+                    animManager.legsTime = 0; animManager.torsoTime = 0;
+                    animManager.legsFrame = 0; animManager.torsoFrame = 0;
+
+                    animManager.update(0);
+
+                    const GIF = (await import('gif.js')).default;
+                    const gif = new GIF({
+                        workers: 1,
+                        quality: 10,
+                        width: gifWidth,
+                        height: gifHeight,
+                        workerScript: '/gif.worker.js'
+                    });
+                    for (let i = 0; i < numFrames; i++) {
+                        gifProgress.value = `[Gesture] Frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)`;
+                        if (i > 0) animManager.update(dt);
+                        scene.updateMatrixWorld(true);
+                        await new Promise(resolve => requestAnimationFrame(resolve));
+                        captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+                        gif.addFrame(tempCanvas, { copy: true, delay: frameDelay });
+                        await new Promise(resolve => setTimeout(resolve, 30));
+                    }
+                    animManager.stop();
+                    animManager.resetToIdle();
+                    restoreCamera();
+
+                    gifProgress.value = 'Encoding gesture GIF...';
+                    gestureBlob = await new Promise((resolve, reject) => {
+                        const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+                        gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
+                        gif.on('progress', (p) => { gifProgress.value = `Encoding gesture: ${Math.round(p * 100)}%`; });
+                        gif.render();
+                    });
+                }
+            } catch (e) {
+                console.warn('Gesture GIF failed:', e.message);
+                restoreCamera();
+            }
+
+            // Resume viewer's animation loop
+            viewer3D.value.resumeAnimationLoop();
+        }
+
+        // ---- 4. HEAD ICON ----
+        gifProgress.value = '[4/4] Head icon...';
         let headIconBlob = null;
         try {
             const THREE = await import('three');
-
             const model = viewer3D.value.getModel();
-            if (!model) {
-                throw new Error('Model not loaded');
-            }
-
-            let headMesh = null;
-            let highestY = -Infinity;
-
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    const worldPos = new THREE.Vector3();
-                    child.getWorldPosition(worldPos);
-                    if (worldPos.y > highestY) {
-                        highestY = worldPos.y;
-                        headMesh = child;
+            if (model) {
+                let headMesh = null;
+                let highestY = -Infinity;
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        const worldPos = new THREE.Vector3();
+                        child.getWorldPosition(worldPos);
+                        if (worldPos.y > highestY) { highestY = worldPos.y; headMesh = child; }
                     }
+                });
+                if (headMesh) {
+                    const headBox = new THREE.Box3().setFromObject(headMesh);
+                    const headCenter = headBox.getCenter(new THREE.Vector3());
+                    const headSize = headBox.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
+                    const fov = camera.fov * (Math.PI / 180);
+                    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
+
+                    camera.position.set(headCenter.x, headCenter.y, headCenter.z + cameraZ);
+                    camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
+                    camera.updateMatrixWorld();
+                    scene.updateMatrixWorld(true);
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                    renderer.render(scene, camera);
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+
+                    const headCanvas = document.createElement('canvas');
+                    headCanvas.width = 64; headCanvas.height = 64;
+                    const headCtx = headCanvas.getContext('2d');
+                    headCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 64, 64);
+                    headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
+                    headCanvas.width = 0; headCanvas.height = 0;
                 }
-            });
-
-            if (!headMesh) {
-                throw new Error('Could not find head mesh');
             }
-
-            const headBox = new THREE.Box3().setFromObject(headMesh);
-            const headCenter = headBox.getCenter(new THREE.Vector3());
-            const headSize = headBox.getSize(new THREE.Vector3());
-
-            const maxDim = Math.max(headSize.x, headSize.y, headSize.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-            cameraZ *= 1.5;
-
-            if (controls) {
-                controls.target.set(headCenter.x, headCenter.y, headCenter.z);
-                controls.update();
-            }
-
-            camera.position.set(headCenter.x, headCenter.y, headCenter.z + cameraZ);
-            camera.lookAt(headCenter.x, headCenter.y, headCenter.z);
-
-            camera.updateMatrixWorld();
-            scene.updateMatrixWorld(true);
-            await new Promise(resolve => requestAnimationFrame(resolve));
-            renderer.render(scene, camera);
-            await new Promise(resolve => requestAnimationFrame(resolve));
-
-            const headCanvas = document.createElement('canvas');
-            headCanvas.width = 64;
-            headCanvas.height = 64;
-            const headCtx = headCanvas.getContext('2d');
-            headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
-
-            headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
-
-            // Release head canvas
-            headCanvas.width = 0;
-            headCanvas.height = 0;
         } catch (error) {
             console.error('Head icon generation error:', error);
         }
 
-        // Restore camera position and original target
-        camera.position.copy(originalPosition);
-        camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
-        if (controls) {
-            controls.target.copy(originalTarget);
-            controls.update();
-        }
+        restoreCamera();
+        tempCanvas.width = 0; tempCanvas.height = 0;
 
+        // ---- Upload all variants ----
         gifProgress.value = 'Uploading...';
-
-        // Upload to server
         const formData = new FormData();
-        formData.append('gif', gifBlob, `model_${props.model.id}.gif`);
-        if (headIconBlob) {
-            formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
-        }
+        if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${props.model.id}_rotate.gif`);
+        if (idleBlob) formData.append('idle_gif', idleBlob, `model_${props.model.id}_idle.gif`);
+        if (gestureBlob) formData.append('gesture_gif', gestureBlob, `model_${props.model.id}_gesture.gif`);
+        if (headIconBlob) formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
 
         const response = await fetch(route('models.saveThumbnail', props.model.id), {
             method: 'POST',
@@ -910,16 +960,19 @@ const generateGifThumbnail = async () => {
         const data = await response.json();
 
         if (data.success) {
-            gifProgress.value = 'Done!';
-            showSuccessNotification('Thumbnail generated successfully!');
+            const generated = [];
+            if (rotateBlob) generated.push('rotate');
+            if (idleBlob) generated.push('idle');
+            if (gestureBlob) generated.push('gesture');
+            gifProgress.value = `Done! Generated: ${generated.join(', ')}`;
+            showSuccessNotification(`Generated ${generated.length} GIF variants + head icon!`);
         } else {
-            throw new Error(data.message || 'Failed to save thumbnail');
+            throw new Error(data.message || 'Failed to save thumbnails');
         }
 
     } catch (error) {
         console.error('GIF generation error:', error);
-        showErrorNotification('Failed to generate thumbnail: ' + error.message);
-        cleanup();
+        showErrorNotification('Failed to generate thumbnails: ' + error.message);
     } finally {
         isGeneratingGif.value = false;
     }

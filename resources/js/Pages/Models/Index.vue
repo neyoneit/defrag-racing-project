@@ -73,6 +73,19 @@ const sortOptions = [
 
 const searchQuery = ref(props.search || '');
 
+// GIF preview mode: idle (default), rotate, gesture
+const previewMode = ref(localStorage.getItem('models_preview_mode') || 'idle');
+function setPreviewMode(mode) {
+    previewMode.value = mode;
+    localStorage.setItem('models_preview_mode', mode);
+}
+function getPreviewGif(model) {
+    if (previewMode.value === 'rotate') return model.rotate_gif || model.thumbnail;
+    if (previewMode.value === 'gesture') return model.gesture_gif || model.idle_gif || model.thumbnail;
+    // default: idle
+    return model.idle_gif || model.thumbnail;
+}
+
 const applyFilters = (updates) => {
     router.visit(route('models.index', {
         category: updates.category !== undefined ? updates.category : props.category,
@@ -270,6 +283,31 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
                         </div>
 
+                        <!-- Preview Mode -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Preview
+                            </h3>
+                            <div class="space-y-1">
+                                <button
+                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, { value: 'gesture', label: 'Gesture' }]"
+                                    :key="mode.value"
+                                    @click="setPreviewMode(mode.value)"
+                                    :class="[
+                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                        previewMode === mode.value
+                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    ]">
+                                    {{ mode.label }}
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Sort Options -->
                         <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
@@ -321,10 +359,10 @@ const getModelTypeBadgeClass = (type) => {
 
                             <!-- Thumbnail -->
                             <div class="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center relative overflow-hidden">
-                                <!-- Pre-rendered GIF thumbnail (instant load!) -->
+                                <!-- Pre-rendered GIF thumbnail -->
                                 <img
-                                    v-if="model.thumbnail"
-                                    :src="`/storage/${model.thumbnail}`"
+                                    v-if="getPreviewGif(model)"
+                                    :src="`/storage/${getPreviewGif(model)}`"
                                     :alt="model.name"
                                     :class="['w-full h-full object-cover', model.is_nsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']"
                                     :loading="index < 8 ? 'eager' : 'lazy'"

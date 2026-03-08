@@ -1147,9 +1147,12 @@ class ModelsController extends Controller
         }
 
         try {
-            // Validate the uploaded files
+            // Validate the uploaded files - at least one GIF variant required
             $request->validate([
-                'gif' => 'required|file|mimes:gif|max:10240', // 10MB max
+                'gif' => 'nullable|file|mimes:gif|max:10240', // 10MB max (legacy rotate)
+                'rotate_gif' => 'nullable|file|mimes:gif|max:10240',
+                'idle_gif' => 'nullable|file|mimes:gif|max:10240',
+                'gesture_gif' => 'nullable|file|mimes:gif|max:10240',
                 'head_icon' => 'nullable|file|mimes:png,jpg,jpeg|max:1024', // 1MB max
             ]);
 
@@ -1159,12 +1162,32 @@ class ModelsController extends Controller
                 mkdir($thumbnailsDir, 0755, true);
             }
 
-            // Save the GIF file
-            $gifFile = $request->file('gif');
-            $filename = "model_{$id}.gif";
-            $gifFile->storeAs('public/thumbnails', $filename, 'local');
+            $updateData = [];
 
-            $updateData = ['thumbnail' => "thumbnails/{$filename}"];
+            // Save GIF variants
+            $gifTypes = [
+                'rotate_gif' => "model_{$id}_rotate.gif",
+                'idle_gif' => "model_{$id}_idle.gif",
+                'gesture_gif' => "model_{$id}_gesture.gif",
+            ];
+
+            foreach ($gifTypes as $field => $filename) {
+                if ($request->hasFile($field)) {
+                    $request->file($field)->storeAs('public/thumbnails', $filename, 'local');
+                    $updateData[$field] = "thumbnails/{$filename}";
+                }
+            }
+
+            // Legacy support: 'gif' field saves as both thumbnail and rotate_gif
+            if ($request->hasFile('gif')) {
+                $gifFile = $request->file('gif');
+                $legacyFilename = "model_{$id}.gif";
+                $gifFile->storeAs('public/thumbnails', $legacyFilename, 'local');
+                $updateData['thumbnail'] = "thumbnails/{$legacyFilename}";
+                if (!isset($updateData['rotate_gif'])) {
+                    $updateData['rotate_gif'] = "thumbnails/{$legacyFilename}";
+                }
+            }
 
             // Save head icon if provided
             if ($request->hasFile('head_icon')) {
@@ -1172,19 +1195,21 @@ class ModelsController extends Controller
                 $headIconFilename = "model_{$id}_head.png";
                 $headIconFile->storeAs('public/thumbnails', $headIconFilename, 'local');
                 $updateData['head_icon'] = "thumbnails/{$headIconFilename}";
-                \Log::info("Head icon saved for model {$id}");
             }
 
-            // Update model with thumbnail paths
+            if (empty($updateData)) {
+                return response()->json(['success' => false, 'message' => 'No files provided'], 422);
+            }
+
+            // Update model with all paths
             $model->update($updateData);
 
-            \Log::info("Thumbnail saved for model {$id}");
+            \Log::info("Thumbnails saved for model {$id}: " . implode(', ', array_keys($updateData)));
 
             return response()->json([
                 'success' => true,
-                'thumbnail' => "thumbnails/{$filename}",
-                'head_icon' => $updateData['head_icon'] ?? null,
-                'message' => 'Thumbnail generated successfully!'
+                'updated' => array_keys($updateData),
+                'message' => 'Thumbnails saved successfully!'
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {

@@ -192,35 +192,50 @@ function getBaseModelData(model) {
     return null;
 }
 
-// Generate GIF for a single model (extracted from Show.vue logic)
-async function generateGifForModel() {
+// --- Shared GIF helpers ---
+function getViewerComponents() {
     const viewer = viewer3D.value;
     if (!viewer) throw new Error('Viewer not available');
-
     const renderer = viewer.getRenderer();
     const scene = viewer.getScene();
     const camera = viewer.getCamera();
+    if (!renderer || !scene || !camera) throw new Error('Could not access 3D viewer components');
+    return { viewer, renderer, scene, camera };
+}
 
-    if (!renderer || !scene || !camera) {
-        throw new Error('Could not access 3D viewer components');
-    }
+function captureFrame(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight) {
+    renderer.render(scene, camera);
+    tempCtx.fillStyle = '#000000';
+    tempCtx.fillRect(0, 0, gifWidth, gifHeight);
+    tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, gifWidth, gifHeight);
+}
 
-    const canvas = renderer.domElement;
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-
-    const gifWidth = 300;
-    const gifHeight = 300;
-
+async function createGifEncoder(gifWidth, gifHeight) {
     const GIF = await getGifModule();
-
-    const gif = new GIF({
+    return new GIF({
         workers: 4,
         quality: 10,
         width: gifWidth,
         height: gifHeight,
         workerScript: '/gif.worker.js'
     });
+}
+
+async function finalizeGif(gif) {
+    const blob = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+        gif.on('finished', (b) => { clearTimeout(timeout); resolve(b); });
+        gif.render();
+    });
+    try { gif.abort(); if (gif.freeWorkers) gif.freeWorkers.forEach(w => w.terminate()); } catch (e) { /* ignore */ }
+    return blob;
+}
+
+// --- ROTATE GIF: camera orbits around static model (36 frames) ---
+async function generateRotateGif() {
+    const { viewer, renderer, scene, camera } = getViewerComponents();
+    const canvas = renderer.domElement;
+    const gifWidth = 300, gifHeight = 300;
 
     const controls = viewer.getControls();
     const originalPosition = camera.position.clone();
@@ -238,61 +253,151 @@ async function generateGifForModel() {
     const startAngle = Math.atan2(dx, dz);
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = gifWidth;
-    tempCanvas.height = gifHeight;
+    tempCanvas.width = gifWidth; tempCanvas.height = gifHeight;
     const tempCtx = tempCanvas.getContext('2d');
 
-    const numFrames = 24;
-    const rotationStep = (Math.PI * 2) / numFrames;
+    const gif = await createGifEncoder(gifWidth, gifHeight);
+    const numFrames = 36;
 
     for (let i = 0; i < numFrames; i++) {
-        currentStatus.value = `Capturing frame ${i + 1}/${numFrames}...`;
-
-        const angle = startAngle + (i * rotationStep);
+        currentStatus.value = `[Rotate] Capturing frame ${i + 1}/${numFrames}...`;
+        const angle = startAngle + (i * (Math.PI * 2) / numFrames);
         camera.position.x = target.x + Math.sin(angle) * radius;
         camera.position.z = target.z + Math.cos(angle) * radius;
         camera.position.y = target.y + height;
-
         camera.lookAt(target.x, target.y, target.z);
         camera.updateMatrixWorld();
         scene.updateMatrixWorld(true);
 
         await new Promise(resolve => requestAnimationFrame(resolve));
-        renderer.render(scene, camera);
-        await new Promise(resolve => requestAnimationFrame(resolve));
-
-        // Fill with opaque black first to prevent GIF frame accumulation
-        // (renderer has alpha:true, so transparent areas would bleed between frames)
-        tempCtx.fillStyle = '#000000';
-        tempCtx.fillRect(0, 0, gifWidth, gifHeight);
-        tempCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, gifWidth, gifHeight);
+        captureFrame(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
         gif.addFrame(tempCanvas, { copy: true, delay: 83 });
-
         await new Promise(resolve => setTimeout(resolve, 30));
     }
 
-    currentStatus.value = 'Encoding GIF...';
+    // Restore camera
+    camera.position.copy(originalPosition);
+    camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+    if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    const gifBlob = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error('GIF encoding timed out'));
-        }, 60000);
+    currentStatus.value = 'Encoding rotate GIF...';
+    const blob = await finalizeGif(gif);
+    tempCanvas.width = 0; tempCanvas.height = 0;
+    return blob;
+}
 
-        gif.on('finished', (blob) => {
-            clearTimeout(timeout);
-            resolve(blob);
-        });
-        gif.render();
-    });
+// --- ANIMATION GIF: fixed camera, model plays animation ---
+async function generateAnimationGif(legsAnim, torsoAnim, label, isLoop = false) {
+    const { viewer, renderer, scene, camera } = getViewerComponents();
+    const animManager = viewer.getAnimationManager();
+    if (!animManager) throw new Error('No animation manager available');
 
-    // Cleanup GIF encoder
-    try {
-        gif.abort();
-        if (gif.freeWorkers) gif.freeWorkers.forEach(w => w.terminate());
-    } catch (e) { /* ignore */ }
+    const anims = viewer.getAvailableAnimations();
+    const legsData = anims.legs?.[legsAnim] || anims.both?.[legsAnim];
+    const torsoData = anims.torso?.[torsoAnim] || anims.both?.[torsoAnim];
 
-    // Generate head icon
-    currentStatus.value = 'Generating head icon...';
+    if (!legsData && !torsoData) throw new Error(`Animations ${legsAnim}/${torsoAnim} not found`);
+
+    let animFps, numFrames;
+    if (isLoop) {
+        // LOOPING (idle): use legs native fps, capture exactly numFrames.
+        // No intro skip, no loopingFrames tricks — just like the real-time viewer.
+        animFps = legsData?.fps || torsoData?.fps || 15;
+        numFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+    } else {
+        // ONE-SHOT (gesture): use max fps so no frames from either part are skipped.
+        animFps = Math.max(legsData?.fps || 0, torsoData?.fps || 0) || 15;
+        const legsDuration = legsData ? legsData.numFrames / legsData.fps : 0;
+        const torsoDuration = torsoData ? torsoData.numFrames / torsoData.fps : 0;
+        numFrames = Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2);
+    }
+    const frameDelay = Math.round(1000 / animFps);
+
+    console.log(`[${label}] ${isLoop ? 'LOOP' : 'ONE-SHOT'} animFps=${animFps}, delay=${frameDelay}ms, gifFrames=${numFrames}`);
+
+    const canvas = renderer.domElement;
+    const gifWidth = 300, gifHeight = 300;
+
+    const controls = viewer.getControls();
+    const originalPosition = camera.position.clone();
+    const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
+
+    const modelObj = viewer.getModel();
+    const pivot = viewer.getModelCenter();
+    const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+
+    const dx = originalPosition.x - target.x;
+    const dz = originalPosition.z - target.z;
+    const radius = Math.sqrt(dx * dx + dz * dz);
+
+    // Front view camera
+    camera.position.x = target.x;
+    camera.position.z = target.z + radius;
+    camera.position.y = target.y + (originalPosition.y - target.y) * 0.5;
+    camera.lookAt(target.x, target.y, target.z);
+    camera.updateMatrixWorld();
+
+    // Pause the viewer's own animation loop so we control animation timing exclusively
+    viewer.pauseAnimationLoop();
+
+    // Start animation from beginning
+    animManager.stop();
+    if (legsData) animManager.playLegsAnimation(legsAnim);
+    if (torsoData) animManager.playTorsoAnimation(torsoAnim);
+    animManager.playing = true;
+    animManager.legsTime = 0;
+    animManager.torsoTime = 0;
+    animManager.legsFrame = 0;
+    animManager.torsoFrame = 0;
+
+    // Initialize mesh vertices to frame 0 — playLegsAnimation/playTorsoAnimation
+    // only set internal state but don't update mesh geometry. Without this,
+    // frame 0 in the GIF shows stale vertex data from the previous animation state.
+    animManager.update(0);
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = gifWidth; tempCanvas.height = gifHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    const gif = await createGifEncoder(gifWidth, gifHeight);
+    const dt = 1 / animFps;
+
+    for (let i = 0; i < numFrames; i++) {
+        currentStatus.value = `[${label}] Capturing frame ${i + 1}/${numFrames} (${animFps}fps, delay=${frameDelay}ms)...`;
+
+        if (i > 0) {
+            animManager.update(dt);
+        }
+        scene.updateMatrixWorld(true);
+
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        captureFrame(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+        gif.addFrame(tempCanvas, { copy: true, delay: frameDelay });
+        await new Promise(resolve => setTimeout(resolve, 20));
+    }
+
+    // Restore camera, resume viewer animation loop
+    animManager.stop();
+    animManager.resetToIdle();
+    viewer.resumeAnimationLoop();
+    camera.position.copy(originalPosition);
+    camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+    if (controls) { controls.target.copy(originalTarget); controls.update(); }
+
+    currentStatus.value = `Encoding ${label} GIF...`;
+    const blob = await finalizeGif(gif);
+    tempCanvas.width = 0; tempCanvas.height = 0;
+    return blob;
+}
+
+// --- HEAD ICON (64x64 PNG) ---
+async function generateHeadIcon() {
+    const { viewer, renderer, scene, camera } = getViewerComponents();
+    const canvas = renderer.domElement;
+    const controls = viewer.getControls();
+    const originalPosition = camera.position.clone();
+    const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
+
     let headIconBlob = null;
     try {
         const THREE = await import('three');
@@ -310,7 +415,6 @@ async function generateGifForModel() {
                     }
                 }
             });
-
             if (headMesh) {
                 const headBox = new THREE.Box3().setFromObject(headMesh);
                 const headCenter = headBox.getCenter(new THREE.Vector3());
@@ -328,13 +432,11 @@ async function generateGifForModel() {
                 await new Promise(resolve => requestAnimationFrame(resolve));
 
                 const headCanvas = document.createElement('canvas');
-                headCanvas.width = 64;
-                headCanvas.height = 64;
+                headCanvas.width = 64; headCanvas.height = 64;
                 const headCtx = headCanvas.getContext('2d');
-                headCtx.drawImage(canvas, 0, 0, canvasWidth, canvasHeight, 0, 0, 64, 64);
+                headCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 64, 64);
                 headIconBlob = await new Promise(resolve => headCanvas.toBlob(resolve, 'image/png'));
-                headCanvas.width = 0;
-                headCanvas.height = 0;
+                headCanvas.width = 0; headCanvas.height = 0;
             }
         }
     } catch (e) {
@@ -344,25 +446,49 @@ async function generateGifForModel() {
     // Restore camera
     camera.position.copy(originalPosition);
     camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
-    if (controls) {
-        controls.target.copy(originalTarget);
-        controls.update();
-    }
+    if (controls) { controls.target.copy(originalTarget); controls.update(); }
 
-    // Release temp canvas
-    tempCanvas.width = 0;
-    tempCanvas.height = 0;
-
-    return { gifBlob, headIconBlob };
+    return headIconBlob;
 }
 
-// Upload GIF + head icon for a model
-async function uploadThumbnail(modelId, gifBlob, headIconBlob) {
-    const formData = new FormData();
-    formData.append('gif', gifBlob, `model_${modelId}.gif`);
-    if (headIconBlob) {
-        formData.append('head_icon', headIconBlob, `model_${modelId}_head.png`);
+// --- Main: generate all GIF variants for a model ---
+async function generateAllGifsForModel() {
+    // 1. Rotate GIF
+    currentStatus.value = 'Generating rotate GIF...';
+    const rotateBlob = await generateRotateGif();
+
+    // 2. Idle GIF (LEGS_IDLE + TORSO_STAND)
+    let idleBlob = null;
+    try {
+        currentStatus.value = 'Generating idle GIF...';
+        idleBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_STAND', 'Idle', true);
+    } catch (e) {
+        console.warn('Idle GIF failed (no animation?):', e.message);
     }
+
+    // 3. Gesture GIF (LEGS_IDLE + TORSO_GESTURE)
+    let gestureBlob = null;
+    try {
+        currentStatus.value = 'Generating gesture GIF...';
+        gestureBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_GESTURE', 'Gesture');
+    } catch (e) {
+        console.warn('Gesture GIF failed (no animation?):', e.message);
+    }
+
+    // 4. Head icon
+    currentStatus.value = 'Generating head icon...';
+    const headIconBlob = await generateHeadIcon();
+
+    return { rotateBlob, idleBlob, gestureBlob, headIconBlob };
+}
+
+// Upload all GIF variants for a model
+async function uploadThumbnails(modelId, { rotateBlob, idleBlob, gestureBlob, headIconBlob }) {
+    const formData = new FormData();
+    if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${modelId}_rotate.gif`);
+    if (idleBlob) formData.append('idle_gif', idleBlob, `model_${modelId}_idle.gif`);
+    if (gestureBlob) formData.append('gesture_gif', gestureBlob, `model_${modelId}_gesture.gif`);
+    if (headIconBlob) formData.append('head_icon', headIconBlob, `model_${modelId}_head.png`);
 
     const response = await fetch(route('models.saveThumbnail', modelId), {
         method: 'POST',
@@ -440,6 +566,9 @@ const onViewerError = (err) => {
     viewerLoaded.value = false;
 };
 
+// Force regenerate flag - skips "already completed" check
+const forceMode = ref(false);
+
 // Main batch process
 async function startBatch(startFrom = 0) {
     const ids = selectedModelIds.value;
@@ -481,8 +610,8 @@ async function startBatch(startFrom = 0) {
         currentModelIndex.value = i;
         overallProgress.value = `Processing ${i + 1}/${ids.length}: Model #${modelId}`;
 
-        // Skip already completed models
-        if (getCompletedIds().has(modelId)) {
+        // Skip already completed models (unless force mode)
+        if (!forceMode.value && getCompletedIds().has(modelId)) {
             results.value.push({ id: modelId, name: findModel(modelId)?.name || `#${modelId}`, status: 'skipped', message: 'Already done' });
             continue;
         }
@@ -524,13 +653,13 @@ async function startBatch(startFrom = 0) {
             // Wait for model to load (with generation check)
             await waitForViewerLoaded(thisGeneration);
 
-            // Generate GIF
-            currentStatus.value = 'Generating GIF...';
-            const { gifBlob, headIconBlob } = await generateGifForModel();
+            // Generate all GIF variants (rotate, idle, gesture) + head icon
+            currentStatus.value = 'Generating GIFs...';
+            const allGifs = await generateAllGifsForModel();
 
-            // Upload
+            // Upload all variants
             currentStatus.value = 'Uploading...';
-            await uploadThumbnail(modelId, gifBlob, headIconBlob);
+            await uploadThumbnails(modelId, allGifs);
 
             markCompleted(modelId);
             completedCount.value = getCompletedIds().size;
@@ -569,9 +698,15 @@ function stopBatch() {
     currentStatus.value = 'Stopping after current model...';
 }
 
+async function startBatchForce() {
+    forceMode.value = true;
+    await startBatch(0);
+    forceMode.value = false;
+}
+
 // Quick-fill helpers
 function fillAllWithoutGif() {
-    const ids = props.models.filter(m => !m.thumbnail).map(m => m.id);
+    const ids = props.models.filter(m => !m.idle_gif && !m.rotate_gif).map(m => m.id);
     modelIdsInput.value = ids.join(', ');
 }
 
@@ -599,7 +734,7 @@ async function startAll() {
 }
 
 async function startAlreadyGenerated() {
-    modelIdsInput.value = props.models.filter(m => m.thumbnail).map(m => m.id).join(', ');
+    modelIdsInput.value = props.models.filter(m => m.idle_gif || m.rotate_gif || m.thumbnail).map(m => m.id).join(', ');
     await nextTick();
     startBatch(0);
 }
@@ -634,6 +769,14 @@ async function startAlreadyGenerated() {
                         Generate ({{ selectedModelIds.length }} models)
                     </button>
                     <button
+                        v-if="!isProcessing"
+                        @click="startBatchForce"
+                        :disabled="selectedModelIds.length === 0"
+                        class="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 rounded font-medium"
+                    >
+                        Force Regenerate ({{ selectedModelIds.length }})
+                    </button>
+                    <button
                         v-else
                         @click="stopBatch"
                         :disabled="stopRequested"
@@ -646,7 +789,7 @@ async function startAlreadyGenerated() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Fill: Missing thumbnails ({{ models.filter(m => !m.thumbnail).length }})
+                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif && !m.rotate_gif).length }})
                     </button>
                     <button
                         @click="fillAll"
@@ -684,7 +827,7 @@ async function startAlreadyGenerated() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-700 rounded text-sm font-medium"
                     >
-                        Regenerate existing ({{ models.filter(m => m.thumbnail).length }})
+                        Regenerate existing ({{ models.filter(m => m.idle_gif || m.rotate_gif || m.thumbnail).length }})
                     </button>
                     <button
                         @click="startAll"
@@ -789,7 +932,9 @@ async function startAlreadyGenerated() {
                                 <th class="text-left py-1 px-2">ID</th>
                                 <th class="text-left py-1 px-2">Name</th>
                                 <th class="text-left py-1 px-2">Category</th>
-                                <th class="text-left py-1 px-2">Has GIF</th>
+                                <th class="text-left py-1 px-2">Idle</th>
+                                <th class="text-left py-1 px-2">Rotate</th>
+                                <th class="text-left py-1 px-2">Gesture</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -798,8 +943,16 @@ async function startAlreadyGenerated() {
                                 <td class="py-1 px-2">{{ m.name }}</td>
                                 <td class="py-1 px-2 text-gray-400">{{ m.category }}</td>
                                 <td class="py-1 px-2">
-                                    <span v-if="m.thumbnail" class="text-green-400">Yes</span>
-                                    <span v-else class="text-red-400">No</span>
+                                    <span v-if="m.idle_gif" class="text-green-400">Y</span>
+                                    <span v-else class="text-red-400">N</span>
+                                </td>
+                                <td class="py-1 px-2">
+                                    <span v-if="m.rotate_gif || m.thumbnail" class="text-green-400">Y</span>
+                                    <span v-else class="text-red-400">N</span>
+                                </td>
+                                <td class="py-1 px-2">
+                                    <span v-if="m.gesture_gif" class="text-green-400">Y</span>
+                                    <span v-else class="text-red-400">N</span>
                                 </td>
                             </tr>
                         </tbody>
