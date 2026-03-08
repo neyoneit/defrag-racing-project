@@ -500,7 +500,10 @@ export class MD3Loader {
                     DEBUG && console.log(`✅ Resolved texture path (relative): ${texturePath}`);
                 }
 
-                skinMap[surfaceName] = texturePath;
+                // Store with lowercase key for case-insensitive matching
+                // MD3 surface names use mixed case (e.g. Head.Face) while skin files
+                // may use lowercase (head.face) or vice versa
+                skinMap[surfaceName.toLowerCase()] = texturePath;
             }
         }
 
@@ -551,7 +554,7 @@ export class MD3Loader {
 
             // MD3 surfaces often have a _1, _2, etc suffix for LOD (level of detail)
             // Strip the suffix to match skin file surface names
-            const skinSurfaceName = surface.name.replace(/_\d+$/, '');
+            const skinSurfaceName = surface.name.replace(/_\d+$/, '').toLowerCase();
 
             DEBUG && console.log(`🔍 Processing surface: "${surface.name}" -> skin lookup: "${skinSurfaceName}", has skinData: ${!!this.skinData}, has texture mapping: ${!!(this.skinData && this.skinData[skinSurfaceName])}`);
 
@@ -1356,7 +1359,7 @@ export class MD3Loader {
 
             modelPart.traverse((child) => {
                 if (child.isMesh && child.material) {
-                    const surfaceName = child.userData.surface || child.name;
+                    const surfaceName = (child.userData.surface || child.name).toLowerCase();
                     const textureMapping = skinData[surfaceName];
 
                     DEBUG && console.log(`🔍 Checking mesh: ${surfaceName}, has mapping: ${!!textureMapping}, material type: ${child.material.type}`);
