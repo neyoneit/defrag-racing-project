@@ -990,7 +990,8 @@ class ModelsController extends Controller
             abort(404, 'Model file not found');
         }
 
-        return response()->download($filePath, $model->name . '.pk3');
+        $filename = str_replace(' ', '_', $model->name) . '.pk3';
+        return response()->download($filePath, $filename);
     }
 
     /**
