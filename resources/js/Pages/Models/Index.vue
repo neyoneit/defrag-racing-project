@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
 
 const props = defineProps({
@@ -9,10 +9,13 @@ const props = defineProps({
     category: String,
     sort: String,
     baseModel: String,
+    authors: String,
     search: String,
     myUploads: Boolean,
     approvalStatus: String,
     load_times: Object,
+    availableBaseModels: Object,
+    availableAuthors: Object,
 });
 
 // Save current page URL to sessionStorage so "Back to models" returns here
@@ -21,6 +24,8 @@ function saveBackUrl() {
     if (props.category) params.set('category', props.category);
     if (props.sort) params.set('sort', props.sort);
     if (props.search) params.set('search', props.search);
+    if (props.baseModel) params.set('base_model', props.baseModel);
+    if (props.authors) params.set('authors', props.authors);
     if (props.myUploads) params.set('my_uploads', '1');
     if (props.models.current_page > 1) params.set('page', props.models.current_page);
     const query = params.toString();
@@ -72,6 +77,77 @@ const sortOptions = [
 ];
 
 const searchQuery = ref(props.search || '');
+let searchDebounce = null;
+const onSearchInput = () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+        applyFilters({ search: searchQuery.value || null });
+    }, 400);
+};
+
+// Base model dropdown
+const baseModelDropdownOpen = ref(false);
+const baseModelSearch = ref('');
+const selectedBaseModels = ref(props.baseModel ? props.baseModel.split(',') : []);
+
+const filteredBaseModels = computed(() => {
+    if (!props.availableBaseModels) return [];
+    const entries = Object.entries(props.availableBaseModels);
+    if (!baseModelSearch.value) return entries;
+    const q = baseModelSearch.value.toLowerCase();
+    return entries.filter(([name]) => name.toLowerCase().includes(q));
+});
+
+const toggleBaseModel = (name) => {
+    const idx = selectedBaseModels.value.indexOf(name);
+    if (idx >= 0) {
+        selectedBaseModels.value.splice(idx, 1);
+    } else {
+        selectedBaseModels.value.push(name);
+    }
+    applyFilters({ base_model: selectedBaseModels.value.length ? selectedBaseModels.value.join(',') : null });
+};
+
+const clearBaseModels = () => {
+    selectedBaseModels.value = [];
+    applyFilters({ base_model: null });
+};
+
+// Author dropdown
+const authorDropdownOpen = ref(false);
+const authorSearch = ref('');
+const selectedAuthors = ref(props.authors ? props.authors.split(',') : []);
+
+const filteredAuthors = computed(() => {
+    if (!props.availableAuthors) return [];
+    const entries = Object.entries(props.availableAuthors);
+    if (!authorSearch.value) return entries;
+    const q = authorSearch.value.toLowerCase();
+    return entries.filter(([name]) => name.toLowerCase().includes(q));
+});
+
+const toggleAuthor = (name) => {
+    const idx = selectedAuthors.value.indexOf(name);
+    if (idx >= 0) {
+        selectedAuthors.value.splice(idx, 1);
+    } else {
+        selectedAuthors.value.push(name);
+    }
+    applyFilters({ authors: selectedAuthors.value.length ? selectedAuthors.value.join(',') : null });
+};
+
+const clearAuthors = () => {
+    selectedAuthors.value = [];
+    applyFilters({ authors: null });
+};
+
+// Close dropdowns when clicking outside
+const handleClickOutside = (e) => {
+    if (!e.target.closest('.base-model-dropdown')) baseModelDropdownOpen.value = false;
+    if (!e.target.closest('.author-dropdown')) authorDropdownOpen.value = false;
+};
+onMounted(() => document.addEventListener('click', handleClickOutside));
+onUnmounted(() => document.removeEventListener('click', handleClickOutside));
 
 // GIF preview mode: idle (default), rotate, gesture
 const previewMode = ref(localStorage.getItem('models_preview_mode') || 'idle');
@@ -91,6 +167,7 @@ const applyFilters = (updates) => {
         category: updates.category !== undefined ? updates.category : props.category,
         sort: updates.sort !== undefined ? updates.sort : props.sort,
         base_model: updates.base_model !== undefined ? updates.base_model : props.baseModel,
+        authors: updates.authors !== undefined ? updates.authors : props.authors,
         search: updates.search !== undefined ? updates.search : searchQuery.value,
         my_uploads: updates.my_uploads !== undefined ? updates.my_uploads : props.myUploads,
         approval_status: updates.approval_status !== undefined ? updates.approval_status : props.approvalStatus,
@@ -102,7 +179,6 @@ const applyFilters = (updates) => {
 
 const switchCategory = (category) => applyFilters({ category });
 const changeSort = (newSort) => applyFilters({ sort: newSort });
-const clearBaseModelFilter = () => applyFilters({ base_model: null });
 
 const toggleMyUploads = () => {
     applyFilters({
@@ -201,6 +277,127 @@ const getModelTypeBadgeClass = (type) => {
                 <!-- Left Sidebar - Filters -->
                 <aside class="w-64 flex-shrink-0">
                     <div class="sticky top-6 space-y-4">
+                        <!-- Search Filter -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                </svg>
+                                Search
+                            </h3>
+                            <input
+                                v-model="searchQuery"
+                                @input="onSearchInput"
+                                type="text"
+                                placeholder="Name, author, base model..."
+                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                            />
+                        </div>
+
+                        <!-- Base Model Filter -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5 base-model-dropdown">
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                                </svg>
+                                Base Model
+                                <span v-if="selectedBaseModels.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedBaseModels.length }}</span>
+                            </h3>
+                            <button
+                                @click.stop="baseModelDropdownOpen = !baseModelDropdownOpen"
+                                class="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition-colors"
+                            >
+                                <span v-if="selectedBaseModels.length" class="text-white truncate">{{ selectedBaseModels.join(', ') }}</span>
+                                <span v-else>Select base models...</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 flex-shrink-0 transition-transform" :class="{ 'rotate-180': baseModelDropdownOpen }">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown panel -->
+                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                                <input
+                                    v-model="baseModelSearch"
+                                    type="text"
+                                    placeholder="Filter..."
+                                    class="w-full bg-transparent border-b border-white/10 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none"
+                                    @click.stop
+                                />
+                                <div class="overflow-y-auto flex-1">
+                                    <label
+                                        v-for="[name, count] in filteredBaseModels"
+                                        :key="name"
+                                        class="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 cursor-pointer text-sm"
+                                        @click.stop
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :checked="selectedBaseModels.includes(name)"
+                                            @change="toggleBaseModel(name)"
+                                            class="rounded bg-white/10 border-white/20 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0"
+                                        />
+                                        <span class="text-gray-300 truncate flex-1">{{ name }}</span>
+                                        <span class="text-gray-600 text-xs">{{ count }}</span>
+                                    </label>
+                                    <div v-if="filteredBaseModels.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No results</div>
+                                </div>
+                                <button v-if="selectedBaseModels.length" @click.stop="clearBaseModels" class="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
+                                    Clear selection
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Author Filter -->
+                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                </svg>
+                                Author
+                                <span v-if="selectedAuthors.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedAuthors.length }}</span>
+                            </h3>
+                            <button
+                                @click.stop="authorDropdownOpen = !authorDropdownOpen"
+                                class="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition-colors"
+                            >
+                                <span v-if="selectedAuthors.length" class="text-white truncate">{{ selectedAuthors.join(', ') }}</span>
+                                <span v-else>Select authors...</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 flex-shrink-0 transition-transform" :class="{ 'rotate-180': authorDropdownOpen }">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                            <!-- Dropdown panel -->
+                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                                <input
+                                    v-model="authorSearch"
+                                    type="text"
+                                    placeholder="Filter..."
+                                    class="w-full bg-transparent border-b border-white/10 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none"
+                                    @click.stop
+                                />
+                                <div class="overflow-y-auto flex-1">
+                                    <label
+                                        v-for="[name, count] in filteredAuthors"
+                                        :key="name"
+                                        class="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 cursor-pointer text-sm"
+                                        @click.stop
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            :checked="selectedAuthors.includes(name)"
+                                            @change="toggleAuthor(name)"
+                                            class="rounded bg-white/10 border-white/20 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0"
+                                        />
+                                        <span class="text-gray-300 truncate flex-1">{{ name }}</span>
+                                        <span class="text-gray-600 text-xs">{{ count }}</span>
+                                    </label>
+                                    <div v-if="filteredAuthors.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No results</div>
+                                </div>
+                                <button v-if="selectedAuthors.length" @click.stop="clearAuthors" class="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
+                                    Clear selection
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Category Filter -->
                         <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
@@ -336,16 +533,18 @@ const getModelTypeBadgeClass = (type) => {
 
                 <!-- Main Content Area -->
                 <main class="flex-1">
-                    <!-- Base Model Filter Badge -->
-                    <div v-if="baseModel" class="mb-6">
-                        <div class="inline-flex items-center gap-3 px-4 py-3 bg-blue-500/20 border border-blue-500/30 rounded-xl">
-                            <span class="text-sm text-blue-300">
-                                Showing models based on: <span class="font-bold text-blue-200">{{ baseModel }}</span>
-                            </span>
-                            <button @click="clearBaseModelFilter" class="text-blue-400 hover:text-blue-300 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                    <!-- Active Filters -->
+                    <div v-if="selectedBaseModels.length || selectedAuthors.length || searchQuery" class="mb-6 flex flex-wrap gap-2">
+                        <div v-for="bm in selectedBaseModels" :key="'bm-'+bm" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded-lg text-sm text-blue-300">
+                            <span class="text-xs text-blue-400">Base:</span> {{ bm }}
+                            <button @click="toggleBaseModel(bm)" class="text-blue-400 hover:text-blue-200 ml-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div v-for="a in selectedAuthors" :key="'au-'+a" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-lg text-sm text-purple-300">
+                            <span class="text-xs text-purple-400">Author:</span> {{ a }}
+                            <button @click="toggleAuthor(a)" class="text-purple-400 hover:text-purple-200 ml-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
                     </div>

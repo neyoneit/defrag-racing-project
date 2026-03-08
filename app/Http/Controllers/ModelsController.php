@@ -21,7 +21,8 @@ class ModelsController extends Controller
 
         $category = $request->get('category', 'all');
         $sort = $request->get('sort', 'newest'); // newest or oldest
-        $baseModel = $request->get('base_model'); // Filter by base model
+        $baseModel = $request->get('base_model'); // Filter by base model (comma-separated for multiple)
+        $authors = $request->get('authors'); // Filter by authors (comma-separated for multiple)
         $search = $request->get('search'); // Search query
         $myUploads = filter_var($request->get('my_uploads', false), FILTER_VALIDATE_BOOLEAN); // Filter by user's uploads
         $approvalStatus = $request->get('approval_status'); // Filter by approval status (pending, approved, rejected)
@@ -50,16 +51,32 @@ class ModelsController extends Controller
             $query->category($category);
         }
 
-        // Filter by base model if provided
+        // Filter by base model(s) if provided
         if ($baseModel) {
-            $query->where('base_model', $baseModel);
+            $baseModels = array_filter(explode(',', $baseModel));
+            if (count($baseModels) === 1) {
+                $query->where('base_model', $baseModels[0]);
+            } elseif (count($baseModels) > 1) {
+                $query->whereIn('base_model', $baseModels);
+            }
         }
 
-        // Search by name or author
+        // Filter by author(s) if provided
+        if ($authors) {
+            $authorList = array_filter(explode(',', $authors));
+            if (count($authorList) === 1) {
+                $query->where('author', $authorList[0]);
+            } elseif (count($authorList) > 1) {
+                $query->whereIn('author', $authorList);
+            }
+        }
+
+        // Search by name, author, or base model
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('author', 'LIKE', "%{$search}%");
+                  ->orWhere('author', 'LIKE', "%{$search}%")
+                  ->orWhere('base_model', 'LIKE', "%{$search}%");
             });
         }
 
@@ -86,15 +103,39 @@ class ModelsController extends Controller
 
         $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
+        // Get available base models and authors for filter dropdowns
+        $filterQuery = PlayerModel::approved()->where('hidden', false);
+        if ($category !== 'all') {
+            $filterQuery->category($category);
+        }
+        $availableBaseModels = (clone $filterQuery)
+            ->whereNotNull('base_model')
+            ->where('base_model', '!=', '')
+            ->selectRaw('base_model, COUNT(*) as count')
+            ->groupBy('base_model')
+            ->orderBy('base_model')
+            ->pluck('count', 'base_model');
+
+        $availableAuthors = (clone $filterQuery)
+            ->whereNotNull('author')
+            ->where('author', '!=', '')
+            ->selectRaw('author, COUNT(*) as count')
+            ->groupBy('author')
+            ->orderBy('author')
+            ->pluck('count', 'author');
+
         return Inertia::render('Models/Index', [
             'models' => $models,
             'category' => $category,
             'sort' => $sort,
             'baseModel' => $baseModel,
+            'authors' => $authors,
             'search' => $search,
             'myUploads' => $myUploads,
             'approvalStatus' => $approvalStatus,
             'load_times' => $timings,
+            'availableBaseModels' => $availableBaseModels,
+            'availableAuthors' => $availableAuthors,
         ]);
     }
 
