@@ -458,15 +458,15 @@ const getFunctionName = (abbr) => {
                         <div class="relative inline-block w-full">
                             <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
                             <!-- Fade positioned at bottom of actual image -->
-                            <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+                            <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
                             <!-- Reverse fade right below the image - fades from black to transparent -->
-                            <div class="absolute inset-x-0 top-full h-[160px] w-full bg-gradient-to-b from-black via-black/70 to-transparent"></div>
+                            <div class="absolute inset-x-0 top-full h-[160px] w-full bg-gradient-to-b from-black via-black/80 to-transparent"></div>
                         </div>
                     </div>
 
                     <div class="relative p-6 flex flex-col h-full">
                         <!-- Server Info Box -->
-                        <div class="mb-4 p-4 bg-white/10 rounded-lg border border-white/20 backdrop-blur-sm">
+                        <div class="mb-4 p-4 bg-black/40 rounded-lg border border-white/20 backdrop-blur-md">
                             <!-- Server Name with Flag and Copy IP - Left Aligned -->
                             <div class="flex items-center gap-2 mb-3">
                                 <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-lg" :title="server.location" @error="$event.target.style.display='none'">
@@ -567,15 +567,15 @@ const getFunctionName = (abbr) => {
 
                         <!-- Players List - Always expanded -->
                         <div v-if="server.online_players.length > 0" :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
-                            <div class="bg-white/10 rounded-lg p-2 border border-white/10 backdrop-blur-sm">
+                            <div class="bg-black/50 rounded-lg p-2 border border-white/10 backdrop-blur-md">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
                                 </div>
                             </div>
                         </div>
                         <div v-else :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
-                            <div class="p-3 bg-white/10 rounded-lg border border-white/10 text-center backdrop-blur-sm">
-                                <span class="text-sm text-gray-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
+                            <div class="p-3 bg-black/50 rounded-lg border border-white/10 text-center backdrop-blur-md">
+                                <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
                             </div>
                         </div>
 
@@ -617,7 +617,7 @@ const getFunctionName = (abbr) => {
                                 class="w-full h-full object-cover scale-105 group-hover:scale-110 opacity-100 transition-all duration-500"
                                 :alt="server.map"
                             />
-                            <div class="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/40 group-hover:from-black/30 group-hover:via-black/10 group-hover:to-black/30 transition-all duration-500"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60 group-hover:from-black/50 group-hover:via-black/30 group-hover:to-black/50 transition-all duration-500"></div>
                         </div>
 
                         <div class="relative p-3">
@@ -627,7 +627,7 @@ const getFunctionName = (abbr) => {
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
-                                    <div class="inline-flex flex-col bg-white/10 backdrop-blur-sm px-2 py-1 rounded border border-white/20">
+                                    <div class="inline-flex flex-col bg-black/40 backdrop-blur-md px-2 py-1 rounded border border-white/20">
                                         <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
                                             <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
@@ -722,7 +722,7 @@ const getFunctionName = (abbr) => {
                                 class="w-full h-full object-cover scale-105 group-hover:scale-110 opacity-100 transition-all duration-500"
                                 :alt="server.map"
                             />
-                            <div class="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/40 group-hover:from-black/30 group-hover:via-black/10 group-hover:to-black/30 transition-all duration-500"></div>
+                            <div class="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60 group-hover:from-black/50 group-hover:via-black/30 group-hover:to-black/50 transition-all duration-500"></div>
                         </div>
 
                         <div class="relative p-3">
@@ -731,7 +731,7 @@ const getFunctionName = (abbr) => {
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
-                                    <div class="inline-flex flex-col bg-white/10 backdrop-blur-sm px-2 py-1 rounded border border-white/20">
+                                    <div class="inline-flex flex-col bg-black/40 backdrop-blur-md px-2 py-1 rounded border border-white/20">
                                         <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
                                             <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-purple-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
