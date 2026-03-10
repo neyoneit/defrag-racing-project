@@ -1619,7 +1619,7 @@ class ModelsController extends Controller
 
             if (preg_match('/<td>Author<\/td>\s*<td>(?:<a[^>]*>)?([^<]+)(?:<\/a>)?<\/td>/i', $html, $m)) {
                 $author = html_entity_decode(trim($m[1]), ENT_QUOTES, 'UTF-8');
-                if ($author && strtolower($author) !== 'unknown') $meta['author'] = $author;
+                if ($author) $meta['author'] = $author;
             }
 
             if (preg_match('/<td>Skin<\/td>\s*<td>([^<]+)<\/td>/i', $html, $m)) {
@@ -1633,7 +1633,6 @@ class ModelsController extends Controller
 
             $updates = [];
             if (!empty($meta['author'])) $updates['author'] = $meta['author'];
-            if (!empty($meta['name'])) $updates['name'] = $meta['name'];
 
             $model->update($updates);
 

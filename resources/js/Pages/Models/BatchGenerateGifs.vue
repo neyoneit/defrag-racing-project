@@ -300,17 +300,20 @@ async function generateAnimationGif(legsAnim, torsoAnim, label, isLoop = false) 
     if (!legsData && !torsoData) throw new Error(`Animations ${legsAnim}/${torsoAnim} not found`);
 
     let animFps, numFrames;
+    const MAX_GIF_FRAMES = 300; // Cap to prevent huge GIFs from long animations
     if (isLoop) {
-        // LOOPING (idle): use legs native fps, capture exactly numFrames.
-        // No intro skip, no loopingFrames tricks — just like the real-time viewer.
+        // LOOPING (idle): use native fps, ensure min ~3s, cap at MAX_GIF_FRAMES
         animFps = legsData?.fps || torsoData?.fps || 15;
-        numFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+        const baseFrames = legsData?.numFrames || torsoData?.numFrames || 1;
+        const minFrames = Math.ceil(3 * animFps);
+        const numCycles = Math.max(1, Math.ceil(minFrames / baseFrames));
+        numFrames = Math.min(baseFrames * numCycles, MAX_GIF_FRAMES);
     } else {
-        // ONE-SHOT (gesture): use max fps so no frames from either part are skipped.
+        // ONE-SHOT (gesture): use max fps, cap at MAX_GIF_FRAMES
         animFps = Math.max(legsData?.fps || 0, torsoData?.fps || 0) || 15;
         const legsDuration = legsData ? legsData.numFrames / legsData.fps : 0;
         const torsoDuration = torsoData ? torsoData.numFrames / torsoData.fps : 0;
-        numFrames = Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2);
+        numFrames = Math.min(Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2), MAX_GIF_FRAMES);
     }
     const frameDelay = Math.round(1000 / animFps);
 

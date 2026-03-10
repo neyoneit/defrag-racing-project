@@ -53,6 +53,8 @@ const tabs = [
     { key: 'NOT_IN_DB', label: 'Not in DB', color: 'purple' },
     { key: 'OK', label: 'OK', color: 'green' },
     { key: 'NO_MD5', label: 'Scrape Error', color: 'gray' },
+    { key: 'WS_DETAIL_CHECK', label: 'WS Detail Check', color: 'cyan' },
+    { key: 'MISSING_SKIN_NAME', label: 'Missing Skin Name', color: 'amber' },
 ];
 
 const allResults = computed(() => props.report?.results || []);
@@ -80,6 +82,8 @@ const filteredResults = computed(() => {
 });
 
 const tabCount = (key) => {
+    if (key === 'WS_DETAIL_CHECK') return wsDetailLoaded.value ? wsDetailItems.value.length : '?';
+    if (key === 'MISSING_SKIN_NAME') return skinNameLoaded.value ? skinNameItems.value.length : '?';
     let all;
     if (key === 'FAILED_MANUAL') {
         all = allResults.value.filter(r => r.failed_manual);
@@ -100,6 +104,8 @@ const colorClass = (color) => ({
     green: 'bg-green-500/20 text-green-400 border-green-500/30',
     pink: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
     gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+    cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+    amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
 }[color] || 'bg-gray-500/20 text-gray-400 border-gray-500/30');
 
 const activeColorClass = (color) => ({
@@ -110,7 +116,144 @@ const activeColorClass = (color) => ({
     green: 'bg-green-500 text-white',
     pink: 'bg-pink-500 text-white',
     gray: 'bg-gray-500 text-white',
+    cyan: 'bg-cyan-500 text-white',
+    amber: 'bg-amber-500 text-white',
 }[color] || 'bg-gray-500 text-white');
+
+// WS Detail Check state
+const wsDetailItems = ref([]);
+const wsDetailLoading = ref(false);
+const wsDetailLoaded = ref(false);
+const wsDetailSearch = ref('');
+const wsDetailFilter = ref('all'); // all, has_ws, no_ws
+const scrapingWsDetail = reactive({});
+const wsBatchProgress = ref('');
+
+const filteredWsDetailItems = computed(() => {
+    let items = wsDetailItems.value;
+    if (wsDetailFilter.value === 'has_ws') items = items.filter(i => i.ws_detail_url || i.guessed_ws_url);
+    else if (wsDetailFilter.value === 'no_ws') items = items.filter(i => !i.ws_detail_url && !i.guessed_ws_url);
+    if (wsDetailSearch.value) {
+        const q = wsDetailSearch.value.toLowerCase();
+        items = items.filter(i =>
+            (i.name && i.name.toLowerCase().includes(q)) ||
+            (i.base_model && i.base_model.toLowerCase().includes(q)) ||
+            (i.ws_name && i.ws_name.toLowerCase().includes(q))
+        );
+    }
+    return items;
+});
+
+async function loadWsDetailCheck() {
+    wsDetailLoading.value = true;
+    try {
+        const { data } = await axios.get('/admin/models-audit/ws-detail-check');
+        wsDetailItems.value = data;
+        wsDetailLoaded.value = true;
+    } catch (e) {
+        showToast('Failed to load WS detail check: ' + e.message, 'error');
+    } finally {
+        wsDetailLoading.value = false;
+    }
+}
+
+function getWsUrl(item) {
+    if (item.ws_detail_url) {
+        return item.ws_detail_url.startsWith('http') ? item.ws_detail_url : 'https://ws.q3df.org' + item.ws_detail_url;
+    }
+    return item.guessed_ws_url || null;
+}
+
+async function scrapeWsForModel(item) {
+    const wsUrl = getWsUrl(item);
+    if (!wsUrl) return;
+    scrapingWsDetail[item.id] = true;
+    try {
+        const { data } = await axios.post(`/models/${item.id}/scrape-ws-metadata`, { url: wsUrl });
+        if (data.updated) {
+            // Update local state
+            if (data.updated.author) item.author = data.updated.author;
+            if (data.updated.name) item.name = data.updated.name;
+            showToast(`Updated #${item.id}: ${JSON.stringify(data.updated)}`);
+        }
+    } catch (e) {
+        showToast('Scrape failed: ' + (e.response?.data?.error || e.message), 'error');
+    } finally {
+        scrapingWsDetail[item.id] = false;
+    }
+}
+
+async function batchScrapeWsDetail() {
+    const items = filteredWsDetailItems.value.filter(i => getWsUrl(i) && !i.author);
+    if (!items.length) { showToast('No items with WS URL to scrape', 'error'); return; }
+    for (let i = 0; i < items.length; i++) {
+        wsBatchProgress.value = `Scraping ${i + 1}/${items.length}: ${items[i].name}...`;
+        await scrapeWsForModel(items[i]);
+        await new Promise(r => setTimeout(r, 500));
+    }
+    wsBatchProgress.value = '';
+    showToast(`Scraped ${items.length} models`);
+}
+
+// Missing Skin Name state
+const skinNameItems = ref([]);
+const skinNameLoading = ref(false);
+const skinNameLoaded = ref(false);
+const skinNameSearch = ref('');
+const fixingName = reactive({});
+
+const filteredSkinNameItems = computed(() => {
+    let items = skinNameItems.value;
+    if (skinNameSearch.value) {
+        const q = skinNameSearch.value.toLowerCase();
+        items = items.filter(i =>
+            (i.name && i.name.toLowerCase().includes(q)) ||
+            (i.base_model && i.base_model.toLowerCase().includes(q)) ||
+            (i.skin_name && i.skin_name.toLowerCase().includes(q))
+        );
+    }
+    return items;
+});
+
+async function loadMissingSkinNames() {
+    skinNameLoading.value = true;
+    try {
+        const { data } = await axios.get('/admin/models-audit/missing-skins-in-name');
+        skinNameItems.value = data;
+        skinNameLoaded.value = true;
+    } catch (e) {
+        showToast('Failed to load: ' + e.message, 'error');
+    } finally {
+        skinNameLoading.value = false;
+    }
+}
+
+async function fixSkinName(item, newName) {
+    fixingName[item.id] = true;
+    try {
+        const { data } = await axios.post('/admin/models-audit/fix-model-name', { id: item.id, new_name: newName });
+        item.name = data.new_name;
+        // Remove from list since it's fixed
+        skinNameItems.value = skinNameItems.value.filter(i => i.id !== item.id);
+        showToast(`#${item.id}: "${data.old_name}" → "${data.new_name}"`);
+    } catch (e) {
+        showToast('Fix failed: ' + (e.response?.data?.message || e.message), 'error');
+    } finally {
+        fixingName[item.id] = false;
+    }
+}
+
+async function batchFixSkinNames() {
+    const items = [...filteredSkinNameItems.value];
+    if (!items.length) return;
+    for (let i = 0; i < items.length; i++) {
+        batchProgress.value = `Fixing ${i + 1}/${items.length}: ${items[i].name}...`;
+        await fixSkinName(items[i], items[i].expected_name);
+        await new Promise(r => setTimeout(r, 100));
+    }
+    batchProgress.value = '';
+    showToast(`Fixed ${items.length} model names`);
+}
 
 const getCompareKey = (item) => item.download_file;
 
@@ -492,6 +635,7 @@ const batchPredownload = async () => {
     }
 
     batchDownloading.value = false;
+    batchProgress.value = '';
     showToast(`Pre-downloaded ${done}/${items.length} files`);
 };
 
@@ -817,8 +961,161 @@ const executeDryRun = async () => {
                 </div>
             </div>
 
+            <!-- WS Detail Check Tab -->
+            <div v-if="activeTab === 'WS_DETAIL_CHECK'" class="mb-6">
+                <div v-if="!wsDetailLoaded" class="text-center py-12">
+                    <button @click="loadWsDetailCheck" :disabled="wsDetailLoading"
+                        class="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
+                        {{ wsDetailLoading ? 'Loading...' : 'Load Models Missing Metadata' }}
+                    </button>
+                </div>
+                <template v-else>
+                    <div class="flex items-center gap-4 mb-4">
+                        <input v-model="wsDetailSearch" type="text" placeholder="Search by name or base model..."
+                            class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/50" />
+                        <select v-model="wsDetailFilter"
+                            class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                            <option value="all">All ({{ wsDetailItems.length }})</option>
+                            <option value="has_ws">Has WS URL ({{ wsDetailItems.filter(i => i.ws_detail_url || i.guessed_ws_url).length }})</option>
+                            <option value="no_ws">No WS URL ({{ wsDetailItems.filter(i => !i.ws_detail_url && !i.guessed_ws_url).length }})</option>
+                        </select>
+                        <button @click="batchScrapeWsDetail"
+                            class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition-colors cursor-pointer">
+                            {{ wsBatchProgress || 'Batch Scrape All with WS URL' }}
+                        </button>
+                        <span class="text-sm text-gray-500">{{ filteredWsDetailItems.length }} results</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-white/10 text-left text-gray-400">
+                                    <th class="py-3 px-4 font-semibold w-16">#</th>
+                                    <th class="py-3 px-4 font-semibold">Model</th>
+                                    <th class="py-3 px-4 font-semibold">Base / Type</th>
+                                    <th class="py-3 px-4 font-semibold">Author</th>
+                                    <th class="py-3 px-4 font-semibold">WS Match</th>
+                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredWsDetailItems" :key="'ws-'+item.id"
+                                    class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-2 px-4 text-gray-500 font-mono text-xs">{{ item.id }}</td>
+                                    <td class="py-2 px-4">
+                                        <a :href="item.local_url" target="_blank" class="text-blue-400 hover:text-blue-300 font-medium">
+                                            {{ item.name }}
+                                        </a>
+                                    </td>
+                                    <td class="py-2 px-4 text-gray-400 text-xs">
+                                        <span class="font-mono">{{ item.base_model }}</span>
+                                        <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                            :class="item.model_type === 'complete' ? 'bg-green-500/20 text-green-400' : item.model_type === 'skin' ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'">
+                                            {{ item.model_type }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span v-if="item.author" class="text-green-400">{{ item.author }}</span>
+                                        <span v-else class="text-red-400 text-xs">missing</span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <template v-if="item.ws_detail_url">
+                                            <a :href="(item.ws_detail_url.startsWith('http') ? '' : 'https://ws.q3df.org') + item.ws_detail_url"
+                                                target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs">
+                                                {{ item.ws_name || item.ws_download_file || 'WS page' }}
+                                            </a>
+                                        </template>
+                                        <template v-else-if="item.guessed_ws_url">
+                                            <a :href="item.guessed_ws_url" target="_blank" class="text-yellow-400 hover:text-yellow-300 text-xs">
+                                                {{ item.guessed_ws_url.replace('https://ws.q3df.org', '') }}
+                                            </a>
+                                            <span class="text-gray-600 text-[10px] ml-1">(guessed)</span>
+                                        </template>
+                                        <span v-else class="text-gray-600 text-xs">no match</span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <button v-if="getWsUrl(item)"
+                                            @click="scrapeWsForModel(item)"
+                                            :disabled="scrapingWsDetail[item.id]"
+                                            class="px-3 py-1 bg-cyan-600/50 hover:bg-cyan-500 disabled:opacity-50 text-white rounded text-xs font-semibold transition-colors">
+                                            {{ scrapingWsDetail[item.id] ? 'Scraping...' : 'Scrape WS' }}
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredWsDetailItems.length === 0">
+                                    <td colspan="6" class="py-8 text-center text-gray-500">No results</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Missing Skin Name Tab -->
+            <div v-if="activeTab === 'MISSING_SKIN_NAME'" class="mb-6">
+                <div v-if="!skinNameLoaded" class="text-center py-12">
+                    <button @click="loadMissingSkinNames" :disabled="skinNameLoading"
+                        class="px-6 py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
+                        {{ skinNameLoading ? 'Loading...' : 'Load Models Missing Skin in Name' }}
+                    </button>
+                </div>
+                <template v-else>
+                    <div class="flex items-center gap-4 mb-4">
+                        <input v-model="skinNameSearch" type="text" placeholder="Search by name, base model, or skin..."
+                            class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50" />
+                        <button @click="batchFixSkinNames" :disabled="batchProgress || !filteredSkinNameItems.length"
+                            class="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold whitespace-nowrap transition-colors">
+                            {{ batchProgress || `Batch Fix All (${filteredSkinNameItems.length})` }}
+                        </button>
+                        <span class="text-sm text-gray-500">{{ filteredSkinNameItems.length }} results</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-white/10 text-left text-gray-400">
+                                    <th class="py-3 px-4 font-semibold w-16">#</th>
+                                    <th class="py-3 px-4 font-semibold">Current Name</th>
+                                    <th class="py-3 px-4 font-semibold">Skin</th>
+                                    <th class="py-3 px-4 font-semibold">Expected Name</th>
+                                    <th class="py-3 px-4 font-semibold">Type</th>
+                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredSkinNameItems" :key="'sn-'+item.id"
+                                    class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-2 px-4 text-gray-500 font-mono text-xs">{{ item.id }}</td>
+                                    <td class="py-2 px-4">
+                                        <a :href="item.local_url" target="_blank" class="text-blue-400 hover:text-blue-300 font-medium">
+                                            {{ item.name }}
+                                        </a>
+                                    </td>
+                                    <td class="py-2 px-4 text-amber-400 font-mono text-xs">{{ item.skin_name }}</td>
+                                    <td class="py-2 px-4 text-green-400 text-xs">{{ item.expected_name }}</td>
+                                    <td class="py-2 px-4">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                            :class="item.model_type === 'complete' ? 'bg-green-500/20 text-green-400' : item.model_type === 'skin' ? 'bg-blue-500/20 text-blue-400' : 'bg-yellow-500/20 text-yellow-400'">
+                                            {{ item.model_type }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4 flex gap-2">
+                                        <button @click="fixSkinName(item, item.expected_name)"
+                                            :disabled="fixingName[item.id]"
+                                            class="px-3 py-1 bg-green-600/50 hover:bg-green-500 disabled:opacity-50 text-white rounded text-xs font-semibold transition-colors">
+                                            {{ fixingName[item.id] ? 'Fixing...' : 'Fix' }}
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredSkinNameItems.length === 0">
+                                    <td colspan="6" class="py-8 text-center text-gray-500">No results</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+            </div>
+
             <!-- Results Table -->
-            <div class="overflow-x-auto">
+            <div v-if="activeTab !== 'WS_DETAIL_CHECK' && activeTab !== 'MISSING_SKIN_NAME'" class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-gray-400">

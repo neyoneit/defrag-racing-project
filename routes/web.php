@@ -292,6 +292,18 @@ Route::post('/admin/models-audit/import-pk3', [App\Http\Controllers\ModelsAuditC
     ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
     ->name('admin.models-audit.import-pk3');
 
+Route::get('/admin/models-audit/ws-detail-check', [App\Http\Controllers\ModelsAuditController::class, 'wsDetailCheck'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.ws-detail-check');
+
+Route::get('/admin/models-audit/missing-skins-in-name', [App\Http\Controllers\ModelsAuditController::class, 'missingSkinsInName'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.missing-skins-in-name');
+
+Route::post('/admin/models-audit/fix-model-name', [App\Http\Controllers\ModelsAuditController::class, 'fixModelName'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.fix-model-name');
+
 // PayPal webhook (no CSRF protection needed for webhooks)
 Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookController::class, 'handleWebhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 

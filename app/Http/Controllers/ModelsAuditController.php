@@ -1680,6 +1680,144 @@ class ModelsAuditController extends Controller
         rmdir($dir);
     }
 
+    /**
+     * Return models missing metadata (author, etc.) matched against WS audit data
+     */
+    public function wsDetailCheck()
+    {
+        $report = $this->loadLatestReport();
+        $wsResults = $report['results'] ?? [];
+
+        // Index WS results by download_file (lowercase) for matching
+        $wsByFile = [];
+        foreach ($wsResults as $ws) {
+            if (!empty($ws['download_file'])) {
+                $wsByFile[strtolower($ws['download_file'])] = $ws;
+            }
+        }
+
+        // Get all approved models missing author
+        $models = PlayerModel::approved()
+            ->where(function ($q) {
+                $q->whereNull('author')
+                  ->orWhere('author', '');
+            })
+            ->select('id', 'name', 'base_model', 'author', 'available_skins', 'zip_path', 'model_type', 'thumbnail_path')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $items = [];
+        foreach ($models as $model) {
+            $zipBasename = $model->zip_path ? strtolower(basename($model->zip_path)) : null;
+
+            // Try matching by zip_path basename
+            $wsMatch = null;
+            if ($zipBasename && isset($wsByFile[$zipBasename])) {
+                $wsMatch = $wsByFile[$zipBasename];
+            }
+
+            // Try matching by pk3 name inside zip (zip might have different name)
+            if (!$wsMatch && $zipBasename) {
+                $pk3Name = preg_replace('/\.zip$/i', '.pk3', $zipBasename);
+                if (isset($wsByFile[$pk3Name])) {
+                    $wsMatch = $wsByFile[$pk3Name];
+                }
+            }
+
+            // Build guessed WS URL from base_model + skin name
+            $guessedWsUrl = null;
+            if ($model->base_model) {
+                $baseModel = strtolower($model->base_model);
+                $skins = $model->available_skins;
+                if (is_string($skins)) $skins = json_decode($skins, true);
+                $skinName = is_array($skins) && !empty($skins) ? strtolower($skins[0]) : null;
+
+                if ($skinName && $skinName !== 'default') {
+                    $guessedWsUrl = "https://ws.q3df.org/model/{$baseModel}/skin/{$skinName}/";
+                } else {
+                    $guessedWsUrl = "https://ws.q3df.org/model/{$baseModel}/";
+                }
+            }
+
+            $items[] = [
+                'id' => $model->id,
+                'name' => $model->name,
+                'base_model' => $model->base_model,
+                'author' => $model->author,
+                'model_type' => $model->model_type,
+                'thumbnail_path' => $model->thumbnail_path,
+                'available_skins' => $model->available_skins,
+                'local_url' => "/models/{$model->id}",
+                'ws_detail_url' => $wsMatch['detail_url'] ?? null,
+                'ws_name' => $wsMatch['name'] ?? null,
+                'ws_download_file' => $wsMatch['download_file'] ?? null,
+                'guessed_ws_url' => $guessedWsUrl,
+            ];
+        }
+
+        return response()->json($items);
+    }
+
+    /**
+     * Return models where name is missing skin in parentheses
+     */
+    public function missingSkinsInName()
+    {
+        $models = PlayerModel::approved()
+            ->where('hidden', false)
+            ->select('id', 'name', 'base_model', 'available_skins', 'model_type', 'author', 'thumbnail_path')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $items = [];
+        foreach ($models as $model) {
+            $skins = $model->available_skins;
+            if (is_string($skins)) $skins = json_decode($skins, true);
+            if (!is_array($skins) || empty($skins)) continue;
+
+            $skinName = $skins[0];
+            if (strtolower($skinName) === 'default') continue;
+
+            // Check if name already contains (skin_name) correctly
+            if (stripos($model->name, "({$skinName})") !== false) continue;
+
+            // Build expected name: strip existing parentheses (wrong skin from WS scrape) and add correct one
+            $baseName = preg_replace('/\s*\([^)]*\)\s*$/', '', $model->name);
+            $expectedName = trim($baseName) . " ({$skinName})";
+
+            $items[] = [
+                'id' => $model->id,
+                'name' => $model->name,
+                'base_model' => $model->base_model,
+                'skin_name' => $skinName,
+                'expected_name' => $expectedName,
+                'model_type' => $model->model_type,
+                'author' => $model->author,
+                'local_url' => "/models/{$model->id}",
+            ];
+        }
+
+        return response()->json($items);
+    }
+
+    /**
+     * Fix model name (add skin in parentheses, etc.)
+     */
+    public function fixModelName(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer',
+            'new_name' => 'required|string|max:255',
+        ]);
+
+        $model = PlayerModel::findOrFail($request->id);
+        $oldName = $model->name;
+        $model->name = $request->new_name;
+        $model->save();
+
+        return response()->json(['success' => true, 'old_name' => $oldName, 'new_name' => $model->name]);
+    }
+
     private function loadLatestReport(): array
     {
         $files = collect(Storage::disk('local')->files('.'))

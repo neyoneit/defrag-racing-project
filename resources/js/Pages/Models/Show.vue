@@ -823,14 +823,14 @@ const generateGifThumbnail = async () => {
                 const torsoData = anims.torso?.['TORSO_STAND'] || anims.both?.['TORSO_STAND'];
 
                 if (legsData || torsoData) {
-                    // LOOPING (idle): use native fps, ensure minimum ~3s duration for shader effects visibility
+                    // LOOPING (idle): use native fps, ensure minimum ~3s, cap at 300 frames
+                    const MAX_GIF_FRAMES = 300;
                     const animFps = legsData?.fps || torsoData?.fps || 15;
                     const baseFrames = legsData?.numFrames || torsoData?.numFrames || 1;
                     const minDurationSec = 3;
                     const minFrames = Math.ceil(minDurationSec * animFps);
-                    // Repeat animation cycles to fill minimum duration (must be multiple of baseFrames for seamless loop)
                     const numCycles = Math.max(1, Math.ceil(minFrames / baseFrames));
-                    const numFrames = baseFrames * numCycles;
+                    const numFrames = Math.min(baseFrames * numCycles, MAX_GIF_FRAMES);
                     const frameDelay = Math.round(1000 / animFps);
                     const dt = 1 / animFps;
 
@@ -895,12 +895,12 @@ const generateGifThumbnail = async () => {
                 const torsoData = anims.torso?.['TORSO_GESTURE'] || anims.both?.['TORSO_GESTURE'];
 
                 if (torsoData) {
-                    // Gesture is one-shot — capture ALL frames, no intro skip
-                    // Use higher fps of the two animations so no frames are skipped
+                    // Gesture is one-shot, cap at 150 frames
+                    const MAX_GESTURE_FRAMES = 300;
                     const animFps = Math.max(legsData?.fps || 0, torsoData.fps) || 15;
                     const legsDuration = legsData ? legsData.numFrames / legsData.fps : 0;
                     const torsoDuration = torsoData.numFrames / torsoData.fps;
-                    const numFrames = Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2);
+                    const numFrames = Math.min(Math.max(Math.ceil(Math.max(legsDuration, torsoDuration) * animFps), 2), MAX_GESTURE_FRAMES);
                     const frameDelay = Math.round(1000 / animFps);
                     const dt = 1 / animFps;
 
