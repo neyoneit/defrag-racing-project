@@ -3343,65 +3343,79 @@ export class MD3Loader {
             both: {}
         };
 
-        const lines = content.split(/\r\n|\r|\n/);
+        // Q3 engine animation order (from bg_public.h animNumber_t enum)
+        // The engine parses animation.cfg POSITIONALLY - comments are ignored.
+        // Line N corresponds to animation index N in this array.
+        const ANIM_NAMES = [
+            'BOTH_DEATH1', 'BOTH_DEAD1', 'BOTH_DEATH2', 'BOTH_DEAD2',
+            'BOTH_DEATH3', 'BOTH_DEAD3',
+            'TORSO_GESTURE',
+            'TORSO_ATTACK', 'TORSO_ATTACK2',
+            'TORSO_DROP', 'TORSO_RAISE',
+            'TORSO_STAND', 'TORSO_STAND2',
+            'LEGS_WALKCR', 'LEGS_WALK', 'LEGS_RUN', 'LEGS_BACK', 'LEGS_SWIM',
+            'LEGS_JUMP', 'LEGS_LAND',
+            'LEGS_JUMPB', 'LEGS_LANDB',
+            'LEGS_IDLE', 'LEGS_IDLECR',
+            'LEGS_TURN',
+        ];
 
-        let lineNumber = 0;
+        const lines = content.split(/\r\n|\r|\n/);
+        let animIndex = 0;
+
         for (const line of lines) {
-            lineNumber++;
             const trimmed = line.trim();
 
-            // Skip empty lines and comments
+            // Skip empty lines and pure comment lines
             if (!trimmed || trimmed.startsWith('//')) continue;
 
-            // Parse sex line
-            if (trimmed.startsWith('sex')) {
-                const parts = trimmed.split(/\s+/);
-                if (parts.length >= 2) {
-                    animations.sex = parts[1];
+            // Parse header lines (sex, headoffset, footsteps)
+            if (trimmed.match(/^(sex|headoffset|footsteps)\b/i)) {
+                if (trimmed.startsWith('sex')) {
+                    const parts = trimmed.split(/\s+/);
+                    if (parts.length >= 2) {
+                        animations.sex = parts[1];
+                    }
                 }
                 continue;
             }
 
-            // Parse animation line: firstFrame numFrames loopingFrames fps // NAME
-            const match = trimmed.match(/^(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+\/\/\s*(.+)$/);
-            if (match) {
-                const [, firstFrame, numFrames, loopingFrames, fps, rawName] = match;
+            // Parse animation line: firstFrame numFrames loopingFrames fps [// optional comment]
+            const match = trimmed.match(/^(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)/);
+            if (!match) continue;
 
-                // STRIP TABS, COMMENTS, AND EXTRA WHITESPACE FROM NAME
-                let name = rawName.trim();
-                // Remove everything after tab or comment
-                name = name.split('\t')[0].trim();
-                name = name.split('(')[0].trim();
-                name = name.split('//')[0].trim();
+            const [, firstFrame, numFrames, loopingFrames, fps] = match;
 
-                const anim = {
-                    name: name,
-                    firstFrame: parseInt(firstFrame),
-                    numFrames: parseInt(numFrames),
-                    loopingFrames: parseInt(loopingFrames),
-                    fps: parseInt(fps),
-                    loop: parseInt(loopingFrames) > 0
-                };
-
-
-                // Categorize animation by prefix
-                // Some models use UPPER_/LOWER_ instead of TORSO_/LEGS_ - normalize to standard Q3 names
-                if (name.startsWith('BOTH_')) {
-                    animations.both[name] = anim;
-                } else if (name.startsWith('TORSO_')) {
-                    animations.torso[name] = anim;
-                } else if (name.startsWith('UPPER_')) {
-                    const stdName = 'TORSO_' + name.substring('UPPER_'.length);
-                    anim.name = stdName;
-                    animations.torso[stdName] = anim;
-                } else if (name.startsWith('LEGS_')) {
-                    animations.legs[name] = anim;
-                } else if (name.startsWith('LOWER_')) {
-                    const stdName = 'LEGS_' + name.substring('LOWER_'.length);
-                    anim.name = stdName;
-                    animations.legs[stdName] = anim;
-                }
+            // Use positional name from enum, fall back to comment if beyond known range
+            let name;
+            if (animIndex < ANIM_NAMES.length) {
+                name = ANIM_NAMES[animIndex];
+            } else {
+                // Extra animations beyond standard Q3 set - try to read comment
+                const commentMatch = trimmed.match(/\/\/\s*(.+)$/);
+                name = commentMatch ? commentMatch[1].trim().split(/[\t(\/]/)[0].trim() : `ANIM_${animIndex}`;
             }
+
+            const anim = {
+                name: name,
+                firstFrame: parseInt(firstFrame),
+                numFrames: Math.abs(parseInt(numFrames)),
+                loopingFrames: parseInt(loopingFrames),
+                fps: parseInt(fps),
+                loop: parseInt(loopingFrames) > 0,
+                reversed: parseInt(numFrames) < 0,
+            };
+
+            // Categorize by standard prefix
+            if (name.startsWith('BOTH_')) {
+                animations.both[name] = anim;
+            } else if (name.startsWith('TORSO_')) {
+                animations.torso[name] = anim;
+            } else if (name.startsWith('LEGS_')) {
+                animations.legs[name] = anim;
+            }
+
+            animIndex++;
         }
 
         // Q3 ENGINE FRAME OFFSET LOGIC (from cg_players.c:210-214)
@@ -3428,6 +3442,11 @@ export class MD3Loader {
                 anim.firstFrame -= skip;
             }
         }
+
+        DEBUG && console.log(`🎬 Parsed ${animIndex} animations positionally:`,
+            `both=${Object.keys(animations.both).length}`,
+            `torso=${Object.keys(animations.torso).length}`,
+            `legs=${Object.keys(animations.legs).length}`);
 
         return animations;
     }
