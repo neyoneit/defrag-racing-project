@@ -32,18 +32,38 @@ export class MD3Loader {
      * Load file manifest from extracted PK3 directory.
      * Builds a lowercase -> original path map for instant case-insensitive lookups.
      */
-    async loadManifest(baseUrl) {
-        // Derive manifest URL from baseUrl (go up to extraction root)
-        // baseUrl is like: /storage/models/extracted/slug/models/players/Name/
-        // manifest is at: /storage/models/extracted/slug/manifest.json
-        let manifestUrl;
-        if (baseUrl.includes('/extracted/')) {
-            const extractedIndex = baseUrl.indexOf('/extracted/');
-            const afterExtracted = baseUrl.substring(extractedIndex + '/extracted/'.length);
-            const firstSlash = afterExtracted.indexOf('/');
-            if (firstSlash !== -1) {
-                manifestUrl = baseUrl.substring(0, extractedIndex + '/extracted/'.length + firstSlash) + '/manifest.json';
+    /**
+     * Get the Q3 root directory from a URL path.
+     * For normal: /storage/models/extracted/slug/models/... → /storage/models/extracted/slug
+     * For multi-PK3: /storage/models/extracted/slug/__pk3_0_xxx/models/... → /storage/models/extracted/slug/__pk3_0_xxx
+     */
+    static getQ3Root(url) {
+        if (!url.includes('/extracted/')) return null;
+        const extractedIndex = url.indexOf('/extracted/');
+        const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
+        const firstSlash = afterExtracted.indexOf('/');
+        if (firstSlash === -1) return null;
+        let root = url.substring(0, extractedIndex + '/extracted/'.length + firstSlash);
+        // Check if next segment is a __pk3_ subdirectory
+        const remaining = afterExtracted.substring(firstSlash + 1);
+        if (remaining.startsWith('__pk3_')) {
+            const nextSlash = remaining.indexOf('/');
+            if (nextSlash !== -1) {
+                root += '/' + remaining.substring(0, nextSlash);
             }
+        }
+        return root;
+    }
+
+    async loadManifest(baseUrl) {
+        // Derive manifest URL from baseUrl (go up to Q3 root)
+        // baseUrl is like: /storage/models/extracted/slug/models/players/Name/
+        // or: /storage/models/extracted/slug/__pk3_0_xxx/models/weapons2/gauntlet/
+        // manifest is at the Q3 root + /manifest.json
+        let manifestUrl;
+        const q3Root = MD3Loader.getQ3Root(baseUrl);
+        if (q3Root) {
+            manifestUrl = q3Root + '/manifest.json';
         }
 
         if (!manifestUrl) return;
@@ -66,23 +86,17 @@ export class MD3Loader {
      * Load manifest for a custom base model (for fallback texture resolution).
      */
     async loadBaseModelManifest(baseModelUrl) {
-        let manifestUrl;
-        if (baseModelUrl.includes('/extracted/')) {
-            const extractedIndex = baseModelUrl.indexOf('/extracted/');
-            const afterExtracted = baseModelUrl.substring(extractedIndex + '/extracted/'.length);
-            const firstSlash = afterExtracted.indexOf('/');
-            if (firstSlash !== -1) {
-                manifestUrl = baseModelUrl.substring(0, extractedIndex + '/extracted/'.length + firstSlash) + '/manifest.json';
-            }
-        }
-        if (!manifestUrl) return;
+        const q3Root = MD3Loader.getQ3Root(baseModelUrl);
+        if (!q3Root) return;
+
+        const manifestUrl = q3Root + '/manifest.json';
 
         try {
             const response = await fetch(manifestUrl);
             if (response.ok) {
                 const files = await response.json();
                 this.baseModelManifest = new Map();
-                this.baseModelManifestPrefix = baseModelUrl.substring(0, baseModelUrl.indexOf('/extracted/') + '/extracted/'.length + baseModelUrl.substring(baseModelUrl.indexOf('/extracted/') + '/extracted/'.length).indexOf('/') + 1);
+                this.baseModelManifestPrefix = q3Root + '/';
                 for (const file of files) {
                     this.baseModelManifest.set(file.toLowerCase(), file);
                 }
@@ -126,12 +140,10 @@ export class MD3Loader {
     resolvePathFromManifest(url) {
         // Try PK3 manifest first
         if (this.manifest && url.includes('/extracted/')) {
-            const extractedIndex = url.indexOf('/extracted/');
-            const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-            const firstSlash = afterExtracted.indexOf('/');
-            if (firstSlash !== -1) {
-                const prefix = url.substring(0, extractedIndex + '/extracted/'.length + firstSlash + 1);
-                const relativePath = afterExtracted.substring(firstSlash + 1);
+            const q3Root = MD3Loader.getQ3Root(url);
+            if (q3Root) {
+                const prefix = q3Root + '/';
+                const relativePath = url.substring(prefix.length);
                 const resolved = this.manifest.get(relativePath.toLowerCase());
                 if (resolved) {
                     return prefix + resolved;
@@ -1187,11 +1199,9 @@ export class MD3Loader {
         if (fallbackBaseUrl) {
             let relativePath = url;
             if (url.includes('/extracted/')) {
-                const extractedIndex = url.indexOf('/extracted/');
-                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-                const firstSlashAfterExtracted = afterExtracted.indexOf('/');
-                if (firstSlashAfterExtracted !== -1) {
-                    relativePath = afterExtracted.substring(firstSlashAfterExtracted + 1);
+                const q3Root = MD3Loader.getQ3Root(url);
+                if (q3Root) {
+                    relativePath = url.substring(q3Root.length + 1);
                 }
             }
 
@@ -1254,12 +1264,10 @@ export class MD3Loader {
 
         // Try PK3 manifest
         if (this.manifest && url.includes('/extracted/')) {
-            const extractedIndex = url.indexOf('/extracted/');
-            const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-            const firstSlash = afterExtracted.indexOf('/');
-            if (firstSlash !== -1) {
-                const prefix = url.substring(0, extractedIndex + '/extracted/'.length + firstSlash + 1);
-                const relativePath = afterExtracted.substring(firstSlash + 1);
+            const q3Root = MD3Loader.getQ3Root(url);
+            if (q3Root) {
+                const prefix = q3Root + '/';
+                const relativePath = url.substring(prefix.length);
                 const result = tryManifestLookup(this.manifest, relativePath, prefix);
                 if (result) return result;
             }
@@ -1269,11 +1277,9 @@ export class MD3Loader {
         if (this.baseModelManifest && this.baseModelManifestPrefix) {
             let relativePath;
             if (url.includes('/extracted/')) {
-                const extractedIndex = url.indexOf('/extracted/');
-                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-                const firstSlash = afterExtracted.indexOf('/');
-                if (firstSlash !== -1) {
-                    relativePath = afterExtracted.substring(firstSlash + 1);
+                const q3Root = MD3Loader.getQ3Root(url);
+                if (q3Root) {
+                    relativePath = url.substring(q3Root.length + 1);
                 }
             }
             if (relativePath) {
@@ -1288,11 +1294,9 @@ export class MD3Loader {
             if (url.startsWith('/baseq3/')) {
                 relativePath = url.substring('/baseq3/'.length);
             } else if (url.includes('/extracted/')) {
-                const extractedIndex = url.indexOf('/extracted/');
-                const afterExtracted = url.substring(extractedIndex + '/extracted/'.length);
-                const firstSlash = afterExtracted.indexOf('/');
-                if (firstSlash !== -1) {
-                    relativePath = afterExtracted.substring(firstSlash + 1);
+                const q3Root = MD3Loader.getQ3Root(url);
+                if (q3Root) {
+                    relativePath = url.substring(q3Root.length + 1);
                 }
             } else if (!url.startsWith('/') && (url.startsWith('models/') || url.startsWith('textures/') || url.startsWith('gfx/'))) {
                 // Bare Q3-relative path (e.g., from skin files referencing baseq3 assets)
@@ -1962,6 +1966,12 @@ export class MD3Loader {
         const weaponGroup = new THREE.Group();
         weaponGroup.name = `weapon_${weaponName}`;
 
+        // Load file manifests for case-insensitive lookups and fast texture resolution
+        await this.loadBaseq3Manifest();
+        if (!isBaseQ3) {
+            await this.loadManifest(baseUrl);
+        }
+
         // Load shader files for this weapon first (before loading MD3 files)
         // This already loads baseq3 shaders first, then pk3 overrides
         await this.loadShadersForWeapon(baseUrl, weaponName, modelId);
@@ -2052,10 +2062,13 @@ export class MD3Loader {
 
             // If this is a pk3 weapon (not baseq3), try to load pk3 overrides
             if (!isBaseQ3) {
-                DEBUG && console.log(`🔄 Checking for pk3 overrides in ${baseUrl}...`);
+                // Check manifest to see if PK3 has any MD3 files at all
+                // Skin-only packs (color variants) have no MD3s - skip expensive override attempts
+                const pk3HasMd3 = !this.manifest || this.manifest.has(`models/weapons2/${weaponName}/${weaponName}.md3`);
+                DEBUG && console.log(`🔄 Checking for pk3 overrides in ${baseUrl}... (manifest says MD3 exists: ${pk3HasMd3})`);
 
-                // Try to replace main body with pk3 version
-                try {
+                // Try to replace main body with pk3 version (only if manifest says it exists)
+                if (pk3HasMd3) try {
                     const pk3MainUrl = `${baseUrl}${weaponName}.md3`;
                     DEBUG && console.log(`🔄 Trying to load pk3 main body: ${pk3MainUrl}`);
                     // Load pk3 main with pk3 textures (baseUrl already points to pk3)
@@ -2220,6 +2233,9 @@ export class MD3Loader {
 
             DEBUG && console.log(`🔊 Weapon ${weaponName} will load ${weaponGroup.userData.animation.soundPaths.length} sounds`);
 
+            // Cache for reusable projectile assets (textures, geometries, materials)
+            const projectileCache = {};
+
             // Helper function to create weapon-specific projectiles (following Q3 engine logic)
             const createProjectileForWeapon = async (weaponName) => {
                 const projectileGroup = new THREE.Group();
@@ -2257,23 +2273,25 @@ export class MD3Loader {
                     projectileGroup.userData.projectileType = 'rocket';
 
                 } else if (lowerName.includes('plasma') || lowerName.includes('pg')) {
-                    // Plasma projectile - sprite-based like Q3 (uses railDisc shader)
-                    // Create circular sprite billboard
-                    const spriteMap = new THREE.TextureLoader().load('data:image/svg+xml;base64,' + btoa(`
-                        <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <radialGradient id="grad">
-                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
-                                    <stop offset="40%" stop-color="#88ffff" stop-opacity="0.8"/>
-                                    <stop offset="100%" stop-color="#4488ff" stop-opacity="0"/>
-                                </radialGradient>
-                            </defs>
-                            <circle cx="16" cy="16" r="16" fill="url(#grad)"/>
-                        </svg>
-                    `));
+                    // Plasma projectile - sprite-based like Q3
+                    // Cache the texture so it's not recreated every shot (10 shots/sec!)
+                    if (!projectileCache.plasmaTexture) {
+                        projectileCache.plasmaTexture = new THREE.TextureLoader().load('data:image/svg+xml;base64,' + btoa(`
+                            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <radialGradient id="grad">
+                                        <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+                                        <stop offset="40%" stop-color="#88ffff" stop-opacity="0.8"/>
+                                        <stop offset="100%" stop-color="#4488ff" stop-opacity="0"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="16" cy="16" r="16" fill="url(#grad)"/>
+                            </svg>
+                        `));
+                    }
 
                     const spriteMat = new THREE.SpriteMaterial({
-                        map: spriteMap,
+                        map: projectileCache.plasmaTexture,
                         color: 0x88ccff,
                         transparent: true,
                         opacity: 0.8,
@@ -3358,6 +3376,7 @@ export class MD3Loader {
         // Q3 engine animation order (from bg_public.h animNumber_t enum)
         // The engine parses animation.cfg POSITIONALLY - comments are ignored.
         // Line N corresponds to animation index N in this array.
+        // Q3 engine animation order (bg_public.h animNumber_t enum, MAX_ANIMATIONS = 31)
         const ANIM_NAMES = [
             'BOTH_DEATH1', 'BOTH_DEAD1', 'BOTH_DEATH2', 'BOTH_DEAD2',
             'BOTH_DEATH3', 'BOTH_DEAD3',
@@ -3370,9 +3389,26 @@ export class MD3Loader {
             'LEGS_JUMPB', 'LEGS_LANDB',
             'LEGS_IDLE', 'LEGS_IDLECR',
             'LEGS_TURN',
+            // CTF animations (TORSO_GETFLAG through TORSO_NEGATIVE)
+            'TORSO_GETFLAG', 'TORSO_GUARDBASE', 'TORSO_PATROL',
+            'TORSO_FOLLOWME', 'TORSO_AFFIRMATIVE', 'TORSO_NEGATIVE',
         ];
 
         const lines = content.split(/\r\n|\r|\n/);
+
+        // First pass: count animation lines to detect non-standard (mod) configs
+        // Standard Q3 has exactly 25 animations. Mods like BFP have more and use
+        // different animation order — for those we use comment-based naming.
+        let totalAnimLines = 0;
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('//')) continue;
+            if (trimmed.match(/^(sex|headoffset|footsteps)\b/i)) continue;
+            if (trimmed.match(/^(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)/)) totalAnimLines++;
+        }
+        const useCommentNames = totalAnimLines > ANIM_NAMES.length;
+        DEBUG && console.log(`🎬 Animation lines: ${totalAnimLines}, standard: ${ANIM_NAMES.length}, useCommentNames: ${useCommentNames}`);
+
         let animIndex = 0;
 
         for (const line of lines) {
@@ -3398,14 +3434,22 @@ export class MD3Loader {
 
             const [, firstFrame, numFrames, loopingFrames, fps] = match;
 
-            // Use positional name from enum, fall back to comment if beyond known range
+            // Extract comment name (e.g., "// TORSO_STAND" or "// LEGS_IDLE (hover)")
+            const commentMatch = trimmed.match(/\/\/\s*(.+)$/);
+            const commentName = commentMatch
+                ? commentMatch[1].trim().split(/[\t(\/]/)[0].trim().replace(/\s+/g, '_').toUpperCase()
+                : null;
+
             let name;
-            if (animIndex < ANIM_NAMES.length) {
+            if (useCommentNames && commentName) {
+                // Mod model: use comment names (they define the actual animation)
+                name = commentName;
+            } else if (animIndex < ANIM_NAMES.length) {
+                // Standard Q3: use positional mapping
                 name = ANIM_NAMES[animIndex];
             } else {
-                // Extra animations beyond standard Q3 set - try to read comment
-                const commentMatch = trimmed.match(/\/\/\s*(.+)$/);
-                name = commentMatch ? commentMatch[1].trim().split(/[\t(\/]/)[0].trim() : `ANIM_${animIndex}`;
+                // Beyond standard range: use comment or fallback
+                name = commentName || `ANIM_${animIndex}`;
             }
 
             const anim = {

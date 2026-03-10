@@ -303,6 +303,12 @@ class ModelsAuditController extends Controller
             // Skip entries marked as extras (e.g. bot PK3s without models)
             if (!empty($entry['is_extra'])) continue;
 
+            // Nested PK3s that are identical copies of their parent — count as found but skip checking
+            if (!empty($entry['nested_in_pk3']) && !empty($entry['nested_comparison']['identical'])) {
+                if (!empty($entry['models_found'])) $foundPk3 = true;
+                continue;
+            }
+
             if (!empty($entry['models_found'])) {
                 $foundPk3 = true;
                 foreach ($entry['models_found'] as $mf) {
@@ -311,7 +317,11 @@ class ModelsAuditController extends Controller
                 }
             }
             if (!empty($entry['contents'])) {
-                if ($this->hasAnyPk3($entry['contents']) && !$this->checkAllContentsIdentical($entry['contents'])) return false;
+                if ($this->hasAnyPk3($entry['contents'])) {
+                    if (!$this->checkAllContentsIdentical($entry['contents'])) return false;
+                    // Nested PK3s with models count as found
+                    $foundPk3 = true;
+                }
             }
         }
         return $foundPk3;
@@ -1157,7 +1167,34 @@ class ModelsAuditController extends Controller
      * Returns array of file entries with name, size, md5.
      * If a file inside is itself a ZIP/PK3, its contents are nested.
      */
-    private function inspectArchive(string $path): array
+    /**
+     * Build a map of file path → md5 for all files in a PK3 (excluding nested archives).
+     */
+    private function buildPk3FileMap(string $pk3Path): array
+    {
+        $map = [];
+        $tmpDir = sys_get_temp_dir() . '/audit_pk3map_' . md5($pk3Path . microtime());
+        @mkdir($tmpDir, 0777, true);
+        $zip = new ZipArchive();
+        if ($zip->open($pk3Path) === true) {
+            $zip->extractTo($tmpDir);
+            $zip->close();
+            $iter = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($tmpDir, \RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+            foreach ($iter as $file) {
+                if (!$file->isFile()) continue;
+                $rel = strtolower(str_replace($tmpDir . '/', '', $file->getPathname()));
+                $fileExt = strtolower(pathinfo($rel, PATHINFO_EXTENSION));
+                if (in_array($fileExt, ['pk3', 'zip'])) continue;
+                $map[$rel] = md5_file($file->getPathname());
+            }
+        }
+        $this->removeDir($tmpDir);
+        return $map;
+    }
+
+    private function inspectArchive(string $path, ?string $parentMd5 = null, ?array $parentPk3Files = null): array
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
@@ -1177,6 +1214,11 @@ class ModelsAuditController extends Controller
         }
 
         $entries = [];
+        $seenPk3s = []; // Track PK3s by MD5 to detect duplicates among siblings
+        // If parent is a PK3, seed with its MD5 so nested identical PK3s are caught
+        if ($parentMd5 && $ext === 'pk3') {
+            $seenPk3s[$parentMd5] = basename($path) . ' (parent)';
+        }
         $tempDir = sys_get_temp_dir() . '/audit_inspect_' . md5($path . microtime());
         @mkdir($tempDir, 0777, true);
 
@@ -1203,22 +1245,24 @@ class ModelsAuditController extends Controller
 
                 if (file_exists($extractedPath)) {
                     $innerMd5 = md5_file($extractedPath);
-                    $parentBasename = strtolower(pathinfo($path, PATHINFO_FILENAME));
-                    $innerBasename = strtolower(pathinfo($name, PATHINFO_FILENAME));
 
-                    // If nested archive has same name as parent, it's redundant packaging — mark as extra
-                    if ($innerBasename === $parentBasename) {
+                    // Detect duplicate PK3s among siblings (same MD5 in different folders)
+                    if ($innerExt === 'pk3' && isset($seenPk3s[$innerMd5])) {
                         $entry['md5'] = $innerMd5;
-                        $entry['type'] = 'self-reference';
+                        $entry['type'] = 'duplicate';
                         $entry['is_extra'] = true;
-                        $entry['note'] = 'Duplicate packaging (same name as parent archive)';
+                        $entry['note'] = 'Duplicate of ' . $seenPk3s[$innerMd5] . ' (identical MD5)';
                         $entries[] = $entry;
                         continue;
+                    }
+                    if ($innerExt === 'pk3') {
+                        $seenPk3s[$innerMd5] = $name;
                     }
 
                     $entry['md5'] = $innerMd5;
                     $entry['type'] = 'archive';
-                    $entry['contents'] = $this->inspectArchive($extractedPath);
+                    $currentMd5 = ($ext === 'pk3') ? md5_file($path) : null;
+                    $entry['contents'] = $this->inspectArchive($extractedPath, $currentMd5);
 
                     // For PK3 files, detect models and check DB
                     if ($innerExt === 'pk3') {
@@ -1227,6 +1271,41 @@ class ModelsAuditController extends Controller
                         $entry['pk3_files'] = $pk3Analysis['pk3_files'] ?? [];
                         $entry['pk3_summary'] = $pk3Analysis['pk3_summary'] ?? [];
                         $entry['pk3_total_files'] = $pk3Analysis['total_files'] ?? 0;
+
+                        // If nested inside a PK3, compare files against parent
+                        if ($ext === 'pk3') {
+                            $entry['nested_in_pk3'] = true;
+                            // Build parent file map if not passed
+                            if (!$parentPk3Files) {
+                                $parentPk3Files = $this->buildPk3FileMap($path);
+                            }
+                            // Compare nested PK3 files (excl .pk3) against parent files
+                            $nestedFiles = $entry['pk3_files'] ?? [];
+                            $matching = 0;
+                            $total = 0;
+                            $diffFiles = [];
+                            $extraFiles = [];
+                            foreach ($nestedFiles as $nf) {
+                                $nfExt = strtolower(pathinfo($nf['path'], PATHINFO_EXTENSION));
+                                if (in_array($nfExt, ['pk3', 'zip'])) continue;
+                                $total++;
+                                $nfKey = strtolower($nf['path']);
+                                if (isset($parentPk3Files[$nfKey]) && $parentPk3Files[$nfKey] === $nf['md5']) {
+                                    $matching++;
+                                } elseif (isset($parentPk3Files[$nfKey])) {
+                                    $diffFiles[] = $nf['path'];
+                                } else {
+                                    $extraFiles[] = $nf['path'];
+                                }
+                            }
+                            $entry['nested_comparison'] = [
+                                'total' => $total,
+                                'matching' => $matching,
+                                'identical' => ($total > 0 && $matching === $total),
+                                'diff_files' => $diffFiles,
+                                'extra_files' => $extraFiles,
+                            ];
+                        }
                     }
                 }
             } else {
@@ -1341,7 +1420,25 @@ class ModelsAuditController extends Controller
         $modelNames = $scraper->detectAllModelNames($tempExtract);
 
         if (empty($modelNames)) {
+            // Check if this PK3 contains nested PK3s — if so, don't report error,
+            // those nested PK3s will be analyzed separately by inspectArchive
+            $hasNestedPk3 = false;
+            $zip2 = new ZipArchive();
+            if ($zip2->open($pk3Path) === true) {
+                for ($i = 0; $i < $zip2->numFiles; $i++) {
+                    if (str_ends_with(strtolower($zip2->getNameIndex($i)), '.pk3')) {
+                        $hasNestedPk3 = true;
+                        break;
+                    }
+                }
+                $zip2->close();
+            }
+
             $this->removeDir($tempExtract);
+            if ($hasNestedPk3) {
+                // Wrapper PK3 — models are in nested PK3s, return empty (no error)
+                return ['models' => [], 'pk3_files' => [], 'pk3_summary' => [], 'total_files' => 0];
+            }
             return [['info' => 'No model folders found (no models/players/*/)', 'in_db' => false]];
         }
 
@@ -1367,14 +1464,15 @@ class ModelsAuditController extends Controller
             $skins = $metadata['available_skins'] ?? ['default'];
 
             // Build slugs from source filenames for disambiguation
+            // Prefer download filename (from WS page) over inner PK3 name
             $sourceSlugs = [];
-            if ($sourceFilename) {
-                $sourceSlugs[] = Str::slug(pathinfo(basename($sourceFilename), PATHINFO_FILENAME));
-            }
             if ($this->currentDownloadFile) {
-                $dlSlug = Str::slug(pathinfo(basename($this->currentDownloadFile), PATHINFO_FILENAME));
-                if (!in_array($dlSlug, $sourceSlugs)) {
-                    $sourceSlugs[] = $dlSlug;
+                $sourceSlugs[] = Str::slug(pathinfo(basename($this->currentDownloadFile), PATHINFO_FILENAME));
+            }
+            if ($sourceFilename) {
+                $sfSlug = Str::slug(pathinfo(basename($sourceFilename), PATHINFO_FILENAME));
+                if (!in_array($sfSlug, $sourceSlugs)) {
+                    $sourceSlugs[] = $sfSlug;
                 }
             }
 
@@ -1476,6 +1574,7 @@ class ModelsAuditController extends Controller
 
             $pk3FileList[] = [
                 'path' => $path,
+                'md5' => $info['md5'],
                 'size' => $info['size'],
                 'category' => $category,
             ];
@@ -1545,6 +1644,10 @@ class ModelsAuditController extends Controller
         $allMatch = true;
 
         foreach ($pk3Files as $lowerPath => $pk3Info) {
+            // Skip nested PK3/ZIP files — they're not model assets
+            $fileExt = strtolower(pathinfo($lowerPath, PATHINFO_EXTENSION));
+            if (in_array($fileExt, ['pk3', 'zip'])) continue;
+
             if (isset($localFiles[$lowerPath])) {
                 $match = $pk3Info['md5'] === $localFiles[$lowerPath]['md5'];
                 if (!$match) $allMatch = false;

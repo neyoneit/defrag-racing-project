@@ -1600,17 +1600,25 @@ export class Q3ShaderMaterialSystem {
                 return '/baseq3/' + mapPath;
             } else if (defaultPath.includes('/extracted/')) {
                 // User-uploaded model - try PK3 first, then baseq3 fallback
-                const match = defaultPath.match(/(.*?\/models\/extracted\/[^\/]+)\//);
-                if (match) {
-                    // Check if file exists in PK3 manifest first
+                // Use MD3Loader.getQ3Root to handle __pk3_* subdirectories correctly
+                const q3Root = this.loader.constructor.getQ3Root
+                    ? this.loader.constructor.getQ3Root(defaultPath)
+                    : defaultPath.match(/(.*?\/models\/extracted\/[^\/]+)/)?.[1];
+                if (q3Root) {
                     if (this.loader.manifest) {
-                        const resolved = this.loader.manifest.get(mapPath.toLowerCase());
-                        if (resolved) {
-                            return match[1] + '/' + resolved;
+                        const lowerMap = mapPath.toLowerCase();
+                        // Try exact match first (with extension already in path)
+                        let resolved = this.loader.manifest.get(lowerMap);
+                        if (resolved) return q3Root + '/' + resolved;
+                        // Manifest keys have extensions, mapPath may not - try common ones
+                        for (const ext of ['.tga', '.jpg', '.png', '.jpeg']) {
+                            resolved = this.loader.manifest.get(lowerMap + ext);
+                            if (resolved) return q3Root + '/' + resolved;
                         }
+                        // Not in PK3 at all - use baseq3
+                        return '/baseq3/' + mapPath;
                     }
-                    // Try PK3 path (may work if texture is in the PK3)
-                    return match[1] + '/' + mapPath;
+                    return q3Root + '/' + mapPath;
                 }
             }
             // Bare Q3-relative path (e.g., skin references like "models/powerups/instant/quad")

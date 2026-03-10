@@ -1398,9 +1398,9 @@ const confirmNsfw = () => {
                                     </div>
                                 </div>
                                 <!-- Pending approval banner (admin only) -->
-                                <div v-if="model.approval_status === 'pending' && $page.props.auth?.user?.admin" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                                <div v-if="model.approval_status === 'pending' && $page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                                     <span class="text-yellow-400 text-xs font-semibold">Pending Approval</span>
-                                    <button @click="approveModel" :disabled="isApproving"
+                                    <button v-if="$page.props.auth.user.admin" @click="approveModel" :disabled="isApproving"
                                         class="px-3 py-1 rounded bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-all disabled:opacity-50">
                                         {{ isApproving ? 'Approving...' : 'Approve' }}
                                     </button>
@@ -1696,8 +1696,8 @@ const confirmNsfw = () => {
                                 Delete
                             </button>
                         </div>
-                        <!-- Delete confirmation (admin only) -->
-                        <div v-if="showDeleteConfirm && $page.props.auth?.user?.admin" class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                        <!-- Delete confirmation (admin or owner of pending) -->
+                        <div v-if="showDeleteConfirm && $page.props.auth?.user && ($page.props.auth.user.admin || (model.approval_status === 'pending' && $page.props.auth.user.id === model.user_id))" class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
                             <div class="text-red-400 text-xs font-semibold mb-2">
                                 <template v-if="siblingModels?.length">
                                     This will also delete {{ siblingModels.length }} other model{{ siblingModels.length > 1 ? 's' : '' }} from the same PK3:

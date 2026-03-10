@@ -620,6 +620,21 @@ const getCompareResult = (item) => {
 const importing = reactive({});
 const importingPk3 = reactive({});
 
+// Recursively collect all entries with models_found from nested contents
+const collectModelEntries = (contents) => {
+    const result = [];
+    if (!contents) return result;
+    for (const entry of contents) {
+        if (entry.models_found?.length && !entry.is_extra) {
+            result.push(entry);
+        }
+        if (entry.contents) {
+            result.push(...collectModelEntries(entry.contents));
+        }
+    }
+    return result;
+};
+
 // Classify file type for display
 const fileCategory = (name) => {
     const ext = name.split('.').pop().toLowerCase();
@@ -1689,12 +1704,28 @@ const executeDryRun = async () => {
                                                 <h4 class="text-orange-400 font-semibold text-sm mb-2">Model Analysis</h4>
 
                                                 <div class="mt-2">
-                                                    <template v-for="(entry, ei) in getCompareResult(item).ws_file.contents" :key="'ws-'+ei">
-                                                        <!-- Only show PK3 model analysis (skip extras like lowres variants) -->
-                                                        <template v-if="entry.models_found && entry.models_found.length && !entry.is_extra">
+                                                    <template v-for="(entry, ei) in collectModelEntries(getCompareResult(item).ws_file.contents)" :key="'ws-'+ei">
                                                             <div class="mb-3 p-2 bg-gray-800/60 rounded border border-gray-700/50">
-                                                                <div class="text-xs text-yellow-400 font-semibold mb-1">{{ entry.name }}</div>
-                                                                <template v-for="(mf, mi) in entry.models_found" :key="'mf-'+mi">
+                                                                <div class="text-xs text-yellow-400 font-semibold mb-1">
+                                                                    {{ entry.name }}
+                                                                    <span v-if="entry.nested_in_pk3" class="ml-1 px-1 bg-purple-500/20 text-purple-400 rounded text-[10px]">nested PK3</span>
+                                                                </div>
+                                                                <!-- Nested PK3 comparison with parent -->
+                                                                <div v-if="entry.nested_comparison" class="text-[11px] mb-1">
+                                                                    <span v-if="entry.nested_comparison.identical" class="text-green-400">
+                                                                        Identical copy of parent PK3 ({{ entry.nested_comparison.matching }}/{{ entry.nested_comparison.total }} files match)
+                                                                    </span>
+                                                                    <span v-else class="text-yellow-400">
+                                                                        Differs from parent PK3: {{ entry.nested_comparison.matching }}/{{ entry.nested_comparison.total }} files match
+                                                                        <span v-if="entry.nested_comparison.diff_files.length" class="text-red-400 ml-1">
+                                                                            changed: {{ entry.nested_comparison.diff_files.join(', ') }}
+                                                                        </span>
+                                                                        <span v-if="entry.nested_comparison.extra_files.length" class="text-orange-400 ml-1">
+                                                                            extra: {{ entry.nested_comparison.extra_files.join(', ') }}
+                                                                        </span>
+                                                                    </span>
+                                                                </div>
+                                                                <template v-if="!entry.nested_comparison?.identical" v-for="(mf, mi) in entry.models_found" :key="'mf-'+mi">
                                                                     <div v-if="mf.error" class="text-red-400 text-xs">{{ mf.error }}</div>
                                                                     <div v-else-if="mf.info" class="text-gray-400 text-xs">{{ mf.info }}</div>
                                                                     <div v-else class="text-xs mb-1">
@@ -1740,7 +1771,6 @@ const executeDryRun = async () => {
                                                                     </div>
                                                                 </template>
                                                             </div>
-                                                        </template>
                                                     </template>
                                                 </div>
                                             </div>

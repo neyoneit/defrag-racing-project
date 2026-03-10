@@ -328,12 +328,13 @@ async function loadModel() {
                 await loader.loadShadersForModel('/baseq3/scripts/', 'models');
             }
 
-            // Extract base directory and weapon name
+            // Extract base directory and weapon name from directory (not filename)
             // modelPath is like: /baseq3/models/weapons2/machinegun/machinegun.md3
             // We want: /baseq3/models/weapons2/machinegun/ and weaponName: machinegun
             const baseDir = props.modelPath.substring(0, props.modelPath.lastIndexOf('/') + 1);
-            const fileName = props.modelPath.split('/').pop(); // Get "machinegun.md3"
-            const weaponName = fileName.replace('.md3', ''); // Get "machinegun"
+            // Weapon name = directory name (not filename, which could be gauntlet_barrel.md3)
+            const pathParts = baseDir.replace(/\/+$/, '').split('/');
+            const weaponName = pathParts[pathParts.length - 1];
 
             model = await loader.loadWeaponModel(baseDir, weaponName, props.modelId);
 

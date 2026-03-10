@@ -229,85 +229,61 @@ class ModelsController extends Controller
             return response()->json(['success' => false, 'message' => $extractResult['message']], 422);
         }
 
+        // Check for __pk3_* subdirectories (multi-PK3 ZIP upload)
+        $pk3Subdirs = [];
+        if (is_dir($extractPath)) {
+            foreach (scandir($extractPath) as $entry) {
+                if (preg_match('/^__pk3_(\d+)_(.+)$/', $entry, $matches) && is_dir($extractPath . '/' . $entry)) {
+                    $pk3Subdirs[] = [
+                        'dir' => $entry,
+                        'index' => (int) $matches[1],
+                        'name' => $matches[2],
+                        'path' => $extractPath . '/' . $entry,
+                    ];
+                }
+            }
+        }
+
         // Detect models
-        if ($request->category === 'weapon') {
-            $detectedModelNames = $this->detectAllWeaponNames($extractPath);
-        } else {
-            $detectedModelNames = $this->detectAllModelNames($extractPath);
-        }
-
-        if (empty($detectedModelNames)) {
-            $this->deleteDirectory($extractPath);
-            $errorMsg = $request->category === 'weapon'
-                ? 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.'
-                : 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.';
-            return response()->json(['success' => false, 'message' => $errorMsg], 422);
-        }
-
-        // Build model info for frontend (viewer paths, skins, etc.)
         $models = [];
-        $isMultiModelPack = count($detectedModelNames) > 1;
 
-        foreach ($detectedModelNames as $detectedModelName) {
-            if ($request->category === 'weapon') {
-                $weaponsBase = $this->findWeaponsPath($extractPath);
-                $weaponPath = $weaponsBase ? $weaponsBase . '/' . $detectedModelName : $extractPath . '/models/weapons2/' . $detectedModelName;
-                $md3Files = glob($weaponPath . '/*.{md3,MD3}', GLOB_BRACE);
-                $mainMd3 = null;
-
-                if (!empty($md3Files)) {
-                    foreach ($md3Files as $md3File) {
-                        $basename = basename($md3File, '.md3');
-                        if ($basename === $detectedModelName) {
-                            $mainMd3 = basename($md3File);
-                            break;
-                        }
-                    }
-                    if (!$mainMd3) {
-                        foreach ($md3Files as $md3File) {
-                            $basename = basename($md3File, '.md3');
-                            if (!preg_match('/_(hand|flash|barrel|[0-9])$/', $basename)) {
-                                $mainMd3 = basename($md3File);
-                                break;
-                            }
-                        }
-                    }
-                    if (!$mainMd3) {
-                        $mainMd3 = basename($md3Files[0]);
+        if ($request->category === 'weapon' && !empty($pk3Subdirs)) {
+            // Multi-PK3 weapon upload: scan each PK3 subdirectory separately
+            foreach ($pk3Subdirs as $pk3Sub) {
+                $weaponNames = $this->detectAllWeaponNames($pk3Sub['path']);
+                foreach ($weaponNames as $weaponName) {
+                    $weaponModel = $this->buildWeaponModelInfo(
+                        $pk3Sub['path'], $weaponName, $slug,
+                        $pk3Sub['dir'], $pk3Sub['name'],
+                        'models/pk3s/' . $slug . '_' . $pk3Sub['index'] . '.pk3',
+                        true // isMultiPk3
+                    );
+                    if ($weaponModel) {
+                        $models[] = $weaponModel;
                     }
                 }
-
-                $skinFiles = glob($weaponPath . '/*.skin');
-                $availableSkins = [];
-                foreach ($skinFiles as $skinFile) {
-                    $skinBasename = basename($skinFile, '.skin');
-                    if (str_starts_with($skinBasename, $detectedModelName . '_')) {
-                        $skinName = str_replace($detectedModelName . '_', '', $skinBasename);
-                    } else {
-                        $skinName = $skinBasename;
-                    }
-                    if (!in_array($skinName, $availableSkins)) {
-                        $availableSkins[] = $skinName;
-                    }
+            }
+        } elseif ($request->category === 'weapon') {
+            // Single PK3 weapon upload
+            $detectedModelNames = $this->detectAllWeaponNames($extractPath);
+            $isMultiModelPack = count($detectedModelNames) > 1;
+            foreach ($detectedModelNames as $detectedModelName) {
+                $weaponModel = $this->buildWeaponModelInfo(
+                    $extractPath, $detectedModelName, $slug,
+                    null, null,
+                    $extractResult['pk3_path'],
+                    $isMultiModelPack
+                );
+                if ($weaponModel) {
+                    $models[] = $weaponModel;
                 }
-                if (empty($availableSkins)) {
-                    $availableSkins = ['default'];
-                }
+            }
+        } else {
+            // Player models
+            $detectedModelNames = $this->detectAllModelNames($extractPath);
+            $isMultiModelPack = count($detectedModelNames) > 1;
 
-                $finalName = $isMultiModelPack ? ucfirst($detectedModelName) : $modelName;
-
-                $models[] = [
-                    'detected_name' => $detectedModelName,
-                    'display_name' => $finalName,
-                    'category' => 'weapon',
-                    'main_file' => $mainMd3,
-                    'available_skins' => $availableSkins,
-                    'file_path' => 'models/extracted/' . $slug . '/models/weapons2/' . $detectedModelName,
-                    'viewer_path' => $mainMd3
-                        ? '/storage/models/extracted/' . $slug . '/models/weapons2/' . $detectedModelName . '/' . $mainMd3
-                        : null,
-                ];
-            } else {
+            foreach ($detectedModelNames as $detectedModelName) {
                 $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
                 $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
                 $availableSkins = $metadata['available_skins'] ?? ['default'];
@@ -353,6 +329,14 @@ class ModelsController extends Controller
             }
         }
 
+        if (empty($models)) {
+            $this->deleteDirectory($extractPath);
+            $errorMsg = $request->category === 'weapon'
+                ? 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.'
+                : 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.';
+            return response()->json(['success' => false, 'message' => $errorMsg], 422);
+        }
+
         // Store temp upload metadata in session for step 2
         $tempData = [
             'slug' => $slug,
@@ -360,6 +344,7 @@ class ModelsController extends Controller
             'description' => $request->description,
             'category' => $request->category,
             'is_nsfw' => $request->is_nsfw ?? false,
+            'author' => $request->author ?: null,
             'pk3_path' => $extractResult['pk3_path'],
             'extract_path' => $extractPath,
             'models' => $models,
@@ -435,7 +420,15 @@ class ModelsController extends Controller
 
         foreach ($detectedModels as $idx => $modelInfo) {
             if ($category === 'weapon') {
-                $metadata = $this->parseWeaponMetadata($extractPath, $modelInfo['detected_name']);
+                // For multi-PK3 weapons, use the per-PK3 subdirectory as search path
+                $weaponSearchPath = $extractPath;
+                if (!empty($modelInfo['pk3_subdir'])) {
+                    $weaponSearchPath = $extractPath . '/' . $modelInfo['pk3_subdir'];
+                }
+                $metadata = $this->parseWeaponMetadata($weaponSearchPath, $modelInfo['detected_name']);
+
+                // Use per-model pk3_path if available (multi-PK3), otherwise global
+                $modelPk3Path = $modelInfo['pk3_path'] ?? $pk3Path;
 
                 $model = PlayerModel::create([
                     'user_id' => $userId,
@@ -445,10 +438,10 @@ class ModelsController extends Controller
                     'model_type' => 'complete',
                     'description' => $tempData['description'],
                     'category' => 'weapon',
-                    'author' => $metadata['author'] ?? null,
+                    'author' => $tempData['author'] ?? $metadata['author'] ?? null,
                     'author_email' => $metadata['author_email'] ?? null,
                     'file_path' => $modelInfo['file_path'],
-                    'zip_path' => $pk3Path,
+                    'zip_path' => $modelPk3Path,
                     'poly_count' => $metadata['poly_count'] ?? null,
                     'vert_count' => $metadata['vert_count'] ?? null,
                     'has_sounds' => false,
@@ -473,7 +466,7 @@ class ModelsController extends Controller
                     'model_type' => $modelType,
                     'description' => $tempData['description'],
                     'category' => $category,
-                    'author' => $metadata['author'] ?? null,
+                    'author' => $tempData['author'] ?? $metadata['author'] ?? null,
                     'author_email' => $metadata['author_email'] ?? null,
                     'file_path' => $modelInfo['file_path'],
                     'zip_path' => $pk3Path,
@@ -594,24 +587,21 @@ class ModelsController extends Controller
         }
 
         // Check if this is a ZIP containing PK3 files
-        $containsPK3 = false;
-        $pk3FileName = null;
+        $pk3FileNames = [];
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $filename = $zip->getNameIndex($i);
             $basename = basename($filename);
-            $ext = pathinfo($basename, PATHINFO_EXTENSION);
+            $ext = strtolower(pathinfo($basename, PATHINFO_EXTENSION));
             $hasSlash = strpos($filename, '/');
 
             if ($ext === 'pk3' && $hasSlash === false) {
-                $containsPK3 = true;
-                $pk3FileName = $filename;
-                break;
+                $pk3FileNames[] = $filename;
             }
         }
 
-        if ($containsPK3 && $pk3FileName) {
-            // ZIP containing a PK3 file
+        if (!empty($pk3FileNames)) {
+            // ZIP containing PK3 file(s)
             $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
             if (!file_exists($tempExtract)) {
                 mkdir($tempExtract, 0755, true);
@@ -620,18 +610,48 @@ class ModelsController extends Controller
             $zip->extractTo($tempExtract);
             $zip->close();
 
-            $pk3File = $tempExtract . '/' . $pk3FileName;
+            if (count($pk3FileNames) === 1) {
+                // Single PK3 in ZIP — extract directly
+                $pk3File = $tempExtract . '/' . $pk3FileNames[0];
+                if (file_exists($pk3File)) {
+                    $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                    copy($pk3File, storage_path('app/' . $pk3PathForDownload));
 
-            if (file_exists($pk3File)) {
-                $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
-                copy($pk3File, storage_path('app/' . $pk3PathForDownload));
-
-                $pk3Zip = new ZipArchive;
-                if ($pk3Zip->open($pk3File) === TRUE) {
-                    $pk3Zip->extractTo($extractPath);
-                    $pk3Zip->close();
+                    $pk3Zip = new ZipArchive;
+                    if ($pk3Zip->open($pk3File) === TRUE) {
+                        $pk3Zip->extractTo($extractPath);
+                        $pk3Zip->close();
+                    }
                     $this->generateFileManifest($extractPath);
                 }
+            } else {
+                // Multiple PK3s — extract each into its own subdirectory
+                // so they don't overwrite each other's files
+                foreach ($pk3FileNames as $idx => $pk3FileName) {
+                    $pk3File = $tempExtract . '/' . $pk3FileName;
+                    if (!file_exists($pk3File)) continue;
+
+                    $pk3Slug = pathinfo($pk3FileName, PATHINFO_FILENAME);
+                    $subExtractPath = $extractPath . '/__pk3_' . $idx . '_' . $pk3Slug;
+                    if (!file_exists($subExtractPath)) {
+                        mkdir($subExtractPath, 0755, true);
+                    }
+
+                    // Store each PK3 separately for downloads
+                    $pk3StorePath = 'models/pk3s/' . $slug . '_' . $idx . '.pk3';
+                    copy($pk3File, storage_path('app/' . $pk3StorePath));
+
+                    $pk3Zip = new ZipArchive;
+                    if ($pk3Zip->open($pk3File) === TRUE) {
+                        $pk3Zip->extractTo($subExtractPath);
+                        $pk3Zip->close();
+                    }
+                    $this->mergeCaseDuplicateDirs($subExtractPath);
+                    $this->generateFileManifest($subExtractPath);
+                }
+
+                // Use first PK3 path as default (will be overridden per-model)
+                $pk3PathForDownload = 'models/pk3s/' . $slug . '_0.pk3';
             }
 
             $this->deleteDirectory($tempExtract);
@@ -803,38 +823,21 @@ class ModelsController extends Controller
         // Check if uploaded file is ZIP or PK3
         if ($zip->open($tempFullPath) === TRUE) {
             // Check if this is a ZIP containing PK3 files
-            $containsPK3 = false;
-            $pk3FileName = null;
-
-            \Log::info('Analyzing uploaded file:', ['numFiles' => $zip->numFiles]);
+            $pk3FileNames = [];
 
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $filename = $zip->getNameIndex($i);
                 $basename = basename($filename);
-                $ext = pathinfo($basename, PATHINFO_EXTENSION);
+                $ext = strtolower(pathinfo($basename, PATHINFO_EXTENSION));
                 $hasSlash = strpos($filename, '/');
 
-                \Log::info('File in archive:', [
-                    'filename' => $filename,
-                    'basename' => $basename,
-                    'ext' => $ext,
-                    'hasSlash' => $hasSlash
-                ]);
-
-                // Check if this is a PK3 file (not in a subdirectory)
                 if ($ext === 'pk3' && $hasSlash === false) {
-                    $containsPK3 = true;
-                    $pk3FileName = $filename;
-                    \Log::info('Found PK3 file:', ['filename' => $pk3FileName]);
-                    break;
+                    $pk3FileNames[] = $filename;
                 }
             }
 
-            \Log::info('After scan:', ['containsPK3' => $containsPK3, 'pk3FileName' => $pk3FileName]);
-
-            if ($containsPK3 && $pk3FileName) {
-                // This is a ZIP containing a PK3 file
-                // Extract ZIP to temp location to find PK3
+            if (!empty($pk3FileNames)) {
+                // ZIP containing PK3 file(s) — extract all into shared directory
                 $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
                 if (!file_exists($tempExtract)) {
                     mkdir($tempExtract, 0755, true);
@@ -843,30 +846,22 @@ class ModelsController extends Controller
                 $zip->extractTo($tempExtract);
                 $zip->close();
 
-                // Find the PK3 file
-                $pk3File = $tempExtract . '/' . $pk3FileName;
-
-                if (file_exists($pk3File)) {
-                    $pk3Found = true;
-
-                    // Store the PK3 in PRIVATE storage for downloads
-                    $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
-                    copy($pk3File, storage_path('app/' . $pk3PathForDownload));
-
-                    // Extract the PK3 contents to PUBLIC storage
-                    $pk3Zip = new ZipArchive;
-                    if ($pk3Zip->open($pk3File) === TRUE) {
-                        $pk3Zip->extractTo($extractPath);
-                        $pk3Zip->close();
-                        $this->generateFileManifest($extractPath);
-                    } else {
-                        \Log::error('Failed to open PK3 file for extraction: ' . $pk3File);
+                foreach ($pk3FileNames as $pk3FileName) {
+                    $pk3File = $tempExtract . '/' . $pk3FileName;
+                    if (file_exists($pk3File)) {
+                        $pk3Zip = new ZipArchive;
+                        if ($pk3Zip->open($pk3File) === TRUE) {
+                            $pk3Zip->extractTo($extractPath);
+                            $pk3Zip->close();
+                        }
                     }
-                } else {
-                    \Log::error('PK3 file not found after extraction: ' . $pk3File);
                 }
 
-                // Clean up temp extraction
+                $pk3Found = true;
+                $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                copy($tempFullPath, storage_path('app/' . $pk3PathForDownload));
+                $this->generateFileManifest($extractPath);
+
                 $this->deleteDirectory($tempExtract);
             } else {
                 // This is a direct PK3 file - check if it has the proper structure
@@ -1522,6 +1517,91 @@ class ModelsController extends Controller
     }
 
     /**
+     * Build weapon model info array for tempUpload detection.
+     * Works for both single-PK3 and multi-PK3 weapon uploads.
+     */
+    private function buildWeaponModelInfo($searchPath, $weaponName, $slug, $pk3SubDir, $pk3DisplayName, $pk3Path, $isMultiPk3)
+    {
+        $weaponsBase = $this->findWeaponsPath($searchPath);
+        $weaponPath = $weaponsBase ? $weaponsBase . '/' . $weaponName : $searchPath . '/models/weapons2/' . $weaponName;
+        $md3Files = glob($weaponPath . '/*.{md3,MD3}', GLOB_BRACE);
+        $mainMd3 = null;
+
+        if (!empty($md3Files)) {
+            // Try exact match first (e.g., gauntlet.md3 for gauntlet/)
+            foreach ($md3Files as $md3File) {
+                $basename = strtolower(basename($md3File, '.md3'));
+                if ($basename === strtolower($weaponName)) {
+                    $mainMd3 = basename($md3File);
+                    break;
+                }
+            }
+            // Then try excluding known suffixes
+            if (!$mainMd3) {
+                foreach ($md3Files as $md3File) {
+                    $basename = strtolower(basename($md3File, '.md3'));
+                    if (!preg_match('/_(hand|flash|barrel|[0-9])$/i', $basename)) {
+                        $mainMd3 = basename($md3File);
+                        break;
+                    }
+                }
+            }
+            if (!$mainMd3) {
+                $mainMd3 = basename($md3Files[0]);
+            }
+        }
+
+        $skinFiles = glob($weaponPath . '/*.skin');
+        $availableSkins = [];
+        foreach ($skinFiles as $skinFile) {
+            $skinBasename = basename($skinFile, '.skin');
+            if (str_starts_with($skinBasename, $weaponName . '_')) {
+                $skinName = str_replace($weaponName . '_', '', $skinBasename);
+            } else {
+                $skinName = $skinBasename;
+            }
+            if (!in_array($skinName, $availableSkins)) {
+                $availableSkins[] = $skinName;
+            }
+        }
+        if (empty($availableSkins)) {
+            $availableSkins = ['default'];
+        }
+
+        // Build paths: for multi-PK3, include the __pk3_* subdir in the path
+        if ($pk3SubDir) {
+            $relFilePath = 'models/extracted/' . $slug . '/' . $pk3SubDir . '/models/weapons2/' . $weaponName;
+            $viewerPath = $mainMd3
+                ? '/storage/models/extracted/' . $slug . '/' . $pk3SubDir . '/models/weapons2/' . $weaponName . '/' . $mainMd3
+                : null;
+        } else {
+            $relFilePath = 'models/extracted/' . $slug . '/models/weapons2/' . $weaponName;
+            $viewerPath = $mainMd3
+                ? '/storage/models/extracted/' . $slug . '/models/weapons2/' . $weaponName . '/' . $mainMd3
+                : null;
+        }
+
+        // Display name: use PK3 filename for multi-PK3, weapon dir name for multi-weapon single PK3
+        if ($isMultiPk3 && $pk3DisplayName) {
+            $finalName = str_replace(['-', '_'], ' ', $pk3DisplayName);
+        } else {
+            $finalName = ucfirst($weaponName);
+        }
+
+        return [
+            'detected_name' => $weaponName,
+            'display_name' => $finalName,
+            'category' => 'weapon',
+            'main_file' => $mainMd3,
+            'available_skins' => $availableSkins,
+            'file_path' => $relFilePath,
+            'viewer_path' => $viewerPath,
+            'pk3_path' => $pk3Path,
+            'pk3_subdir' => $pk3SubDir,
+        ];
+    }
+
+    /**
      * Check if model directory contains MD3 files (complete model)
      * Returns true if has head.md3, upper.md3, lower.md3
      * Returns false if only has skins/textures (skin-only upload)
@@ -1684,9 +1764,10 @@ class ModelsController extends Controller
             ]);
         }
 
-        // For admins, include sibling models (same PK3) for delete confirmation
+        // For admins or owners of pending models, include sibling models for delete confirmation
         $siblingModels = [];
-        if ($isOwnerOrAdmin && Auth::user()->admin && $model->zip_path) {
+        $canDelete = $isOwnerOrAdmin && (Auth::user()->admin || $model->approval_status === 'pending');
+        if ($canDelete && $model->zip_path) {
             $siblingModels = PlayerModel::where('zip_path', $model->zip_path)
                 ->where('id', '!=', $model->id)
                 ->with('user:id,name')
@@ -1721,15 +1802,27 @@ class ModelsController extends Controller
     }
 
     /**
-     * Delete a model and all sibling models sharing the same PK3 (admin only)
+     * Delete a model and all sibling models sharing the same PK3.
+     * Admin can delete any model. Owner can only delete pending (not yet approved) models.
      */
     public function destroyModel($id)
     {
-        if (!Auth::check() || !Auth::user()->admin) {
+        if (!Auth::check()) {
             abort(403);
         }
 
         $model = PlayerModel::findOrFail($id);
+        $isAdmin = Auth::user()->admin;
+        $isOwner = Auth::id() === $model->user_id;
+
+        if (!$isAdmin && !$isOwner) {
+            abort(403);
+        }
+
+        // Owners can only delete pending models
+        if ($isOwner && !$isAdmin && $model->approval_status !== 'pending') {
+            abort(403, 'You can only delete models that are pending approval.');
+        }
 
         // Find all models sharing the same PK3
         $modelsToDelete = $model->zip_path

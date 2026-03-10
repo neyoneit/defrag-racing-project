@@ -1,8 +1,10 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, nextTick, onBeforeUnmount } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
+
+const page = usePage();
 
 // Step management
 const step = ref(1); // 1 = upload form, 2 = GIF generation, 3 = done
@@ -12,6 +14,8 @@ const formName = ref('');
 const formDescription = ref('');
 const formCategory = ref('player');
 const formIsNsfw = ref(false);
+const formAuthor = ref('');
+const formIsAuthor = ref(true);
 const formFile = ref(null);
 const fileInput = ref(null);
 const selectedFileName = ref('');
@@ -54,6 +58,7 @@ async function submitUpload() {
     formData.append('description', formDescription.value || '');
     formData.append('category', formCategory.value);
     formData.append('is_nsfw', formIsNsfw.value ? '1' : '0');
+    formData.append('author', formIsAuthor.value ? (page.props.auth?.user?.name || '') : formAuthor.value);
     formData.append('model_file', formFile.value);
 
     try {
@@ -147,8 +152,8 @@ async function startGifGeneration() {
 function waitForViewerLoaded() {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-            reject(new Error('Model load timed out (20s)'));
-        }, 20000);
+            reject(new Error('Model load timed out (60s)'));
+        }, 60000);
 
         const interval = setInterval(() => {
             if (viewerError.value) {
@@ -363,6 +368,24 @@ function currentViewerModel() {
                         <p class="mt-1 text-xs text-gray-500 ml-8">Content will be blurred and require age confirmation to view</p>
                     </div>
 
+                    <!-- Author -->
+                    <div>
+                        <label class="block text-sm font-bold text-white mb-2">Author</label>
+                        <label class="flex items-center gap-3 cursor-pointer group mb-3">
+                            <input
+                                type="checkbox"
+                                v-model="formIsAuthor"
+                                class="w-5 h-5 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer">
+                            <span class="text-sm text-white group-hover:text-blue-400 transition-colors">I am the author</span>
+                        </label>
+                        <input
+                            v-if="!formIsAuthor"
+                            v-model="formAuthor"
+                            type="text"
+                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                            placeholder="Original author name">
+                    </div>
+
                     <!-- Description -->
                     <div>
                         <label for="description" class="block text-sm font-bold text-white mb-2">
@@ -557,6 +580,7 @@ function currentViewerModel() {
                 <div v-if="currentModelIndex >= 0 && currentViewerModel()?.viewer_path" class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 overflow-hidden shadow-2xl mx-auto" style="width: 800px; max-width: 100%;">
                     <div class="relative" style="width: 800px; height: 800px; max-width: 100%;">
                         <ModelViewer
+                            :key="'viewer-' + currentModelIndex"
                             ref="viewer3D"
                             :model-path="currentViewerModel().viewer_path"
                             :skin-path="currentViewerModel().skin_path || null"
@@ -612,11 +636,11 @@ function currentViewerModel() {
                 <h2 class="text-2xl font-black text-white mb-2">Upload Complete!</h2>
                 <p class="text-gray-400 mb-6">{{ successMessage }}</p>
                 <div class="flex gap-4 justify-center">
-                    <a
-                        :href="redirectUrl"
+                    <Link
+                        :href="route('models.index', { my_uploads: 1, approval_status: 'pending' })"
                         class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg">
-                        View Model
-                    </a>
+                        Show My Uploads
+                    </Link>
                     <Link
                         :href="route('models.create')"
                         class="px-6 py-3 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all">
