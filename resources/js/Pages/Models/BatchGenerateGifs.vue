@@ -456,44 +456,197 @@ async function generateHeadIcon() {
     return headIconBlob;
 }
 
+// --- STILL THUMBNAIL (300x300 PNG from idle pose middle frame) ---
+async function generateStillThumbnail() {
+    const { viewer, renderer, scene, camera } = getViewerComponents();
+    const canvas = renderer.domElement;
+    const controls = viewer.getControls();
+    const originalPosition = camera.position.clone();
+    const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
+
+    const modelObj = viewer.getModel();
+    const pivot = viewer.getModelCenter();
+    const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+    const dx = originalPosition.x - target.x;
+    const dy = originalPosition.y - target.y;
+    const dz = originalPosition.z - target.z;
+    const radius = Math.sqrt(dx * dx + dz * dz);
+
+    // Front view
+    camera.position.x = target.x;
+    camera.position.z = target.z + radius;
+    camera.position.y = target.y + dy * 0.5;
+    camera.lookAt(target.x, target.y, target.z);
+    camera.updateMatrixWorld();
+
+    // Advance to middle of idle animation if available
+    const animManager = viewer.getAnimationManager?.();
+    if (animManager) {
+        const anims = viewer.getAvailableAnimations?.();
+        const legsData = anims?.legs?.['LEGS_IDLE'] || anims?.both?.['LEGS_IDLE'];
+        const torsoData = anims?.torso?.['TORSO_STAND'] || anims?.both?.['TORSO_STAND'];
+        if (legsData || torsoData) {
+            animManager.stop();
+            if (legsData) animManager.playLegsAnimation('LEGS_IDLE');
+            if (torsoData) animManager.playTorsoAnimation('TORSO_STAND');
+            animManager.playing = true;
+            animManager.legsTime = 0; animManager.torsoTime = 0;
+            animManager.legsFrame = 0; animManager.torsoFrame = 0;
+            const midFrames = Math.floor((legsData?.numFrames || torsoData?.numFrames || 1) / 2);
+            const fps = legsData?.fps || torsoData?.fps || 15;
+            for (let i = 0; i < midFrames; i++) {
+                animManager.update(1 / fps);
+            }
+        }
+    }
+
+    scene.updateMatrixWorld(true);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    renderer.render(scene, camera);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    const stillCanvas = document.createElement('canvas');
+    stillCanvas.width = 300; stillCanvas.height = 300;
+    const stillCtx = stillCanvas.getContext('2d');
+    stillCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 300, 300);
+    const blob = await new Promise(resolve => stillCanvas.toBlob(resolve, 'image/png'));
+    stillCanvas.width = 0; stillCanvas.height = 0;
+
+    if (animManager) {
+        animManager.stop();
+        animManager.resetToIdle?.();
+    }
+
+    // Restore camera
+    camera.position.copy(originalPosition);
+    camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+    if (controls) { controls.target.copy(originalTarget); controls.update(); }
+
+    return blob;
+}
+
 // --- Main: generate all GIF variants for a model ---
-async function generateAllGifsForModel() {
+async function generateAllGifsForModel(model) {
+    const isWeapon = model?.category === 'weapon';
+
     // 1. Rotate GIF
     currentStatus.value = 'Generating rotate GIF...';
     const rotateBlob = await generateRotateGif();
 
-    // 2. Idle GIF (LEGS_IDLE + TORSO_STAND)
+    // 2. Idle GIF - for weapons: static front view snapshot as GIF, for players: LEGS_IDLE + TORSO_STAND
     let idleBlob = null;
-    try {
-        currentStatus.value = 'Generating idle GIF...';
-        idleBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_STAND', 'Idle', true);
-    } catch (e) {
-        console.warn('Idle GIF failed (no animation?):', e.message);
+    if (isWeapon) {
+        try {
+            currentStatus.value = 'Generating idle GIF (static snapshot)...';
+            idleBlob = await generateWeaponIdleGif();
+        } catch (e) {
+            console.warn('Weapon idle GIF failed:', e.message);
+        }
+    } else {
+        try {
+            currentStatus.value = 'Generating idle GIF...';
+            idleBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_STAND', 'Idle', true);
+        } catch (e) {
+            console.warn('Idle GIF failed (no animation?):', e.message);
+        }
     }
 
-    // 3. Gesture GIF (LEGS_IDLE + TORSO_GESTURE)
+    // 3. Gesture GIF + 4. Head icon (player models only)
     let gestureBlob = null;
-    try {
-        currentStatus.value = 'Generating gesture GIF...';
-        gestureBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_GESTURE', 'Gesture');
-    } catch (e) {
-        console.warn('Gesture GIF failed (no animation?):', e.message);
+    let headIconBlob = null;
+    if (!isWeapon) {
+        try {
+            currentStatus.value = 'Generating gesture GIF...';
+            gestureBlob = await generateAnimationGif('LEGS_IDLE', 'TORSO_GESTURE', 'Gesture');
+        } catch (e) {
+            console.warn('Gesture GIF failed (no animation?):', e.message);
+        }
+
+        currentStatus.value = 'Generating head icon...';
+        headIconBlob = await generateHeadIcon();
     }
 
-    // 4. Head icon
-    currentStatus.value = 'Generating head icon...';
-    const headIconBlob = await generateHeadIcon();
+    // 5. Still thumbnail (PNG from idle pose middle frame)
+    let thumbnailBlob = null;
+    try {
+        currentStatus.value = 'Generating still thumbnail...';
+        thumbnailBlob = await generateStillThumbnail();
+    } catch (e) {
+        console.warn('Still thumbnail failed:', e.message);
+    }
 
-    return { rotateBlob, idleBlob, gestureBlob, headIconBlob };
+    return { rotateBlob, idleBlob, gestureBlob, headIconBlob, thumbnailBlob };
+}
+
+// --- WEAPON IDLE GIF: front view with shader animations (~3s at 15fps) ---
+async function generateWeaponIdleGif() {
+    const { viewer, renderer, scene, camera } = getViewerComponents();
+    const canvas = renderer.domElement;
+    const gifWidth = 300, gifHeight = 300;
+
+    const controls = viewer.getControls();
+    const originalPosition = camera.position.clone();
+    const originalTarget = controls?.target ? controls.target.clone() : { x: 0, y: 0, z: 0 };
+
+    const modelObj = viewer.getModel();
+    const pivot = viewer.getModelCenter();
+    const target = { x: modelObj?.position.x || 0, y: pivot.y, z: modelObj?.position.z || 0 };
+
+    const dx = originalPosition.x - target.x;
+    const dz = originalPosition.z - target.z;
+    const radius = Math.sqrt(dx * dx + dz * dz);
+
+    // Front view
+    camera.position.x = target.x;
+    camera.position.z = target.z + radius;
+    camera.position.y = target.y + (originalPosition.y - target.y) * 0.5;
+    camera.lookAt(target.x, target.y, target.z);
+    camera.updateMatrixWorld();
+    scene.updateMatrixWorld(true);
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = gifWidth; tempCanvas.height = gifHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    const numFrames = 45; // ~3s at 15fps
+    const fps = 15;
+    const frameDelay = Math.round(1000 / fps);
+    const dt = 1 / fps;
+    let shaderTime = 0;
+
+    const gif = await createGifEncoder(gifWidth, gifHeight);
+    for (let i = 0; i < numFrames; i++) {
+        currentStatus.value = `[Weapon Idle] Frame ${i + 1}/${numFrames}`;
+        shaderTime += dt;
+        viewer.updateShaderAnimations?.(shaderTime);
+        scene.updateMatrixWorld(true);
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        captureFrame(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+        gif.addFrame(tempCanvas, { copy: true, delay: frameDelay });
+        await new Promise(resolve => setTimeout(resolve, 30));
+    }
+
+    // Restore camera
+    camera.position.copy(originalPosition);
+    camera.lookAt(originalTarget.x, originalTarget.y, originalTarget.z);
+    if (controls) { controls.target.copy(originalTarget); controls.update(); }
+
+    currentStatus.value = 'Encoding weapon idle GIF...';
+    const blob = await finalizeGif(gif);
+    tempCanvas.width = 0; tempCanvas.height = 0;
+    return blob;
 }
 
 // Upload all GIF variants for a model
-async function uploadThumbnails(modelId, { rotateBlob, idleBlob, gestureBlob, headIconBlob }) {
+async function uploadThumbnails(modelId, { rotateBlob, idleBlob, gestureBlob, headIconBlob, thumbnailBlob }) {
     const formData = new FormData();
     if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${modelId}_rotate.gif`);
     if (idleBlob) formData.append('idle_gif', idleBlob, `model_${modelId}_idle.gif`);
     if (gestureBlob) formData.append('gesture_gif', gestureBlob, `model_${modelId}_gesture.gif`);
     if (headIconBlob) formData.append('head_icon', headIconBlob, `model_${modelId}_head.png`);
+    if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, `model_${modelId}_still.png`);
 
     const response = await fetch(route('models.saveThumbnail', modelId), {
         method: 'POST',
@@ -660,7 +813,7 @@ async function startBatch(startFrom = 0) {
 
             // Generate all GIF variants (rotate, idle, gesture) + head icon
             currentStatus.value = 'Generating GIFs...';
-            const allGifs = await generateAllGifsForModel();
+            const allGifs = await generateAllGifsForModel(modelData);
 
             // Upload all variants
             currentStatus.value = 'Uploading...';
@@ -672,13 +825,15 @@ async function startBatch(startFrom = 0) {
             if (allGifs.idleBlob) parts.push('idle');
             if (allGifs.gestureBlob) parts.push('gesture');
             if (allGifs.headIconBlob) parts.push('head');
+            if (allGifs.thumbnailBlob) parts.push('still');
+            const isWeapon = modelData?.category === 'weapon';
             const missing = [];
             if (!allGifs.rotateBlob) missing.push('rotate');
             if (!allGifs.idleBlob) missing.push('idle');
-            if (!allGifs.gestureBlob) missing.push('gesture');
-
-            // Only mark as completed if all 3 GIFs were generated
-            const allGenerated = allGifs.rotateBlob && allGifs.idleBlob && allGifs.gestureBlob;
+            if (!isWeapon && !allGifs.gestureBlob) missing.push('gesture');
+            const allGenerated = isWeapon
+                ? (allGifs.rotateBlob && allGifs.idleBlob)
+                : (allGifs.rotateBlob && allGifs.idleBlob && allGifs.gestureBlob);
             if (allGenerated) {
                 markCompleted(modelId);
                 completedCount.value = getCompletedIds().size;
@@ -727,12 +882,16 @@ function stopBatch() {
 async function startBatchForce() {
     forceMode.value = true;
     await startBatch(0);
-    forceMode.value = false;
 }
 
 // Quick-fill helpers
 function fillAllWithoutGif() {
-    const ids = props.models.filter(m => !m.idle_gif || !m.rotate_gif || !m.gesture_gif).map(m => m.id);
+    const ids = props.models.filter(m => {
+        if (!m.idle_gif || !m.rotate_gif) return true;
+        // Weapon models don't need gesture GIF
+        if (m.category !== 'weapon' && !m.gesture_gif) return true;
+        return false;
+    }).map(m => m.id);
     // Clear completed status for these IDs so they don't get skipped as "Already done"
     const completed = getCompletedIds();
     let changed = false;
@@ -923,7 +1082,7 @@ function stopThumbGeneration() {
                         :disabled="isProcessing"
                         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 rounded text-sm"
                     >
-                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif || !m.rotate_gif || !m.gesture_gif).length }})
+                        Fill: Missing GIFs ({{ models.filter(m => !m.idle_gif || !m.rotate_gif || (m.category !== 'weapon' && !m.gesture_gif)).length }})
                     </button>
                     <button
                         @click="fillAll"
@@ -1005,8 +1164,8 @@ function stopThumbGeneration() {
                             :show-grid="false"
                             :enable-sounds="false"
                             :thumbnail-mode="true"
-                            :base-model-name="currentModel.model_type !== 'complete' ? currentModel.base_model : null"
-                            :base-model-file-path="getBaseModelData(currentModel)?.file_path || null"
+                            :base-model-name="currentModel.base_model"
+                            :base-model-file-path="getBaseModelData(currentModel)?.file_path || currentModel.base_model_file_path || null"
                             @loaded="onViewerLoaded"
                             @error="onViewerError"
                         />

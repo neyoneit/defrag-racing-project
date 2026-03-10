@@ -157,8 +157,9 @@ function setPreviewMode(mode) {
 }
 function getPreviewGif(model) {
     if (previewMode.value === 'rotate') return model.rotate_gif || model.thumbnail;
-    if (previewMode.value === 'gesture') return model.gesture_gif || model.idle_gif || model.thumbnail;
-    // default: idle
+    if (previewMode.value === 'gesture' && model.category !== 'weapon') return model.gesture_gif || model.idle_gif || model.thumbnail;
+    if (previewMode.value === 'preview') return model.thumbnail || model.idle_gif;
+    // default: idle (also fallback for gesture on weapons)
     return model.idle_gif || model.thumbnail;
 }
 
@@ -351,7 +352,7 @@ const getModelTypeBadgeClass = (type) => {
                             </h3>
                             <div class="space-y-1">
                                 <button
-                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, { value: 'gesture', label: 'Gesture' }]"
+                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category !== 'weapon' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumbnail' }]"
                                     :key="mode.value"
                                     @click="setPreviewMode(mode.value)"
                                     :class="[

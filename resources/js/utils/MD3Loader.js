@@ -4,7 +4,7 @@ import { Q3ShaderParser } from './Q3ShaderParser.js';
 import { Q3ShaderMaterialSystem } from './Q3ShaderMaterial.js';
 
 // Set to true to enable verbose console logging for debugging model loading
-const DEBUG = true;
+const DEBUG = false;
 
 /**
  * MD3 (Quake 3 Model) Loader for Three.js
@@ -1771,7 +1771,7 @@ export class MD3Loader {
                     pk3Lower.userData.source = 'pk3';
 
                     // Find and preserve upper/head before replacing lower
-                    const oldLower = playerGroup.userData.lower;
+                    const oldLower = playerGroup.children.find(c => c.name === 'lower');
                     const oldUpper = oldLower?.children.find(c => c.name === 'upper');
 
                     // Remove old lower and add new one
@@ -2000,6 +2000,7 @@ export class MD3Loader {
                         const barrel = await this.load(barrelUrl, null, textureBaseUrl);
                         barrel.name = 'barrel';
                         barrel.userData.source = 'baseq3';
+                        barrel.userData.tagForward = barrelTag.axis[0].clone().normalize();
                         this.attachToTag(barrel, barrelTag);
                         main.add(barrel);
                         DEBUG && console.log(`✅ Attached barrel to ${weaponName}`);
@@ -2082,6 +2083,7 @@ export class MD3Loader {
                                 const pk3Barrel = await this.load(pk3BarrelUrl, null, baseUrl);
                                 pk3Barrel.name = 'barrel';
                                 pk3Barrel.userData.source = 'pk3';
+                                pk3Barrel.userData.tagForward = pk3BarrelTag.axis[0].clone().normalize();
                                 this.attachToTag(pk3Barrel, pk3BarrelTag);
                                 pk3Main.add(pk3Barrel);
                                 DEBUG && console.log(`✅ Attached pk3 barrel`);
@@ -2610,16 +2612,12 @@ export class MD3Loader {
                 this.animation.firing = true;
                 this.animation.muzzleFlashTime = Date.now();
 
-                // Only spin barrel for weapons that have spinning barrels (chaingun/vulcan/minigun)
-                // Machinegun, plasmagun, and other weapons don't have spinning barrels
-                const lowerName = this.animation.weaponName.toLowerCase();
-                const hasSpinningBarrel = lowerName.includes('chain') ||
-                                         lowerName.includes('vulcan') ||
-                                         lowerName.includes('minigun');
+                // Spin barrel for any weapon that has a barrel model (Q3 engine behavior)
+                const hasBarrelModel = !!weaponGroup?.getObjectByName('barrel');
 
-                DEBUG && console.log(`🔫 Weapon: ${this.animation.weaponName}, hasSpinningBarrel: ${hasSpinningBarrel}`);
+                DEBUG && console.log(`🔫 Weapon: ${this.animation.weaponName}, hasBarrelModel: ${hasBarrelModel}`);
 
-                if (hasSpinningBarrel) {
+                if (hasBarrelModel) {
                     this.animation.barrelSpinning = true;
                     this.animation.barrelTime = Date.now();
                     DEBUG && console.log('🔄 Barrel spinning started');
@@ -2629,8 +2627,8 @@ export class MD3Loader {
                 const flash = weaponGroup.getObjectByName('flash');
                 if (flash) {
                     flash.visible = true;
-                    // Random rotation for flash
-                    flash.rotation.z = Math.random() * Math.PI * 2;
+                    // Q3: angles[ROLL] = crandom() * 10 — subtle ±10° roll variation
+                    flash.rotation.z = (Math.random() * 2 - 1) * 10 * (Math.PI / 180);
                 }
 
                 // Spawn projectile
@@ -2949,53 +2947,67 @@ export class MD3Loader {
                 const MUZZLE_FLASH_TIME = 20; // milliseconds
                 const SPIN_SPEED = 0.9; // degrees per millisecond
                 const COAST_TIME = 1000; // milliseconds
+                const lowerName = this.animation.weaponName.toLowerCase();
 
                 // Update muzzle flash visibility
+                // Q3: gauntlet & lightning gun have continuous flash while firing (EF_FIRING),
+                // other weapons use impulse flash (brief MUZZLE_FLASH_TIME burst)
+                const isContinuousFlash = lowerName.includes('gauntlet') || lowerName.includes('/gt')
+                    || lowerName.includes('lightning') || lowerName.includes('lg');
+
                 if (this.animation.muzzleFlashTime > 0) {
-                    if (now - this.animation.muzzleFlashTime > MUZZLE_FLASH_TIME) {
-                        // Hide flash after duration
-                        const flash = weaponGroup.getObjectByName('flash');
+                    const flash = weaponGroup.getObjectByName('flash');
+                    if (isContinuousFlash && this.animation.firing) {
+                        // Continuous flash: stay visible, update roll each frame
+                        if (flash) {
+                            flash.visible = true;
+                            flash.rotation.z = (Math.random() * 2 - 1) * 10 * (Math.PI / 180);
+                        }
+                    } else if (now - this.animation.muzzleFlashTime > MUZZLE_FLASH_TIME) {
+                        // Impulse flash: hide after duration
                         if (flash) {
                             flash.visible = false;
                         }
                         this.animation.muzzleFlashTime = 0;
-                        // DON'T set firing = false here! That's controlled by stopFiring() method
-                        // The firing state needs to persist while the button is held down
                     }
                 }
 
                 // Update barrel/blade spinning (for weapons with spinning parts)
-                const lowerName = this.animation.weaponName.toLowerCase();
-                const hasSpinningBarrel = lowerName.includes('chain') ||
-                                         lowerName.includes('vulcan') ||
-                                         lowerName.includes('minigun');
+                const hasBarrel = !!weaponGroup.getObjectByName('barrel');
                 const hasSpinningBlade = lowerName.includes('gauntlet') || lowerName.includes('gt');
 
-                if (hasSpinningBarrel) {
+                if (hasBarrel) {
                     const barrel = weaponGroup.getObjectByName('barrel');
                     if (barrel) {
-                        const delta = now - this.animation.barrelTime;
-                        let angle;
+                        if (this.animation.barrelAngle !== 0 || this.animation.barrelSpinning) {
+                            const delta = now - this.animation.barrelTime;
+                            let angle;
 
-                        if (this.animation.barrelSpinning) {
-                            // Spinning
-                            angle = this.animation.barrelAngle + delta * SPIN_SPEED;
-                        } else {
-                            // Coasting to a stop
-                            const coastDelta = Math.min(delta, COAST_TIME);
-                            const speed = 0.5 * (SPIN_SPEED + (COAST_TIME - coastDelta) / COAST_TIME);
-                            angle = this.animation.barrelAngle + coastDelta * speed;
-                        }
+                            if (this.animation.barrelSpinning) {
+                                // Active spinning - update state each frame
+                                angle = this.animation.barrelAngle + delta * SPIN_SPEED;
+                                this.animation.barrelAngle = angle;
+                                this.animation.barrelTime = now;
+                            } else {
+                                // Coasting - do NOT update barrelAngle/barrelTime (Q3 only updates on state transitions)
+                                if (delta < COAST_TIME) {
+                                    const speed = 0.5 * (SPIN_SPEED + (COAST_TIME - delta) / COAST_TIME);
+                                    angle = this.animation.barrelAngle + delta * speed;
+                                } else {
+                                    angle = this.animation.barrelAngle;
+                                }
+                            }
 
-                        // Apply rotation to barrel (roll axis)
-                        barrel.rotation.z = (angle * Math.PI) / 180; // Convert to radians
+                            if (barrel.userData.initialQuaternion === undefined) {
+                                barrel.userData.initialQuaternion = barrel.quaternion.clone();
+                            }
 
-                        // Stop spinning after coast time
-                        if (!this.animation.barrelSpinning && delta > COAST_TIME) {
-                            this.animation.barrelAngle = angle;
-                        } else {
-                            this.animation.barrelAngle = angle;
-                            this.animation.barrelTime = now;
+                            // Rotate around the tag's forward axis (Q3 ROLL)
+                            const spinQuat = new THREE.Quaternion();
+                            const forward = barrel.userData.tagForward || new THREE.Vector3(1, 0, 0);
+                            spinQuat.setFromAxisAngle(forward, (angle * Math.PI) / 180);
+                            barrel.quaternion.copy(barrel.userData.initialQuaternion);
+                            barrel.quaternion.premultiply(spinQuat);
                         }
                     }
                 }

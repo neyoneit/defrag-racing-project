@@ -1295,6 +1295,7 @@ class ModelsController extends Controller
                 'idle_gif' => 'nullable|file|mimes:gif|max:10240',
                 'gesture_gif' => 'nullable|file|mimes:gif|max:10240',
                 'head_icon' => 'nullable|file|mimes:png,jpg,jpeg|max:1024', // 1MB max
+                'thumbnail' => 'nullable|file|mimes:png,jpg,jpeg|max:2048', // 2MB max still image
             ]);
 
             // Create thumbnails directory if it doesn't exist
@@ -1328,6 +1329,14 @@ class ModelsController extends Controller
                 if (!isset($updateData['rotate_gif'])) {
                     $updateData['rotate_gif'] = "thumbnails/{$legacyFilename}";
                 }
+            }
+
+            // Save still thumbnail if provided
+            if ($request->hasFile('thumbnail')) {
+                $thumbFile = $request->file('thumbnail');
+                $thumbFilename = "model_{$id}_still.png";
+                $thumbFile->storeAs('public/thumbnails', $thumbFilename, 'local');
+                $updateData['thumbnail'] = "thumbnails/{$thumbFilename}";
             }
 
             // Save head icon if provided

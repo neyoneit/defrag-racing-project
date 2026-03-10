@@ -415,7 +415,16 @@ async function loadModel() {
         // Rotate to stand upright
         model.rotation.x = -Math.PI / 2;  // Stand upright (Q3 Z-up → Three.js Y-up)
         if (props.isWeapon) {
-            model.rotation.z = 0;  // Weapons: barrel points right when viewed from front
+            const wName = (model.userData.animation?.weaponName || props.modelPath || '').toLowerCase();
+            if (wName.includes('gauntlet') || wName.includes('/gt')) {
+                // Gauntlet orientation: blade left, spikes up, front face visible
+                model.rotation.set(-Math.PI / 2, 0, Math.PI);
+                model.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+                model.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), Math.PI);
+                model.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), Math.PI / 8);
+            } else {
+                model.rotation.z = 0;  // Weapons: barrel points right when viewed from front
+            }
         } else {
             model.rotation.z = -Math.PI / 2;  // Players: face camera
         }
@@ -544,6 +553,16 @@ async function loadModel() {
 
         // Auto-fit camera to show entire model
         fitToView(props.thumbnailMode ? 1.05 : 1.03);
+
+        // Shift gauntlet view to the right after fitToView
+        const wFitName = (model.userData.animation?.weaponName || props.modelPath || '').toLowerCase();
+        if ((wFitName.includes('gauntlet') || wFitName.includes('/gt')) && !props.thumbnailMode) {
+            camera.position.x -= 5;
+            controls.target.x -= 5;
+            camera.position.y += 6;
+            controls.target.y += 6;
+            controls.update();
+        }
 
         loading.value = false;
         emit('loaded', model);

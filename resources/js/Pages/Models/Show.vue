@@ -808,9 +808,57 @@ const generateGifThumbnail = async () => {
             rotateGif.render();
         });
 
-        // ---- 2. IDLE GIF (LEGS_IDLE + TORSO_STAND) ----
+        // ---- 2. IDLE GIF ----
         let idleBlob = null;
         let gestureBlob = null;
+
+        if (isWeaponModel.value) {
+            // Weapon idle: front view with shader animations (~3s at 15fps)
+            try {
+                gifProgress.value = '[2/5] Weapon Idle GIF...';
+                const numIdleFrames = 45;
+                const idleFps = 15;
+                const idleDelay = Math.round(1000 / idleFps);
+                const idleDt = 1 / idleFps;
+
+                camera.position.x = target.x;
+                camera.position.z = target.z + radius;
+                camera.position.y = target.y + height * 0.5;
+                camera.lookAt(target.x, target.y, target.z);
+                camera.updateMatrixWorld();
+                scene.updateMatrixWorld(true);
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                const GIF = (await import('gif.js')).default;
+                const gif = new GIF({
+                    workers: 1, quality: 10,
+                    width: gifWidth, height: gifHeight,
+                    workerScript: '/gif.worker.js'
+                });
+                for (let i = 0; i < numIdleFrames; i++) {
+                    gifProgress.value = `[Weapon Idle] Frame ${i + 1}/${numIdleFrames}`;
+                    shaderTime += idleDt;
+                    viewer3D.value.updateShaderAnimations(shaderTime);
+                    scene.updateMatrixWorld(true);
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                    captureFrameToCanvas(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+                    gif.addFrame(tempCanvas, { copy: true, delay: idleDelay });
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                }
+                restoreCamera();
+                gifProgress.value = 'Encoding weapon idle GIF...';
+                idleBlob = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('GIF encoding timed out')), 60000);
+                    gif.on('finished', (blob) => { clearTimeout(timeout); resolve(blob); });
+                    gif.on('progress', (p) => { gifProgress.value = `Encoding idle: ${Math.round(p * 100)}%`; });
+                    gif.render();
+                });
+            } catch (e) {
+                console.warn('Weapon idle GIF failed:', e.message);
+                restoreCamera();
+            }
+        }
+
         const animManager = viewer3D.value.getAnimationManager();
         if (animManager) {
             // Pause viewer's own animation loop to prevent double-advancing
@@ -887,8 +935,8 @@ const generateGifThumbnail = async () => {
                 restoreCamera();
             }
 
-            // ---- 3. GESTURE GIF (LEGS_IDLE + TORSO_GESTURE) ----
-            try {
+            // ---- 3. GESTURE GIF (LEGS_IDLE + TORSO_GESTURE) - player models only ----
+            if (!isWeaponModel.value) try {
                 gifProgress.value = '[3/4] Gesture GIF...';
                 const anims = viewer3D.value.getAvailableAnimations();
                 const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
@@ -959,10 +1007,65 @@ const generateGifThumbnail = async () => {
             viewer3D.value.resumeAnimationLoop();
         }
 
-        // ---- 4. HEAD ICON ----
-        gifProgress.value = '[4/4] Head icon...';
-        let headIconBlob = null;
+        // ---- 4. STILL THUMBNAIL (capture middle frame of idle pose) ----
+        gifProgress.value = '[4/5] Still thumbnail...';
+        let thumbnailBlob = null;
         try {
+            // Position camera at front view (same as idle)
+            camera.position.x = target.x;
+            camera.position.z = target.z + radius;
+            camera.position.y = target.y + height * 0.5;
+            camera.lookAt(target.x, target.y, target.z);
+            camera.updateMatrixWorld();
+
+            // If we have animation, advance to middle frame
+            const stillAnimManager = viewer3D.value.getAnimationManager();
+            if (stillAnimManager) {
+                const anims = viewer3D.value.getAvailableAnimations();
+                const legsData = anims.legs?.['LEGS_IDLE'] || anims.both?.['LEGS_IDLE'];
+                const torsoData = anims.torso?.['TORSO_STAND'] || anims.both?.['TORSO_STAND'];
+                if (legsData || torsoData) {
+                    stillAnimManager.stop();
+                    if (legsData) stillAnimManager.playLegsAnimation('LEGS_IDLE');
+                    if (torsoData) stillAnimManager.playTorsoAnimation('TORSO_STAND');
+                    stillAnimManager.playing = true;
+                    stillAnimManager.legsTime = 0; stillAnimManager.torsoTime = 0;
+                    stillAnimManager.legsFrame = 0; stillAnimManager.torsoFrame = 0;
+                    // Advance to middle of animation
+                    const midFrames = Math.floor((legsData?.numFrames || torsoData?.numFrames || 1) / 2);
+                    const fps = legsData?.fps || torsoData?.fps || 15;
+                    for (let i = 0; i < midFrames; i++) {
+                        stillAnimManager.update(1 / fps);
+                    }
+                }
+            }
+
+            scene.updateMatrixWorld(true);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            renderer.render(scene, camera);
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            const stillCanvas = document.createElement('canvas');
+            stillCanvas.width = 300; stillCanvas.height = 300;
+            const stillCtx = stillCanvas.getContext('2d');
+            stillCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 300, 300);
+            thumbnailBlob = await new Promise(resolve => stillCanvas.toBlob(resolve, 'image/png'));
+            stillCanvas.width = 0; stillCanvas.height = 0;
+
+            if (stillAnimManager) {
+                stillAnimManager.stop();
+                stillAnimManager.resetToIdle();
+            }
+            restoreCamera();
+        } catch (e) {
+            console.warn('Still thumbnail failed:', e.message);
+            restoreCamera();
+        }
+
+        // ---- 5. HEAD ICON (player models only) ----
+        gifProgress.value = '[5/5] Head icon...';
+        let headIconBlob = null;
+        if (!isWeaponModel.value) try {
             const THREE = await import('three');
             const model = viewer3D.value.getModel();
             if (model) {
@@ -1013,6 +1116,7 @@ const generateGifThumbnail = async () => {
         if (idleBlob) formData.append('idle_gif', idleBlob, `model_${props.model.id}_idle.gif`);
         if (gestureBlob) formData.append('gesture_gif', gestureBlob, `model_${props.model.id}_gesture.gif`);
         if (headIconBlob) formData.append('head_icon', headIconBlob, `model_${props.model.id}_head.png`);
+        if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, `model_${props.model.id}_still.png`);
 
         const response = await fetch(route('models.saveThumbnail', props.model.id), {
             method: 'POST',
@@ -1563,6 +1667,7 @@ const confirmNsfw = () => {
                                 title="Preview in model listing (Rotate mode)">
                                 Rotate MISSING
                             </span>
+                            <template v-if="!isWeaponModel">
                             <a v-if="model.gesture_gif" :href="`/storage/${model.gesture_gif}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
                                 title="Preview in model listing (Gesture mode)">
@@ -1581,6 +1686,7 @@ const confirmNsfw = () => {
                                 title="Head icon (used in HUD/scoreboard)">
                                 Head Icon MISSING
                             </span>
+                            </template>
                             <a v-if="model.thumbnail" :href="`/storage/${model.thumbnail}`" target="_blank"
                                 class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
                                 title="Thumbnail (static image used as fallback)">
@@ -1618,7 +1724,7 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- ANIMATION BUTTONS -->
-                        <div v-if="animationsReady" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
+                        <div v-if="animationsReady && !isWeaponModel" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
                             <!-- Login overlay for non-authenticated users -->
                             <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
                                 <a href="/login" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-sm transition-colors shadow-lg">
