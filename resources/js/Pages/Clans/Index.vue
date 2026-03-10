@@ -378,26 +378,38 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     </div>
 
                     <div class="flex flex-wrap gap-3">
-                        <button
-                            @click="showInvitations"
-                            class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600/20 to-blue-800/20 hover:from-blue-600/30 hover:to-blue-800/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
+                        <template v-if="$page.props.auth.user">
+                            <button
+                                @click="showInvitations"
+                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600/20 to-blue-800/20 hover:from-blue-600/30 hover:to-blue-800/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                </svg>
+                                <span>Invitations</span>
+                                <span class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
+                            </button>
+
+                            <Link
+                                v-if="! myClan"
+                                :href="route('clans.manage.create')"
+                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                                Create New Clan
+                            </Link>
+                        </template>
+                        <Link
+                            v-else
+                            :href="route('login')"
+                            class="flex items-center gap-2 px-6 py-3 bg-gray-700/50 border border-white/10 text-gray-400 font-bold rounded-lg transition-all duration-300 hover:bg-gray-600/50 hover:text-gray-300"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                             </svg>
-                            <span>Invitations</span>
-                            <span class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
-                        </button>
-
-                        <Link
-                            v-if="! myClan"
-                            :href="route('clans.manage.create')"
-                            class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/50"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            Create New Clan
+                            Log in to create or join a clan
                         </Link>
                     </div>
                 </div>

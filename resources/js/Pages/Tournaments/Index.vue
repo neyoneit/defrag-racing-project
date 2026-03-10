@@ -77,7 +77,7 @@
 
                 <!-- Create Tournament Button -->
                 <Link
-                    v-if="records >= 50"
+                    v-if="$page.props.auth.user && records >= 50"
                     :href="route('tournaments.create')"
                     class="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/20"
                 >
@@ -85,6 +85,17 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                     Create Tournament
+                </Link>
+
+                <Link
+                    v-else-if="!$page.props.auth.user"
+                    :href="route('login')"
+                    class="flex items-center gap-2 px-4 py-3 bg-gray-700/50 border border-white/10 text-gray-400 font-bold rounded-lg transition-all hover:bg-gray-600/50 hover:text-gray-300"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                    </svg>
+                    Log in to create tournaments
                 </Link>
 
                 <div
