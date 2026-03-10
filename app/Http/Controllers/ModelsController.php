@@ -188,6 +188,581 @@ class ModelsController extends Controller
      * - Original PK3s: storage/app/models/pk3s/{slug}.pk3 (private, served via download controller)
      * - Temp files: storage/app/models/temp/ (cleaned up after processing)
      */
+
+    /**
+     * Step 1 of upload flow: Temporarily upload and extract a model file.
+     * Returns JSON with detected models for the frontend to display in 3D viewer + generate GIFs.
+     */
+    public function tempUpload(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category' => 'required|in:player,weapon,shadow',
+            'model_file' => 'required|file|mimes:zip,pk3|max:51200',
+            'is_nsfw' => 'nullable|boolean',
+        ]);
+
+        $modelName = $request->name;
+        $slug = \Str::slug($modelName) . '-' . time();
+
+        // Extract to public storage so 3D viewer can access files
+        $extractPath = storage_path('app/public/models/extracted/' . $slug);
+
+        // Store original file temporarily
+        $uploadedFile = $request->file('model_file');
+        $tempPath = $uploadedFile->storeAs('models/temp', $slug . '.' . $uploadedFile->getClientOriginalExtension(), 'local');
+        $tempFullPath = storage_path('app/' . $tempPath);
+
+        if (!file_exists($extractPath)) {
+            mkdir($extractPath, 0755, true);
+        }
+
+        // Extract using shared logic
+        $extractResult = $this->extractUploadedArchive($tempFullPath, $extractPath, $slug);
+
+        // Clean up temp uploaded file
+        Storage::disk('local')->delete($tempPath);
+
+        if (!$extractResult['success']) {
+            $this->deleteDirectory($extractPath);
+            return response()->json(['success' => false, 'message' => $extractResult['message']], 422);
+        }
+
+        // Detect models
+        if ($request->category === 'weapon') {
+            $detectedModelNames = $this->detectAllWeaponNames($extractPath);
+        } else {
+            $detectedModelNames = $this->detectAllModelNames($extractPath);
+        }
+
+        if (empty($detectedModelNames)) {
+            $this->deleteDirectory($extractPath);
+            $errorMsg = $request->category === 'weapon'
+                ? 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.'
+                : 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.';
+            return response()->json(['success' => false, 'message' => $errorMsg], 422);
+        }
+
+        // Build model info for frontend (viewer paths, skins, etc.)
+        $models = [];
+        $isMultiModelPack = count($detectedModelNames) > 1;
+
+        foreach ($detectedModelNames as $detectedModelName) {
+            if ($request->category === 'weapon') {
+                $weaponsBase = $this->findWeaponsPath($extractPath);
+                $weaponPath = $weaponsBase ? $weaponsBase . '/' . $detectedModelName : $extractPath . '/models/weapons2/' . $detectedModelName;
+                $md3Files = glob($weaponPath . '/*.{md3,MD3}', GLOB_BRACE);
+                $mainMd3 = null;
+
+                if (!empty($md3Files)) {
+                    foreach ($md3Files as $md3File) {
+                        $basename = basename($md3File, '.md3');
+                        if ($basename === $detectedModelName) {
+                            $mainMd3 = basename($md3File);
+                            break;
+                        }
+                    }
+                    if (!$mainMd3) {
+                        foreach ($md3Files as $md3File) {
+                            $basename = basename($md3File, '.md3');
+                            if (!preg_match('/_(hand|flash|barrel|[0-9])$/', $basename)) {
+                                $mainMd3 = basename($md3File);
+                                break;
+                            }
+                        }
+                    }
+                    if (!$mainMd3) {
+                        $mainMd3 = basename($md3Files[0]);
+                    }
+                }
+
+                $skinFiles = glob($weaponPath . '/*.skin');
+                $availableSkins = [];
+                foreach ($skinFiles as $skinFile) {
+                    $skinBasename = basename($skinFile, '.skin');
+                    if (str_starts_with($skinBasename, $detectedModelName . '_')) {
+                        $skinName = str_replace($detectedModelName . '_', '', $skinBasename);
+                    } else {
+                        $skinName = $skinBasename;
+                    }
+                    if (!in_array($skinName, $availableSkins)) {
+                        $availableSkins[] = $skinName;
+                    }
+                }
+                if (empty($availableSkins)) {
+                    $availableSkins = ['default'];
+                }
+
+                $finalName = $isMultiModelPack ? ucfirst($detectedModelName) : $modelName;
+
+                $models[] = [
+                    'detected_name' => $detectedModelName,
+                    'display_name' => $finalName,
+                    'category' => 'weapon',
+                    'main_file' => $mainMd3,
+                    'available_skins' => $availableSkins,
+                    'file_path' => 'models/extracted/' . $slug . '/models/weapons2/' . $detectedModelName,
+                    'viewer_path' => $mainMd3
+                        ? '/storage/models/extracted/' . $slug . '/models/weapons2/' . $detectedModelName . '/' . $mainMd3
+                        : null,
+                ];
+            } else {
+                $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+                $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+                $availableSkins = $metadata['available_skins'] ?? ['default'];
+
+                foreach ($availableSkins as $skinName) {
+                    if ($isMultiModelPack) {
+                        $finalName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
+                    } else {
+                        $finalName = count($availableSkins) > 1
+                            ? $modelName . ' (' . $skinName . ')'
+                            : $modelName;
+                    }
+
+                    $filePath = 'models/extracted/' . $slug;
+                    $viewerBasePath = '/storage/' . $filePath;
+
+                    // Determine viewer path (head.md3)
+                    $playerPath = $extractPath . '/models/players/' . $detectedModelName;
+                    $viewerPath = null;
+                    if (is_dir($playerPath)) {
+                        $viewerPath = $viewerBasePath . '/models/players/' . $detectedModelName . '/head.md3';
+                    }
+
+                    $skinPath = null;
+                    if ($viewerPath) {
+                        $skinPath = $viewerBasePath . '/models/players/' . $detectedModelName . '/head_' . $skinName . '.skin';
+                    }
+
+                    $models[] = [
+                        'detected_name' => $detectedModelName,
+                        'skin_name' => $skinName,
+                        'display_name' => $finalName,
+                        'category' => $request->category,
+                        'available_skins' => [$skinName],
+                        'file_path' => $filePath,
+                        'has_md3' => $hasMd3Files,
+                        'model_type' => $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata),
+                        'viewer_path' => $viewerPath,
+                        'skin_path' => $skinPath,
+                        'base_model' => $detectedModelName,
+                    ];
+                }
+            }
+        }
+
+        // Store temp upload metadata in session for step 2
+        $tempData = [
+            'slug' => $slug,
+            'name' => $modelName,
+            'description' => $request->description,
+            'category' => $request->category,
+            'is_nsfw' => $request->is_nsfw ?? false,
+            'pk3_path' => $extractResult['pk3_path'],
+            'extract_path' => $extractPath,
+            'models' => $models,
+            'created_at' => now()->timestamp,
+        ];
+
+        session()->put('temp_upload_' . $slug, $tempData);
+
+        return response()->json([
+            'success' => true,
+            'slug' => $slug,
+            'models' => $models,
+        ]);
+    }
+
+    /**
+     * Step 2 of upload flow: Save model(s) with GIF thumbnails.
+     * Called after frontend has generated GIFs for each detected model.
+     */
+    public function storeWithGifs(Request $request)
+    {
+        $request->validate([
+            'slug' => 'required|string',
+            'gifs' => 'required|array',
+            'gifs.*.model_index' => 'required|integer|min:0',
+            'gifs.*.rotate_gif' => 'nullable|file|mimes:gif|max:10240',
+            'gifs.*.idle_gif' => 'nullable|file|mimes:gif|max:10240',
+            'gifs.*.gesture_gif' => 'nullable|file|mimes:gif|max:10240',
+            'gifs.*.head_icon' => 'nullable|file|mimes:png,jpg,jpeg|max:1024',
+            'gifs.*.thumbnail' => 'nullable|file|mimes:png,jpg,jpeg|max:2048',
+        ]);
+
+        $slug = $request->slug;
+        $tempData = session()->get('temp_upload_' . $slug);
+
+        if (!$tempData) {
+            return response()->json(['success' => false, 'message' => 'Upload session expired. Please start over.'], 422);
+        }
+
+        // Check session age (max 30 min)
+        if (now()->timestamp - $tempData['created_at'] > 1800) {
+            session()->forget('temp_upload_' . $slug);
+            $this->deleteDirectory($tempData['extract_path']);
+            if ($tempData['pk3_path'] && file_exists(storage_path('app/' . $tempData['pk3_path']))) {
+                unlink(storage_path('app/' . $tempData['pk3_path']));
+            }
+            return response()->json(['success' => false, 'message' => 'Upload session expired (30 min). Please start over.'], 422);
+        }
+
+        $userId = Auth::id();
+        $category = $tempData['category'];
+        $extractPath = $tempData['extract_path'];
+        $pk3Path = $tempData['pk3_path'];
+        $detectedModels = $tempData['models'];
+        $isMultiModelPack = count($detectedModels) > 1;
+
+        // Thumbnails directory
+        $thumbnailsDir = storage_path('app/public/thumbnails');
+        if (!file_exists($thumbnailsDir)) {
+            mkdir($thumbnailsDir, 0755, true);
+        }
+
+        $createdModels = [];
+
+        // Build a map of GIF files by model_index
+        $gifsByIndex = [];
+        if ($request->has('gifs')) {
+            foreach ($request->file('gifs', []) as $idx => $gifFiles) {
+                $modelIndex = $request->input("gifs.{$idx}.model_index", $idx);
+                $gifsByIndex[$modelIndex] = $gifFiles;
+            }
+        }
+
+        foreach ($detectedModels as $idx => $modelInfo) {
+            if ($category === 'weapon') {
+                $metadata = $this->parseWeaponMetadata($extractPath, $modelInfo['detected_name']);
+
+                $model = PlayerModel::create([
+                    'user_id' => $userId,
+                    'name' => $modelInfo['display_name'],
+                    'base_model' => $modelInfo['detected_name'],
+                    'main_file' => $modelInfo['main_file'],
+                    'model_type' => 'complete',
+                    'description' => $tempData['description'],
+                    'category' => 'weapon',
+                    'author' => $metadata['author'] ?? null,
+                    'author_email' => $metadata['author_email'] ?? null,
+                    'file_path' => $modelInfo['file_path'],
+                    'zip_path' => $pk3Path,
+                    'poly_count' => $metadata['poly_count'] ?? null,
+                    'vert_count' => $metadata['vert_count'] ?? null,
+                    'has_sounds' => false,
+                    'has_ctf_skins' => false,
+                    'available_skins' => json_encode($modelInfo['available_skins']),
+                    'approval_status' => 'pending',
+                    'is_nsfw' => $tempData['is_nsfw'],
+                ]);
+            } else {
+                $metadata = $this->parseModelMetadata($extractPath, $modelInfo['detected_name']);
+                $hasMd3Files = $modelInfo['has_md3'] ?? false;
+                $baseModel = $modelInfo['base_model'] ?? $modelInfo['detected_name'];
+                $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $modelInfo['detected_name'], $hasMd3Files, $baseModel);
+                $modelType = $modelInfo['model_type'] ?? 'complete';
+                $skinName = $modelInfo['skin_name'] ?? 'default';
+
+                $model = PlayerModel::create([
+                    'user_id' => $userId,
+                    'name' => $modelInfo['display_name'],
+                    'base_model' => $baseModel,
+                    'base_model_file_path' => $baseModelFilePath,
+                    'model_type' => $modelType,
+                    'description' => $tempData['description'],
+                    'category' => $category,
+                    'author' => $metadata['author'] ?? null,
+                    'author_email' => $metadata['author_email'] ?? null,
+                    'file_path' => $modelInfo['file_path'],
+                    'zip_path' => $pk3Path,
+                    'poly_count' => $metadata['poly_count'] ?? null,
+                    'vert_count' => $metadata['vert_count'] ?? null,
+                    'has_sounds' => $metadata['has_sounds'] ?? false,
+                    'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                    'available_skins' => json_encode($modelInfo['available_skins']),
+                    'approval_status' => 'pending',
+                    'is_nsfw' => $tempData['is_nsfw'],
+                ]);
+            }
+
+            // Save GIF files for this model
+            $gifFiles = $gifsByIndex[$idx] ?? [];
+            $updateData = [];
+
+            $gifTypes = [
+                'rotate_gif' => "model_{$model->id}_rotate.gif",
+                'idle_gif' => "model_{$model->id}_idle.gif",
+                'gesture_gif' => "model_{$model->id}_gesture.gif",
+            ];
+
+            foreach ($gifTypes as $field => $filename) {
+                if (isset($gifFiles[$field]) && $gifFiles[$field]->isValid()) {
+                    $gifFiles[$field]->storeAs('public/thumbnails', $filename, 'local');
+                    $updateData[$field] = "thumbnails/{$filename}";
+                }
+            }
+
+            if (isset($gifFiles['thumbnail']) && $gifFiles['thumbnail']->isValid()) {
+                $thumbFilename = "model_{$model->id}_still.png";
+                $gifFiles['thumbnail']->storeAs('public/thumbnails', $thumbFilename, 'local');
+                $updateData['thumbnail'] = "thumbnails/{$thumbFilename}";
+            }
+
+            if (isset($gifFiles['head_icon']) && $gifFiles['head_icon']->isValid()) {
+                $headFilename = "model_{$model->id}_head.png";
+                $gifFiles['head_icon']->storeAs('public/thumbnails', $headFilename, 'local');
+                $updateData['head_icon'] = "thumbnails/{$headFilename}";
+            }
+
+            if (!empty($updateData)) {
+                $model->update($updateData);
+            }
+
+            $createdModels[] = $model;
+        }
+
+        // Clean up session
+        session()->forget('temp_upload_' . $slug);
+
+        if (empty($createdModels)) {
+            return response()->json(['success' => false, 'message' => 'No models were created.'], 422);
+        }
+
+        $successMessage = count($createdModels) > 1
+            ? sprintf('Successfully uploaded %d model variations. They will be visible once approved.',
+                count($createdModels))
+            : sprintf('Model "%s" uploaded successfully! It will be visible once approved.', $createdModels[0]->name);
+
+        return response()->json([
+            'success' => true,
+            'message' => $successMessage,
+            'redirect' => route('models.show', $createdModels[0]->id),
+            'model_ids' => array_map(fn($m) => $m->id, $createdModels),
+        ]);
+    }
+
+    /**
+     * Delete a temporary upload (cleanup).
+     */
+    public function deleteTempUpload(Request $request)
+    {
+        $slug = $request->input('slug');
+        if (!$slug) {
+            return response()->json(['success' => false], 400);
+        }
+
+        $tempData = session()->get('temp_upload_' . $slug);
+        if ($tempData) {
+            // Clean up extracted files
+            if (isset($tempData['extract_path']) && is_dir($tempData['extract_path'])) {
+                $this->deleteDirectory($tempData['extract_path']);
+            }
+            // Clean up PK3
+            if (isset($tempData['pk3_path']) && $tempData['pk3_path'] && file_exists(storage_path('app/' . $tempData['pk3_path']))) {
+                unlink(storage_path('app/' . $tempData['pk3_path']));
+            }
+            session()->forget('temp_upload_' . $slug);
+        } else {
+            // Fallback: try to clean up by slug even without session
+            $extractPath = storage_path('app/public/models/extracted/' . $slug);
+            if (is_dir($extractPath)) {
+                $this->deleteDirectory($extractPath);
+            }
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Extract an uploaded archive (ZIP or PK3) to the extract path.
+     * Returns ['success' => bool, 'message' => string, 'pk3_path' => string|null]
+     */
+    private function extractUploadedArchive($tempFullPath, $extractPath, $slug)
+    {
+        $pk3StoragePath = storage_path('app/models/pk3s');
+        if (!file_exists($pk3StoragePath)) {
+            mkdir($pk3StoragePath, 0755, true);
+        }
+
+        $zip = new ZipArchive;
+        $pk3PathForDownload = null;
+
+        if ($zip->open($tempFullPath) !== TRUE) {
+            return ['success' => false, 'message' => 'Failed to open archive file.', 'pk3_path' => null];
+        }
+
+        // Check if this is a ZIP containing PK3 files
+        $containsPK3 = false;
+        $pk3FileName = null;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $filename = $zip->getNameIndex($i);
+            $basename = basename($filename);
+            $ext = pathinfo($basename, PATHINFO_EXTENSION);
+            $hasSlash = strpos($filename, '/');
+
+            if ($ext === 'pk3' && $hasSlash === false) {
+                $containsPK3 = true;
+                $pk3FileName = $filename;
+                break;
+            }
+        }
+
+        if ($containsPK3 && $pk3FileName) {
+            // ZIP containing a PK3 file
+            $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
+            if (!file_exists($tempExtract)) {
+                mkdir($tempExtract, 0755, true);
+            }
+
+            $zip->extractTo($tempExtract);
+            $zip->close();
+
+            $pk3File = $tempExtract . '/' . $pk3FileName;
+
+            if (file_exists($pk3File)) {
+                $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                copy($pk3File, storage_path('app/' . $pk3PathForDownload));
+
+                $pk3Zip = new ZipArchive;
+                if ($pk3Zip->open($pk3File) === TRUE) {
+                    $pk3Zip->extractTo($extractPath);
+                    $pk3Zip->close();
+                    $this->generateFileManifest($extractPath);
+                }
+            }
+
+            $this->deleteDirectory($tempExtract);
+        } else {
+            // Direct PK3 file
+            $hasProperStructure = false;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+                if (stripos($filename, 'models/players/') === 0 ||
+                    stripos($filename, 'models/weapons2/') === 0 ||
+                    stripos($filename, 'sound/player/') === 0) {
+                    $hasProperStructure = true;
+                    break;
+                }
+            }
+
+            if ($hasProperStructure) {
+                $zip->extractTo($extractPath);
+                $zip->close();
+                $this->generateFileManifest($extractPath);
+
+                $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                copy($tempFullPath, storage_path('app/' . $pk3PathForDownload));
+            } else {
+                $zip->close();
+                return ['success' => false, 'message' => 'Invalid PK3 structure. Must contain models/players/ or models/weapons2/ directories.', 'pk3_path' => null];
+            }
+        }
+
+        if (!$pk3PathForDownload) {
+            return ['success' => false, 'message' => 'Failed to extract model file.', 'pk3_path' => null];
+        }
+
+        // Merge case-duplicate directories (e.g. scripts/ and SCRIPTS/ → lowercase wins)
+        $this->mergeCaseDuplicateDirs($extractPath);
+
+        return ['success' => true, 'message' => 'OK', 'pk3_path' => $pk3PathForDownload];
+    }
+
+    /**
+     * Merge directories that differ only in case (e.g. SCRIPTS/ and scripts/).
+     * Moves all files from the uppercase variant into the lowercase one, then removes it.
+     * Only operates on top-level directories of the extract path.
+     */
+    private function mergeCaseDuplicateDirs($extractPath, $depth = 0)
+    {
+        // Limit recursion depth to prevent infinite loops
+        if ($depth > 10) return;
+
+        $entries = scandir($extractPath);
+        if (!$entries) return;
+
+        // Group directories by lowercase name
+        $groups = [];
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            if (!is_dir($extractPath . '/' . $entry)) continue;
+            $lower = strtolower($entry);
+            $groups[$lower][] = $entry;
+        }
+
+        foreach ($groups as $lower => $dirs) {
+            if (count($dirs) > 1) {
+                // Pick the lowercase name as the canonical target
+                $target = $lower;
+                $targetPath = $extractPath . '/' . $target;
+
+                // If the lowercase dir doesn't exist yet, rename one of the existing ones
+                if (!is_dir($targetPath)) {
+                    rename($extractPath . '/' . $dirs[0], $targetPath);
+                    array_shift($dirs);
+                }
+
+                // Merge remaining dirs into target
+                foreach ($dirs as $dir) {
+                    $dirPath = $extractPath . '/' . $dir;
+                    if ($dirPath === $targetPath) continue;
+                    if (!is_dir($dirPath)) continue;
+
+                    $this->mergeDirRecursive($dirPath, $targetPath);
+                    $this->deleteDirectory($dirPath);
+                }
+            }
+        }
+
+        // Recurse into all remaining subdirectories to merge nested case duplicates
+        $entries = scandir($extractPath);
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            if (is_dir($extractPath . '/' . $entry)) {
+                $this->mergeCaseDuplicateDirs($extractPath . '/' . $entry, $depth + 1);
+            }
+        }
+    }
+
+    /**
+     * Recursively merge $source directory into $target.
+     * Files in source that don't exist in target are moved; conflicts are skipped (target wins).
+     */
+    private function mergeDirRecursive($source, $target)
+    {
+        if (!is_dir($target)) {
+            mkdir($target, 0755, true);
+        }
+
+        $entries = scandir($source);
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+
+            $srcPath = $source . '/' . $entry;
+            $dstPath = $target . '/' . $entry;
+
+            if (is_dir($srcPath)) {
+                $this->mergeDirRecursive($srcPath, $dstPath);
+            } else {
+                if (!file_exists($dstPath)) {
+                    rename($srcPath, $dstPath);
+                }
+                // If target file already exists, skip (target wins)
+            }
+        }
+    }
+
+    /**
+     * Upload and create model(s) from a PK3/ZIP file (legacy single-step flow).
+     *
+     * Storage Architecture:
+     * - Extracted files: storage/app/public/models/extracted/{slug}/ (web-accessible for 3D viewer)
+     * - Original PK3s: storage/app/models/pk3s/{slug}.pk3 (private, served via download controller)
+     * - Temp files: storage/app/models/temp/ (cleaned up after processing)
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -352,7 +927,8 @@ class ModelsController extends Controller
                     if ($request->category === 'weapon') {
                         // WEAPON MODEL PROCESSING
                         \Log::info('Processing weapon:', ['name' => $detectedModelName]);
-                        $weaponPath = $extractPath . '/models/weapons2/' . $detectedModelName;
+                        $weaponsBase = $this->findWeaponsPath($extractPath);
+                        $weaponPath = ($weaponsBase ?: $extractPath . '/models/weapons2') . '/' . $detectedModelName;
 
                         // Find MD3 files for this weapon
                         $md3Files = glob($weaponPath . '/*.md3');
@@ -394,9 +970,9 @@ class ModelsController extends Controller
                         }
 
                         // Find ALL shader files in scripts directory
-                        $scriptsPath = $extractPath . '/scripts';
+                        $scriptsPath = $this->findScriptsPath($extractPath);
                         $shaderFiles = [];
-                        if (is_dir($scriptsPath)) {
+                        if ($scriptsPath && is_dir($scriptsPath)) {
                             // Get all .shader and .shaderx files
                             $allShaders = array_merge(
                                 glob($scriptsPath . '/*.shader') ?: [],
@@ -825,6 +1401,57 @@ class ModelsController extends Controller
     }
 
     /**
+     * Case-insensitive directory finder: resolve a path like 'models/weapons2' within $basePath.
+     */
+    private function findDirCaseInsensitive($basePath, array $segments)
+    {
+        $current = $basePath;
+        foreach ($segments as $segment) {
+            $exact = $current . '/' . $segment;
+            if (is_dir($exact)) {
+                $current = $exact;
+                continue;
+            }
+            $found = false;
+            if (!is_dir($current)) return null;
+            foreach (scandir($current) as $entry) {
+                if ($entry === '.' || $entry === '..') continue;
+                if (strtolower($entry) === strtolower($segment) && is_dir($current . '/' . $entry)) {
+                    $current = $current . '/' . $entry;
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) return null;
+        }
+        return $current;
+    }
+
+    /**
+     * Find scripts directory (case-insensitive)
+     */
+    private function findScriptsPath($extractPath)
+    {
+        return $this->findDirCaseInsensitive($extractPath, ['scripts']);
+    }
+
+    /**
+     * Find weapons path (case-insensitive): models/weapons2
+     */
+    private function findWeaponsPath($extractPath)
+    {
+        return $this->findDirCaseInsensitive($extractPath, ['models', 'weapons2']);
+    }
+
+    /**
+     * Find sound/player path (case-insensitive)
+     */
+    private function findSoundPlayerPath($extractPath)
+    {
+        return $this->findDirCaseInsensitive($extractPath, ['sound', 'player']);
+    }
+
+    /**
      * Detect model name from extracted files
      * Looks for models/players/{name}/ directory
      */
@@ -877,28 +1504,8 @@ class ModelsController extends Controller
      */
     private function detectAllWeaponNames($extractPath)
     {
-        // Case-insensitive: find models/weapons2 directory
-        $weaponsPath = $extractPath . '/models/weapons2';
-        if (!is_dir($weaponsPath)) {
-            // Try case-insensitive lookup
-            $modelsDir = null;
-            foreach (scandir($extractPath) as $entry) {
-                if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'models' && is_dir($extractPath . '/' . $entry)) {
-                    $modelsDir = $extractPath . '/' . $entry;
-                    break;
-                }
-            }
-            if ($modelsDir) {
-                foreach (scandir($modelsDir) as $entry) {
-                    if ($entry !== '.' && $entry !== '..' && strtolower($entry) === 'weapons2' && is_dir($modelsDir . '/' . $entry)) {
-                        $weaponsPath = $modelsDir . '/' . $entry;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!is_dir($weaponsPath)) {
+        $weaponsPath = $this->findWeaponsPath($extractPath);
+        if (!$weaponsPath) {
             return [];
         }
 
@@ -930,10 +1537,12 @@ class ModelsController extends Controller
             return false;
         }
 
-        // Check for the three required MD3 files
-        $hasHead = file_exists($modelPath . '/head.md3');
-        $hasUpper = file_exists($modelPath . '/upper.md3');
-        $hasLower = file_exists($modelPath . '/lower.md3');
+        // Check for the three required MD3 files (case-insensitive)
+        $files = scandir($modelPath);
+        $lowerFiles = array_map('strtolower', $files);
+        $hasHead = in_array('head.md3', $lowerFiles);
+        $hasUpper = in_array('upper.md3', $lowerFiles);
+        $hasLower = in_array('lower.md3', $lowerFiles);
 
         // Model is complete if it has all three MD3 files
         return $hasHead && $hasUpper && $hasLower;
@@ -974,8 +1583,8 @@ class ModelsController extends Controller
         }
 
         // Check for shader files
-        $scriptsPath = $extractPath . '/scripts';
-        if (is_dir($scriptsPath)) {
+        $scriptsPath = $this->findScriptsPath($extractPath);
+        if ($scriptsPath && is_dir($scriptsPath)) {
             $shaderFiles = glob($scriptsPath . '/*.shader');
             $hasShaders = !empty($shaderFiles);
         }
@@ -1075,12 +1684,106 @@ class ModelsController extends Controller
             ]);
         }
 
+        // For admins, include sibling models (same PK3) for delete confirmation
+        $siblingModels = [];
+        if ($isOwnerOrAdmin && Auth::user()->admin && $model->zip_path) {
+            $siblingModels = PlayerModel::where('zip_path', $model->zip_path)
+                ->where('id', '!=', $model->id)
+                ->with('user:id,name')
+                ->select(['id', 'name', 'user_id', 'created_at'])
+                ->get()
+                ->toArray();
+        }
+
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,
             'bundledModels' => $bundledModels,
+            'siblingModels' => $siblingModels,
             'load_times' => $timings,
         ]);
+    }
+
+    /**
+     * Approve a model (admin only)
+     */
+    public function approveModel($id)
+    {
+        if (!Auth::check() || !Auth::user()->admin) {
+            abort(403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+        $model->approval_status = 'approved';
+        $model->save();
+
+        return response()->json(['success' => true, 'message' => "Model \"{$model->name}\" approved."]);
+    }
+
+    /**
+     * Delete a model and all sibling models sharing the same PK3 (admin only)
+     */
+    public function destroyModel($id)
+    {
+        if (!Auth::check() || !Auth::user()->admin) {
+            abort(403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+
+        // Find all models sharing the same PK3
+        $modelsToDelete = $model->zip_path
+            ? PlayerModel::where('zip_path', $model->zip_path)->get()
+            : collect([$model]);
+
+        $deletedNames = [];
+
+        foreach ($modelsToDelete as $m) {
+            // Delete GIF/thumbnail files
+            foreach (['rotate_gif', 'idle_gif', 'gesture_gif', 'thumbnail', 'head_icon'] as $field) {
+                if ($m->$field && Storage::disk('public')->exists($m->$field)) {
+                    Storage::disk('public')->delete($m->$field);
+                }
+            }
+
+            $deletedNames[] = $m->name;
+            $m->delete();
+        }
+
+        // Delete extracted files directory (shared by all models from same PK3)
+        if ($model->file_path) {
+            // file_path is like "models/extracted/testing-1773175654" - delete the root extracted dir
+            $parts = explode('/', $model->file_path);
+            // Find the "models/extracted/<hash>" root
+            $extractRoot = null;
+            for ($i = 0; $i < count($parts); $i++) {
+                if ($parts[$i] === 'extracted' && $i > 0 && isset($parts[$i + 1])) {
+                    $extractRoot = implode('/', array_slice($parts, 0, $i + 2));
+                    break;
+                }
+            }
+            if ($extractRoot) {
+                $extractedFullPath = storage_path('app/public/' . $extractRoot);
+                if (is_dir($extractedFullPath)) {
+                    $this->deleteDirectory($extractedFullPath);
+                }
+            }
+        }
+
+        // Delete PK3 file
+        if ($model->zip_path) {
+            $pk3Path = storage_path('app/' . $model->zip_path);
+            if (file_exists($pk3Path)) {
+                unlink($pk3Path);
+            }
+        }
+
+        $count = count($deletedNames);
+        $message = $count > 1
+            ? "Deleted {$count} models: " . implode(', ', $deletedNames)
+            : "Model \"{$deletedNames[0]}\" deleted.";
+
+        return response()->json(['success' => true, 'message' => $message]);
     }
 
     /**
@@ -1184,8 +1887,9 @@ class ModelsController extends Controller
             }
         }
 
-        // Check for sound files
-        if (is_dir($extractPath . '/sound')) {
+        // Check for sound files (case-insensitive)
+        $soundPath = $this->findDirCaseInsensitive($extractPath, ['sound']);
+        if ($soundPath) {
             $metadata['has_sounds'] = true;
         }
 
@@ -1240,7 +1944,8 @@ class ModelsController extends Controller
         ];
 
         // Look for readme/txt files in the weapon directory
-        $weaponPath = $extractPath . '/models/weapons2/' . $weaponName;
+        $weaponsBase = $this->findWeaponsPath($extractPath);
+        $weaponPath = ($weaponsBase ?: $extractPath . '/models/weapons2') . '/' . $weaponName;
         $files = glob($weaponPath . '/*.{txt,TXT}', GLOB_BRACE);
 
         // Also check root of PK3

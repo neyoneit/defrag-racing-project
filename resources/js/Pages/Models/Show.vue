@@ -10,6 +10,7 @@ const props = defineProps({
     model: Object,
     baseModelData: Object,
     bundledModels: Array,
+    siblingModels: Array,
     load_times: Object,
 });
 
@@ -538,6 +539,34 @@ const goBack = () => {
 // GIF Generation (browser-based)
 const isGeneratingGif = ref(false);
 const gifProgress = ref('');
+
+// Admin actions
+const showDeleteConfirm = ref(false);
+const isApproving = ref(false);
+const isDeleting = ref(false);
+
+const approveModel = async () => {
+    isApproving.value = true;
+    try {
+        await axios.post(`/models/${props.model.id}/approve`);
+        router.reload();
+    } catch (e) {
+        alert('Failed to approve: ' + (e.response?.data?.message || e.message));
+    } finally {
+        isApproving.value = false;
+    }
+};
+
+const deleteModel = async () => {
+    isDeleting.value = true;
+    try {
+        await axios.delete(`/models/${props.model.id}`);
+        window.location.href = '/models';
+    } catch (e) {
+        alert('Failed to delete: ' + (e.response?.data?.message || e.message));
+        isDeleting.value = false;
+    }
+};
 
 // Notification state
 const showNotification = ref(false);
@@ -1368,6 +1397,18 @@ const confirmNsfw = () => {
                                         </span>
                                     </div>
                                 </div>
+                                <!-- Pending approval banner (admin only) -->
+                                <div v-if="model.approval_status === 'pending' && $page.props.auth?.user?.admin" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                                    <span class="text-yellow-400 text-xs font-semibold">Pending Approval</span>
+                                    <button @click="approveModel" :disabled="isApproving"
+                                        class="px-3 py-1 rounded bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-all disabled:opacity-50">
+                                        {{ isApproving ? 'Approving...' : 'Approve' }}
+                                    </button>
+                                    <button @click="showDeleteConfirm = true"
+                                        class="px-3 py-1 rounded bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all">
+                                        Delete
+                                    </button>
+                                </div>
                                 <!-- Row 2: Author + Base Model -->
                                 <div class="flex items-center gap-4 mt-2 text-sm">
                                     <div v-if="model.author" class="flex items-center gap-1.5">
@@ -1645,6 +1686,44 @@ const confirmNsfw = () => {
                                 </svg>
                                 Edit
                             </a>
+                            <button
+                                v-if="$page.props.auth?.user?.admin"
+                                @click="showDeleteConfirm = !showDeleteConfirm"
+                                class="px-3 py-2 bg-red-500/20 border border-red-500/30 text-red-300 font-semibold rounded-lg hover:bg-red-500/30 transition-all text-xs flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                                Delete
+                            </button>
+                        </div>
+                        <!-- Delete confirmation (admin only) -->
+                        <div v-if="showDeleteConfirm && $page.props.auth?.user?.admin" class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <div class="text-red-400 text-xs font-semibold mb-2">
+                                <template v-if="siblingModels?.length">
+                                    This will also delete {{ siblingModels.length }} other model{{ siblingModels.length > 1 ? 's' : '' }} from the same PK3:
+                                </template>
+                                <template v-else>
+                                    Delete this model permanently?
+                                </template>
+                            </div>
+                            <div v-if="siblingModels?.length" class="mb-3 space-y-1">
+                                <div v-for="s in siblingModels" :key="s.id" class="flex items-center gap-2 text-xs text-gray-300 pl-2 border-l-2 border-red-500/20">
+                                    <span class="font-semibold text-white">{{ s.name }}</span>
+                                    <span class="text-gray-500">by</span>
+                                    <span class="text-blue-400">{{ s.user?.name || 'Unknown' }}</span>
+                                    <span class="text-gray-500">{{ new Date(s.created_at).toLocaleString() }}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="deleteModel" :disabled="isDeleting"
+                                    class="px-3 py-1 rounded bg-red-600/30 border border-red-500/40 text-red-300 text-xs font-bold hover:bg-red-600/40 transition-all disabled:opacity-50">
+                                    {{ isDeleting ? 'Deleting...' : `Yes, Delete${siblingModels?.length ? ` All (${siblingModels.length + 1})` : ''}` }}
+                                </button>
+                                <button @click="showDeleteConfirm = false"
+                                    class="px-2 py-1 text-gray-400 text-xs hover:text-gray-300 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                         <!-- GIF Status (admin only) -->
                         <div v-if="$page.props.auth?.user?.admin" class="flex flex-wrap items-center gap-2 mb-4 text-xs">

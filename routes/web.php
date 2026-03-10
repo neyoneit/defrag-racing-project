@@ -59,12 +59,17 @@ Route::get('/bundles/{id?}/{slug?}', [BundlesController::class, 'index'])->name(
 Route::get('/models', [ModelsController::class, 'index'])->name('models.index');
 Route::get('/models/create', [ModelsController::class, 'create'])->middleware('auth')->name('models.create');
 Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
+Route::post('/models/temp-upload', [ModelsController::class, 'tempUpload'])->middleware('auth')->name('models.tempUpload');
+Route::post('/models/store-with-gifs', [ModelsController::class, 'storeWithGifs'])->middleware('auth')->name('models.storeWithGifs');
+Route::post('/models/delete-temp', [ModelsController::class, 'deleteTempUpload'])->middleware('auth')->name('models.deleteTempUpload');
 Route::get('/models/bulk-upload', [ModelsController::class, 'bulkUploadForm'])->middleware('auth')->name('models.bulk-upload');
 Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->middleware('auth')->name('models.bulk-upload.store');
 Route::get('/models/batch-generate-gifs', [ModelsController::class, 'batchGenerateGifs'])->middleware('auth')->name('models.batchGenerateGifs');
 Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->where('id', '[0-9]+')->name('models.shaders');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
 Route::get('/models/{model}/download-extras', [ModelsController::class, 'downloadExtras'])->name('models.downloadExtras');
+Route::post('/models/{id}/approve', [ModelsController::class, 'approveModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.approve');
+Route::delete('/models/{id}', [ModelsController::class, 'destroyModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.destroy');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
 Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
