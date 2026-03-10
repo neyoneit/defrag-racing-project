@@ -4,7 +4,7 @@ import { Q3ShaderParser } from './Q3ShaderParser.js';
 import { Q3ShaderMaterialSystem } from './Q3ShaderMaterial.js';
 
 // Set to true to enable verbose console logging for debugging model loading
-const DEBUG = false;
+const DEBUG = true;
 
 /**
  * MD3 (Quake 3 Model) Loader for Three.js
@@ -209,10 +209,10 @@ export class MD3Loader {
      * @param {string} baseUrlOverride - Optional override for texture base path (for weapon skin packs)
      * @returns {Promise<THREE.Group>} - Promise that resolves to a Three.js Group
      */
-    async load(url, skinUrl = null, baseUrlOverride = null) {
+    async load(url, skinUrl = null, baseUrlOverride = null, baseModelSkinUrl = null) {
         // Load skin file if provided
         if (skinUrl) {
-            await this.loadSkin(skinUrl);
+            await this.loadSkin(skinUrl, baseModelSkinUrl);
         }
 
         // Extract base URL for texture loading (everything up to the last /)
@@ -228,7 +228,7 @@ export class MD3Loader {
      * Load and parse a .skin file
      * @param {string} url - The URL to the .skin file
      */
-    async loadSkin(url) {
+    async loadSkin(url, baseModelSkinUrl = null) {
         try {
             const response = await this.fetchCaseInsensitive(url);
             const text = await response.text();
@@ -260,6 +260,18 @@ export class MD3Loader {
                     return;
                 } catch (e) {
                     // _default fallback also failed
+                }
+            }
+            // Try loading skin from base model path (for skin packs where .skin files are only in the base model PK3)
+            if (baseModelSkinUrl) {
+                try {
+                    DEBUG && console.log(`🔄 Skin not found in skin pack, trying base model: ${baseModelSkinUrl}`);
+                    const baseResponse = await this.fetchCaseInsensitive(baseModelSkinUrl);
+                    const text = await baseResponse.text();
+                    this.skinData = this.parseSkin(text, baseModelSkinUrl);
+                    return;
+                } catch (e) {
+                    // Base model skin also not found
                 }
             }
             console.warn('Failed to load skin file:', error);
@@ -1689,11 +1701,15 @@ export class MD3Loader {
                 DEBUG && console.log(`👤 Loading complete model from PK3: ${baseUrl}`);
             }
 
+            // For skin packs: if skin files are missing in skinBasePath, fall back to mainPlayerPath skins
+            const skinFallbackPath = (skinBasePath !== mainPlayerPath) ? mainPlayerPath : null;
+
             // Load lower body (legs) from base model with specified skin
             const lowerUrl = `${mainPlayerPath}lower.md3`;
             const lowerSkinUrl = `${skinBasePath}lower_${skinName}.skin`;
+            const lowerSkinFallback = skinFallbackPath ? `${skinFallbackPath}lower_${skinName}.skin` : null;
             DEBUG && console.log(`👤 Loading player lower from: ${lowerUrl} with skin: ${lowerSkinUrl}`);
-            const lower = await this.load(lowerUrl, lowerSkinUrl);
+            const lower = await this.load(lowerUrl, lowerSkinUrl, null, lowerSkinFallback);
             lower.name = 'lower';
             lower.userData.source = 'baseq3';
             playerGroup.add(lower);
@@ -1707,7 +1723,8 @@ export class MD3Loader {
                     // Load upper body (torso) from base model with specified skin
                     const upperUrl = `${mainPlayerPath}upper.md3`;
                     const upperSkinUrl = `${skinBasePath}upper_${skinName}.skin`;
-                    const upper = await this.load(upperUrl, upperSkinUrl);
+                    const upperSkinFallback = skinFallbackPath ? `${skinFallbackPath}upper_${skinName}.skin` : null;
+                    const upper = await this.load(upperUrl, upperSkinUrl, null, upperSkinFallback);
                     upper.name = 'upper';
                     upper.userData.source = mainPlayerPath.includes('/baseq3/') ? 'baseq3' : 'pk3';
 
@@ -1724,7 +1741,8 @@ export class MD3Loader {
                             // Load head from base model with specified skin
                             const headUrl = `${mainPlayerPath}head.md3`;
                             const headSkinUrl = `${skinBasePath}head_${skinName}.skin`;
-                            const head = await this.load(headUrl, headSkinUrl);
+                            const headSkinFallback = skinFallbackPath ? `${skinFallbackPath}head_${skinName}.skin` : null;
+                            const head = await this.load(headUrl, headSkinUrl, null, headSkinFallback);
                             head.name = 'head';
                             head.userData.source = mainPlayerPath.includes('/baseq3/') ? 'baseq3' : 'pk3';
 
@@ -3367,12 +3385,21 @@ export class MD3Loader {
 
 
                 // Categorize animation by prefix
+                // Some models use UPPER_/LOWER_ instead of TORSO_/LEGS_ - normalize to standard Q3 names
                 if (name.startsWith('BOTH_')) {
                     animations.both[name] = anim;
                 } else if (name.startsWith('TORSO_')) {
                     animations.torso[name] = anim;
+                } else if (name.startsWith('UPPER_')) {
+                    const stdName = 'TORSO_' + name.substring('UPPER_'.length);
+                    anim.name = stdName;
+                    animations.torso[stdName] = anim;
                 } else if (name.startsWith('LEGS_')) {
                     animations.legs[name] = anim;
+                } else if (name.startsWith('LOWER_')) {
+                    const stdName = 'LEGS_' + name.substring('LOWER_'.length);
+                    anim.name = stdName;
+                    animations.legs[stdName] = anim;
                 }
             }
         }

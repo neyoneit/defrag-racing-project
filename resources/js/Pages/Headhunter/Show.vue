@@ -61,7 +61,7 @@ const getStatusColor = (status) => {
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
-            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <!-- Back Button -->
                 <Link :href="route('headhunter.index')" class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 mb-6 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
@@ -73,7 +73,7 @@ const getStatusColor = (status) => {
         </div>
 
         <!-- Content Section -->
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
                 <!-- Challenge Header -->
                 <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
                     <div class="flex items-start justify-between gap-4 mb-6">
@@ -160,8 +160,21 @@ const getStatusColor = (status) => {
                         </div>
                     </div>
 
+                    <!-- Login prompt for guests -->
+                    <div v-if="!$page.props.auth.user" class="mt-6 pt-6 border-t border-white/10">
+                        <Link
+                            :href="route('login')"
+                            class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-700/50 border border-white/10 text-gray-400 font-bold rounded-lg transition-all duration-300 hover:bg-gray-600/50 hover:text-gray-300"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                            </svg>
+                            Log in to participate in this challenge
+                        </Link>
+                    </div>
+
                     <!-- User Actions -->
-                    <div v-if="$page.props.auth.user && $page.props.auth.user.id !== challenge.creator_id" class="mt-6 pt-6 border-t border-white/10">
+                    <div v-else-if="$page.props.auth.user.id !== challenge.creator_id" class="mt-6 pt-6 border-t border-white/10">
                         <div v-if="!userParticipation">
                             <button
                                 @click="participate"

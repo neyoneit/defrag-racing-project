@@ -70,6 +70,8 @@ Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbn
 Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
 Route::post('/user/confirm-nsfw', [ModelsController::class, 'confirmNsfw'])->middleware('auth')->name('user.confirm-nsfw');
 Route::post('/models/{id}/scrape-ws-metadata', [ModelsController::class, 'scrapeWsMetadata'])->middleware('auth')->where('id', '[0-9]+')->name('models.scrapeWsMetadata');
+Route::post('/models/{id}/generate-still-thumbnail', [ModelsController::class, 'generateStillThumbnail'])->middleware('auth')->where('id', '[0-9]+')->name('models.generateStillThumbnail');
+Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class, 'batchGenerateStillThumbnails'])->middleware('auth')->name('models.batchGenerateStillThumbnails');
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
@@ -279,6 +281,10 @@ Route::post('/admin/models-audit/mark-failed-manual', [App\Http\Controllers\Mode
 Route::get('/admin/models-audit/cached-files', [App\Http\Controllers\ModelsAuditController::class, 'cachedFiles'])
     ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
     ->name('admin.models-audit.cached-files');
+
+Route::post('/admin/models-audit/validate-local-files', [App\Http\Controllers\ModelsAuditController::class, 'validateLocalFiles'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.validate-local-files');
 
 Route::post('/admin/models-audit/resolve', [App\Http\Controllers\ModelsAuditController::class, 'resolve'])
     ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])

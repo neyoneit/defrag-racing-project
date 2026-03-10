@@ -1542,6 +1542,55 @@ const confirmNsfw = () => {
                                 Edit
                             </a>
                         </div>
+                        <!-- GIF Status (admin only) -->
+                        <div v-if="$page.props.auth?.user?.admin" class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+                            <span class="text-gray-500 font-semibold">Assets:</span>
+                            <a v-if="model.idle_gif" :href="`/storage/${model.idle_gif}`" target="_blank"
+                                class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
+                                title="Default preview in model listing (Idle mode)">
+                                Idle OK
+                            </a>
+                            <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
+                                title="Default preview in model listing (Idle mode)">
+                                Idle MISSING
+                            </span>
+                            <a v-if="model.rotate_gif" :href="`/storage/${model.rotate_gif}`" target="_blank"
+                                class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
+                                title="Preview in model listing (Rotate mode)">
+                                Rotate OK
+                            </a>
+                            <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
+                                title="Preview in model listing (Rotate mode)">
+                                Rotate MISSING
+                            </span>
+                            <a v-if="model.gesture_gif" :href="`/storage/${model.gesture_gif}`" target="_blank"
+                                class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
+                                title="Preview in model listing (Gesture mode)">
+                                Gesture OK
+                            </a>
+                            <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
+                                title="Preview in model listing (Gesture mode)">
+                                Gesture MISSING
+                            </span>
+                            <a v-if="model.head_icon" :href="`/storage/${model.head_icon}`" target="_blank"
+                                class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
+                                title="Head icon (used in HUD/scoreboard)">
+                                Head Icon OK
+                            </a>
+                            <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
+                                title="Head icon (used in HUD/scoreboard)">
+                                Head Icon MISSING
+                            </span>
+                            <a v-if="model.thumbnail" :href="`/storage/${model.thumbnail}`" target="_blank"
+                                class="px-2 py-0.5 rounded border text-green-400 bg-green-500/10 border-green-500/20 font-medium hover:bg-green-500/20 transition cursor-pointer"
+                                title="Thumbnail (static image used as fallback)">
+                                Thumbnail OK
+                            </a>
+                            <span v-else class="px-2 py-0.5 rounded border text-red-400 bg-red-500/10 border-red-500/20 font-medium"
+                                title="Thumbnail (static image used as fallback)">
+                                Thumbnail MISSING
+                            </span>
+                        </div>
 
                         <!-- WS METADATA SCRAPE (admin only) -->
                         <div v-if="$page.props.auth?.user?.admin" class="mb-4">

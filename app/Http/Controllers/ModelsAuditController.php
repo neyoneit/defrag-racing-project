@@ -548,6 +548,51 @@ class ModelsAuditController extends Controller
         return response()->json($files);
     }
 
+    /**
+     * Validate that local PK3 files exist and MD5 matches for resolved OK items.
+     */
+    public function validateLocalFiles(Request $request)
+    {
+        $items = $request->input('items', []);
+        $results = [];
+
+        foreach ($items as $item) {
+            $downloadFile = $item['download_file'] ?? '';
+            $localPath = $item['local_path'] ?? null;
+            $wsMd5 = $item['ws_md5'] ?? null;
+
+            if (!$localPath) {
+                $results[] = ['download_file' => $downloadFile, 'valid' => false, 'reason' => 'No local_path stored'];
+                continue;
+            }
+
+            $fullPath = storage_path('app/' . $localPath);
+            if (!file_exists($fullPath)) {
+                $results[] = ['download_file' => $downloadFile, 'valid' => false, 'reason' => "File missing: {$localPath}"];
+                continue;
+            }
+
+            if ($wsMd5) {
+                $localMd5 = md5_file($fullPath);
+                if ($localMd5 !== $wsMd5) {
+                    $results[] = ['download_file' => $downloadFile, 'valid' => false, 'reason' => "MD5 mismatch: ws={$wsMd5} local={$localMd5}"];
+                    continue;
+                }
+            }
+
+            // Check that at least one DB model references this file
+            $dbCount = PlayerModel::where('zip_path', $localPath)->count();
+            if ($dbCount === 0) {
+                $results[] = ['download_file' => $downloadFile, 'valid' => false, 'reason' => "No DB model references {$localPath}"];
+                continue;
+            }
+
+            $results[] = ['download_file' => $downloadFile, 'valid' => true];
+        }
+
+        return response()->json($results);
+    }
+
     public function markManualReview(Request $request)
     {
         $request->validate(['download_file' => 'required|string']);
@@ -648,12 +693,21 @@ class ModelsAuditController extends Controller
         Storage::disk('local')->put($backupFile, $content);
 
         $found = false;
+        $isUnresolve = $resolution === 'unresolved';
+
         foreach ($report['results'] as &$item) {
             if ($item['download_file'] === $downloadFile) {
-                $item['resolved'] = true;
-                $item['resolution'] = $resolution;
-                $item['resolution_note'] = $note;
-                $item['resolved_at'] = now()->toIso8601String();
+                if ($isUnresolve) {
+                    $item['resolved'] = false;
+                    unset($item['resolution'], $item['resolution_note'], $item['resolved_at']);
+                    $item['unresolved_at'] = now()->toIso8601String();
+                    $item['unresolve_reason'] = $note;
+                } else {
+                    $item['resolved'] = true;
+                    $item['resolution'] = $resolution;
+                    $item['resolution_note'] = $note;
+                    $item['resolved_at'] = now()->toIso8601String();
+                }
                 $found = true;
             }
         }
@@ -669,8 +723,12 @@ class ModelsAuditController extends Controller
         $verify = json_decode(Storage::disk('local')->get($reportFile), true);
         $verified = false;
         foreach ($verify['results'] ?? [] as $v) {
-            if ($v['download_file'] === $downloadFile && !empty($v['resolved'])) {
-                $verified = true;
+            if ($v['download_file'] === $downloadFile) {
+                if ($isUnresolve) {
+                    $verified = empty($v['resolved']);
+                } else {
+                    $verified = !empty($v['resolved']);
+                }
                 break;
             }
         }

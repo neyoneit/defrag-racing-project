@@ -294,27 +294,24 @@ const getModelTypeBadgeClass = (type) => {
                             />
                         </div>
 
-                        <!-- Preview Mode -->
+                        <!-- Category Filter -->
                         <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                 </svg>
-                                Preview
+                                Category
                             </h3>
                             <div class="space-y-1">
-                                <button
-                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, { value: 'gesture', label: 'Gesture' }]"
-                                    :key="mode.value"
-                                    @click="setPreviewMode(mode.value)"
-                                    :class="[
-                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
-                                        previewMode === mode.value
-                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                    ]">
-                                    {{ mode.label }}
+                                <button v-for="cat in categories" :key="cat.value"
+                                        @click="switchCategory(cat.value)"
+                                        :class="[
+                                            'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                            category === cat.value
+                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        ]">
+                                    {{ cat.label }}
                                 </button>
                             </div>
                         </div>
@@ -343,24 +340,27 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
                         </div>
 
-                        <!-- Category Filter -->
+                        <!-- Preview Mode -->
                         <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                Category
+                                Preview
                             </h3>
                             <div class="space-y-1">
-                                <button v-for="cat in categories" :key="cat.value"
-                                        @click="switchCategory(cat.value)"
-                                        :class="[
-                                            'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
-                                            category === cat.value
-                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                        ]">
-                                    {{ cat.label }}
+                                <button
+                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, { value: 'gesture', label: 'Gesture' }]"
+                                    :key="mode.value"
+                                    @click="setPreviewMode(mode.value)"
+                                    :class="[
+                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                        previewMode === mode.value
+                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    ]">
+                                    {{ mode.label }}
                                 </button>
                             </div>
                         </div>

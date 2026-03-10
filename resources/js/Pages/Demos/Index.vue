@@ -914,26 +914,51 @@ watch(selectedPhysics, () => {
                         Upload New Demos
                     </h3>
 
-                    <!-- Requirements Check -->
-                    <div v-if="!$page.props.auth.user" class="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4 mb-4">
-                        <p class="text-yellow-400">You must be logged in to upload demos.</p>
+                    <!-- Not logged in: full clickable login overlay -->
+                    <div v-if="!$page.props.auth.user" class="relative">
+                        <div class="border-2 border-dashed border-gray-600 rounded-xl p-4 text-center blur-[2px] opacity-40 pointer-events-none">
+                            <div class="space-y-2">
+                                <div class="flex justify-center">
+                                    <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                    </svg>
+                                </div>
+                                <p class="text-base font-semibold text-gray-200">Drag demo files or folders here</p>
+                                <p class="text-gray-400 mt-1 text-sm">Or use buttons below to select files or folders</p>
+                                <div class="flex gap-2 justify-center">
+                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg">Select Files</span>
+                                    <span class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg">Select Folder</span>
+                                </div>
+                            </div>
+                        </div>
+                        <Link
+                            :href="route('login')"
+                            class="absolute inset-0 flex flex-col items-center justify-center bg-black/60 rounded-xl border-2 border-dashed border-white/10 hover:border-blue-500/50 transition-all duration-300 cursor-pointer group"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-400 group-hover:text-blue-400 transition-colors mb-3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                            </svg>
+                            <span class="text-gray-300 group-hover:text-blue-300 font-semibold text-lg transition-colors">Log in to upload demos</span>
+                            <span class="text-gray-500 text-sm mt-1">Click here to sign in</span>
+                        </Link>
                     </div>
 
+                    <!-- Logged in but can't upload (restricted / not enough records) -->
                     <div v-else-if="!canUpload" class="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-4">
                         <p class="text-red-400">
                             {{ uploadRestrictionMessage }}
                         </p>
                     </div>
 
-                    <!-- Drag and Drop Zone -->
+                    <!-- Drag and Drop Zone (authenticated users with upload permission) -->
                     <div
+                        v-else
                         @dragenter="handleDragEnter"
                         @dragleave="handleDragLeave"
                         @dragover="handleDragOver"
                         @drop="handleDrop"
                         :class="[
                             'relative border-2 border-dashed rounded-xl p-4 text-center transition-all duration-300 ease-in-out',
-                            !canUpload ? 'opacity-50 pointer-events-none' : '',
                             isDragOver
                                 ? 'border-blue-400 bg-blue-900/20 scale-[1.02]'
                                 : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/30'
@@ -1012,11 +1037,6 @@ watch(selectedPhysics, () => {
                                     Select Folder
                                 </button>
                             </div>
-                        
-                        <!-- Guest notice -->
-                        <div v-if="!$page.props.auth.user" class="mt-4 text-sm text-yellow-300">
-                            You are not logged in. Uploaded demos will be public and you will not be able to delete them from the UI.
-                        </div>
                         </div>
                     </div>
 

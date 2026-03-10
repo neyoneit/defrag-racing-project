@@ -66,7 +66,7 @@ const failedList = ref(getFailedIds());
 
 // Save/restore batch state for auto-refresh continuation
 function saveBatchState(ids, startIndex) {
-    localStorage.setItem(BATCH_STATE_KEY, JSON.stringify({ ids, startIndex }));
+    localStorage.setItem(BATCH_STATE_KEY, JSON.stringify({ ids, startIndex, force: forceMode.value }));
 }
 function loadBatchState() {
     try {
@@ -95,6 +95,7 @@ onMounted(() => {
     const state = loadBatchState();
     if (state) {
         modelIdsInput.value = state.ids.join(', ');
+        if (state.force) forceMode.value = true;
         overallProgress.value = `Auto-resuming batch from model ${state.startIndex + 1}/${state.ids.length}...`;
         nextTick(() => startBatch(state.startIndex));
     }
@@ -665,11 +666,31 @@ async function startBatch(startFrom = 0) {
             currentStatus.value = 'Uploading...';
             await uploadThumbnails(modelId, allGifs);
 
-            markCompleted(modelId);
-            completedCount.value = getCompletedIds().size;
+            // Build status message showing what was generated
+            const parts = [];
+            if (allGifs.rotateBlob) parts.push('rotate');
+            if (allGifs.idleBlob) parts.push('idle');
+            if (allGifs.gestureBlob) parts.push('gesture');
+            if (allGifs.headIconBlob) parts.push('head');
+            const missing = [];
+            if (!allGifs.rotateBlob) missing.push('rotate');
+            if (!allGifs.idleBlob) missing.push('idle');
+            if (!allGifs.gestureBlob) missing.push('gesture');
+
+            // Only mark as completed if all 3 GIFs were generated
+            const allGenerated = allGifs.rotateBlob && allGifs.idleBlob && allGifs.gestureBlob;
+            if (allGenerated) {
+                markCompleted(modelId);
+                completedCount.value = getCompletedIds().size;
+            }
+
             consecutiveErrors.value = 0;
             processedThisCycle++;
-            results.value.push({ id: modelId, name: modelData.name, status: 'success', message: 'Done' });
+            const statusMsg = missing.length > 0
+                ? `Partial: ${parts.join('+')} OK, missing ${missing.join('+')}`
+                : 'Done';
+            const status = missing.length > 0 ? 'partial' : 'success';
+            results.value.push({ id: modelId, name: modelData.name, status, message: statusMsg });
         } catch (err) {
             console.error(`Error processing model ${modelId}:`, err);
             consecutiveErrors.value++;
@@ -685,6 +706,7 @@ async function startBatch(startFrom = 0) {
 
     // Batch complete (not interrupted by auto-refresh)
     clearBatchState();
+    forceMode.value = false;
     failedList.value = getFailedIds();
     currentModel.value = null;
     isProcessing.value = false;
@@ -711,6 +733,19 @@ async function startBatchForce() {
 // Quick-fill helpers
 function fillAllWithoutGif() {
     const ids = props.models.filter(m => !m.idle_gif || !m.rotate_gif || !m.gesture_gif).map(m => m.id);
+    // Clear completed status for these IDs so they don't get skipped as "Already done"
+    const completed = getCompletedIds();
+    let changed = false;
+    for (const id of ids) {
+        if (completed.has(id)) {
+            completed.delete(id);
+            changed = true;
+        }
+    }
+    if (changed) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
+        completedCount.value = completed.size;
+    }
     modelIdsInput.value = ids.join(', ');
 }
 
@@ -742,6 +777,80 @@ async function startAlreadyGenerated() {
     await nextTick();
     startBatch(0);
 }
+
+// --- Tab system ---
+const activeTab = ref('gifs');
+
+// --- Still Thumbnail Generation (server-side, from idle GIF middle frame) ---
+const missingThumbnailModels = computed(() =>
+    props.models.filter(m => m.idle_gif && !m.thumbnail)
+);
+const thumbProcessing = ref(false);
+const thumbStopRequested = ref(false);
+const thumbProgress = ref('');
+const thumbStatus = ref('');
+const thumbResults = ref([]);
+const thumbBatchSize = 50;
+
+async function generateStillThumbnails() {
+    const ids = missingThumbnailModels.value.map(m => m.id);
+    if (ids.length === 0) return;
+
+    thumbProcessing.value = true;
+    thumbStopRequested.value = false;
+    thumbResults.value = [];
+    let processed = 0;
+
+    // Process in batches of 50
+    for (let i = 0; i < ids.length; i += thumbBatchSize) {
+        if (thumbStopRequested.value) break;
+
+        const batch = ids.slice(i, i + thumbBatchSize);
+        thumbProgress.value = `Processing batch ${Math.floor(i / thumbBatchSize) + 1}/${Math.ceil(ids.length / thumbBatchSize)} (${processed}/${ids.length} done)`;
+        thumbStatus.value = `Generating thumbnails for ${batch.length} models...`;
+
+        try {
+            const response = await fetch('/models/batch-generate-still-thumbnails', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+                body: JSON.stringify({ ids: batch }),
+            });
+
+            const data = await response.json();
+            if (data.results) {
+                for (const r of data.results) {
+                    const model = props.models.find(m => m.id === r.id);
+                    thumbResults.value.push({
+                        id: r.id,
+                        name: model?.name || `#${r.id}`,
+                        status: r.status,
+                        message: r.message || '',
+                    });
+                    if (r.status === 'ok' && model) {
+                        model.thumbnail = `thumbnails/model_${r.id}.png`;
+                    }
+                }
+                processed += data.results.length;
+            }
+        } catch (e) {
+            thumbResults.value.push({ id: 0, name: 'Batch error', status: 'error', message: e.message });
+        }
+    }
+
+    const okCount = thumbResults.value.filter(r => r.status === 'ok').length;
+    thumbProgress.value = `Done: ${okCount} generated, ${thumbResults.value.length - okCount} failed`;
+    thumbStatus.value = '';
+    thumbProcessing.value = false;
+    thumbStopRequested.value = false;
+}
+
+function stopThumbGeneration() {
+    thumbStopRequested.value = true;
+    thumbStatus.value = 'Stopping after current batch...';
+}
 </script>
 
 <template>
@@ -750,6 +859,27 @@ async function startAlreadyGenerated() {
     <div class="min-h-screen bg-gray-900 text-white p-8">
         <div class="max-w-4xl mx-auto">
             <h1 class="text-2xl font-bold mb-6">Batch Generate GIF Thumbnails</h1>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 mb-6">
+                <button
+                    @click="activeTab = 'gifs'"
+                    :class="activeTab === 'gifs' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                    class="px-4 py-2 rounded font-medium transition-colors"
+                >
+                    GIF Generation
+                </button>
+                <button
+                    @click="activeTab = 'thumbnails'"
+                    :class="activeTab === 'thumbnails' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                    class="px-4 py-2 rounded font-medium transition-colors"
+                >
+                    Missing Still Thumbnails ({{ missingThumbnailModels.length }})
+                </button>
+            </div>
+
+            <!-- GIF Generation Tab -->
+            <div v-show="activeTab === 'gifs'">
 
             <!-- Input -->
             <div class="bg-gray-800 rounded-lg p-6 mb-6">
@@ -896,16 +1026,21 @@ async function startAlreadyGenerated() {
                         <span
                             :class="{
                                 'text-green-400': result.status === 'success',
+                                'text-yellow-400': result.status === 'partial',
                                 'text-red-400': result.status === 'error',
                                 'text-gray-500': result.status === 'skipped'
                             }"
-                            class="font-mono w-10"
+                            class="font-mono w-14"
                         >
-                            {{ result.status === 'success' ? 'OK' : result.status === 'skipped' ? 'SKIP' : 'FAIL' }}
+                            {{ result.status === 'success' ? 'OK' : result.status === 'partial' ? 'PART' : result.status === 'skipped' ? 'SKIP' : 'FAIL' }}
                         </span>
                         <span class="text-gray-300">#{{ result.id }}</span>
                         <span class="text-white">{{ result.name }}</span>
-                        <span v-if="result.status !== 'success'" class="text-xs" :class="result.status === 'error' ? 'text-red-400' : 'text-gray-500'">
+                        <span v-if="result.message" class="text-xs" :class="{
+                            'text-red-400': result.status === 'error',
+                            'text-yellow-400': result.status === 'partial',
+                            'text-gray-500': result.status === 'skipped' || result.status === 'success'
+                        }">
                             {{ result.message }}
                         </span>
                     </div>
@@ -963,6 +1098,93 @@ async function startAlreadyGenerated() {
                     </table>
                 </div>
             </details>
+
+            </div><!-- End GIF Generation Tab -->
+
+            <!-- Missing Still Thumbnails Tab -->
+            <div v-show="activeTab === 'thumbnails'">
+                <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                    <p class="text-gray-300 mb-4">
+                        Models with idle GIF but no still thumbnail (PNG fallback). Extracts the middle frame from the idle GIF server-side using Imagick.
+                    </p>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <button
+                            v-if="!thumbProcessing"
+                            @click="generateStillThumbnails"
+                            :disabled="missingThumbnailModels.length === 0"
+                            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded font-medium"
+                        >
+                            Generate All ({{ missingThumbnailModels.length }})
+                        </button>
+                        <button
+                            v-else
+                            @click="stopThumbGeneration"
+                            :disabled="thumbStopRequested"
+                            class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 rounded font-medium"
+                        >
+                            {{ thumbStopRequested ? 'Stopping...' : 'Stop' }}
+                        </button>
+
+                        <span class="text-sm text-gray-400">
+                            Batches of {{ thumbBatchSize }} (server-side, no 3D viewer needed)
+                        </span>
+                    </div>
+
+                    <!-- Progress -->
+                    <div v-if="thumbProgress" class="mb-4">
+                        <div class="text-lg font-medium">{{ thumbProgress }}</div>
+                        <div v-if="thumbStatus" class="text-sm text-gray-400 mt-1">{{ thumbStatus }}</div>
+                    </div>
+
+                    <!-- Results -->
+                    <div v-if="thumbResults.length > 0" class="mb-4 max-h-64 overflow-y-auto">
+                        <div
+                            v-for="(r, idx) in thumbResults"
+                            :key="idx"
+                            class="flex items-center gap-3 text-sm py-0.5"
+                        >
+                            <span
+                                :class="r.status === 'ok' ? 'text-green-400' : 'text-red-400'"
+                                class="font-mono w-10"
+                            >
+                                {{ r.status === 'ok' ? 'OK' : 'FAIL' }}
+                            </span>
+                            <span class="text-gray-400">#{{ r.id }}</span>
+                            <span class="text-white">{{ r.name }}</span>
+                            <span v-if="r.message" class="text-xs text-red-400">{{ r.message }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Missing models list -->
+                <div class="bg-gray-800 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <h3 class="text-sm font-medium text-gray-400 mb-2">
+                        Missing thumbnails ({{ missingThumbnailModels.length }})
+                    </h3>
+                    <table class="w-full text-sm">
+                        <thead class="text-gray-400">
+                            <tr>
+                                <th class="text-left py-1 px-2">ID</th>
+                                <th class="text-left py-1 px-2">Name</th>
+                                <th class="text-left py-1 px-2">Category</th>
+                                <th class="text-left py-1 px-2">Idle GIF</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="m in missingThumbnailModels" :key="m.id" class="border-t border-gray-700">
+                                <td class="py-1 px-2 font-mono text-gray-400">{{ m.id }}</td>
+                                <td class="py-1 px-2">{{ m.name }}</td>
+                                <td class="py-1 px-2 text-gray-400">{{ m.category }}</td>
+                                <td class="py-1 px-2">
+                                    <span class="text-green-400 text-xs">{{ m.idle_gif }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div><!-- End Thumbnails Tab -->
+
         </div>
 
     </div>

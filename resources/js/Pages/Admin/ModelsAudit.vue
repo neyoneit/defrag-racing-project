@@ -55,6 +55,7 @@ const tabs = [
     { key: 'NO_MD5', label: 'Scrape Error', color: 'gray' },
     { key: 'WS_DETAIL_CHECK', label: 'WS Detail Check', color: 'cyan' },
     { key: 'MISSING_SKIN_NAME', label: 'Missing Skin Name', color: 'amber' },
+    { key: 'VALIDATE_RESOLVED', label: 'Validate Resolved', color: 'rose' },
 ];
 
 const allResults = computed(() => props.report?.results || []);
@@ -84,6 +85,13 @@ const filteredResults = computed(() => {
 const tabCount = (key) => {
     if (key === 'WS_DETAIL_CHECK') return wsDetailLoaded.value ? wsDetailItems.value.length : '?';
     if (key === 'MISSING_SKIN_NAME') return skinNameLoaded.value ? skinNameItems.value.length : '?';
+    if (key === 'VALIDATE_RESOLVED') {
+        const total = allResults.value.filter(r => r.resolved).length;
+        const valid = Object.keys(validateValid).length;
+        const fp = validateFalsePositives.value.length;
+        const unchecked = total - valid - fp;
+        return fp > 0 ? `${fp} FP / ${total}` : `${valid}/${total}`;
+    }
     let all;
     if (key === 'FAILED_MANUAL') {
         all = allResults.value.filter(r => r.failed_manual);
@@ -106,6 +114,7 @@ const colorClass = (color) => ({
     gray: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
     cyan: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
     amber: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+    rose: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
 }[color] || 'bg-gray-500/20 text-gray-400 border-gray-500/30');
 
 const activeColorClass = (color) => ({
@@ -118,6 +127,7 @@ const activeColorClass = (color) => ({
     gray: 'bg-gray-500 text-white',
     cyan: 'bg-cyan-500 text-white',
     amber: 'bg-amber-500 text-white',
+    rose: 'bg-rose-500 text-white',
 }[color] || 'bg-gray-500 text-white');
 
 // WS Detail Check state
@@ -253,6 +263,203 @@ async function batchFixSkinNames() {
     }
     batchProgress.value = '';
     showToast(`Fixed ${items.length} model names`);
+}
+
+// Validate Resolved state — persisted in localStorage
+const _storedValid = JSON.parse(localStorage.getItem('audit_validate_valid') || '{}');
+const _storedFP = JSON.parse(localStorage.getItem('audit_validate_fp') || '[]');
+const validateFalsePositives = ref(_storedFP);
+const validateValid = reactive(_storedValid);
+const validateRunning = ref(false);
+const validateProgress = ref('');
+const validateSearch = ref('');
+const validateFilter = ref('all'); // all, valid, unchecked, false_positive
+
+function persistValidateState() {
+    localStorage.setItem('audit_validate_valid', JSON.stringify(validateValid));
+    localStorage.setItem('audit_validate_fp', JSON.stringify(validateFalsePositives.value));
+}
+
+const filteredValidateItems = computed(() => {
+    let items = validateFalsePositives.value;
+    if (validateSearch.value) {
+        const q = validateSearch.value.toLowerCase();
+        items = items.filter(i =>
+            (i.name && i.name.toLowerCase().includes(q)) ||
+            (i.download_file && i.download_file.toLowerCase().includes(q))
+        );
+    }
+    return items;
+});
+
+// Core validation logic for a single item — returns {valid, reason} or null if valid
+async function validateSingleItem(item, cachedFiles) {
+    // OK items (PK3 with local_path + MD5): fast local file check
+    if (item.status === 'OK' && item.local_path) {
+        try {
+            const { data } = await axios.post('/admin/models-audit/validate-local-files', {
+                items: [{
+                    download_file: item.download_file,
+                    local_path: item.local_path,
+                    ws_md5: item.ws_md5 || null,
+                }],
+            });
+            const result = data[0];
+            if (!result.valid) {
+                return { reason: result.reason };
+            }
+            return null; // valid
+        } catch (e) {
+            return { reason: 'Local validation error: ' + e.message };
+        }
+    }
+
+    // ZIP/identical items: need download + compare
+    const key = item.download_file;
+    try {
+        if (cachedFiles && !cachedFiles.has(key)) {
+            await downloadWithProgress(item, key);
+            cachedFiles.add(key);
+        }
+
+        const { data } = await axios.post('/admin/models-audit/compare', {
+            download_file: item.download_file,
+            local_path: item.local_path || null,
+            detail_url: null,
+        });
+
+        const wasIdentical = item.resolution === 'identical';
+        const isNowIdentical = !!data.all_identical;
+
+        if (wasIdentical && !isNowIdentical) {
+            return { reason: 'Marked identical but files differ from DB', data };
+        }
+
+        if (!isNowIdentical) {
+            const hasMissing = (data.ws_file?.contents || []).some(entry =>
+                entry.models_found?.some(mf => !mf.all_in_db && !mf.error && !mf.info)
+            );
+            if (hasMissing) {
+                return { reason: 'Contains models not imported to DB', data };
+            }
+        }
+
+        return null; // valid
+    } catch (e) {
+        return { reason: 'Validation error: ' + (e.response?.data?.error || e.message) };
+    }
+}
+
+// Validate a single item (button per row)
+const validatingSingle = reactive({});
+async function validateOne(item) {
+    const key = item.download_file;
+    validatingSingle[key] = true;
+    try {
+        let cachedFiles;
+        try {
+            const { data } = await axios.get('/admin/models-audit/cached-files');
+            cachedFiles = new Set(data);
+        } catch { cachedFiles = new Set(); }
+
+        const result = await validateSingleItem(item, cachedFiles);
+        if (result) {
+            delete validateValid[key];
+            validateFalsePositives.value = validateFalsePositives.value.filter(i => i.download_file !== key);
+            validateFalsePositives.value.push({
+                ...item,
+                validate_reason: result.reason,
+                validate_data: result.data || null,
+            });
+            showToast(`FALSE POSITIVE: ${item.name} — ${result.reason}`, 'error');
+        } else {
+            validateValid[key] = true;
+            showToast(`VALID: ${item.name} — resolved status confirmed`);
+        }
+        persistValidateState();
+    } finally {
+        validatingSingle[key] = false;
+    }
+}
+
+// Validate all resolved items sequentially
+async function validateResolved() {
+    // Only validate unchecked items (skip already valid or false positive)
+    const resolved = allResults.value.filter(r =>
+        r.resolved &&
+        !validateValid[r.download_file] &&
+        !validateFalsePositives.value.some(fp => fp.download_file === r.download_file)
+    );
+    if (!resolved.length) {
+        showToast('No unchecked resolved items to validate', 'error');
+        return;
+    }
+
+    validateRunning.value = true;
+    let done = 0;
+    let falseCount = 0;
+
+    // Get cached files list once
+    let cachedFiles;
+    try {
+        const { data } = await axios.get('/admin/models-audit/cached-files');
+        cachedFiles = new Set(data);
+    } catch (e) {
+        showToast('Failed to fetch cached files list', 'error');
+        validateRunning.value = false;
+        return;
+    }
+
+    // Process one by one
+    for (const item of resolved) {
+        if (!validateRunning.value) break;
+
+        done++;
+        validateProgress.value = `${done}/${resolved.length} — ${item.name || item.download_file}`;
+
+        const result = await validateSingleItem(item, cachedFiles);
+        if (result) {
+            falseCount++;
+            delete validateValid[item.download_file];
+            validateFalsePositives.value.push({
+                ...item,
+                validate_reason: result.reason,
+                validate_data: result.data || null,
+            });
+        } else {
+            validateValid[item.download_file] = true;
+        }
+        persistValidateState();
+    }
+
+    validateProgress.value = '';
+    validateRunning.value = false;
+    showToast(`Validated ${done}/${resolved.length} items. False positives: ${falseCount}`);
+}
+
+async function unresolveItem(item) {
+    try {
+        // Update the audit JSON: remove resolved flag
+        await axios.post('/admin/models-audit/resolve', {
+            download_file: item.download_file,
+            resolution: 'unresolved',
+            note: 'Validation found false positive: ' + (item.validate_reason || ''),
+        });
+        // Remove from false positives list and valid cache
+        validateFalsePositives.value = validateFalsePositives.value.filter(i => i.download_file !== item.download_file);
+        delete validateValid[item.download_file];
+        persistValidateState();
+        // Also update the source item in allResults
+        const sourceItem = allResults.value.find(r => r.download_file === item.download_file);
+        if (sourceItem) {
+            sourceItem.resolved = false;
+            delete sourceItem.resolution;
+            delete sourceItem.resolution_note;
+        }
+        showToast(`Unresolved "${item.download_file}" — ready for re-processing`);
+    } catch (e) {
+        showToast('Failed to unresolve: ' + (e.response?.data?.error || e.message), 'error');
+    }
 }
 
 const getCompareKey = (item) => item.download_file;
@@ -1114,8 +1321,173 @@ const executeDryRun = async () => {
                 </template>
             </div>
 
+            <!-- Validate Resolved Tab -->
+            <div v-if="activeTab === 'VALIDATE_RESOLVED'" class="mb-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <button @click="validateResolved" :disabled="validateRunning"
+                        class="px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors">
+                        {{ validateRunning ? `Validating... (${validateProgress})` : `Validate Unchecked (${allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length})` }}
+                    </button>
+                    <button v-if="validateRunning" @click="validateRunning = false"
+                        class="px-4 py-3 bg-red-700 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">
+                        Stop
+                    </button>
+                    <span v-if="validateFalsePositives.length" class="text-rose-400 font-bold text-sm">
+                        {{ validateFalsePositives.length }} false positive(s) found
+                    </span>
+                </div>
+
+                <!-- False Positives Table (shown when any found) -->
+                <div v-if="validateFalsePositives.length" class="mb-6">
+                    <h4 class="text-rose-400 font-bold mb-3 text-sm">False Positives</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-rose-500/20 text-left text-gray-400">
+                                    <th class="py-3 px-4 font-semibold">Name</th>
+                                    <th class="py-3 px-4 font-semibold">File</th>
+                                    <th class="py-3 px-4 font-semibold">Old Resolution</th>
+                                    <th class="py-3 px-4 font-semibold">Problem</th>
+                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in filteredValidateItems" :key="'fp-'+item.download_file"
+                                    class="border-b border-white/5 bg-rose-500/5 hover:bg-rose-500/10 transition-colors">
+                                    <td class="py-2 px-4">
+                                        <span class="text-white font-medium">{{ item.name }}</span>
+                                    </td>
+                                    <td class="py-2 px-4 text-gray-400 font-mono text-xs">{{ item.download_file }}</td>
+                                    <td class="py-2 px-4">
+                                        <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">{{ item.resolution }}</span>
+                                        <div v-if="item.resolution_note" class="text-[10px] text-gray-500 mt-0.5">{{ item.resolution_note }}</div>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span class="text-rose-400 text-xs">{{ item.validate_reason }}</span>
+                                    </td>
+                                    <td class="py-2 px-4 flex gap-2">
+                                        <button @click="unresolveItem(item)"
+                                            class="px-3 py-1 bg-rose-600/50 hover:bg-rose-500 text-white rounded text-xs font-semibold transition-colors">
+                                            Unresolve
+                                        </button>
+                                        <a v-if="item.detail_url" :href="item.detail_url" target="_blank"
+                                            class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition">
+                                            WS Page
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- All Resolved Items Table (validate per-item) -->
+                <div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <input v-model="validateSearch" type="text" placeholder="Filter by name or filename..."
+                            class="w-full max-w-md bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500/50" />
+                        <select v-model="validateFilter"
+                            class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+                            <option value="all">All ({{ allResults.filter(r => r.resolved).length }})</option>
+                            <option value="valid">Valid ({{ Object.keys(validateValid).length }})</option>
+                            <option value="unchecked">Unchecked ({{ allResults.filter(r => r.resolved && !validateValid[r.download_file] && !validateFalsePositives.some(fp => fp.download_file === r.download_file)).length }})</option>
+                            <option value="false_positive">False Positive ({{ validateFalsePositives.length }})</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-gray-950">
+                                <tr class="border-b border-white/10 text-left text-gray-400">
+                                    <th class="py-3 px-4 font-semibold">Name</th>
+                                    <th class="py-3 px-4 font-semibold">File</th>
+                                    <th class="py-3 px-4 font-semibold">Status</th>
+                                    <th class="py-3 px-4 font-semibold">Resolution</th>
+                                    <th class="py-3 px-4 font-semibold">Validation</th>
+                                    <th class="py-3 px-4 font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="item in allResults.filter(r => r.resolved).filter(r => {
+                                        // Filter by validation state
+                                        const isFP = validateFalsePositives.some(fp => fp.download_file === r.download_file);
+                                        const isValid = !!validateValid[r.download_file];
+                                        if (validateFilter === 'valid' && !isValid) return false;
+                                        if (validateFilter === 'unchecked' && (isValid || isFP)) return false;
+                                        if (validateFilter === 'false_positive' && !isFP) return false;
+                                        // Text search
+                                        if (!validateSearch) return true;
+                                        const q = validateSearch.toLowerCase();
+                                        return (r.name && r.name.toLowerCase().includes(q)) || (r.download_file && r.download_file.toLowerCase().includes(q));
+                                    })"
+                                    :key="'vr-all-'+item.download_file"
+                                    :class="[
+                                        'border-b border-white/5 transition-colors',
+                                        validateFalsePositives.some(fp => fp.download_file === item.download_file)
+                                            ? 'bg-rose-500/10 hover:bg-rose-500/15'
+                                            : validateValid[item.download_file]
+                                                ? 'bg-green-500/5 hover:bg-green-500/10'
+                                                : 'hover:bg-white/5'
+                                    ]">
+                                    <td class="py-2 px-4">
+                                        <span class="text-white font-medium text-xs">{{ item.name }}</span>
+                                    </td>
+                                    <td class="py-2 px-4 text-gray-400 font-mono text-[10px]">{{ item.download_file }}</td>
+                                    <td class="py-2 px-4">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                            :class="item.status === 'OK' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'">
+                                            {{ item.status }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span class="px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-[10px]">{{ item.resolution }}</span>
+                                        <div v-if="item.resolution_note" class="text-[10px] text-gray-600 mt-0.5 max-w-[200px] truncate" :title="item.resolution_note">{{ item.resolution_note }}</div>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <span v-if="validateFalsePositives.some(fp => fp.download_file === item.download_file)"
+                                            class="px-2 py-0.5 bg-rose-600/30 text-rose-300 rounded text-[10px] font-semibold">
+                                            FALSE POSITIVE
+                                        </span>
+                                        <span v-else-if="validateValid[item.download_file]"
+                                            class="px-2 py-0.5 bg-green-600/30 text-green-300 rounded text-[10px] font-semibold">
+                                            VALID
+                                        </span>
+                                        <span v-else class="px-2 py-0.5 bg-gray-600/20 text-gray-500 rounded text-[10px]">
+                                            unchecked
+                                        </span>
+                                    </td>
+                                    <td class="py-2 px-4">
+                                        <div class="flex gap-1.5">
+                                            <button
+                                                v-if="!validateFalsePositives.some(fp => fp.download_file === item.download_file)"
+                                                @click="validateOne(item)"
+                                                :disabled="!!validatingSingle[item.download_file]"
+                                                :class="[
+                                                    'px-2 py-1 rounded text-xs transition disabled:opacity-50 font-semibold',
+                                                    validateValid[item.download_file]
+                                                        ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                                        : 'bg-rose-500/20 text-rose-400 hover:bg-rose-500/30'
+                                                ]">
+                                                {{ validatingSingle[item.download_file] ? 'Checking...' : validateValid[item.download_file] ? 'Re-validate' : 'Validate' }}
+                                            </button>
+                                            <button v-else @click="unresolveItem(validateFalsePositives.find(fp => fp.download_file === item.download_file))"
+                                                class="px-2 py-1 bg-rose-600/50 hover:bg-rose-500 text-white rounded text-xs font-semibold transition-colors">
+                                                Unresolve
+                                            </button>
+                                            <a v-if="item.detail_url" :href="item.detail_url" target="_blank"
+                                                class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-xs hover:bg-gray-500/30 transition">
+                                                WS
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- Results Table -->
-            <div v-if="activeTab !== 'WS_DETAIL_CHECK' && activeTab !== 'MISSING_SKIN_NAME'" class="overflow-x-auto">
+            <div v-if="activeTab !== 'WS_DETAIL_CHECK' && activeTab !== 'MISSING_SKIN_NAME' && activeTab !== 'VALIDATE_RESOLVED'" class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-white/10 text-left text-gray-400">

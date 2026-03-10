@@ -1596,6 +1596,127 @@ class ModelsController extends Controller
         return back();
     }
 
+    /**
+     * Generate still PNG thumbnail from idle GIF (middle frame extraction)
+     */
+    public function generateStillThumbnail(Request $request, $id)
+    {
+        if (!Auth::check() || !Auth::user()->admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+
+        if (!$model->idle_gif) {
+            return response()->json(['success' => false, 'message' => 'No idle GIF available'], 422);
+        }
+
+        $gifPath = storage_path('app/public/' . $model->idle_gif);
+        if (!file_exists($gifPath)) {
+            return response()->json(['success' => false, 'message' => 'Idle GIF file not found on disk'], 404);
+        }
+
+        try {
+            $imagick = new \Imagick($gifPath);
+            $frameCount = $imagick->getNumberImages();
+            $middleIndex = (int) floor($frameCount / 2);
+
+            $coalesced = $imagick->coalesceImages();
+            for ($i = 0; $i < $middleIndex; $i++) {
+                $coalesced->nextImage();
+            }
+
+            $coalesced->setImageFormat('png');
+            $pngData = $coalesced->getImageBlob();
+            $coalesced->clear();
+            $imagick->clear();
+
+            $thumbnailsDir = storage_path('app/public/thumbnails');
+            if (!file_exists($thumbnailsDir)) {
+                mkdir($thumbnailsDir, 0755, true);
+            }
+
+            $filename = "model_{$id}.png";
+            file_put_contents($thumbnailsDir . '/' . $filename, $pngData);
+            $model->update(['thumbnail' => "thumbnails/{$filename}"]);
+
+            return response()->json([
+                'success' => true,
+                'thumbnail' => "thumbnails/{$filename}",
+                'frames' => $frameCount,
+                'extracted_frame' => $middleIndex,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Batch generate still thumbnails from idle GIFs
+     */
+    public function batchGenerateStillThumbnails(Request $request)
+    {
+        if (!Auth::check() || !Auth::user()->admin) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return response()->json(['success' => false, 'message' => 'No IDs provided'], 422);
+        }
+
+        // Process max 50 at a time to avoid timeout
+        $ids = array_slice($ids, 0, 50);
+        $models = PlayerModel::whereIn('id', $ids)->whereNotNull('idle_gif')->get();
+
+        $thumbnailsDir = storage_path('app/public/thumbnails');
+        if (!file_exists($thumbnailsDir)) {
+            mkdir($thumbnailsDir, 0755, true);
+        }
+
+        $results = [];
+        foreach ($models as $model) {
+            $gifPath = storage_path('app/public/' . $model->idle_gif);
+            if (!file_exists($gifPath)) {
+                $results[] = ['id' => $model->id, 'status' => 'error', 'message' => 'GIF not found'];
+                continue;
+            }
+
+            try {
+                $imagick = new \Imagick($gifPath);
+                $frameCount = $imagick->getNumberImages();
+                $middleIndex = (int) floor($frameCount / 2);
+
+                $coalesced = $imagick->coalesceImages();
+                for ($i = 0; $i < $middleIndex; $i++) {
+                    $coalesced->nextImage();
+                }
+
+                $coalesced->setImageFormat('png');
+                $pngData = $coalesced->getImageBlob();
+                $coalesced->clear();
+                $imagick->clear();
+
+                $filename = "model_{$model->id}.png";
+                file_put_contents($thumbnailsDir . '/' . $filename, $pngData);
+                $model->update(['thumbnail' => "thumbnails/{$filename}"]);
+
+                $results[] = ['id' => $model->id, 'status' => 'ok'];
+            } catch (\Exception $e) {
+                $results[] = ['id' => $model->id, 'status' => 'error', 'message' => $e->getMessage()];
+            }
+        }
+
+        $okCount = count(array_filter($results, fn($r) => $r['status'] === 'ok'));
+        return response()->json([
+            'success' => true,
+            'processed' => count($results),
+            'ok' => $okCount,
+            'failed' => count($results) - $okCount,
+            'results' => $results,
+        ]);
+    }
+
     public function scrapeWsMetadata(Request $request, $id)
     {
         $user = Auth::user();
