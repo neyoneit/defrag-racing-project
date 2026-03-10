@@ -7,6 +7,8 @@ import { MD3Loader } from '@/utils/MD3Loader.js';
 import { MD3AnimationManager } from '@/utils/MD3AnimationManager.js';
 import { MD3SoundManager } from '@/utils/MD3SoundManager.js';
 
+const DEBUG = false;
+
 const props = defineProps({
     modelPath: {
         type: String,
@@ -360,22 +362,22 @@ async function loadModel() {
                                             audio.setBuffer(buffer);
                                             audio.setVolume(0.5);
                                             model.userData.animation.sounds.push(audio);
-                                            console.log(`🔊 Loaded weapon sound: ${soundPath}`);
+                                            DEBUG && console.log(`🔊 Loaded weapon sound: ${soundPath}`);
                                             resolve();
                                         },
                                         undefined,
                                         (err) => {
-                                            console.log(`⚠️ Could not load sound ${soundPath}:`, err);
+                                            DEBUG && console.log(`⚠️ Could not load sound ${soundPath}:`, err);
                                             resolve(); // Don't fail if sound doesn't load
                                         }
                                     );
                                 });
                             } catch (e) {
-                                console.log(`⚠️ Error loading sound ${soundPath}:`, e);
+                                DEBUG && console.log(`⚠️ Error loading sound ${soundPath}:`, e);
                             }
                         }
 
-                        console.log(`🔊 Loaded ${model.userData.animation.sounds.length} weapon sounds`);
+                        DEBUG && console.log(`🔊 Loaded ${model.userData.animation.sounds.length} weapon sounds`);
 
                         // Emit soundsReady event for weapons
                         if (model.userData.animation.sounds.length > 0) {
@@ -397,11 +399,11 @@ async function loadModel() {
                             if (idleSound) {
                                 idleSound.setLoop(true);
                                 idleSound.play();
-                                console.log('🔊 Started lightning gun idle sound');
+                                DEBUG && console.log('🔊 Started lightning gun idle sound');
                             }
                         }
                     } catch (e) {
-                        console.log('⚠️ Failed to load weapon sounds:', e);
+                        DEBUG && console.log('⚠️ Failed to load weapon sounds:', e);
                     }
                 }
             }
@@ -493,7 +495,7 @@ async function loadModel() {
                         // Pure base Q3 model: /baseq3/models/players/anarki/head.md3
                         // Only load from baseq3 (no base model, no PK3 override)
                         pk3SoundPath = `/baseq3/sound/player/${modelName}`;
-                        console.log(`🔊 Loading base Q3 model sounds: ${pk3SoundPath}`);
+                        DEBUG && console.log(`🔊 Loading base Q3 model sounds: ${pk3SoundPath}`);
                     } else {
                         // Custom model from PK3
                         const extractedPath = props.modelPath.match(/^(\/storage\/models\/extracted\/[^\/]+)\//);
@@ -507,15 +509,15 @@ async function loadModel() {
                             if (baseModelIsBaseQ3) {
                                 // Base model is from baseq3 - load those sounds first
                                 baseModelSoundPath = `/baseq3/sound/player/${props.baseModelName}`;
-                                console.log(`🔊 Will load base model sounds from: ${baseModelSoundPath}, then override with PK3: ${pk3SoundPath}`);
+                                DEBUG && console.log(`🔊 Will load base model sounds from: ${baseModelSoundPath}, then override with PK3: ${pk3SoundPath}`);
                             } else {
                                 // Base model is custom (from another PK3) - would need to know its path
                                 // For now, just load from PK3
-                                console.log(`🔊 Loading sounds from PK3: ${pk3SoundPath}`);
+                                DEBUG && console.log(`🔊 Loading sounds from PK3: ${pk3SoundPath}`);
                             }
                         } else {
                             // Complete model - load only from PK3
-                            console.log(`🔊 Loading complete model sounds from PK3: ${pk3SoundPath}`);
+                            DEBUG && console.log(`🔊 Loading complete model sounds from PK3: ${pk3SoundPath}`);
                         }
                     }
 
@@ -896,7 +898,7 @@ function startFiring() {
     const weaponName = model.userData.animation?.weaponName || '';
     const fireRate = getWeaponFireRate(weaponName);
 
-    console.log(`🔫 Weapon ${weaponName} fire rate: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
+    DEBUG && console.log(`🔫 Weapon ${weaponName} fire rate: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
 
     // Continue firing while button is held (automatic fire)
     firingInterval = setInterval(() => {
@@ -924,7 +926,7 @@ function startFiringWithHit() {
     const weaponName = model.userData.animation?.weaponName || '';
     const fireRate = getWeaponFireRate(weaponName);
 
-    console.log(`🔫 Weapon ${weaponName} fire rate WITH HIT: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
+    DEBUG && console.log(`🔫 Weapon ${weaponName} fire rate WITH HIT: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
 
     // Continue firing while button is held (automatic fire with hit sounds)
     firingInterval = setInterval(() => {
