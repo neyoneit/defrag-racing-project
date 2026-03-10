@@ -17,6 +17,7 @@ class Maplist extends Model
         'is_play_later',
         'likes_count',
         'favorites_count',
+        'views_count',
     ];
 
     protected $casts = [

@@ -64,10 +64,12 @@ Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->mid
 Route::get('/models/batch-generate-gifs', [ModelsController::class, 'batchGenerateGifs'])->middleware('auth')->name('models.batchGenerateGifs');
 Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->where('id', '[0-9]+')->name('models.shaders');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
+Route::get('/models/{model}/download-extras', [ModelsController::class, 'downloadExtras'])->name('models.downloadExtras');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
 Route::post('/models/{id}/save-head-icon', [ModelsController::class, 'saveHeadIcon'])->middleware('auth')->name('models.saveHeadIcon');
 Route::post('/user/confirm-nsfw', [ModelsController::class, 'confirmNsfw'])->middleware('auth')->name('user.confirm-nsfw');
+Route::post('/models/{id}/scrape-ws-metadata', [ModelsController::class, 'scrapeWsMetadata'])->middleware('auth')->where('id', '[0-9]+')->name('models.scrapeWsMetadata');
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
@@ -244,6 +246,51 @@ Route::get('/api/donations/progress', [DonationController::class, 'getProgress']
 
 // Roadmap route
 Route::get('/roadmap', [WebController::class, 'roadmap'])->name('roadmap');
+
+// Admin tools
+Route::get('/admin/models-audit', [App\Http\Controllers\ModelsAuditController::class, 'index'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit');
+
+Route::get('/admin/models-audit/download', [App\Http\Controllers\ModelsAuditController::class, 'download'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.download');
+
+Route::post('/admin/models-audit/compare', [App\Http\Controllers\ModelsAuditController::class, 'compare'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.compare');
+
+Route::post('/admin/models-audit/save-description', [App\Http\Controllers\ModelsAuditController::class, 'saveDescription'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.save-description');
+
+Route::post('/admin/models-audit/build-extras-zip', [App\Http\Controllers\ModelsAuditController::class, 'buildExtrasZip'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.build-extras-zip');
+
+Route::post('/admin/models-audit/mark-manual-review', [App\Http\Controllers\ModelsAuditController::class, 'markManualReview'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.mark-manual-review');
+
+Route::post('/admin/models-audit/mark-failed-manual', [App\Http\Controllers\ModelsAuditController::class, 'markFailedManual'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.mark-failed-manual');
+
+Route::get('/admin/models-audit/cached-files', [App\Http\Controllers\ModelsAuditController::class, 'cachedFiles'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.cached-files');
+
+Route::post('/admin/models-audit/resolve', [App\Http\Controllers\ModelsAuditController::class, 'resolve'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.resolve');
+
+Route::post('/admin/models-audit/import', [App\Http\Controllers\ModelsAuditController::class, 'importModel'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.import');
+
+Route::post('/admin/models-audit/import-pk3', [App\Http\Controllers\ModelsAuditController::class, 'importPk3'])
+    ->middleware(['auth', App\Http\Middleware\AdminAccessMiddleware::class])
+    ->name('admin.models-audit.import-pk3');
 
 // PayPal webhook (no CSRF protection needed for webhooks)
 Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookController::class, 'handleWebhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);

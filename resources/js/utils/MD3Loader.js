@@ -595,6 +595,7 @@ export class MD3Loader {
             });
 
             const mesh = new THREE.Mesh(geometry, material);
+            mesh.frustumCulled = false; // Disable frustum culling - MD3 animations change vertex positions
             mesh.name = surface.name;
             mesh.userData.surface = surface.name; // Store surface name as string
             mesh.userData.surfaceData = surface; // Store full surface object for animations

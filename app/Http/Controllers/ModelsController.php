@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PlayerModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use ZipArchive;
@@ -1056,6 +1057,16 @@ class ModelsController extends Controller
 
         $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
 
+        // Resolve bundled models — only from OTHER PK3s (same PK3 = siblings, not dependencies)
+        $bundledModels = [];
+        if ($model->bundle_uuid) {
+            $bundledModels = PlayerModel::where('bundle_uuid', $model->bundle_uuid)
+                ->where('zip_path', '!=', $model->zip_path)
+                ->select(['id', 'name', 'base_model', 'zip_path', 'thumbnail_path'])
+                ->get()
+                ->toArray();
+        }
+
         // For thumbnail generation, render without layout
         if ($request->has('thumbnail')) {
             return Inertia::render('Models/ShowThumbnail', [
@@ -1067,6 +1078,7 @@ class ModelsController extends Controller
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,
+            'bundledModels' => $bundledModels,
             'load_times' => $timings,
         ]);
     }
@@ -1095,6 +1107,29 @@ class ModelsController extends Controller
         }
 
         $filename = str_replace(' ', '_', $model->name) . '.pk3';
+        return response()->download($filePath, $filename);
+    }
+
+    /**
+     * Download extras ZIP (source files, readmes, etc. from original author package)
+     */
+    public function downloadExtras(PlayerModel $model)
+    {
+        if ($model->approval_status !== 'approved' && $model->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        if (!$model->extras_zip_path) {
+            abort(404, 'No extras available for this model');
+        }
+
+        $filePath = storage_path('app/' . $model->extras_zip_path);
+
+        if (!file_exists($filePath)) {
+            abort(404, 'Extras file not found');
+        }
+
+        $filename = str_replace(' ', '_', $model->name) . '-extras.zip';
         return response()->download($filePath, $filename);
     }
 
@@ -1530,6 +1565,23 @@ class ModelsController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
+        // Resolve base_model_file_path for skin/mixed models missing it (same fallback as show())
+        $needsResolution = $models->filter(fn ($m) => !$m->base_model_file_path && $m->model_type !== 'complete' && $m->base_model);
+        if ($needsResolution->isNotEmpty()) {
+            $baseNames = $needsResolution->pluck('base_model')->map(fn ($b) => strtolower($b))->unique();
+            $baseModels = PlayerModel::where('model_type', 'complete')
+                ->whereRaw('LOWER(base_model) IN (' . $baseNames->map(fn () => '?')->implode(',') . ')', $baseNames->values()->all())
+                ->get(['base_model', 'file_path'])
+                ->keyBy(fn ($m) => strtolower($m->base_model));
+
+            foreach ($needsResolution as $model) {
+                $base = $baseModels->get(strtolower($model->base_model));
+                if ($base) {
+                    $model->base_model_file_path = $base->file_path;
+                }
+            }
+        }
+
         return Inertia::render('Models/BatchGenerateGifs', [
             'models' => $models,
         ]);
@@ -1542,5 +1594,56 @@ class ModelsController extends Controller
         $user->save();
 
         return back();
+    }
+
+    public function scrapeWsMetadata(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->admin) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $request->validate(['url' => 'required|url']);
+        $url = $request->input('url');
+
+        $model = PlayerModel::findOrFail($id);
+
+        try {
+            $response = Http::withoutVerifying()->timeout(10)->get($url);
+            if (!$response->ok()) {
+                return response()->json(['error' => 'Failed to fetch page (HTTP ' . $response->status() . ')'], 422);
+            }
+
+            $html = $response->body();
+            $meta = [];
+
+            if (preg_match('/<td>Author<\/td>\s*<td>(?:<a[^>]*>)?([^<]+)(?:<\/a>)?<\/td>/i', $html, $m)) {
+                $author = html_entity_decode(trim($m[1]), ENT_QUOTES, 'UTF-8');
+                if ($author && strtolower($author) !== 'unknown') $meta['author'] = $author;
+            }
+
+            if (preg_match('/<td>Skin<\/td>\s*<td>([^<]+)<\/td>/i', $html, $m)) {
+                $name = html_entity_decode(trim($m[1]), ENT_QUOTES, 'UTF-8');
+                if ($name) $meta['name'] = $name;
+            }
+
+            if (empty($meta)) {
+                return response()->json(['error' => 'No useful metadata found on page'], 422);
+            }
+
+            $updates = [];
+            if (!empty($meta['author'])) $updates['author'] = $meta['author'];
+            if (!empty($meta['name'])) $updates['name'] = $meta['name'];
+
+            $model->update($updates);
+
+            return response()->json([
+                'success' => true,
+                'updated' => $updates,
+                'meta' => $meta,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Scrape failed: ' . $e->getMessage()], 500);
+        }
     }
 }

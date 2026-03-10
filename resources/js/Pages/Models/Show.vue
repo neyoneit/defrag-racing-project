@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted } from 'vue';
+import axios from 'axios';
 
 const page = usePage();
 import ModelViewer from '@/Components/ModelViewer.vue';
@@ -8,7 +9,20 @@ import ModelViewer from '@/Components/ModelViewer.vue';
 const props = defineProps({
     model: Object,
     baseModelData: Object,
+    bundledModels: Array,
     load_times: Object,
+});
+
+// Group bundled models by PK3 file (one download per PK3)
+const bundledByPk3 = computed(() => {
+    if (!props.bundledModels?.length) return {};
+    const groups = {};
+    props.bundledModels.forEach(m => {
+        const key = m.zip_path || m.id;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+    });
+    return groups;
 });
 
 // Frontend timing metrics
@@ -66,6 +80,27 @@ const currentLegsAnim = ref(null);
 const currentTorsoAnim = ref(null);
 const showWireframe = ref(false);
 const autoRotate = ref(false);
+
+// WS metadata scraping
+const wsUrl = ref('');
+const scrapingWs = ref(false);
+const scrapeResult = ref(null);
+
+const scrapeWsMetadata = async () => {
+    if (!wsUrl.value) return;
+    scrapingWs.value = true;
+    scrapeResult.value = null;
+    try {
+        const { data } = await axios.post(`/models/${props.model.id}/scrape-ws-metadata`, { url: wsUrl.value });
+        scrapeResult.value = { success: true, updated: data.updated };
+        // Reload page to reflect changes
+        setTimeout(() => router.reload(), 1000);
+    } catch (e) {
+        scrapeResult.value = { error: e.response?.data?.error || e.message };
+    } finally {
+        scrapingWs.value = false;
+    }
+};
 const bgColor = ref('black');
 const animationSpeed = ref(1.0); // FPS multiplier
 const manualFrame = ref(0);
@@ -463,6 +498,23 @@ const updateAnimationSpeed = (event) => {
 const isBaseQ3Model = computed(() => {
     return props.model.file_path && props.model.file_path.startsWith('baseq3/');
 });
+
+// In-game command: /model base_model or /model base_model/skin
+const inGameCommand = computed(() => {
+    if (!props.model.base_model) return null;
+    const skins = props.model.available_skins;
+    const skin = Array.isArray(skins) ? skins[0] : (typeof skins === 'string' ? JSON.parse(skins)[0] : null);
+    if (!skin || skin === 'default') return `/model ${props.model.base_model}`;
+    return `/model ${props.model.base_model}/${skin}`;
+});
+
+const commandCopied = ref(false);
+const copyCommand = () => {
+    if (!inGameCommand.value) return;
+    navigator.clipboard.writeText(inGameCommand.value);
+    commandCopied.value = true;
+    setTimeout(() => commandCopied.value = false, 2000);
+};
 
 const downloadModel = () => {
     if (isBaseQ3Model.value) {
@@ -1190,7 +1242,42 @@ const confirmNsfw = () => {
                     <!-- Left Column: 3D Viewer / Preview -->
                     <div :class="isThumbnailMode ? 'w-full h-full' : ''" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                         <!-- 3D Viewer Card -->
-                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 pt-4 px-4 pb-4 mb-8']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 pt-4 px-4 pb-4 mb-6']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                            <!-- Header (top of viewer card) -->
+                            <div v-if="!isThumbnailMode" class="mb-4">
+                                <!-- Row 1: Title + Command + Tags -->
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <h1 class="text-3xl font-black text-white leading-tight">{{ model.name }}</h1>
+                                        <div v-if="inGameCommand" class="flex items-center gap-1.5 shrink-0">
+                                            <code class="text-emerald-300 font-mono text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5">{{ inGameCommand }}</code>
+                                            <button @click="copyCommand" class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold hover:bg-emerald-500/25 transition-colors">
+                                                {{ commandCopied ? 'Copied!' : 'Copy' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        <span v-if="model.is_nsfw" class="px-2 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">NSFW</span>
+                                        <span class="px-2 py-0.5 bg-blue-500/15 border border-blue-500/20 rounded text-[10px] font-semibold text-blue-400 capitalize">{{ model.category }}</span>
+                                        <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-[10px] px-2 py-0.5 rounded font-semibold">
+                                            {{ getModelTypeLabel(model.model_type) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <!-- Row 2: Author + Base Model -->
+                                <div class="flex items-center gap-4 mt-2 text-sm">
+                                    <div v-if="model.author" class="flex items-center gap-1.5">
+                                        <span class="text-gray-500">Author:</span>
+                                        <Link :href="route('models.index', { authors: model.author })" class="text-blue-400 hover:text-blue-300 transition-colors font-semibold">{{ model.author }}</Link>
+                                        <span v-if="model.author_email && model.author_email.includes('@') && model.author_email.length < 100" class="text-gray-500 text-xs">({{ model.author_email }})</span>
+                                    </div>
+                                    <div v-if="model.base_model" class="flex items-center gap-1.5">
+                                        <span class="text-gray-500">Base model:</span>
+                                        <Link :href="route('models.index', { base_model: model.base_model })" class="text-blue-400 hover:text-blue-300 transition-colors font-semibold">{{ model.base_model }}</Link>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Viewer Controls -->
                             <div v-if="viewerLoaded && !isThumbnailMode" class="flex gap-2 mb-4">
                                 <button @click="autoRotate = !autoRotate" :class="[
@@ -1274,12 +1361,101 @@ const confirmNsfw = () => {
                                     <p class="text-gray-400 text-sm">No 3D Model Available</p>
                                 </div>
                             </div>
-                        </div>
+                            <!-- Download (bottom of viewer card) -->
+                            <div v-if="!isThumbnailMode" class="mt-4 pt-4 border-t border-white/10">
+                                <button @click="downloadModel"
+                                        :disabled="isBaseQ3Model"
+                                        :class="[
+                                            'w-full px-4 py-2.5 text-white font-bold rounded-lg transition-all text-sm',
+                                            isBaseQ3Model
+                                                ? 'bg-gray-500/30 cursor-not-allowed opacity-60'
+                                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-md hover:shadow-green-500/30'
+                                        ]">
+                                    <span class="flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                        </svg>
+                                        {{ isBaseQ3Model ? 'Included with Quake 3' : 'Download Model' }}
+                                    </span>
+                                </button>
+                                <p v-if="isBaseQ3Model" class="text-center text-gray-500 text-xs mt-1">
+                                    This model is part of the base Quake 3 installation
+                                </p>
+                                <p v-else class="text-center text-gray-500 text-xs mt-1">
+                                    Copy to your Quake 3 baseq3 directory
+                                </p>
 
-                        <!-- Description -->
-                        <div v-if="model.description" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
-                            <h3 class="text-lg font-bold text-white mb-3">Description</h3>
-                            <p class="text-gray-300 whitespace-pre-line">{{ model.description }}</p>
+                                <!-- Extras download (source files from author) -->
+                                <div v-if="model.extras_zip_path" class="mt-3 pt-3 border-t border-white/10">
+                                    <a :href="route('models.downloadExtras', model.id)"
+                                       class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-500/20 border border-gray-500/30 text-gray-300 text-xs font-semibold hover:bg-gray-500/30 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                        </svg>
+                                        Download Author Source Files
+                                    </a>
+                                    <p class="text-center text-gray-600 text-[10px] mt-1">
+                                        Not required for the model to work. Included by the author (e.g. source files, documentation).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Texture Dependency Warning (inside viewer card) -->
+                            <div v-if="!isThumbnailMode && baseModelData?.is_texture_dependency" class="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div class="text-sm">
+                                        <p class="text-amber-200 font-semibold text-xs mb-1">Texture Dependency</p>
+                                        <p class="text-gray-300 text-xs">
+                                            Requires
+                                            <Link :href="route('models.show', baseModelData.id)" class="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
+                                                {{ baseModelData.display_name || baseModelData.name }}
+                                            </Link>
+                                            — textures reference files from that PK3.
+                                        </p>
+                                        <a v-if="baseModelData.zip_path"
+                                           :href="`/storage/${baseModelData.zip_path}`"
+                                           class="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition-colors">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Download {{ baseModelData.display_name || baseModelData.name }}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bundled With (inside viewer card) -->
+                            <div v-if="!isThumbnailMode && bundledModels && bundledModels.length" class="mt-3 pt-3 border-t border-white/10">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                    <span class="text-blue-200 text-sm font-semibold">Bundled With</span>
+                                </div>
+                                <p class="text-gray-400 text-xs mb-3">Packaged together by the author, may be required to work properly.</p>
+                                <div class="space-y-3">
+                                    <div v-for="(group, zipPath) in bundledByPk3" :key="zipPath" class="flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-3 min-w-0 flex-wrap">
+                                            <img v-if="group[0].thumbnail_path" :src="`/storage/${group[0].thumbnail_path}`" class="w-10 h-10 rounded object-cover shrink-0" />
+                                            <div class="text-sm">
+                                                <template v-for="(bundled, i) in group" :key="bundled.id">
+                                                    <Link :href="route('models.show', bundled.id)" class="text-blue-400 font-semibold hover:text-blue-300 transition-colors">{{ bundled.name }}</Link><span v-if="i < group.length - 1" class="text-gray-500">, </span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <a :href="route('models.download', group[0].id)"
+                                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-xs font-semibold hover:bg-green-500/30 transition-colors shrink-0">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                            Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Technical Details -->
@@ -1311,69 +1487,84 @@ const confirmNsfw = () => {
                                     <div class="text-white font-bold">{{ new Date(model.created_at).toLocaleDateString() }}</div>
                                 </div>
                             </div>
+                            <!-- Uploaded By (inline) -->
+                            <div v-if="model.user.name !== 'id Software, Inc.'" class="mt-4 pt-4 border-t border-white/10">
+                                <Link :href="route('profile.index', model.user.id)" class="flex items-center gap-3 hover:bg-white/5 rounded-lg p-2 -m-2 transition-all">
+                                    <img :src="model.user.profile_photo_path ? `/storage/${model.user.profile_photo_path}` : '/images/null.jpg'"
+                                         :alt="model.user.name"
+                                         class="w-8 h-8 rounded-full object-cover ring-2 ring-white/10">
+                                    <div>
+                                        <div class="text-gray-400 text-xs">Uploaded by</div>
+                                        <div class="text-white text-sm font-semibold" v-html="q3tohtml(model.user.name)"></div>
+                                    </div>
+                                </Link>
+                            </div>
+                        </div>
+
+                        <!-- Description / Author Notes -->
+                        <div v-if="model.description" class="backdrop-blur-xl bg-gradient-to-br from-white/5 to-white/[0.02] rounded-xl p-4 border border-white/10 mb-6">
+                            <h3 class="text-sm font-semibold text-gray-400 mb-2">Author Notes</h3>
+                            <p class="text-gray-400 text-xs whitespace-pre-line leading-relaxed">{{ model.description }}</p>
                         </div>
                     </div>
 
-                    <!-- Right Column: Model Info -->
+                    <!-- Right Column: Controls -->
                     <div v-if="!isThumbnailMode">
-                        <!-- Title and Category -->
-                        <div class="mb-6">
-                            <div class="flex items-start justify-between mb-2">
-                                <h1 class="text-4xl font-black text-white">{{ model.name }}</h1>
-                                <div class="flex items-center gap-2">
-                                    <span v-if="model.is_nsfw" class="px-3 py-1 bg-red-500/20 border border-red-500/30 rounded-full text-sm font-bold text-red-400">
-                                        NSFW
-                                    </span>
-                                    <span class="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-sm font-bold text-blue-400">
-                                        {{ model.category }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="text-gray-400">
-                                <p v-if="model.author">
-                                    Created by <span class="text-white font-semibold">{{ model.author }}</span>
-                                    <span v-if="model.author_email" class="text-gray-500">
-                                        ({{ model.author_email }})
-                                    </span>
-                                </p>
-                                <div class="flex items-center gap-3 mt-2">
-                                    <p v-if="model.base_model" class="text-sm text-gray-500">
-                                        Based on
-                                        <Link :href="route('models.index', { base_model: model.base_model })" class="text-blue-400 font-semibold hover:text-blue-300 transition-colors cursor-pointer">
-                                            {{ model.base_model }}
-                                        </Link>
-                                    </p>
-                                    <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
-                                        {{ getModelTypeLabel(model.model_type) }}
-                                    </span>
-                                </div>
-                            </div>
+
+                        <!-- Admin actions row -->
+                        <div v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)" class="flex gap-2 mb-4">
+                            <button
+                                @click="generateGifThumbnail"
+                                :disabled="isGeneratingGif || !viewerLoaded"
+                                class="flex-1 px-3 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-300 font-semibold rounded-lg hover:bg-purple-500/30 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span v-if="!isGeneratingGif" class="flex items-center justify-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                                    </svg>
+                                    Generate GIF
+                                </span>
+                                <span v-else class="flex items-center justify-center gap-1.5">
+                                    <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {{ gifProgress }}
+                                </span>
+                            </button>
+                            <a
+                                v-if="$page.props.auth?.user?.admin"
+                                :href="`/defraghq/models/${model.id}/edit`"
+                                class="px-3 py-2 bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold rounded-lg hover:bg-amber-500/30 transition-all text-xs flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                                </svg>
+                                Edit
+                            </a>
                         </div>
 
-                        <!-- CROSS-PK3 TEXTURE DEPENDENCY WARNING -->
-                        <div v-if="baseModelData?.is_texture_dependency" class="backdrop-blur-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-xl p-4 border border-amber-500/20 mb-6">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-5 h-5 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <div class="text-sm">
-                                    <p class="text-amber-200 font-semibold mb-1">Texture Dependency</p>
-                                    <p class="text-gray-300">
-                                        This model requires the
-                                        <Link :href="route('models.show', baseModelData.id)" class="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
-                                            {{ baseModelData.display_name || baseModelData.name }}
-                                        </Link>
-                                        player model — its textures reference files from that PK3.
-                                    </p>
-                                    <a v-if="baseModelData.zip_path"
-                                       :href="`/storage/${baseModelData.zip_path}`"
-                                       class="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold hover:bg-amber-500/30 transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                        Download {{ baseModelData.display_name || baseModelData.name }}
-                                    </a>
-                                </div>
+                        <!-- WS METADATA SCRAPE (admin only) -->
+                        <div v-if="$page.props.auth?.user?.admin" class="mb-4">
+                            <div class="flex gap-2">
+                                <input
+                                    v-model="wsUrl"
+                                    type="text"
+                                    placeholder="ws.q3df.org URL (e.g. /model/crash/skin/bump/)"
+                                    class="flex-1 px-2 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none"
+                                />
+                                <button
+                                    @click="scrapeWsMetadata"
+                                    :disabled="!wsUrl || scrapingWs"
+                                    class="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-semibold rounded-lg hover:bg-cyan-500/30 transition-all text-xs disabled:opacity-50 whitespace-nowrap"
+                                >
+                                    {{ scrapingWs ? 'Scraping...' : 'Scrape WS' }}
+                                </button>
+                            </div>
+                            <div v-if="scrapeResult" class="mt-1.5 text-xs">
+                                <span v-if="scrapeResult.success" class="text-green-400">
+                                    Updated: {{ Object.entries(scrapeResult.updated).map(([k,v]) => `${k}=${v}`).join(', ') }}
+                                </span>
+                                <span v-else class="text-red-400">{{ scrapeResult.error }}</span>
                             </div>
                         </div>
 
@@ -1694,78 +1885,6 @@ const confirmNsfw = () => {
                             </div>
                         </div>
 
-                        <!-- Uploader Info (Hidden for id Software, Inc.) -->
-                        <div v-if="model.user.name !== 'id Software, Inc.'" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
-                            <h3 class="text-lg font-bold text-white mb-3">Uploaded By</h3>
-                            <Link :href="route('profile.index', model.user.id)" class="flex items-center gap-3 hover:bg-white/5 rounded-lg p-2 -m-2 transition-all">
-                                <img :src="model.user.profile_photo_path ? `/storage/${model.user.profile_photo_path}` : '/images/null.jpg'"
-                                     :alt="model.user.name"
-                                     class="w-12 h-12 rounded-full object-cover ring-2 ring-white/10">
-                                <div>
-                                    <div class="text-white font-bold" v-html="q3tohtml(model.user.name)"></div>
-                                    <div class="text-gray-400 text-sm">View Profile →</div>
-                                </div>
-                            </Link>
-                        </div>
-
-                        <!-- Download Button -->
-                        <div class="relative mb-4">
-                            <button @click="downloadModel"
-                                    :disabled="isBaseQ3Model"
-                                    :class="[
-                                        'w-full px-6 py-4 text-white font-black rounded-xl transition-all shadow-lg text-lg',
-                                        isBaseQ3Model
-                                            ? 'bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed opacity-60'
-                                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/50'
-                                    ]">
-                                <span class="flex items-center justify-center gap-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                    </svg>
-                                    {{ isBaseQ3Model ? 'Included with Quake 3' : 'Download Model' }}
-                                </span>
-                            </button>
-                            <p v-if="isBaseQ3Model" class="text-center text-gray-400 text-xs mt-2">
-                                This model is part of the base Quake 3 installation
-                            </p>
-                        </div>
-
-                        <!-- Generate Thumbnail Button (Owner or Admin) -->
-                        <button
-                            v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)"
-                            @click="generateGifThumbnail"
-                            :disabled="isGeneratingGif || !viewerLoaded"
-                            class="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-purple-500/50 text-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span v-if="!isGeneratingGif" class="flex items-center justify-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                </svg>
-                                Generate GIF Thumbnail
-                            </span>
-                            <span v-else class="flex items-center justify-center gap-3">
-                                <svg class="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {{ gifProgress }}
-                            </span>
-                        </button>
-
-                        <!-- Admin Edit Link -->
-                        <a
-                            v-if="$page.props.auth?.user?.admin"
-                            :href="`/defraghq/models/${model.id}/edit`"
-                            class="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg hover:shadow-amber-500/50 text-lg flex items-center justify-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                            </svg>
-                            Admin Edit
-                        </a>
-
-                        <p v-if="!isBaseQ3Model" class="text-center text-gray-500 text-sm mt-2">
-                            Extract to your Quake 3 baseq3 directory
-                        </p>
 
                         <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
                         <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8">

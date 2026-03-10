@@ -591,6 +591,9 @@ export class Q3ShaderMaterialSystem {
 
                 hasDeformAutoSprite: { value: hasDeformAutoSprite ? 1 : 0 },
                 hasDeformAutoSprite2: { value: hasDeformAutoSprite2 ? 1 : 0 },
+
+                // alphaFunc: 0=none, 1=GT0, 2=GE128, 3=LT128
+                uAlphaFunc: { value: firstStage.alphaFunc === 'GT0' ? 1 : firstStage.alphaFunc === 'GE128' ? 2 : firstStage.alphaFunc === 'LT128' ? 3 : 0 },
             },
 
             vertexShader: this.getVertexShader(),
@@ -598,7 +601,7 @@ export class Q3ShaderMaterialSystem {
 
             // Q3 default cull is CT_FRONT_SIDED (glCullFace(GL_FRONT)) = show back faces
             // This is critical for models with _ot (outline) surfaces that have inverted normals
-            side: shader.cull ? this.getCullMode(shader.cull) : THREE.BackSide,
+            side: shader.cull ? this.getCullMode(shader.cull) : THREE.DoubleSide,
             transparent: alphaTest > 0 || hasAdditiveBlending || hasAlphaBlending || hasAlphaGenEffects, // Enable transparency
             alphaTest: alphaTest, // Set alpha test threshold
             depthWrite: hasMultiplyBlending ? true : depthWrite, // Multiply shaders should write depth (they're visually opaque)
@@ -841,6 +844,7 @@ export class Q3ShaderMaterialSystem {
 
             uniform int numStages;
             uniform float time;
+            uniform int uAlphaFunc; // 0=none, 1=GT0, 2=GE128, 3=LT128
 
             uniform vec4 blendMode0; // x=srcFactor, y=dstFactor, z=enabled, w=reserved
             uniform vec4 blendMode1;
@@ -1301,6 +1305,14 @@ export class Q3ShaderMaterialSystem {
 
                     color = blendColors(stage4, color, blendMode4);
                 }
+
+                // alphaFunc discard (Q3 engine: tr_shade.c)
+                if (uAlphaFunc == 1 && color.a <= 0.0) discard;        // GT0: discard if alpha <= 0
+                if (uAlphaFunc == 2 && color.a < 0.5) discard;         // GE128: discard if alpha < 0.5
+                if (uAlphaFunc == 3 && color.a >= 0.5) discard;        // LT128: discard if alpha >= 0.5
+
+                // After alphaFunc test, surviving fragments should be fully opaque
+                if (uAlphaFunc > 0) color.a = 1.0;
 
                 gl_FragColor = color;
             }

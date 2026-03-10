@@ -604,7 +604,7 @@ const getModelTypeBadgeClass = (type) => {
 
                                 <div class="text-sm text-gray-400 mb-3">
                                     <p v-if="model.author">by {{ model.author }}</p>
-                                    <p v-if="model.base_model" class="text-xs text-gray-500">based on {{ model.base_model }}</p>
+                                    <p v-if="model.base_model" class="text-xs text-gray-500 font-mono">/model {{ model.base_model }}{{ model.available_skins && model.available_skins[0] && model.available_skins[0] !== 'default' ? '/' + model.available_skins[0] : '' }}</p>
                                     <div v-if="model.model_type" class="mt-2">
                                         <span :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
                                             {{ getModelTypeLabel(model.model_type) }}

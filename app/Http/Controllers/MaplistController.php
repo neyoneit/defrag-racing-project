@@ -19,9 +19,11 @@ class MaplistController extends Controller
      */
     public function index(Request $request)
     {
-        $sort = $request->get('sort', 'likes'); // 'likes', 'favorites', 'newest', or 'oldest'
-        $userId = $request->get('user'); // Filter by user
-        $view = $request->get('view', 'public'); // 'public', 'mine', 'favorites', or 'likes'
+        $sort = $request->get('sort', 'likes');
+        $userId = $request->get('user');
+        $view = $request->get('view', 'public');
+        $search = $request->get('search');
+        $authors = $request->get('authors');
 
         $query = Maplist::with(['user', 'maps'])->withCount(['maps', 'likes', 'favorites']);
         $playLater = null;
@@ -83,6 +85,24 @@ class MaplistController extends Controller
                   ->where('is_play_later', false);
         }
 
+        // Search by map name or maplist name
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhereHas('maps', function ($mq) use ($search) {
+                      $mq->where('maps.name', 'like', '%' . $search . '%');
+                  });
+            });
+        }
+
+        // Filter by authors (maplist creators)
+        if ($authors) {
+            $authorIds = explode(',', $authors);
+            $query->whereHas('user', function ($q) use ($authorIds) {
+                $q->whereIn('id', $authorIds);
+            });
+        }
+
         // Apply sorting
         if ($sort === 'favorites') {
             $query->orderBy('favorites_count', 'desc');
@@ -90,6 +110,12 @@ class MaplistController extends Controller
             $query->orderBy('created_at', 'desc');
         } elseif ($sort === 'oldest') {
             $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'most_maps') {
+            $query->orderBy('maps_count', 'desc');
+        } elseif ($sort === 'least_maps') {
+            $query->orderBy('maps_count', 'asc');
+        } elseif ($sort === 'most_views') {
+            $query->orderBy('views_count', 'desc');
         } else {
             $query->orderBy('likes_count', 'desc');
         }
@@ -164,6 +190,18 @@ class MaplistController extends Controller
             }
         }
 
+        // Build available authors list (maplist creators with counts)
+        $availableAuthors = \DB::table('maplists')
+            ->join('users', 'maplists.user_id', '=', 'users.id')
+            ->where('maplists.is_public', true)
+            ->where('maplists.is_play_later', false)
+            ->where('maplists.is_draft', false)
+            ->select('users.id', 'users.name', \DB::raw('COUNT(*) as count'))
+            ->groupBy('users.id', 'users.name')
+            ->orderBy('count', 'desc')
+            ->get()
+            ->mapWithKeys(fn ($row) => [$row->id => ['name' => $row->name, 'count' => $row->count]]);
+
         return Inertia::render('Maplists/Index', [
             'maplists' => $maplists,
             'myMaplists' => $myMaplists,
@@ -173,6 +211,9 @@ class MaplistController extends Controller
             'sort' => $sort,
             'user_id' => $userId,
             'view' => $view,
+            'search' => $search,
+            'authors' => $authors,
+            'availableAuthors' => $availableAuthors,
         ]);
     }
 
@@ -232,6 +273,9 @@ class MaplistController extends Controller
         if ($maplist->is_play_later && Auth::check() && Auth::id() === $maplist->user_id) {
             return redirect()->route('maplists.playLater');
         }
+
+        // Increment views count
+        $maplist->increment('views_count');
 
         $isLiked = Auth::check() ? $maplist->isLikedBy(Auth::id()) : false;
         $isFavorited = Auth::check() ? $maplist->isFavoritedBy(Auth::id()) : false;

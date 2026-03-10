@@ -23,6 +23,7 @@ class PlayerModel extends Model
         'author_email',
         'file_path',
         'zip_path',
+        'extras_zip_path',
         'thumbnail',
         'thumbnail_path',
         'head_icon',
@@ -39,6 +40,7 @@ class PlayerModel extends Model
         'hidden',
         'is_nsfw',
         'main_file',
+        'bundle_uuid',
     ];
 
     protected $casts = [
@@ -101,6 +103,20 @@ class PlayerModel extends Model
     public function scopeCategory($query, $category)
     {
         return $query->where('category', $category);
+    }
+
+    /**
+     * Get other models in the same bundle (grouped by base_model).
+     */
+    public function bundledModels()
+    {
+        if (!$this->bundle_uuid) return collect();
+
+        return static::where('bundle_uuid', $this->bundle_uuid)
+            ->where('base_model', '!=', $this->base_model)
+            ->get()
+            ->groupBy('base_model')
+            ->map(fn ($group) => $group->first());
     }
 
     /**

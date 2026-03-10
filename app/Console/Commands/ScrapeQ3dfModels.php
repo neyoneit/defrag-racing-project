@@ -362,24 +362,21 @@ class ScrapeQ3dfModels extends Command
 
             if ($openResult === TRUE) {
                 // Check if this is a ZIP containing PK3 files
-                $containsPK3 = false;
-                $pk3FileName = null;
+                $pk3FileNames = [];
 
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $filename = $zip->getNameIndex($i);
                     $basename = basename($filename);
                     $ext = pathinfo($basename, PATHINFO_EXTENSION);
 
-                    // Accept PK3 files even if they're in subdirectories (e.g., baseq3/model.pk3)
+                    // Collect ALL PK3 files (not just the first one)
                     if ($ext === 'pk3') {
-                        $containsPK3 = true;
-                        $pk3FileName = $filename;
-                        break;
+                        $pk3FileNames[] = $filename;
                     }
                 }
 
-                if ($containsPK3 && $pk3FileName) {
-                    // Extract ZIP to find PK3
+                if (!empty($pk3FileNames)) {
+                    // Extract ZIP to temp location
                     $tempExtract = storage_path('app/models/temp/' . $slug . '_extract');
                     if (!file_exists($tempExtract)) {
                         mkdir($tempExtract, 0755, true);
@@ -388,21 +385,69 @@ class ScrapeQ3dfModels extends Command
                     $zip->extractTo($tempExtract);
                     $zip->close();
 
-                    $pk3File = $tempExtract . '/' . $pk3FileName;
+                    // Collect non-PK3 files from ZIP for extras download
+                    $extrasZipPath = $this->buildExtrasZip($tempExtract, $pk3FileNames, $slug);
 
-                    if (file_exists($pk3File)) {
-                        $pk3Found = true;
-                        $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
-                        copy($pk3File, storage_path('app/' . $pk3PathForDownload));
+                    if (count($pk3FileNames) === 1) {
+                        // Single PK3 in ZIP - extract directly to main extractPath (original behavior)
+                        $pk3File = $tempExtract . '/' . $pk3FileNames[0];
 
-                        // Extract the PK3 contents
-                        $pk3Zip = new ZipArchive;
-                        if ($pk3Zip->open($pk3File) === TRUE) {
-                            $pk3Zip->extractTo($extractPath);
-                            $pk3Zip->close();
-                            $this->lowercaseFileExtensions($extractPath);
-                            $this->generateFileManifest($extractPath);
+                        if (file_exists($pk3File)) {
+                            $pk3Found = true;
+                            $pk3PathForDownload = 'models/pk3s/' . $slug . '.pk3';
+                            copy($pk3File, storage_path('app/' . $pk3PathForDownload));
+
+                            $pk3Zip = new ZipArchive;
+                            if ($pk3Zip->open($pk3File) === TRUE) {
+                                $pk3Zip->extractTo($extractPath);
+                                $pk3Zip->close();
+                                $this->lowercaseFileExtensions($extractPath);
+                                $this->generateFileManifest($extractPath);
+                            }
                         }
+                    } else {
+                        // Multiple PK3s in ZIP - each gets its own extracted directory and DB records
+                        $this->line("  Multi-PK3 ZIP: " . count($pk3FileNames) . " PK3 files found");
+                        $pk3Found = true;
+                        $allPk3Results = []; // Collect per-PK3 data for processing below
+
+                        foreach ($pk3FileNames as $pk3FileName) {
+                            $pk3File = $tempExtract . '/' . $pk3FileName;
+                            if (!file_exists($pk3File)) continue;
+
+                            $pk3BaseName = pathinfo(basename($pk3FileName), PATHINFO_FILENAME);
+                            $pk3Slug = $slug . '-' . \Str::slug($pk3BaseName);
+
+                            // Each PK3 gets its own extracted directory
+                            $pk3ExtractPath = storage_path('app/public/models/extracted/' . $pk3Slug);
+                            if (!file_exists($pk3ExtractPath)) {
+                                mkdir($pk3ExtractPath, 0755, true);
+                            }
+
+                            $pk3Zip = new ZipArchive;
+                            if ($pk3Zip->open($pk3File) === TRUE) {
+                                $pk3Zip->extractTo($pk3ExtractPath);
+                                $pk3Zip->close();
+                                $this->lowercaseFileExtensions($pk3ExtractPath);
+                                $this->generateFileManifest($pk3ExtractPath);
+                            }
+
+                            // Store PK3 for download
+                            $pk3StorePath = 'models/pk3s/' . $pk3Slug . '.pk3';
+                            copy($pk3File, storage_path('app/' . $pk3StorePath));
+                            $this->line("  Extracted & stored: {$pk3FileName} -> {$pk3Slug}");
+
+                            $allPk3Results[] = [
+                                'slug' => $pk3Slug,
+                                'extractPath' => $pk3ExtractPath,
+                                'pk3Path' => $pk3StorePath,
+                            ];
+                        }
+
+                        // Use dummy extractPath so the single-PK3 path below is skipped
+                        // We'll process multi-PK3 results separately
+                        $extractPath = null;
+                        $pk3PathForDownload = null;
                     }
 
                     $this->deleteDirectory($tempExtract);
@@ -436,110 +481,44 @@ class ScrapeQ3dfModels extends Command
                 Storage::disk('local')->delete($tempPath);
 
                 if ($pk3Found) {
-                    // Auto-detect ALL model names (PK3 might contain multiple models)
-                    $detectedModelNames = $this->detectAllModelNames($extractPath);
+                    // For multi-PK3 ZIPs, process each PK3 separately
+                    if (isset($allPk3Results) && !empty($allPk3Results)) {
+                        $createdModels = [];
 
-                    if (empty($detectedModelNames)) {
-                        $this->deleteDirectory($extractPath);
-                        return ['success' => false, 'error' => 'Could not find any model folders'];
-                    }
-
-                    $createdModels = [];
-                    $isMultiModelPack = count($detectedModelNames) > 1;
-
-                    // Create a separate database entry for each model+skin combination
-                    foreach ($detectedModelNames as $detectedModelName) {
-                        // Note: detectAllModelNames() already filtered out empty folders
-
-                        // Parse metadata
-                        $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
-                        $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
-                        $baseModel = $hasMd3Files ? $detectedModelName : $detectedModelName;
-                        $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
-
-                        // Determine base model file path for MD3 files
-                        $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
-
-                        // Use author from ws.q3df.org, fallback to metadata from txt file
-                        $author = $modelData['author'] !== 'Unknown' ? $modelData['author'] : ($metadata['author'] ?? null);
-
-                        // Get available skins for this model
-                        $availableSkins = $metadata['available_skins'] ?? ['default'];
-
-                        // Create a separate entry for each skin
-                        foreach ($availableSkins as $skinName) {
-                            // Skip skins without actual texture files
-                            if (!$this->skinHasTextures($extractPath, $detectedModelName, $skinName)) {
-                                $this->line("  Skipping empty skin: {$detectedModelName} ({$skinName})");
-                                continue;
-                            }
-
-                            // Check if this base_model + skin combination already exists in database
-                            $existingModel = PlayerModel::where('base_model', strtolower($baseModel))
-                                ->whereRaw("JSON_CONTAINS(available_skins, '\"" . $skinName . "\"')")
-                                ->first();
-
-                            if ($existingModel) {
-                                $this->line("  Skipping duplicate: {$baseModel} ({$skinName}) - already exists as ID {$existingModel->id}");
-                                continue;
-                            }
-                            // Determine display name:
-                            // For multi-model packs: use "{ModelName} ({skin})"
-                            // For single-model packs with one skin: use name from ws.q3df.org
-                            // For single-model packs with multiple skins: use "{ws.q3df.org name} ({skin})"
-                            if ($isMultiModelPack) {
-                                $displayName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
-                            } else {
-                                // Single model pack
-                                if (count($availableSkins) > 1) {
-                                    $displayName = $modelData['name'] . ' (' . $skinName . ')';
-                                } else {
-                                    $displayName = $modelData['name'];
-                                }
-                            }
-
-                            // Construct file_path with actual case-sensitive folder names
-                            // This allows the frontend to correctly locate files in folders like "Models/Players" vs "models/players"
-                            $actualModelsFolder = $metadata['actual_models_folder'] ?? 'models';
-                            $actualPlayersFolder = $metadata['actual_players_folder'] ?? 'players';
-                            $filePathWithCase = 'models/extracted/' . $slug . '/' . $actualModelsFolder . '/' . $actualPlayersFolder . '/' . $baseModel;
-
-                            // Create model record
-                            $model = PlayerModel::create([
-                                'user_id' => $userId,
-                                'name' => $displayName,
-                                'base_model' => $baseModel,
-                                'base_model_file_path' => $baseModelFilePath,
-                                'model_type' => $modelType,
-                                'description' => $author ? "Created by {$author}" : null,
-                                'category' => 'player', // Default to player
-                                'author' => $author,
-                                'author_email' => $metadata['author_email'] ?? null,
-                                'file_path' => $filePathWithCase,
-                                'zip_path' => $pk3PathForDownload,
-                                'poly_count' => $metadata['poly_count'] ?? null,
-                                'vert_count' => $metadata['vert_count'] ?? null,
-                                'has_sounds' => $metadata['has_sounds'] ?? false,
-                                'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
-                                'available_skins' => json_encode([$skinName]), // Store only this skin
-                                'approval_status' => 'approved', // Auto-approve scraper imports
-                            ]);
-
-                            $createdModels[] = [
-                                'id' => $model->id,
-                                'name' => $model->name,
-                            ];
+                        foreach ($allPk3Results as $pk3Result) {
+                            $pk3Models = $this->processExtractedPk3(
+                                $pk3Result['extractPath'],
+                                $pk3Result['slug'],
+                                $pk3Result['pk3Path'],
+                                $modelData,
+                                $userId,
+                                $extrasZipPath ?? null
+                            );
+                            $createdModels = array_merge($createdModels, $pk3Models);
                         }
+
+                        if (empty($createdModels)) {
+                            return ['success' => false, 'error' => 'No valid models/skins found in any PK3 (all were empty or duplicates)'];
+                        }
+
+                        return [
+                            'success' => true,
+                            'model_id' => $createdModels[0]['id'],
+                            'model_name' => implode(', ', array_column($createdModels, 'name')),
+                            'created_count' => count($createdModels),
+                        ];
                     }
 
-                    // Check if any models were actually created
+                    // Single PK3 (or direct PK3) - original processing
+                    $createdModels = $this->processExtractedPk3($extractPath, $slug, $pk3PathForDownload, $modelData, $userId, $extrasZipPath ?? null);
+
                     if (empty($createdModels)) {
                         return ['success' => false, 'error' => 'No valid models/skins found in PK3 (all were empty or duplicates)'];
                     }
 
                     return [
                         'success' => true,
-                        'model_id' => $createdModels[0]['id'], // Return first model ID for history
+                        'model_id' => $createdModels[0]['id'],
                         'model_name' => implode(', ', array_column($createdModels, 'name')),
                         'created_count' => count($createdModels),
                     ];
@@ -576,7 +555,201 @@ class ScrapeQ3dfModels extends Command
     /**
      * Detect ALL model names in a PK3 (for multi-model packs)
      */
-    private function detectAllModelNames($extractPath)
+    /**
+     * Process an extracted PK3 directory and create PlayerModel records.
+     * Returns array of created models [{id, name}, ...].
+     */
+    public function processExtractedPk3(string $extractPath, string $slug, string $pk3PathForDownload, array $modelData, int $userId, ?string $extrasZipPath = null): array
+    {
+        $detectedModelNames = $this->detectAllModelNames($extractPath);
+
+        if (empty($detectedModelNames)) {
+            $this->line("  No model folders found in: {$slug}");
+            return [];
+        }
+
+        // Detect readme/txt files in root of extracted PK3
+        $readmeContent = $this->detectReadmeInPk3($extractPath);
+        if ($readmeContent) {
+            $this->line("  Found readme in PK3 (" . strlen($readmeContent) . " bytes)");
+        }
+
+        $createdModels = [];
+        $isMultiModelPack = count($detectedModelNames) > 1;
+
+        foreach ($detectedModelNames as $detectedModelName) {
+            $metadata = $this->parseModelMetadata($extractPath, $detectedModelName);
+            $hasMd3Files = $this->checkForMd3Files($extractPath, $detectedModelName);
+            $baseModel = $detectedModelName;
+            $modelType = $this->determineModelType($extractPath, $detectedModelName, $hasMd3Files, $metadata);
+            $baseModelFilePath = $this->determineBaseModelFilePath($extractPath, $detectedModelName, $hasMd3Files, $baseModel);
+
+            $author = $modelData['author'] !== 'Unknown' ? $modelData['author'] : ($metadata['author'] ?? null);
+            $availableSkins = $metadata['available_skins'] ?? ['default'];
+
+            // Build description: prefer readme from PK3, fallback to generic
+            $description = $readmeContent ?? ($author ? "Created by {$author}" : null);
+
+            foreach ($availableSkins as $skinName) {
+                if (!$this->skinHasTextures($extractPath, $detectedModelName, $skinName)) {
+                    $this->line("  Skipping empty skin: {$detectedModelName} ({$skinName})");
+                    continue;
+                }
+
+                $existingModel = PlayerModel::where('base_model', strtolower($baseModel))
+                    ->whereRaw("JSON_CONTAINS(available_skins, ?)", [json_encode($skinName)])
+                    ->first();
+
+                if ($existingModel) {
+                    $this->line("  Skipping duplicate: {$baseModel} ({$skinName}) - already exists as ID {$existingModel->id}");
+                    continue;
+                }
+
+                if ($isMultiModelPack) {
+                    $displayName = ucfirst($detectedModelName) . ' (' . $skinName . ')';
+                } else {
+                    if (count($availableSkins) > 1) {
+                        $displayName = $modelData['name'] . ' (' . $skinName . ')';
+                    } else {
+                        $displayName = $modelData['name'];
+                    }
+                }
+
+                $actualModelsFolder = $metadata['actual_models_folder'] ?? 'models';
+                $actualPlayersFolder = $metadata['actual_players_folder'] ?? 'players';
+                $filePathWithCase = 'models/extracted/' . $slug . '/' . $actualModelsFolder . '/' . $actualPlayersFolder . '/' . $baseModel;
+
+                $model = PlayerModel::create([
+                    'user_id' => $userId,
+                    'name' => $displayName,
+                    'base_model' => $baseModel,
+                    'base_model_file_path' => $baseModelFilePath,
+                    'model_type' => $modelType,
+                    'description' => $description,
+                    'category' => 'player',
+                    'author' => $author,
+                    'author_email' => $metadata['author_email'] ?? null,
+                    'file_path' => $filePathWithCase,
+                    'zip_path' => $pk3PathForDownload,
+                    'extras_zip_path' => $extrasZipPath,
+                    'poly_count' => $metadata['poly_count'] ?? null,
+                    'vert_count' => $metadata['vert_count'] ?? null,
+                    'has_sounds' => $metadata['has_sounds'] ?? false,
+                    'has_ctf_skins' => $metadata['has_ctf_skins'] ?? false,
+                    'available_skins' => json_encode([$skinName]),
+                    'approval_status' => 'approved',
+                ]);
+
+                $createdModels[] = [
+                    'id' => $model->id,
+                    'name' => $model->name,
+                ];
+            }
+        }
+
+        return $createdModels;
+    }
+
+    /**
+     * Detect readme/txt files in root of extracted PK3 and return their content.
+     */
+    private function detectReadmeInPk3(string $extractPath): ?string
+    {
+        $textExts = ['txt', 'nfo', 'readme', 'doc', 'text', 'me'];
+
+        if (!is_dir($extractPath)) {
+            return null;
+        }
+
+        $files = array_diff(scandir($extractPath), ['.', '..']);
+        foreach ($files as $file) {
+            $filePath = $extractPath . '/' . $file;
+            if (!is_file($filePath)) continue;
+
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            $nameWithoutExt = strtolower(pathinfo($file, PATHINFO_FILENAME));
+
+            if (in_array($ext, $textExts) || in_array($nameWithoutExt, ['readme', 'read_me', 'read-me'])) {
+                $content = file_get_contents($filePath, false, null, 0, 20480); // max 20KB
+                if ($content === false) continue;
+
+                // Convert encoding if needed
+                $encoding = mb_detect_encoding($content, ['UTF-8', 'Windows-1252', 'ISO-8859-1'], true);
+                if ($encoding && $encoding !== 'UTF-8') {
+                    $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+                }
+
+                $content = trim($content);
+                if (!empty($content)) {
+                    return $content;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a ZIP of non-PK3 files from an extracted ZIP (source files, readmes, etc).
+     * Returns the storage path or null if no extra files found.
+     */
+    private function buildExtrasZip(string $tempExtractDir, array $pk3FileNames, string $slug): ?string
+    {
+        // Collect all files that are NOT PK3s
+        $extraFiles = [];
+        $pk3Basenames = array_map('basename', $pk3FileNames);
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($tempExtractDir, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::LEAVES_ONLY
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) continue;
+
+            $relativePath = str_replace($tempExtractDir . '/', '', $file->getPathname());
+            $basename = basename($relativePath);
+
+            // Skip PK3 files themselves
+            if (in_array($basename, $pk3Basenames)) continue;
+            if (strtolower(pathinfo($basename, PATHINFO_EXTENSION)) === 'pk3') continue;
+
+            $extraFiles[] = [
+                'absolute' => $file->getPathname(),
+                'relative' => $relativePath,
+            ];
+        }
+
+        if (empty($extraFiles)) {
+            return null;
+        }
+
+        $extrasDir = storage_path('app/models/extras');
+        if (!file_exists($extrasDir)) {
+            mkdir($extrasDir, 0755, true);
+        }
+
+        $extrasZipFullPath = $extrasDir . '/' . $slug . '-extras.zip';
+        $extrasZip = new \ZipArchive;
+
+        if ($extrasZip->open($extrasZipFullPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
+            $this->error("  Failed to create extras ZIP: {$extrasZipFullPath}");
+            return null;
+        }
+
+        foreach ($extraFiles as $ef) {
+            $extrasZip->addFile($ef['absolute'], $ef['relative']);
+        }
+
+        $extrasZip->close();
+
+        $storagePath = 'models/extras/' . $slug . '-extras.zip';
+        $this->line("  Created extras ZIP with " . count($extraFiles) . " file(s): {$storagePath}");
+
+        return $storagePath;
+    }
+
+    public function detectAllModelNames($extractPath)
     {
         // Find models/players folder (case-insensitive)
         $playersPath = null;
@@ -637,7 +810,7 @@ class ScrapeQ3dfModels extends Command
         return $modelNames;
     }
 
-    private function checkForMd3Files($extractPath, $modelName)
+    public function checkForMd3Files($extractPath, $modelName)
     {
         // Find model path (case-insensitive)
         $modelPath = null;
@@ -704,7 +877,7 @@ class ScrapeQ3dfModels extends Command
         return $hasHead && $hasUpper && $hasLower;
     }
 
-    private function determineModelType($extractPath, $modelName, $hasMd3Files, $metadata)
+    public function determineModelType($extractPath, $modelName, $hasMd3Files, $metadata)
     {
         if ($hasMd3Files) {
             return 'complete';
@@ -781,7 +954,7 @@ class ScrapeQ3dfModels extends Command
         }
     }
 
-    private function parseModelMetadata($extractPath, $modelName)
+    public function parseModelMetadata($extractPath, $modelName)
     {
         $metadata = [
             'author' => null,
@@ -941,7 +1114,7 @@ class ScrapeQ3dfModels extends Command
      * For complete models: uses own file_path
      * For skin/mixed packs: tries to find base Q3 model or existing uploaded base model
      */
-    private function determineBaseModelFilePath($extractPath, $modelName, $hasMd3Files, $baseModel)
+    public function determineBaseModelFilePath($extractPath, $modelName, $hasMd3Files, $baseModel)
     {
         // If has MD3 files, it's complete - use its own path
         if ($hasMd3Files) {
@@ -1028,7 +1201,7 @@ class ScrapeQ3dfModels extends Command
      * For 'default' skin: must have texture files (not just .skin file)
      * For custom skins: must have .skin file OR texture files OR shader files
      */
-    private function skinHasTextures($extractPath, $modelName, $skinName)
+    public function skinHasTextures($extractPath, $modelName, $skinName)
     {
         // Find the actual folder name (case-insensitive), prioritize non-empty folders
         // First find models folder
@@ -1122,7 +1295,7 @@ class ScrapeQ3dfModels extends Command
         return $hasSkinFile || $hasTextures || $hasShaders;
     }
 
-    private function lowercaseFileExtensions($dir)
+    public function lowercaseFileExtensions($dir)
     {
         if (!file_exists($dir)) {
             return;
@@ -1145,7 +1318,7 @@ class ScrapeQ3dfModels extends Command
         }
     }
 
-    private function generateFileManifest($extractPath)
+    public function generateFileManifest($extractPath)
     {
         $files = [];
         $iterator = new \RecursiveIteratorIterator(
