@@ -1237,9 +1237,10 @@ defineExpose({
         <!-- Error overlay -->
         <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <div class="text-center max-w-md p-6">
-                <div class="text-red-400 text-5xl mb-4">⚠️</div>
+                <div class="text-amber-400 text-5xl mb-4">⚠️</div>
                 <p class="text-white font-bold mb-2">Failed to load model</p>
-                <p class="text-gray-400 text-sm">{{ error }}</p>
+                <p class="text-gray-400 text-sm mb-3">{{ error }}</p>
+                <p class="text-amber-400/80 text-xs">This model may be incomplete or missing required files from the original author's package.</p>
             </div>
         </div>
 
