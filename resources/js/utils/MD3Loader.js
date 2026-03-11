@@ -2994,7 +2994,7 @@ export class MD3Loader {
                 const hasBarrel = !!weaponGroup.getObjectByName('barrel');
                 const hasSpinningBlade = lowerName.includes('gauntlet') || lowerName.includes('gt');
 
-                if (hasBarrel) {
+                if (hasBarrel && !hasSpinningBlade) {
                     const barrel = weaponGroup.getObjectByName('barrel');
                     if (barrel) {
                         if (this.animation.barrelAngle !== 0 || this.animation.barrelSpinning) {
@@ -3048,25 +3048,37 @@ export class MD3Loader {
 
                         const delta = now - this.animation.barrelTime;
 
-                        // Gauntlet blade spins ONLY while firing (no coasting)
-                        if (this.animation.firing) {
-                            // Calculate spin angle
-                            const angle = this.animation.barrelAngle + delta * (SPIN_SPEED * 2);
+                        // Gauntlet blade uses same spin logic as machinegun barrel (CG_MachinegunSpinAngle)
+                        // Spins while firing, then gradually coasts to a stop over COAST_TIME (1000ms)
+                        if (this.animation.barrelSpinning) {
+                            // Active spinning
+                            const angle = this.animation.barrelAngle + delta * SPIN_SPEED;
 
-                            // Start from initial rotation
                             blade.quaternion.copy(blade.userData.initialQuaternion);
-
-                            // Apply spin around local X axis
                             const spinQuat = new THREE.Quaternion();
                             spinQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), (angle * Math.PI) / 180);
                             blade.quaternion.multiply(spinQuat);
 
                             this.animation.barrelAngle = angle;
                             this.animation.barrelTime = now;
-                        } else {
-                            // Reset to initial rotation when not firing
-                            blade.quaternion.copy(blade.userData.initialQuaternion);
-                            this.animation.barrelAngle = 0;
+                        } else if (this.animation.barrelAngle !== 0) {
+                            // Coasting - gradual deceleration over COAST_TIME
+                            if (delta < COAST_TIME) {
+                                const speed = 0.5 * (SPIN_SPEED + (COAST_TIME - delta) / COAST_TIME);
+                                const angle = this.animation.barrelAngle + delta * speed;
+
+                                blade.quaternion.copy(blade.userData.initialQuaternion);
+                                const spinQuat = new THREE.Quaternion();
+                                spinQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), (angle * Math.PI) / 180);
+                                blade.quaternion.multiply(spinQuat);
+                            } else {
+                                // Coast finished - stay at final angle
+                                const finalAngle = this.animation.barrelAngle + COAST_TIME * 0.5 * (SPIN_SPEED + 0);
+                                blade.quaternion.copy(blade.userData.initialQuaternion);
+                                const spinQuat = new THREE.Quaternion();
+                                spinQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), (finalAngle * Math.PI) / 180);
+                                blade.quaternion.multiply(spinQuat);
+                            }
                         }
 
                         // Add light effect ONLY when firing

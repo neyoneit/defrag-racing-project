@@ -5,12 +5,15 @@ import axios from 'axios';
 
 const page = usePage();
 import ModelViewer from '@/Components/ModelViewer.vue';
+import ShadowViewer from '@/Components/ShadowViewer.vue';
+import { generateShadowStill, generateShadowRotateGif } from '@/utils/gifGenerator.js';
 
 const props = defineProps({
     model: Object,
     baseModelData: Object,
     bundledModels: Array,
     siblingModels: Array,
+    shadowData: Object,
     load_times: Object,
 });
 
@@ -150,9 +153,26 @@ const isGesturing = ref(false); // BUTTON_GESTURE
 
 // Check if this is a weapon model (not a player model)
 const isWeaponModel = computed(() => props.model.category === 'weapon');
+const isShadowModel = computed(() => props.model.category === 'shadow');
+
+// Ground textures for shadow viewer
+const groundTextures = [
+    { path: '/baseq3/textures/base_wall/concrete.jpg', label: 'Concrete' },
+    { path: '/baseq3/textures/base_floor/metfloor1.jpg', label: 'Metal' },
+    { path: '/baseq3/textures/base_floor/diamond2c.jpg', label: 'Diamond' },
+    { path: '/baseq3/textures/base_floor/tilefloor7.jpg', label: 'Tile' },
+    { path: '/baseq3/textures/base_floor/clangdark.jpg', label: 'Clang' },
+    { path: '/baseq3/textures/base_floor/dirt.jpg', label: 'Dirt' },
+    { path: '/baseq3/textures/base_floor/smallstone.jpg', label: 'Stone' },
+    { path: '/baseq3/textures/base_floor/clang_floor2.jpg', label: 'Grid' },
+];
+const selectedGroundTexture = ref(groundTextures[0].path);
 
 // Get the path to the model file (MD3 files for the 3D geometry)
 const modelFilePath = computed(() => {
+    // Shadow models don't use MD3 - handled by ShadowViewer
+    if (isShadowModel.value) return null;
+
     // Weapon models: single MD3 file (e.g., /baseq3/models/weapons2/bfg/bfg.md3)
     if (isWeaponModel.value) {
         if (!props.model.file_path) return null;
@@ -234,8 +254,8 @@ const onViewerLoaded = () => {
     // Record model load time
     frontendTimings.value.model_load_time = performance.now() - frontendTimings.value.model_load_start;
 
-    // Get initial light settings
-    if (viewer3D.value) {
+    // Get initial light settings (not available on ShadowViewer)
+    if (viewer3D.value && viewer3D.value.getLightSettings) {
         lightSettings.value = viewer3D.value.getLightSettings();
     }
 
@@ -762,6 +782,50 @@ const generateGifThumbnail = async () => {
     gifProgress.value = 'Preparing...';
 
     try {
+        // Shadow models use dedicated generators
+        if (isShadowModel.value) {
+            let thumbnailBlob = null;
+            let rotateBlob = null;
+
+            try {
+                gifProgress.value = 'Generating shadow still...';
+                thumbnailBlob = await generateShadowStill(viewer3D, (s) => { gifProgress.value = s; });
+            } catch (e) {
+                console.warn('Shadow still failed:', e.message);
+            }
+
+            try {
+                gifProgress.value = 'Generating shadow rotation GIF...';
+                rotateBlob = await generateShadowRotateGif(viewer3D, (s) => { gifProgress.value = s; });
+            } catch (e) {
+                console.warn('Shadow rotate GIF failed:', e.message);
+            }
+
+            gifProgress.value = 'Uploading...';
+            const formData = new FormData();
+            if (rotateBlob) formData.append('rotate_gif', rotateBlob, `model_${props.model.id}_rotate.gif`);
+            if (thumbnailBlob) formData.append('thumbnail', thumbnailBlob, `model_${props.model.id}_still.png`);
+
+            const response = await fetch(route('models.saveThumbnail', props.model.id), {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                const generated = [];
+                if (rotateBlob) generated.push('rotate');
+                if (thumbnailBlob) generated.push('thumbnail');
+                gifProgress.value = `Done! Generated: ${generated.join(', ')}`;
+                showSuccessNotification(`Generated shadow thumbnails!`);
+            } else {
+                throw new Error(data.message || 'Failed to save thumbnails');
+            }
+            return;
+        }
+
         const renderer = viewer3D.value.getRenderer();
         const scene = viewer3D.value.getScene();
         const camera = viewer3D.value.getCamera();
@@ -1413,7 +1477,7 @@ const confirmNsfw = () => {
                                 <div class="flex items-center gap-4 mt-2 text-sm">
                                     <div v-if="model.author" class="flex items-center gap-1.5">
                                         <span class="text-gray-500">Author:</span>
-                                        <Link :href="route('models.index', { authors: model.author })" class="text-blue-400 hover:text-blue-300 transition-colors font-semibold">{{ model.author }}</Link>
+                                        <Link :href="route('models.index', { authors: model.author })" class="hover:text-blue-300 transition-colors font-semibold" v-html="q3tohtml(model.author)"></Link>
                                         <span v-if="model.author_email && model.author_email.includes('@') && model.author_email.length < 100" class="text-gray-500 text-xs">({{ model.author_email }})</span>
                                     </div>
                                     <div v-if="model.base_model" class="flex items-center gap-1.5">
@@ -1423,8 +1487,8 @@ const confirmNsfw = () => {
                                 </div>
                             </div>
 
-                            <!-- Viewer Controls -->
-                            <div v-if="viewerLoaded && !isThumbnailMode" class="flex gap-2 mb-4">
+                            <!-- Viewer Controls (not shown for shadow models) -->
+                            <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="flex gap-2 mb-4">
                                 <button @click="autoRotate = !autoRotate" :class="[
                                     'px-3 py-1 rounded-lg text-xs font-semibold transition-all',
                                     autoRotate
@@ -1470,8 +1534,44 @@ const confirmNsfw = () => {
                                 </button>
                             </div>
 
+                            <!-- Ground texture selector for shadow models -->
+                            <div v-if="isShadowModel && shadowData && viewerLoaded && !isThumbnailMode" class="flex items-center gap-1.5 mb-3">
+                                <span class="text-xs text-gray-500 mr-1">Ground:</span>
+                                <button
+                                    v-for="gt in groundTextures"
+                                    :key="gt.path"
+                                    @click="selectedGroundTexture = gt.path"
+                                    :title="gt.label"
+                                    :class="[
+                                        'w-8 h-8 rounded border-2 overflow-hidden transition-all hover:scale-110',
+                                        selectedGroundTexture === gt.path
+                                            ? 'border-blue-500 ring-1 ring-blue-500/50'
+                                            : 'border-white/20 hover:border-white/40'
+                                    ]"
+                                >
+                                    <img :src="gt.path" :alt="gt.label" class="w-full h-full object-cover" />
+                                </button>
+                            </div>
+
+                            <!-- Shadow viewer for shadow models -->
+                            <ShadowViewer
+                                v-if="isShadowModel && shadowData"
+                                ref="viewer3D"
+                                :viewer-path="shadowData.viewer_path"
+                                :shadow-textures="shadowData.textures || []"
+                                :shadow-shader="shadowData.shader || null"
+                                :auto-rotate="autoRotate"
+                                :background-color="bgColor"
+                                :ground-texture-path="selectedGroundTexture"
+                                @loaded="onViewerLoaded"
+                                @error="onViewerError"
+                                :class="isThumbnailMode ? '' : 'rounded-xl'"
+                                :style="isThumbnailMode ? 'width: 100%; height: 100%;' : 'width: 800px; height: 800px;'"
+                            />
+
+                            <!-- 3D viewer for player/weapon models -->
                             <ModelViewer
-                                v-if="modelFilePath"
+                                v-else-if="modelFilePath"
                                 ref="viewer3D"
                                 :model-path="modelFilePath"
                                 :model-id="model.id"
@@ -1526,8 +1626,11 @@ const confirmNsfw = () => {
                                 <p v-if="isBaseQ3Model" class="text-center text-gray-500 text-xs mt-1">
                                     This model is part of the base Quake 3 installation
                                 </p>
+                                <p v-else-if="isShadowModel || isWeaponModel" class="text-center text-gray-500 text-xs mt-1">
+                                    Copy to your <span class="text-gray-400 font-medium">quake3/defrag</span> directory
+                                </p>
                                 <p v-else class="text-center text-gray-500 text-xs mt-1">
-                                    Copy to your Quake 3 baseq3 directory
+                                    Copy to your <span class="text-gray-400 font-medium">quake3/baseq3</span> directory
                                 </p>
 
                                 <!-- Extras download (source files from author) -->
@@ -1871,8 +1974,8 @@ const confirmNsfw = () => {
                             </div>
                         </div>
 
-                        <!-- Light Controls Card -->
-                        <div v-if="viewerLoaded && !isThumbnailMode" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
+                        <!-- Light Controls Card (not for shadow models) -->
+                        <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
                             <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-xl"></div>
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Lighting</h4>

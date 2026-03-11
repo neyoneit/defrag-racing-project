@@ -145,6 +145,11 @@ class ModelsController extends Controller
      */
     private function getResolvedMd3Path($model)
     {
+        // Shadow models don't have MD3 files
+        if ($model->category === 'shadow') {
+            return null;
+        }
+
         // For complete models, use their own file path
         if ($model->model_type === 'complete') {
             if (str_starts_with($model->file_path, 'baseq3/')) {
@@ -278,6 +283,28 @@ class ModelsController extends Controller
                     $models[] = $weaponModel;
                 }
             }
+        } elseif ($request->category === 'shadow' && !empty($pk3Subdirs)) {
+            // Multi-PK3 shadow upload
+            foreach ($pk3Subdirs as $pk3Sub) {
+                $shadowModel = $this->buildShadowModelInfo(
+                    $pk3Sub['path'], $slug,
+                    $pk3Sub['dir'], $pk3Sub['name'],
+                    'models/pk3s/' . $slug . '_' . $pk3Sub['index'] . '.pk3'
+                );
+                if ($shadowModel) {
+                    $models[] = $shadowModel;
+                }
+            }
+        } elseif ($request->category === 'shadow') {
+            // Single PK3 shadow upload
+            $shadowModel = $this->buildShadowModelInfo(
+                $extractPath, $slug,
+                null, null,
+                $extractResult['pk3_path']
+            );
+            if ($shadowModel) {
+                $models[] = $shadowModel;
+            }
         } else {
             // Player models
             $detectedModelNames = $this->detectAllModelNames($extractPath);
@@ -331,9 +358,12 @@ class ModelsController extends Controller
 
         if (empty($models)) {
             $this->deleteDirectory($extractPath);
-            $errorMsg = $request->category === 'weapon'
-                ? 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.'
-                : 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.';
+            $errorMsgs = [
+                'weapon' => 'Could not find any weapon models. Make sure the PK3 contains models/weapons2/{name}/ directories.',
+                'shadow' => 'Could not find any shadow files. Make sure the PK3 contains gfx/misc/shadow or gfx/damage/shadow textures.',
+                'player' => 'Could not find any model folders. Make sure the PK3 contains models/players/{name}/ directories.',
+            ];
+            $errorMsg = $errorMsgs[$request->category] ?? $errorMsgs['player'];
             return response()->json(['success' => false, 'message' => $errorMsg], 422);
         }
 
@@ -447,6 +477,26 @@ class ModelsController extends Controller
                     'has_sounds' => false,
                     'has_ctf_skins' => false,
                     'available_skins' => json_encode($modelInfo['available_skins']),
+                    'approval_status' => 'pending',
+                    'is_nsfw' => $tempData['is_nsfw'],
+                ]);
+            } elseif ($category === 'shadow') {
+                $modelPk3Path = $modelInfo['pk3_path'] ?? $pk3Path;
+
+                $model = PlayerModel::create([
+                    'user_id' => $userId,
+                    'name' => $modelInfo['display_name'],
+                    'base_model' => 'shadow',
+                    'main_file' => null,
+                    'model_type' => 'complete',
+                    'description' => $tempData['description'],
+                    'category' => 'shadow',
+                    'author' => $tempData['author'] ?? null,
+                    'file_path' => $modelInfo['file_path'],
+                    'zip_path' => $modelPk3Path,
+                    'has_sounds' => false,
+                    'has_ctf_skins' => false,
+                    'available_skins' => json_encode(['default']),
                     'approval_status' => 'pending',
                     'is_nsfw' => $tempData['is_nsfw'],
                 ]);
@@ -662,7 +712,10 @@ class ModelsController extends Controller
                 $filename = $zip->getNameIndex($i);
                 if (stripos($filename, 'models/players/') === 0 ||
                     stripos($filename, 'models/weapons2/') === 0 ||
-                    stripos($filename, 'sound/player/') === 0) {
+                    stripos($filename, 'sound/player/') === 0 ||
+                    stripos($filename, 'gfx/misc/shadow') === 0 ||
+                    stripos($filename, 'gfx/damage/shadow') === 0 ||
+                    stripos($filename, 'scripts/shadow') === 0) {
                     $hasProperStructure = true;
                     break;
                 }
@@ -677,7 +730,7 @@ class ModelsController extends Controller
                 copy($tempFullPath, storage_path('app/' . $pk3PathForDownload));
             } else {
                 $zip->close();
-                return ['success' => false, 'message' => 'Invalid PK3 structure. Must contain models/players/ or models/weapons2/ directories.', 'pk3_path' => null];
+                return ['success' => false, 'message' => 'Invalid PK3 structure. Must contain models/players/, models/weapons2/, or gfx/misc/shadow files.', 'pk3_path' => null];
             }
         }
 
@@ -865,14 +918,16 @@ class ModelsController extends Controller
                 $this->deleteDirectory($tempExtract);
             } else {
                 // This is a direct PK3 file - check if it has the proper structure
-                // A valid PK3 should have models/players/, models/weapons2/, or sound/player/ directories
                 $hasProperStructure = false;
 
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $filename = $zip->getNameIndex($i);
                     if (stripos($filename, 'models/players/') === 0 ||
                         stripos($filename, 'models/weapons2/') === 0 ||
-                        stripos($filename, 'sound/player/') === 0) {
+                        stripos($filename, 'sound/player/') === 0 ||
+                        stripos($filename, 'gfx/misc/shadow') === 0 ||
+                        stripos($filename, 'gfx/damage/shadow') === 0 ||
+                        stripos($filename, 'scripts/shadow') === 0) {
                         $hasProperStructure = true;
                         break;
                     }
@@ -1602,6 +1657,92 @@ class ModelsController extends Controller
     }
 
     /**
+     * Build shadow model info for tempUpload detection.
+     * Detects shadow textures in gfx/misc/ or gfx/damage/ and shader in scripts/.
+     */
+    private function buildShadowModelInfo($searchPath, $slug, $pk3SubDir, $pk3DisplayName, $pk3Path)
+    {
+        $shadowFiles = $this->detectShadowFiles($searchPath);
+        if (empty($shadowFiles['textures']) && empty($shadowFiles['shader'])) {
+            return null;
+        }
+
+        // Build relative paths
+        if ($pk3SubDir) {
+            $relFilePath = 'models/extracted/' . $slug . '/' . $pk3SubDir;
+            $viewerBasePath = '/storage/models/extracted/' . $slug . '/' . $pk3SubDir;
+        } else {
+            $relFilePath = 'models/extracted/' . $slug;
+            $viewerBasePath = '/storage/models/extracted/' . $slug;
+        }
+
+        // Display name
+        if ($pk3DisplayName) {
+            $finalName = str_replace(['-', '_'], ' ', $pk3DisplayName);
+        } else {
+            $finalName = 'Shadow';
+        }
+
+        return [
+            'detected_name' => 'shadow',
+            'display_name' => $finalName,
+            'category' => 'shadow',
+            'main_file' => null,
+            'available_skins' => ['default'],
+            'file_path' => $relFilePath,
+            'viewer_path' => $viewerBasePath, // base path for shadow viewer to find textures
+            'shadow_textures' => $shadowFiles['textures'],
+            'shadow_shader' => $shadowFiles['shader'],
+            'pk3_path' => $pk3Path,
+            'pk3_subdir' => $pk3SubDir,
+        ];
+    }
+
+    /**
+     * Detect shadow files in an extracted directory.
+     * Returns ['textures' => [...], 'shader' => string|null]
+     */
+    private function detectShadowFiles($extractPath)
+    {
+        $textures = [];
+        $shaderContent = null;
+
+        // Look for shadow textures in gfx/misc/ and gfx/damage/
+        $textureDirs = ['gfx/misc', 'gfx/damage'];
+        foreach ($textureDirs as $dir) {
+            $fullDir = $extractPath . '/' . $dir;
+            if (!is_dir($fullDir)) continue;
+
+            foreach (scandir($fullDir) as $file) {
+                if ($file === '.' || $file === '..') continue;
+                $lower = strtolower($file);
+                if (str_starts_with($lower, 'shadow') &&
+                    preg_match('/\.(tga|jpg|jpeg|png|bmp)$/i', $lower)) {
+                    $textures[] = $dir . '/' . $file;
+                }
+            }
+        }
+
+        // Look for shadow shader
+        $scriptsDirs = ['scripts'];
+        foreach ($scriptsDirs as $dir) {
+            $fullDir = $extractPath . '/' . $dir;
+            if (!is_dir($fullDir)) continue;
+
+            foreach (scandir($fullDir) as $file) {
+                if ($file === '.' || $file === '..') continue;
+                $lower = strtolower($file);
+                if (str_starts_with($lower, 'shadow') && str_ends_with($lower, '.shader')) {
+                    $shaderContent = file_get_contents($fullDir . '/' . $file);
+                    break 2;
+                }
+            }
+        }
+
+        return ['textures' => $textures, 'shader' => $shaderContent];
+    }
+
+    /**
      * Check if model directory contains MD3 files (complete model)
      * Returns true if has head.md3, upper.md3, lower.md3
      * Returns false if only has skins/textures (skin-only upload)
@@ -1776,11 +1917,24 @@ class ModelsController extends Controller
                 ->toArray();
         }
 
+        // For shadow models, detect shadow files for the viewer
+        $shadowData = null;
+        if ($model->category === 'shadow') {
+            $shadowExtractPath = storage_path('app/public/' . $model->file_path);
+            $shadowFiles = $this->detectShadowFiles($shadowExtractPath);
+            $shadowData = [
+                'textures' => $shadowFiles['textures'],
+                'shader' => $shadowFiles['shader'],
+                'viewer_path' => '/storage/' . $model->file_path,
+            ];
+        }
+
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,
             'bundledModels' => $bundledModels,
             'siblingModels' => $siblingModels,
+            'shadowData' => $shadowData,
             'load_times' => $timings,
         ]);
     }
@@ -1902,7 +2056,9 @@ class ModelsController extends Controller
             abort(404, 'Model file not found');
         }
 
-        $filename = str_replace(' ', '_', $model->name) . '.pk3';
+        // Shadow and weapon models need zzzzz- prefix to override baseq3 defaults
+        $prefix = in_array($model->category, ['shadow', 'weapon']) ? 'zzzzz-' : '';
+        $filename = $prefix . str_replace(' ', '_', $model->name) . '.pk3';
         return response()->download($filePath, $filename);
     }
 

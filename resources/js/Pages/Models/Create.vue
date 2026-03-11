@@ -2,6 +2,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, nextTick, onBeforeUnmount } from 'vue';
 import ModelViewer from '@/Components/ModelViewer.vue';
+import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
 
 const page = usePage();
@@ -114,7 +115,12 @@ async function startGifGeneration() {
 
         try {
             await waitForViewerLoaded();
-            await waitForTextures(viewer3D);
+            if (modelInfo.category !== 'shadow') {
+                await waitForTextures(viewer3D);
+            } else {
+                // Give shadow viewer a moment to load textures
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
 
             gifStatus.value = 'Generating GIFs...';
             const gifs = await generateAllGifs(viewer3D, modelInfo, (status) => {
@@ -353,6 +359,7 @@ function currentViewerModel() {
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [&>option]:bg-gray-900 [&>option]:text-white">
                             <option value="player">Player Model</option>
                             <option value="weapon">Weapon Model</option>
+                            <option value="shadow">Player Shadow</option>
                         </select>
                     </div>
 
@@ -549,7 +556,11 @@ function currentViewerModel() {
 
                             <div>
                                 <h3 class="text-white font-bold text-sm">{{ model.display_name }}</h3>
-                                <span class="text-xs px-2 py-0.5 rounded-full" :class="model.category === 'weapon' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'">
+                                <span class="text-xs px-2 py-0.5 rounded-full" :class="{
+                                    'bg-orange-500/20 text-orange-400': model.category === 'weapon',
+                                    'bg-purple-500/20 text-purple-400': model.category === 'shadow',
+                                    'bg-blue-500/20 text-blue-400': model.category === 'player',
+                                }">
                                     {{ model.category }}
                                 </span>
                             </div>
@@ -579,7 +590,22 @@ function currentViewerModel() {
                 <!-- 3D Viewer (square aspect ratio to match GIF output) -->
                 <div v-if="currentModelIndex >= 0 && currentViewerModel()?.viewer_path" class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 overflow-hidden shadow-2xl mx-auto" style="width: 800px; max-width: 100%;">
                     <div class="relative" style="width: 800px; height: 800px; max-width: 100%;">
+                        <!-- Shadow viewer for shadow models -->
+                        <ShadowViewer
+                            v-if="currentViewerModel().category === 'shadow'"
+                            :key="'shadow-viewer-' + currentModelIndex"
+                            ref="viewer3D"
+                            :viewer-path="currentViewerModel().viewer_path"
+                            :shadow-textures="currentViewerModel().shadow_textures || []"
+                            :shadow-shader="currentViewerModel().shadow_shader || null"
+                            :thumbnail-mode="true"
+                            background-color="black"
+                            @loaded="onViewerLoaded"
+                            @error="onViewerError"
+                        />
+                        <!-- 3D viewer for player/weapon models -->
                         <ModelViewer
+                            v-else
                             :key="'viewer-' + currentModelIndex"
                             ref="viewer3D"
                             :model-path="currentViewerModel().viewer_path"

@@ -392,14 +392,128 @@ export async function generateStillThumbnail(viewerRef, onStatus) {
 }
 
 /**
+ * Generate a shadow still thumbnail (300x300 PNG, no rotation).
+ */
+export async function generateShadowStill(viewerRef, onStatus) {
+    const viewer = viewerRef.value || viewerRef;
+    if (!viewer) throw new Error('Shadow viewer not available');
+
+    const renderer = viewer.getRenderer();
+    const scene = viewer.getScene();
+    const camera = viewer.getCamera();
+    if (!renderer || !scene || !camera) throw new Error('Could not access shadow viewer components');
+
+    const canvas = renderer.domElement;
+
+    // Set to initial state (no user rotation, time=0)
+    viewer.setRotation(0);
+    viewer.setShaderTime(0);
+    scene.updateMatrixWorld(true);
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    renderer.render(scene, camera);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    const stillCanvas = document.createElement('canvas');
+    stillCanvas.width = 300; stillCanvas.height = 300;
+    const stillCtx = stillCanvas.getContext('2d');
+    stillCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 300, 300);
+    const blob = await new Promise(resolve => stillCanvas.toBlob(resolve, 'image/png'));
+    stillCanvas.width = 0; stillCanvas.height = 0;
+
+    onStatus?.('Shadow still thumbnail generated');
+    return blob;
+}
+
+/**
+ * Generate a shadow rotation GIF (clockwise rotation, captures shader animation).
+ * The shadow itself rotates like the player turning in-game.
+ */
+export async function generateShadowRotateGif(viewerRef, onStatus) {
+    const viewer = viewerRef.value || viewerRef;
+    if (!viewer) throw new Error('Shadow viewer not available');
+
+    const renderer = viewer.getRenderer();
+    const scene = viewer.getScene();
+    const camera = viewer.getCamera();
+    if (!renderer || !scene || !camera) throw new Error('Could not access shadow viewer components');
+
+    const canvas = renderer.domElement;
+    const gifWidth = 300, gifHeight = 300;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = gifWidth; tempCanvas.height = gifHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    const gif = await createGifEncoder(gifWidth, gifHeight);
+
+    // 72 frames for a full rotation at ~15fps = ~4.8s GIF
+    const numFrames = 72;
+    const fps = 15;
+    const frameDelay = Math.round(1000 / fps);
+
+    // Use setRotation to set absolute rotation for each frame
+    // Positive direction = clockwise when viewed from top
+    for (let i = 0; i < numFrames; i++) {
+        onStatus?.(`[Shadow Rotate] Frame ${i + 1}/${numFrames}`);
+
+        // Set absolute rotation and shader time for this frame
+        const rotation = (i / numFrames) * Math.PI * 2;
+        const shaderTime = i / fps;
+        viewer.setRotation(rotation);
+        viewer.setShaderTime(shaderTime);
+
+        // Let the animate loop render with updated values
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        // Wait one more frame to ensure render happened
+        await new Promise(resolve => requestAnimationFrame(resolve));
+
+        captureFrame(renderer, scene, camera, canvas, tempCtx, tempCanvas, gifWidth, gifHeight);
+        gif.addFrame(tempCanvas, { copy: true, delay: frameDelay });
+    }
+
+    // Reset
+    viewer.setRotation(0);
+    viewer.setShaderTime(0);
+
+    onStatus?.('Encoding shadow rotate GIF...');
+    const blob = await finalizeGif(gif);
+    tempCanvas.width = 0; tempCanvas.height = 0;
+    return blob;
+}
+
+/**
  * Generate all GIF variants for a model.
- * @param {Ref|Object} viewerRef - Vue ref or direct reference to ModelViewer component
+ * @param {Ref|Object} viewerRef - Vue ref or direct reference to ModelViewer/ShadowViewer component
  * @param {Object} model - Model data with at least { category }
  * @param {Function} onStatus - Status callback
  * @returns {{ rotateBlob, idleBlob, gestureBlob, headIconBlob, thumbnailBlob }}
  */
 export async function generateAllGifs(viewerRef, model, onStatus) {
     const isWeapon = model?.category === 'weapon';
+    const isShadow = model?.category === 'shadow';
+
+    // Shadow models use their own generators
+    if (isShadow) {
+        let thumbnailBlob = null;
+        let rotateBlob = null;
+
+        try {
+            onStatus?.('Generating shadow still thumbnail...');
+            thumbnailBlob = await generateShadowStill(viewerRef, onStatus);
+        } catch (e) {
+            console.warn('Shadow still failed:', e.message);
+        }
+
+        try {
+            onStatus?.('Generating shadow rotation GIF...');
+            rotateBlob = await generateShadowRotateGif(viewerRef, onStatus);
+        } catch (e) {
+            console.warn('Shadow rotate GIF failed:', e.message);
+        }
+
+        return { rotateBlob, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob };
+    }
 
     onStatus?.('Generating rotate GIF...');
     const rotateBlob = await generateRotateGif(viewerRef, onStatus);

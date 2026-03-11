@@ -69,6 +69,7 @@ const categories = [
     { value: 'all', label: 'All Models', icon: '🎨' },
     { value: 'player', label: 'Player Models', icon: '🏃' },
     { value: 'weapon', label: 'Weapon Models', icon: '🔫' },
+    { value: 'shadow', label: 'Player Shadows', icon: '👤' },
 ];
 
 const sortOptions = [
@@ -157,7 +158,7 @@ function setPreviewMode(mode) {
 }
 function getPreviewGif(model) {
     if (previewMode.value === 'rotate') return model.rotate_gif || model.thumbnail;
-    if (previewMode.value === 'gesture' && model.category !== 'weapon') return model.gesture_gif || model.idle_gif || model.thumbnail;
+    if (previewMode.value === 'gesture' && model.category === 'player') return model.gesture_gif || model.idle_gif || model.thumbnail;
     if (previewMode.value === 'preview') return model.thumbnail || model.idle_gif;
     // default: idle (also fallback for gesture on weapons)
     return model.idle_gif || model.thumbnail;
@@ -352,7 +353,7 @@ const getModelTypeBadgeClass = (type) => {
                             </h3>
                             <div class="space-y-1">
                                 <button
-                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category !== 'weapon' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumbnail' }]"
+                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category === 'player' || category === 'all' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumbnail' }]"
                                     :key="mode.value"
                                     @click="setPreviewMode(mode.value)"
                                     :class="[
@@ -604,7 +605,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </h3>
 
                                 <div class="text-sm text-gray-400 mb-3">
-                                    <p v-if="model.author">by {{ model.author }}</p>
+                                    <p v-if="model.author">by <span v-html="q3tohtml(model.author)"></span></p>
                                     <p v-if="model.base_model" class="text-xs text-gray-500 font-mono">/model {{ model.base_model }}{{ model.available_skins && model.available_skins[0] && model.available_skins[0] !== 'default' ? '/' + model.available_skins[0] : '' }}</p>
                                     <div v-if="model.model_type" class="mt-2">
                                         <span :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
