@@ -330,6 +330,25 @@ async function loadModel() {
                 await loader.loadShadersForModel('/baseq3/scripts/', 'models');
             }
 
+            // For weapon skin packs: load custom shaders from the PK3's scripts/ directory
+            // When modelId is available, loadShadersForWeapon (inside loadWeaponModel) handles this via API.
+            // But during upload (no modelId), we load shader files directly using the manifest.
+            if (props.skinPackBasePath && !props.modelId) {
+                const skinPackRoot = props.skinPackBasePath.replace(/\/models\/weapons2\/.*$/, '');
+                try {
+                    const manifestResp = await fetch(skinPackRoot + '/manifest.json');
+                    if (manifestResp.ok) {
+                        const files = await manifestResp.json();
+                        const shaderFiles = files.filter(f => /^scripts\/.*\.(shader|shaderx)$/i.test(f));
+                        for (const shaderFile of shaderFiles) {
+                            await loader.loadShaderFile(skinPackRoot + '/' + shaderFile);
+                        }
+                    }
+                } catch (e) {
+                    // Manifest or shader loading failed, will use baseq3 shaders
+                }
+            }
+
             // Extract base directory and weapon name from directory (not filename)
             // modelPath is like: /baseq3/models/weapons2/machinegun/machinegun.md3
             // We want: /baseq3/models/weapons2/machinegun/ and weaponName: machinegun
@@ -338,7 +357,9 @@ async function loadModel() {
             const pathParts = baseDir.replace(/\/+$/, '').split('/');
             const weaponName = pathParts[pathParts.length - 1];
 
-            model = await loader.loadWeaponModel(baseDir, weaponName, props.modelId);
+            // For weapon skin packs, pass the skin pack path so textures resolve from pk3
+            const weaponBaseDir = props.skinPackBasePath ? (props.skinPackBasePath + '/') : baseDir;
+            model = await loader.loadWeaponModel(weaponBaseDir, weaponName, props.modelId);
 
             // Set scene and camera reference for projectile spawning
             if (model.userData && model.userData.animation) {
@@ -555,11 +576,11 @@ async function loadModel() {
         }
 
         // Auto-fit camera to show entire model
-        fitToView(props.thumbnailMode ? 1.05 : 1.03);
+        fitToView(1.03);
 
         // Shift gauntlet view to the right after fitToView
         const wFitName = (model.userData.animation?.weaponName || props.modelPath || '').toLowerCase();
-        if ((wFitName.includes('gauntlet') || wFitName.includes('/gt')) && !props.thumbnailMode) {
+        if (wFitName.includes('gauntlet') || wFitName.includes('/gt')) {
             camera.position.x -= 5;
             controls.target.x -= 5;
             camera.position.y += 6;
@@ -891,11 +912,16 @@ function startFiring() {
     // Fire immediately (first fire - pass true for isFirstFire)
     model.userData.fire(true);
 
-    // Trigger weapon kick/recoil
-    triggerWeaponKick();
+    // Trigger weapon kick/recoil (but NOT for gauntlet - plain fire has no kick,
+    // gauntlet only kicks on hit via fireWithHit)
+    const weaponName = model.userData.animation?.weaponName || '';
+    const lowerName = weaponName.toLowerCase();
+    const isGauntlet = lowerName.includes('gauntlet') || lowerName.includes('/gt');
+    if (!isGauntlet) {
+        triggerWeaponKick();
+    }
 
     // Get weapon-specific fire rate
-    const weaponName = model.userData.animation?.weaponName || '';
     const fireRate = getWeaponFireRate(weaponName);
 
     DEBUG && console.log(`🔫 Weapon ${weaponName} fire rate: ${fireRate}ms (${(1000/fireRate).toFixed(1)} shots/sec)`);
@@ -904,7 +930,9 @@ function startFiring() {
     firingInterval = setInterval(() => {
         if (model && model.userData && model.userData.fire) {
             model.userData.fire(false); // Not first fire - pass false
-            triggerWeaponKick();
+            if (!isGauntlet) {
+                triggerWeaponKick();
+            }
         }
     }, fireRate);
 }
@@ -980,25 +1008,24 @@ function stopFiring() {
     }
 }
 
-// Keyboard event handlers for firing with Ctrl key
+// Keyboard event handlers for firing: Ctrl = fire, Alt = fire+hit
 function handleKeyDown(event) {
-    // Only fire for weapons, and only if Ctrl is pressed
     if (!props.isWeapon) return;
-
-    // Ignore keyboard repeat events to prevent rapid firing
     if (event.repeat) return;
 
-    if (event.ctrlKey && !firingInterval) {
+    if (event.altKey && !firingInterval) {
+        event.preventDefault();
+        startFiringWithHit();
+    } else if (event.ctrlKey && !firingInterval) {
         event.preventDefault();
         startFiring();
     }
 }
 
 function handleKeyUp(event) {
-    // Stop firing when Ctrl is released
     if (!props.isWeapon) return;
 
-    if (!event.ctrlKey) {
+    if (!event.ctrlKey && !event.altKey) {
         stopFiring();
     }
 }
@@ -1271,6 +1298,10 @@ defineExpose({
             <div class="flex items-center gap-2">
                 <span>🖱️</span>
                 <span>Left click: Rotate | Right click: Pan | Scroll: Zoom</span>
+            </div>
+            <div v-if="isWeapon" class="flex items-center gap-2 mt-1">
+                <span>⌨️</span>
+                <span>Ctrl: Fire | Alt: Fire + Hit</span>
             </div>
         </div>
 

@@ -128,9 +128,15 @@ export class Q3ShaderParser {
                 switch (command.toLowerCase()) {
                     case 'map':
                     case 'clampmap':
-                    case 'animmap':
                         currentStage.map = args[0];
                         currentStage.mapType = command.toLowerCase();
+                        break;
+                    case 'animmap':
+                        // AnimMap format: animMap <frequency> <texture1> <texture2> ...
+                        currentStage.mapType = 'animmap';
+                        currentStage.animFrequency = parseFloat(args[0]) || 1;
+                        currentStage.animTextures = args.slice(1);
+                        currentStage.map = args[1] || args[0]; // First texture (fallback to freq if malformed)
                         break;
                     case 'blendfunc':
                         if (args.length === 1) {

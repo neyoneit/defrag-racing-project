@@ -1610,9 +1610,13 @@ export class Q3ShaderMaterialSystem {
                         // Try exact match first (with extension already in path)
                         let resolved = this.loader.manifest.get(lowerMap);
                         if (resolved) return q3Root + '/' + resolved;
-                        // Manifest keys have extensions, mapPath may not - try common ones
+                        // Strip existing extension before trying alternatives
+                        const lastDot = lowerMap.lastIndexOf('.');
+                        const lastSlash = lowerMap.lastIndexOf('/');
+                        const baseNoExt = (lastDot > lastSlash) ? lowerMap.substring(0, lastDot) : lowerMap;
+                        // Try each image extension
                         for (const ext of ['.tga', '.jpg', '.png', '.jpeg']) {
-                            resolved = this.loader.manifest.get(lowerMap + ext);
+                            resolved = this.loader.manifest.get(baseNoExt + ext);
                             if (resolved) return q3Root + '/' + resolved;
                         }
                         // Not in PK3 at all - use baseq3

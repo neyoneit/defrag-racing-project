@@ -3,6 +3,8 @@
  * Extracted from BatchGenerateGifs.vue for reuse in Create.vue upload flow.
  */
 
+const DEBUG = true;
+
 let cachedGifModule = null;
 async function getGifModule() {
     if (!cachedGifModule) {
@@ -78,6 +80,7 @@ export async function generateRotateGif(viewerRef, onStatus) {
 
     const gif = await createGifEncoder(gifWidth, gifHeight);
     const numFrames = 36;
+    let shaderTime = 0;
 
     for (let i = 0; i < numFrames; i++) {
         onStatus?.(`[Rotate] Frame ${i + 1}/${numFrames}`);
@@ -87,6 +90,8 @@ export async function generateRotateGif(viewerRef, onStatus) {
         camera.position.y = target.y + height;
         camera.lookAt(target.x, target.y, target.z);
         camera.updateMatrixWorld();
+        shaderTime += 0.083; // ~83ms per frame (12fps rotate)
+        viewer.updateShaderAnimations?.(shaderTime);
         scene.updateMatrixWorld(true);
 
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -490,6 +495,7 @@ export async function generateShadowRotateGif(viewerRef, onStatus) {
  * @returns {{ rotateBlob, idleBlob, gestureBlob, headIconBlob, thumbnailBlob }}
  */
 export async function generateAllGifs(viewerRef, model, onStatus) {
+    if (DEBUG) console.log('[GIF] generateAllGifs called, category:', model?.category, 'viewer:', viewerRef?.value ? 'present' : 'null');
     const isWeapon = model?.category === 'weapon';
     const isShadow = model?.category === 'shadow';
 
@@ -515,16 +521,20 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
         return { rotateBlob, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob };
     }
 
+    if (DEBUG) console.log('[GIF] Starting rotate GIF...');
     onStatus?.('Generating rotate GIF...');
     const rotateBlob = await generateRotateGif(viewerRef, onStatus);
+    if (DEBUG) console.log('[GIF] Rotate blob:', rotateBlob ? `${rotateBlob.size} bytes` : 'null');
 
     let idleBlob = null;
     if (isWeapon) {
         try {
+            if (DEBUG) console.log('[GIF] Starting weapon idle GIF...');
             onStatus?.('Generating idle GIF (weapon)...');
             idleBlob = await generateWeaponIdleGif(viewerRef, onStatus);
+            if (DEBUG) console.log('[GIF] Weapon idle blob:', idleBlob ? `${idleBlob.size} bytes` : 'null');
         } catch (e) {
-            console.warn('Weapon idle GIF failed:', e.message);
+            if (DEBUG) console.error('[GIF] Weapon idle GIF failed:', e.message, e.stack);
         }
     } else {
         try {
@@ -551,12 +561,15 @@ export async function generateAllGifs(viewerRef, model, onStatus) {
 
     let thumbnailBlob = null;
     try {
+        if (DEBUG) console.log('[GIF] Starting still thumbnail...');
         onStatus?.('Generating still thumbnail...');
         thumbnailBlob = await generateStillThumbnail(viewerRef, onStatus);
+        if (DEBUG) console.log('[GIF] Thumbnail blob:', thumbnailBlob ? `${thumbnailBlob.size} bytes` : 'null');
     } catch (e) {
-        console.warn('Still thumbnail failed:', e.message);
+        if (DEBUG) console.error('[GIF] Still thumbnail failed:', e.message, e.stack);
     }
 
+    if (DEBUG) console.log('[GIF] All done. rotate:', !!rotateBlob, 'idle:', !!idleBlob, 'gesture:', !!gestureBlob, 'head:', !!headIconBlob, 'thumb:', !!thumbnailBlob);
     return { rotateBlob, idleBlob, gestureBlob, headIconBlob, thumbnailBlob };
 }
 

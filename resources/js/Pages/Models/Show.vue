@@ -14,6 +14,7 @@ const props = defineProps({
     bundledModels: Array,
     siblingModels: Array,
     shadowData: Object,
+    weaponViewerData: Object,
     load_times: Object,
 });
 
@@ -177,6 +178,11 @@ const modelFilePath = computed(() => {
     if (isWeaponModel.value) {
         if (!props.model.file_path) return null;
 
+        // Weapon skin packs: MD3 is from baseq3, textures from PK3
+        if (props.weaponViewerData?.is_skin_pack) {
+            return props.weaponViewerData.baseq3_model_path;
+        }
+
         // Use main_file if available (for weapons with non-standard filenames like shells -> m_shell.md3)
         const mainFile = props.model.main_file || `${props.model.base_model || props.model.name}.md3`;
 
@@ -232,6 +238,11 @@ const skinFilePath = computed(() => {
 
 // Get the base path for skin pack files (for skin/mixed packs that override base model skins)
 const skinPackBasePath = computed(() => {
+    // Weapon skin packs: textures from PK3
+    if (props.weaponViewerData?.is_skin_pack) {
+        return props.weaponViewerData.skin_pack_base_path;
+    }
+
     // Only needed for skin/mixed packs (not complete models with texture dependencies)
     if (!props.baseModelData || props.model.model_type === 'complete') return null;
 
@@ -1446,7 +1457,7 @@ const confirmNsfw = () => {
                                 <div class="flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-3 min-w-0">
                                         <h1 class="text-3xl font-black text-white leading-tight">{{ model.name }}</h1>
-                                        <div v-if="inGameCommand && !isShadowModel" class="flex items-center gap-1.5 shrink-0">
+                                        <div v-if="inGameCommand && !isShadowModel && !isWeaponModel" class="flex items-center gap-1.5 shrink-0">
                                             <code class="text-emerald-300 font-mono text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5">{{ inGameCommand }}</code>
                                             <button @click="copyCommand" class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold hover:bg-emerald-500/25 transition-colors">
                                                 {{ commandCopied ? 'Copied!' : 'Copy' }}

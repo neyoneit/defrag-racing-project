@@ -2166,7 +2166,11 @@ export class MD3Loader {
                 sounds: [], // Will be populated with weapon sounds
                 projectiles: [], // Array of active projectiles
                 scene: null, // Will be set by ModelViewer
-                weaponName: weaponName // Store weapon name for projectile creation
+                weaponName: weaponName, // Store weapon name for projectile creation
+                // Gauntlet punch animation state
+                punchActive: false,
+                punchStartTime: 0,
+                punchOriginalZ: 0,
             };
 
             // Store sound paths for later loading (will be loaded by ModelViewer with proper AudioListener)
@@ -2869,8 +2873,16 @@ export class MD3Loader {
                 // Call regular fire first
                 this.fire(isFirstFire);
 
-                // Then play hit sounds for weapons that have them
+                // Gauntlet punch animation (only on hit, not on plain fire)
                 const lowerName = this.animation.weaponName.toLowerCase();
+                const isGauntletHit = lowerName.includes('gauntlet') || lowerName.includes('gt');
+                if (isGauntletHit && !this.animation.punchActive) {
+                    this.animation.punchActive = true;
+                    this.animation.punchStartTime = Date.now();
+                    this.animation.punchOriginalZ = weaponGroup.position.x;
+                }
+
+                // Then play hit sounds for weapons that have them
                 const isLightningGun = lowerName.includes('lightning') || lowerName.includes('lg');
                 const isGauntlet = lowerName.includes('gauntlet') || lowerName.includes('gt');
                 const isPlasma = lowerName.includes('plasma') || lowerName.includes('pg');
@@ -3098,6 +3110,31 @@ export class MD3Loader {
                                 blade.remove(bladeLight);
                             }
                         }
+                    }
+                }
+
+                // Update gauntlet punch animation (forward thrust and return)
+                // Uses X axis because weapon model is rotated in the 3D viewer
+                if (this.animation.punchActive) {
+                    const punchElapsed = now - this.animation.punchStartTime;
+                    const PUNCH_FORWARD_TIME = 100; // ms to reach max forward
+                    const PUNCH_RETURN_TIME = 200;  // ms to return to original
+                    const PUNCH_DISTANCE = 8;       // units forward
+
+                    if (punchElapsed < PUNCH_FORWARD_TIME) {
+                        // Thrust forward (ease out)
+                        const t = punchElapsed / PUNCH_FORWARD_TIME;
+                        const eased = 1 - (1 - t) * (1 - t); // ease out quad
+                        weaponGroup.position.x = this.animation.punchOriginalZ + PUNCH_DISTANCE * eased;
+                    } else if (punchElapsed < PUNCH_FORWARD_TIME + PUNCH_RETURN_TIME) {
+                        // Return to original (ease in)
+                        const t = (punchElapsed - PUNCH_FORWARD_TIME) / PUNCH_RETURN_TIME;
+                        const eased = t * t; // ease in quad
+                        weaponGroup.position.x = this.animation.punchOriginalZ + PUNCH_DISTANCE * (1 - eased);
+                    } else {
+                        // Punch complete
+                        weaponGroup.position.x = this.animation.punchOriginalZ;
+                        this.animation.punchActive = false;
                     }
                 }
 

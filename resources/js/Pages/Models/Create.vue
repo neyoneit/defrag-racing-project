@@ -5,6 +5,8 @@ import ModelViewer from '@/Components/ModelViewer.vue';
 import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
 
+const DEBUG = true;
+
 const page = usePage();
 
 // Step management
@@ -98,9 +100,11 @@ async function startGifGeneration() {
     for (let i = 0; i < detectedModels.value.length; i++) {
         currentModelIndex.value = i;
         const modelInfo = detectedModels.value[i];
+        if (DEBUG) console.log('[Create] Model', i, ':', modelInfo.display_name, 'viewer_path:', modelInfo.viewer_path, 'category:', modelInfo.category);
         gifProgress.value = `Model ${i + 1}/${detectedModels.value.length}: ${modelInfo.display_name}`;
 
         if (!modelInfo.viewer_path) {
+            if (DEBUG) console.warn('[Create] No viewer_path, skipping GIF generation');
             gifStatus.value = 'No viewer path - skipping GIF generation';
             generatedGifs.value[i] = { rotateBlob: null, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob: null };
             continue;
@@ -123,6 +127,11 @@ async function startGifGeneration() {
             }
 
             gifStatus.value = 'Generating GIFs...';
+            if (DEBUG) {
+                console.log('[Create] Starting GIF generation for:', modelInfo.display_name, 'category:', modelInfo.category);
+                console.log('[Create] Viewer ref:', viewer3D.value ? 'present' : 'null');
+                console.log('[Create] Viewer methods:', viewer3D.value ? Object.keys(viewer3D.value).filter(k => typeof viewer3D.value[k] === 'function').join(', ') : 'N/A');
+            }
             const gifs = await generateAllGifs(viewer3D, modelInfo, (status) => {
                 gifStatus.value = status;
             });
@@ -136,9 +145,10 @@ async function startGifGeneration() {
             if (gifs.gestureBlob) parts.push('gesture');
             if (gifs.headIconBlob) parts.push('head');
             if (gifs.thumbnailBlob) parts.push('still');
-            gifStatus.value = `Done: ${parts.join(', ')}`;
+            if (DEBUG) console.log('[Create] GIF results:', parts.length > 0 ? parts.join(', ') : 'NONE generated');
+            gifStatus.value = parts.length > 0 ? `Done: ${parts.join(', ')}` : 'Warning: No GIFs were generated';
         } catch (e) {
-            console.error('GIF generation error:', e);
+            if (DEBUG) console.error('[Create] GIF generation error:', e.message, e.stack);
             gifStatus.value = 'Error: ' + e.message;
             generatedGifs.value[i] = { rotateBlob: null, idleBlob: null, gestureBlob: null, headIconBlob: null, thumbnailBlob: null };
         }
@@ -151,7 +161,15 @@ async function startGifGeneration() {
 
     currentModelIndex.value = -1;
     allGifsReady.value = true;
-    gifProgress.value = 'All GIFs generated! Ready to save.';
+
+    // Check if any GIFs were actually generated
+    const hasAnyGifs = Object.values(generatedGifs.value).some(g => g && (g.rotateBlob || g.idleBlob || g.gestureBlob || g.thumbnailBlob || g.headIconBlob));
+    if (hasAnyGifs) {
+        gifProgress.value = 'All thumbnails generated! Click "Save Model" to complete the upload.';
+    } else {
+        gifProgress.value = 'GIF generation failed. You can still save the model and regenerate GIFs later.';
+        console.warn('No GIFs were generated for any model');
+    }
     gifStatus.value = '';
 }
 
@@ -232,6 +250,16 @@ async function saveModel() {
         gifStatus.value = 'Network error: ' + e.message;
         saving.value = false;
     }
+}
+
+// Go back to step 1 (keep temp files, just reset GIF state)
+function goBackToUpload() {
+    step.value = 1;
+    generatedGifs.value = {};
+    allGifsReady.value = false;
+    currentModelIndex.value = -1;
+    gifStatus.value = '';
+    gifProgress.value = '';
 }
 
 // Cancel / cleanup
@@ -612,6 +640,7 @@ function currentViewerModel() {
                             :skin-path="currentViewerModel().skin_path || null"
                             :is-weapon="currentViewerModel().category === 'weapon'"
                             :skin-name="currentViewerModel().skin_name || currentViewerModel().available_skins?.[0] || 'default'"
+                            :skin-pack-base-path="currentViewerModel().is_skin_pack ? '/storage/' + currentViewerModel().file_path : null"
                             :load-full-player="currentViewerModel().category !== 'weapon'"
                             :auto-rotate="false"
                             :show-grid="true"
@@ -646,9 +675,15 @@ function currentViewerModel() {
                     </button>
 
                     <button
-                        @click="cancelUpload"
+                        @click="goBackToUpload"
                         :disabled="saving"
                         class="px-6 py-4 bg-white/5 border border-white/10 text-white font-bold rounded-xl hover:bg-white/10 transition-all disabled:opacity-50">
+                        ← Back
+                    </button>
+                    <button
+                        @click="cancelUpload"
+                        :disabled="saving"
+                        class="px-6 py-4 bg-white/5 border border-white/10 text-red-400 font-bold rounded-xl hover:bg-red-500/10 transition-all disabled:opacity-50">
                         Cancel
                     </button>
                 </div>

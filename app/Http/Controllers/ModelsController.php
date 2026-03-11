@@ -1636,6 +1636,37 @@ class ModelsController extends Controller
                 : null;
         }
 
+        // Fallback to baseq3 MD3 if this is a skin-only weapon pack
+        $isWeaponSkinPack = !$mainMd3;
+        if (!$viewerPath) {
+            // Find the main MD3 from baseq3
+            $baseq3WeaponPath = public_path('baseq3/models/weapons2/' . $weaponName);
+            if (is_dir($baseq3WeaponPath)) {
+                $baseq3Md3Files = glob($baseq3WeaponPath . '/*.{md3,MD3}', GLOB_BRACE);
+                $baseq3MainMd3 = null;
+                foreach ($baseq3Md3Files as $md3File) {
+                    $basename = strtolower(basename($md3File, '.md3'));
+                    if ($basename === strtolower($weaponName)) {
+                        $baseq3MainMd3 = basename($md3File);
+                        break;
+                    }
+                }
+                if (!$baseq3MainMd3 && !empty($baseq3Md3Files)) {
+                    foreach ($baseq3Md3Files as $md3File) {
+                        $basename = strtolower(basename($md3File, '.md3'));
+                        if (!preg_match('/_(hand|flash|barrel|[0-9])$/i', $basename)) {
+                            $baseq3MainMd3 = basename($md3File);
+                            break;
+                        }
+                    }
+                }
+                if ($baseq3MainMd3) {
+                    $viewerPath = '/baseq3/models/weapons2/' . $weaponName . '/' . $baseq3MainMd3;
+                    $mainMd3 = $baseq3MainMd3;
+                }
+            }
+        }
+
         // Display name: use PK3 filename for multi-PK3, weapon dir name for multi-weapon single PK3
         if ($isMultiPk3 && $pk3DisplayName) {
             $finalName = str_replace(['-', '_'], ' ', $pk3DisplayName);
@@ -1653,6 +1684,7 @@ class ModelsController extends Controller
             'viewer_path' => $viewerPath,
             'pk3_path' => $pk3Path,
             'pk3_subdir' => $pk3SubDir,
+            'is_skin_pack' => $isWeaponSkinPack,
         ];
     }
 
@@ -1929,12 +1961,28 @@ class ModelsController extends Controller
             ];
         }
 
+        // For weapon models, detect skin packs (MD3 from baseq3, textures from PK3)
+        $weaponViewerData = null;
+        if ($model->category === 'weapon' && $model->main_file && !str_starts_with($model->file_path, 'baseq3/')) {
+            $extractPath = storage_path('app/public/' . $model->file_path);
+            $isSkinPack = !file_exists($extractPath . '/' . $model->main_file);
+            if ($isSkinPack) {
+                $weaponName = $model->base_model ?? strtolower($model->name);
+                $weaponViewerData = [
+                    'is_skin_pack' => true,
+                    'baseq3_model_path' => '/baseq3/models/weapons2/' . strtolower($weaponName) . '/' . $model->main_file,
+                    'skin_pack_base_path' => '/storage/' . $model->file_path,
+                ];
+            }
+        }
+
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,
             'bundledModels' => $bundledModels,
             'siblingModels' => $siblingModels,
             'shadowData' => $shadowData,
+            'weaponViewerData' => $weaponViewerData,
             'load_times' => $timings,
         ]);
     }
