@@ -5,7 +5,7 @@ import ModelViewer from '@/Components/ModelViewer.vue';
 import ShadowViewer from '@/Components/ShadowViewer.vue';
 import { generateAllGifs, waitForTextures } from '@/utils/gifGenerator.js';
 
-const DEBUG = true;
+const DEBUG = false;
 
 const page = usePage();
 

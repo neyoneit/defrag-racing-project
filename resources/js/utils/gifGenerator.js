@@ -3,7 +3,7 @@
  * Extracted from BatchGenerateGifs.vue for reuse in Create.vue upload flow.
  */
 
-const DEBUG = true;
+const DEBUG = false;
 
 let cachedGifModule = null;
 async function getGifModule() {

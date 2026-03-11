@@ -52,8 +52,12 @@ class DemoProcessorService
             $tempFile = $tempDir . '/' . $demo->original_filename;
             copy($demo->full_path, $tempFile);
 
+            $timingStart = microtime(true);
+
             // Run BatchDemoRenamer
             $output = $this->runBatchDemoRenamer($tempFile);
+
+            $pythonTime = round(microtime(true) - $timingStart, 2);
 
             // Parse the output to extract metadata
             $metadata = $this->parseRenamerOutput($output);
@@ -61,8 +65,19 @@ class DemoProcessorService
             // Use suggested filename if available, otherwise keep original
             $processedFilename = $metadata['suggested_filename'] ?? $demo->original_filename;
 
+            $compressStart = microtime(true);
+
             // Compress the demo file to save space (but don't upload yet)
             $compressedLocalPath = $this->compressDemo($tempFile, $processedFilename);
+
+            $compressTime = round(microtime(true) - $compressStart, 2);
+
+            Log::info('Demo processing timing', [
+                'demo_id' => $demo->id,
+                'python_seconds' => $pythonTime,
+                'compress_seconds' => $compressTime,
+                'file_size' => filesize($tempFile),
+            ]);
 
             // Generate the proper compressed filename for storage
             $format = config('app.demo_compression_format', '7z');

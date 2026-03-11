@@ -407,7 +407,7 @@ class DemosController extends Controller
 
         // Rate limiting: allow a larger cap to support archive imports
         // Max demos allowed to be uploaded/processed per user per 5 minutes
-        $RATE_LIMIT_MAX = 500;
+        $RATE_LIMIT_MAX = 10000;
     $userId = Auth::id();
         $rateLimitKey = "demo_upload_rate_limit_{$userId}";
         $currentUploads = Cache::get($rateLimitKey, 0);
@@ -527,9 +527,20 @@ class DemosController extends Controller
                     // Check for duplicate file content (MD5 hash)
                     $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
                     if ($existingDemo) {
-                        $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
-                        $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
-                        continue;
+                        // Allow re-upload if the previous attempt failed
+                        if ($existingDemo->status === 'failed') {
+                            // Clean up local failed files
+                            $failedDir = storage_path("app/demos/failed/{$existingDemo->id}");
+                            if (is_dir($failedDir)) {
+                                array_map('unlink', glob($failedDir . '/*'));
+                                rmdir($failedDir);
+                            }
+                            $existingDemo->delete();
+                        } else {
+                            $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
+                            $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
+                            continue;
+                        }
                     }
 
                     // Also check for duplicate filename by same user
@@ -538,8 +549,17 @@ class DemosController extends Controller
                         ->first();
 
                     if ($existingByFilename) {
-                        $errors[] = $demoFile->getClientOriginalName() . ': Filename already uploaded by you';
-                        continue;
+                        if ($existingByFilename->status === 'failed') {
+                            $failedDir = storage_path("app/demos/failed/{$existingByFilename->id}");
+                            if (is_dir($failedDir)) {
+                                array_map('unlink', glob($failedDir . '/*'));
+                                rmdir($failedDir);
+                            }
+                            $existingByFilename->delete();
+                        } else {
+                            $errors[] = $demoFile->getClientOriginalName() . ': Filename already uploaded by you';
+                            continue;
+                        }
                     }
 
                     // Create database record first to get the ID

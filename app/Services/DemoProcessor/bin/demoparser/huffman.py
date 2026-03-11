@@ -18,6 +18,12 @@ from .structures.client import ClientState
 from .structures.client import ClientConnection
 from .structures import mapper
 from .utils import raw_bits_to_float, print_debug, print_exception
+
+try:
+    from ._q3huff import FastHuffmanReader as _CReader
+    _HAS_C_EXTENSION = True
+except ImportError:
+    _HAS_C_EXTENSION = False
 from .parser_exceptions import (
     ErrorBadCommandInParseGameState,
     ErrorDeltaFrameTooOld,
@@ -96,7 +102,7 @@ class Q3HuffmanMapper:
         node.symbol = symbol
 
 
-class Q3HuffmanReader:
+class _Q3HuffmanReaderPython:
     BIT_POS: List[int] = [0] * 32
 
     def __init__(self, buffer: bytes) -> None:
@@ -242,3 +248,64 @@ class Q3HuffmanReader:
         for idx in range(length):
             if bits & self.BIT_POS[idx]:
                 array[idx] = self.readLong()
+
+
+if _HAS_C_EXTENSION:
+    class _Q3HuffmanReaderC(_CReader):
+        """C-accelerated reader with Python delta methods."""
+        BIT_POS: List[int] = [1 << i for i in range(32)]
+
+        def readDeltaEntity(self, state: EntityState, number: int) -> bool:
+            if self.readNumBits(1) == 1:
+                state.number = const.MAX_GENTITIES - 1
+                return True
+            if self.readNumBits(1) == 0:
+                state.number = number
+                return True
+            count = self.readByte()
+            if count < 0 or count > MapperFactory.EntityStateFieldNum:
+                print_debug("invalid entityState field count: {0}", count)
+                return False
+            state.number = number
+            for index in range(count):
+                if self.readNumBits(1) == 0:
+                    continue
+                reset = self.readNumBits(1) == 0
+                MapperFactory.update_entity_state(state, index, self, reset)
+            return True
+
+        def readDeltaPlayerState(self, state: PlayerState) -> bool:
+            count = self.readByte()
+            if count < 0 or count > MapperFactory.PlayerStateFieldNum:
+                print_debug("invalid entityState field count: {0}", count)
+                return False
+            for index in range(count):
+                if self.readNumBits(1) == 0:
+                    continue
+                MapperFactory.update_player_state(state, index, self, False)
+            if self.readNumBits(1) != 0:
+                if self.readNumBits(1) != 0:
+                    self._read_ps_array(state.stats, const.MAX_STATS)
+                if self.readNumBits(1) != 0:
+                    self._read_ps_array(state.persistant, const.MAX_PERSISTANT)
+                if self.readNumBits(1) != 0:
+                    self._read_ps_array(state.ammo, const.MAX_WEAPONS)
+                if self.readNumBits(1) != 0:
+                    self._read_ps_long_array(state.powerups, const.MAX_POWERUPS)
+            return True
+
+        def _read_ps_array(self, array: List[int], length: int) -> None:
+            bits = self.readNumBits(length)
+            for idx in range(length):
+                if bits & self.BIT_POS[idx]:
+                    array[idx] = self.readShort()
+
+        def _read_ps_long_array(self, array: List[int], length: int) -> None:
+            bits = self.readNumBits(length)
+            for idx in range(length):
+                if bits & self.BIT_POS[idx]:
+                    array[idx] = self.readLong()
+
+    Q3HuffmanReader = _Q3HuffmanReaderC
+else:
+    Q3HuffmanReader = _Q3HuffmanReaderPython

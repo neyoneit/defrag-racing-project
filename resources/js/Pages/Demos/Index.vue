@@ -34,10 +34,29 @@ const selectedFiles = ref([]);
 const uploading = ref(false);
 const uploadErrors = ref([]);
 const uploadSuccess = ref([]);
+const errorsExpanded = ref(false);
+const successExpanded = ref(false);
+
+const categorizedErrors = computed(() => {
+    const cats = {};
+    uploadErrors.value.forEach(err => {
+        let category = 'Other';
+        if (err.includes('Duplicate file content')) category = 'Duplicates';
+        else if (err.includes('Invalid demo file format')) category = 'Invalid Format';
+        else if (err.includes('Filename already uploaded')) category = 'Duplicate Filename';
+        else if (err.includes('Upload failed') || err.includes('Failed to queue')) category = 'Upload Failed';
+        if (!cats[category]) cats[category] = [];
+        cats[category].push(err);
+    });
+    return cats;
+});
 const processingDemos = ref([]);
 const queueStats = ref({});
 const statusPolling = ref(null);
 const uploadProgress = ref(0);
+
+const activelyProcessingDemos = computed(() => (processingDemos.value || []).filter(d => d.status === 'processing'));
+const queuedDemoCount = computed(() => (queueStats.value?.total_queued || 0));
 
 // Filter state (for Your Uploads section)
 const activeTab = ref('all'); // all, online, offline
@@ -428,6 +447,8 @@ const clearAllFiles = () => {
     }
 };
 
+const BATCH_SIZE = 50;
+
 const uploadDemos = async () => {
     if (selectedFiles.value.length === 0) {
         alert('Please select demo files to upload');
@@ -439,53 +460,68 @@ const uploadDemos = async () => {
     uploadErrors.value = [];
     uploadSuccess.value = [];
 
-    const formData = new FormData();
-    selectedFiles.value.forEach(file => {
-        formData.append('demos[]', file);
-    });
+    const files = [...selectedFiles.value];
+    const totalFiles = files.length;
+    const totalBatches = Math.ceil(totalFiles / BATCH_SIZE);
+    let allUploaded = [];
+    let allErrors = [];
+    let allDemoIds = [];
 
     try {
-        const response = await axios.post(route('demos.upload'), formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            onUploadProgress: function (progressEvent) {
-                if (progressEvent.lengthComputable) {
-                    uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        for (let i = 0; i < totalBatches; i++) {
+            const batchFiles = files.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
+            const formData = new FormData();
+            batchFiles.forEach(file => {
+                formData.append('demos[]', file);
+            });
+
+            const response = await axios.post(route('demos.upload'), formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                onUploadProgress: function (progressEvent) {
+                    if (progressEvent.lengthComputable) {
+                        const batchProgress = (progressEvent.loaded / progressEvent.total);
+                        const overallProgress = ((i + batchProgress) / totalBatches) * 100;
+                        uploadProgress.value = Math.round(overallProgress);
+                    }
                 }
+            });
+
+            if (response.data.success) {
+                allUploaded.push(...(response.data.uploaded || []));
+                allErrors.push(...(response.data.errors || []));
+                const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
+                allDemoIds.push(...demoIds);
             }
-        });
-
-        if (response.data.success) {
-            uploadSuccess.value = response.data.uploaded;
-            uploadErrors.value = response.data.errors || [];
-
-            // Clear selected files
-            selectedFiles.value = [];
-            if (fileInput.value) {
-                fileInput.value.value = '';
-            }
-
-            // If upload returned demo IDs, start targeted polling for them
-            const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
-            if (demoIds.length > 0) {
-                startStatusPolling(demoIds);
-            } else {
-                // Fallback: start global polling
-                startStatusPolling();
-            }
-
-            // Immediately reload the demos list
-            router.reload({ only: ['userDemos', 'publicDemos'] });
-
-            // Clear success message after 10 seconds (longer for queue processing)
-            setTimeout(() => {
-                uploadSuccess.value = [];
-            }, 10000);
         }
+
+        uploadSuccess.value = allUploaded;
+        uploadErrors.value = allErrors;
+
+        // Clear selected files
+        selectedFiles.value = [];
+        if (fileInput.value) {
+            fileInput.value.value = '';
+        }
+
+        // Start polling for all uploaded demo IDs
+        if (allDemoIds.length > 0) {
+            startStatusPolling(allDemoIds);
+        } else {
+            startStatusPolling();
+        }
+
+        // Immediately reload the demos list
+        router.reload({ only: ['userDemos', 'publicDemos'] });
+
+        // Clear success message after 10 seconds
+        setTimeout(() => {
+            uploadSuccess.value = [];
+        }, 10000);
     } catch (error) {
         console.error('Upload error:', error);
-        uploadErrors.value = ['Upload failed: ' + (error.response?.data?.message || error.message)];
+        uploadErrors.value = [...allErrors, 'Upload failed: ' + (error.response?.data?.message || error.message)];
     } finally {
         uploading.value = false;
         setTimeout(() => {
@@ -689,7 +725,7 @@ const startStatusPolling = (targetDemoIds = null) => {
     statusPolling.value = setInterval(async () => {
         try {
             const params = {};
-            if (targetDemoIds && targetDemoIds.length > 0) {
+            if (targetDemoIds && targetDemoIds.length > 0 && targetDemoIds.length <= 100) {
                 params.demo_ids = targetDemoIds;
             }
 
@@ -1109,40 +1145,61 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Upload Results -->
-                    <div v-if="uploadErrors.length > 0" class="mt-6 p-6 bg-gradient-to-r from-red-900/30 to-red-800/20 rounded-xl border border-red-700/50">
-                        <div class="flex items-center mb-4">
-                            <svg class="w-6 h-6 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <h4 class="text-red-300 font-semibold text-lg">Upload Errors</h4>
-                        </div>
-                        <div class="space-y-2">
-                            <div v-for="error in uploadErrors" :key="error" class="flex items-start space-x-2">
-                                <svg class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <div v-if="uploadErrors.length > 0" class="mt-6 p-4 bg-gradient-to-r from-red-900/30 to-red-800/20 rounded-xl border border-red-700/50">
+                        <button @click="errorsExpanded = !errorsExpanded" class="w-full flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                <span class="text-red-200 text-sm">{{ error }}</span>
+                                <span class="text-red-300 font-semibold">Upload Errors</span>
+                                <span class="ml-2 px-2 py-0.5 bg-red-500/30 text-red-300 text-xs rounded-full">{{ uploadErrors.length }}</span>
                             </div>
+                            <svg class="w-4 h-4 text-red-400 transition-transform" :class="{ 'rotate-180': errorsExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div v-if="errorsExpanded" class="mt-3 space-y-2 max-h-60 overflow-y-auto pr-1">
+                            <details v-for="(errors, category) in categorizedErrors" :key="category" class="group">
+                                <summary class="cursor-pointer flex items-center gap-2 text-sm text-red-300/80 hover:text-red-200 py-1">
+                                    <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                    {{ category }}
+                                    <span class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded-full">{{ errors.length }}</span>
+                                </summary>
+                                <div class="ml-5 mt-1 space-y-1">
+                                    <div v-for="error in errors" :key="error" class="flex items-start space-x-1.5">
+                                        <svg class="w-3 h-3 text-red-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        <span class="text-red-200/70 text-xs">{{ error }}</span>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
                     </div>
 
-                    <div v-if="uploadSuccess.length > 0" class="mt-6 p-6 bg-gradient-to-r from-green-900/30 to-green-800/20 rounded-xl border border-green-700/50">
-                        <div class="flex items-center mb-4">
-                            <svg class="w-6 h-6 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <div v-if="uploadSuccess.length > 0" class="mt-4 p-4 bg-gradient-to-r from-green-900/30 to-green-800/20 rounded-xl border border-green-700/50">
+                        <button @click="successExpanded = !successExpanded" class="w-full flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-green-300 font-semibold">Successfully Uploaded</span>
+                                <span class="ml-2 px-2 py-0.5 bg-green-500/30 text-green-300 text-xs rounded-full">{{ uploadSuccess.length }}</span>
+                            </div>
+                            <svg class="w-4 h-4 text-green-400 transition-transform" :class="{ 'rotate-180': successExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
-                            <h4 class="text-green-300 font-semibold text-lg">Successfully Uploaded</h4>
-                        </div>
-                        <div class="space-y-2">
-                            <div v-for="demo in uploadSuccess" :key="demo.id" class="flex items-start space-x-2">
-                                <svg class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        </button>
+                        <div v-if="successExpanded" class="mt-3 space-y-1 max-h-60 overflow-y-auto pr-1">
+                            <div v-for="demo in uploadSuccess" :key="demo.id" class="flex items-start space-x-1.5">
+                                <svg class="w-3 h-3 text-green-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 <div>
-                                    <span class="text-green-200 text-sm font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
-                                    <span v-if="demo.record_id" class="block text-purple-300 text-xs mt-1">
-                                        ✨ Auto-assigned to record
-                                    </span>
+                                    <span class="text-green-200/80 text-xs">{{ demo.processed_filename || demo.original_filename }}</span>
+                                    <span v-if="demo.record_id" class="text-purple-300 text-[10px] ml-1">auto-assigned</span>
                                 </div>
                             </div>
                         </div>
@@ -1154,47 +1211,42 @@ watch(selectedPhysics, () => {
                     <h3 class="text-base font-semibold text-gray-200 mb-3">Global Queue Status</h3>
 
                     <!-- Queue Statistics (always show) -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <div v-if="$page.props.auth.user" class="bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-lg p-3 text-center border border-blue-600/30">
-                            <div class="text-2xl font-bold text-blue-400">{{ queueStats.user_queued || 0 }}</div>
-                            <div class="text-xs text-blue-300 mt-1">Your Queued</div>
-                        </div>
+                    <div class="grid grid-cols-2 gap-2">
                         <div v-if="$page.props.auth.user" class="bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-3 text-center border border-yellow-600/30">
-                            <div class="text-2xl font-bold text-yellow-400">{{ queueStats.user_processing || 0 }}</div>
-                            <div class="text-xs text-yellow-300 mt-1">Your Processing</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-gray-600/20 to-gray-700/10 rounded-lg p-3 text-center border border-gray-600/30">
-                            <div class="text-2xl font-bold text-gray-300">{{ queueStats.total_queued || 0 }}</div>
-                            <div class="text-xs text-gray-400 mt-1">Total Queued</div>
+                            <div class="text-2xl font-bold text-yellow-400">{{ (queueStats.user_queued || 0) + (queueStats.user_processing || 0) }}</div>
+                            <div class="text-xs text-yellow-300 mt-1">Your Remaining</div>
                         </div>
                         <div class="bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-lg p-3 text-center border border-green-600/30">
-                            <div class="text-2xl font-bold text-green-400">{{ queueStats.total_processing || 0 }}</div>
-                            <div class="text-xs text-green-300 mt-1">Total Processing</div>
+                            <div class="text-2xl font-bold text-green-400">{{ (queueStats.total_queued || 0) + (queueStats.total_processing || 0) }}</div>
+                            <div class="text-xs text-green-300 mt-1">Total Remaining</div>
                         </div>
                     </div>
 
-                    <!-- Your Processing Demos List (only show if user has processing demos) -->
-                    <div v-if="$page.props.auth.user && processingDemos.length > 0" class="mt-4 space-y-2">
-                        <h4 class="text-sm font-semibold text-gray-300">Your Demos Currently Processing:</h4>
-                        <div v-for="demo in processingDemos" :key="demo.id" class="flex items-center justify-between bg-gray-700/50 rounded-lg p-2 border border-gray-600/50">
+                    <!-- Actively Processing (only demos currently being worked on by workers) -->
+                    <div v-if="activelyProcessingDemos.length > 0" class="mt-4 space-y-2">
+                        <h4 class="text-sm font-semibold text-blue-300">Actively Processing ({{ activelyProcessingDemos.length }}):</h4>
+                        <div v-for="demo in activelyProcessingDemos" :key="demo.id" class="flex items-center justify-between bg-blue-900/20 rounded-lg p-2 border border-blue-600/30">
                             <div class="flex items-center space-x-2">
-                                <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                <svg class="w-5 h-5 text-blue-400 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
                                 <div>
-                                    <div class="text-gray-200 font-medium text-sm">{{ demo.original_filename }}</div>
-                                    <div class="text-xs text-gray-400">Status: <span class="text-yellow-400">{{ demo.status }}</span></div>
+                                    <div class="text-gray-200 font-medium text-sm truncate max-w-[250px]">{{ demo.original_filename }}</div>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <div class="flex space-x-1">
-                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse"></div>
-                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
-                                    <div class="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                                    <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+                                    <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                                    <div class="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
                                 </div>
-                                <span class="text-yellow-400 text-xs font-medium">Processing...</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Queued count (just a summary, not the full list) -->
+                    <div v-if="queuedDemoCount > 0" class="mt-3">
+                        <div class="text-xs text-gray-400">{{ queuedDemoCount }} demo(s) waiting in queue</div>
                     </div>
                 </div>
 
@@ -1215,43 +1267,42 @@ watch(selectedPhysics, () => {
                         </h3>
 
                         <!-- Filter Tabs -->
-                        <div class="mb-6 space-y-4">
-                            <!-- Category Tabs (Online/Offline) -->
-                            <div class="flex flex-wrap gap-2">
+                        <div class="mb-4 space-y-2">
+                            <!-- Row 1: Category + Status Filters -->
+                            <div class="flex flex-wrap gap-1.5">
                                 <button
                                     @click="changeTabFilter('all')"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeTab === 'all'
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                                        ? 'bg-blue-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    All Demos <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.all }})</span>
+                                    All <span class="opacity-75">({{ demoCountsComputed.all }})</span>
                                 </button>
                                 <button
                                     @click="changeTabFilter('online')"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeTab === 'online'
-                                        ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
+                                        ? 'bg-green-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    Online <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.online }})</span>
+                                    Online <span class="opacity-75">({{ demoCountsComputed.online }})</span>
                                 </button>
                                 <button
                                     @click="changeTabFilter('offline')"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeTab === 'offline'
-                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/50'
+                                        ? 'bg-purple-600 text-white'
                                         : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                                 >
-                                    Offline <span class="ml-1 text-xs opacity-75">({{ demoCountsComputed.offline }})</span>
+                                    Offline <span class="opacity-75">({{ demoCountsComputed.offline }})</span>
                                 </button>
-                            </div>
 
-                            <!-- Status Filters -->
-                            <div class="flex flex-wrap gap-2">
+                                <span class="border-l border-gray-600/50 mx-1"></span>
+
                                 <button
                                     @click="changeStatusFilter('all')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'all'
                                         ? 'bg-gray-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
@@ -1260,52 +1311,52 @@ watch(selectedPhysics, () => {
                                 </button>
                                 <button
                                     @click="changeStatusFilter('assigned')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'assigned'
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Assigned <span class="ml-1 opacity-75">({{ demoCountsComputed.assigned }})</span>
+                                    Assigned <span class="opacity-75">({{ demoCountsComputed.assigned }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('fallback-assigned')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'fallback-assigned'
                                         ? 'bg-orange-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Fallback <span class="ml-1 opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
+                                    Fallback <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('processed')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'processed'
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Processed <span class="ml-1 opacity-75">({{ demoCountsComputed.processed }})</span>
+                                    Processed <span class="opacity-75">({{ demoCountsComputed.processed }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('failed-validity')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'failed-validity'
                                         ? 'bg-orange-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Invalid <span class="ml-1 opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
+                                    Invalid <span class="opacity-75">({{ demoCountsComputed.failed_validity || 0 }})</span>
                                 </button>
                                 <button
                                     @click="changeStatusFilter('failed')"
-                                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'failed'
                                         ? 'bg-red-600 text-white'
                                         : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                                 >
-                                    Failed <span class="ml-1 opacity-75">({{ demoCountsComputed.failed }})</span>
+                                    Failed <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
                                 </button>
                             </div>
 
-                            <!-- Search Input -->
+                            <!-- Row 2: Search Input -->
                             <div class="relative">
                                 <input
                                     v-model="userSearchQuery"
@@ -1543,56 +1594,57 @@ watch(selectedPhysics, () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <div class="flex items-center space-x-2">
+                                    <td class="px-3 py-3 text-sm">
+                                        <div class="flex flex-wrap gap-1">
                                             <a
                                                 :href="route('demos.download', demo.id)"
-                                                class="inline-flex items-center px-3 py-1.5 bg-blue-600/20 text-blue-300 text-xs font-medium rounded-md hover:bg-blue-600/30 transition-colors duration-200"
+                                                class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
+                                                title="Download"
                                             >
-                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                                 </svg>
-                                                Download
+                                                DL
                                             </a>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin)"
                                                 @click="reprocessDemo(demo.id)"
-                                                class="inline-flex items-center px-3 py-1.5 bg-yellow-600/20 text-yellow-300 text-xs font-medium rounded-md hover:bg-yellow-600/30 transition-colors duration-200"
+                                                class="inline-flex items-center px-2 py-1 bg-yellow-600/20 text-yellow-300 text-[11px] font-medium rounded hover:bg-yellow-600/30 transition-colors"
+                                                title="Reprocess"
                                             >
-                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                                 </svg>
-                                                Reprocess
                                             </button>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && (demo.status === 'processed' || demo.status === 'failed' || demo.status === 'fallback-assigned') && !demo.record_id"
                                                 @click="openAssignModal(demo)"
-                                                class="inline-flex items-center px-3 py-1.5 bg-green-600/20 text-green-300 text-xs font-medium rounded-md hover:bg-green-600/30 transition-colors duration-200"
+                                                class="inline-flex items-center px-2 py-1 bg-green-600/20 text-green-300 text-[11px] font-medium rounded hover:bg-green-600/30 transition-colors"
+                                                title="Assign"
                                             >
-                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                                                 </svg>
-                                                Assign
                                             </button>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && demo.record_id"
                                                 @click="unassignDemo(demo)"
-                                                class="inline-flex items-center px-3 py-1.5 bg-orange-600/20 text-orange-300 text-xs font-medium rounded-md hover:bg-orange-600/30 transition-colors duration-200"
+                                                class="inline-flex items-center px-2 py-1 bg-orange-600/20 text-orange-300 text-[11px] font-medium rounded hover:bg-orange-600/30 transition-colors"
+                                                title="Unassign"
                                             >
-                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                                                 </svg>
-                                                Unassign
                                             </button>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin) && !demo.record_id"
                                                 @click="deleteDemo(demo.id)"
-                                                class="inline-flex items-center px-3 py-1.5 bg-red-600/20 text-red-300 text-xs font-medium rounded-md hover:bg-red-600/30 transition-colors duration-200"
+                                                class="inline-flex items-center px-2 py-1 bg-red-600/20 text-red-300 text-[11px] font-medium rounded hover:bg-red-600/30 transition-colors"
+                                                title="Delete"
                                             >
-                                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
-                                                Delete
                                             </button>
                                         </div>
                                     </td>
@@ -1620,43 +1672,42 @@ watch(selectedPhysics, () => {
                     </h3>
 
                     <!-- Browse Filter Tabs and Search -->
-                    <div class="mb-6 space-y-4">
-                        <!-- Category Tabs (Online/Offline) -->
-                        <div class="flex flex-wrap gap-2">
+                    <div class="mb-4 space-y-2">
+                        <!-- Row 1: Category + Status Filters -->
+                        <div class="flex flex-wrap gap-1.5 items-center">
                             <button
                                 @click="changeBrowseTabFilter('all')"
-                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseTab === 'all'
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/50'
+                                    ? 'bg-blue-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                All Demos <span class="ml-1 text-xs opacity-75">({{ browseCountsComputed.all }})</span>
+                                All <span class="opacity-75">({{ browseCountsComputed.all }})</span>
                             </button>
                             <button
                                 @click="changeBrowseTabFilter('online')"
-                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseTab === 'online'
-                                    ? 'bg-green-600 text-white shadow-lg shadow-green-600/50'
+                                    ? 'bg-green-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                Online <span class="ml-1 text-xs opacity-75">({{ browseCountsComputed.online }})</span>
+                                Online <span class="opacity-75">({{ browseCountsComputed.online }})</span>
                             </button>
                             <button
                                 @click="changeBrowseTabFilter('offline')"
-                                class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseTab === 'offline'
-                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/50'
+                                    ? 'bg-purple-600 text-white'
                                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50'"
                             >
-                                Offline <span class="ml-1 text-xs opacity-75">({{ browseCountsComputed.offline }})</span>
+                                Offline <span class="opacity-75">({{ browseCountsComputed.offline }})</span>
                             </button>
-                        </div>
 
-                        <!-- Status Filters and Search -->
-                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="border-l border-gray-600/50 mx-1"></span>
+
                             <button
                                 @click="changeBrowseStatusFilter('all')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'all'
                                     ? 'bg-gray-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
@@ -1665,52 +1716,54 @@ watch(selectedPhysics, () => {
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('assigned')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'assigned'
                                     ? 'bg-purple-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Assigned <span class="ml-1 opacity-75">({{ browseCountsComputed.assigned }})</span>
+                                Assigned <span class="opacity-75">({{ browseCountsComputed.assigned }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('fallback-assigned')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'fallback-assigned'
                                     ? 'bg-orange-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Fallback <span class="ml-1 opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
+                                Fallback <span class="opacity-75">({{ browseCountsComputed.fallback_assigned || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('processed')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'processed'
                                     ? 'bg-yellow-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Processed <span class="ml-1 opacity-75">({{ browseCountsComputed.processed }})</span>
+                                Processed <span class="opacity-75">({{ browseCountsComputed.processed }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('failed-validity')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'failed-validity'
                                     ? 'bg-orange-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Invalid <span class="ml-1 opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
+                                Invalid <span class="opacity-75">({{ browseCountsComputed.failed_validity || 0 }})</span>
                             </button>
                             <button
                                 @click="changeBrowseStatusFilter('failed')"
-                                class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                 :class="activeBrowseStatus === 'failed'
                                     ? 'bg-red-600 text-white'
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
-                                Failed <span class="ml-1 opacity-75">({{ browseCountsComputed.failed }})</span>
+                                Failed <span class="opacity-75">({{ browseCountsComputed.failed }})</span>
                             </button>
+                        </div>
 
-                            <!-- Search Bar -->
-                            <div class="flex-grow max-w-md ml-auto">
+                        <!-- Row 2: Search Bar -->
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <div class="flex-grow max-w-md">
                                 <div class="relative">
                                     <input
                                         v-model="browseSearchQuery"
@@ -1813,15 +1866,16 @@ watch(selectedPhysics, () => {
                                             {{ demo.status ? demo.status.charAt(0).toUpperCase() + demo.status.slice(1) : '-' }}
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
+                                    <td class="px-3 py-3 text-sm">
                                         <a
                                             :href="route('demos.download', demo.id)"
-                                            class="inline-flex items-center px-3 py-1.5 bg-blue-600/20 text-blue-300 text-xs font-medium rounded-md hover:bg-blue-600/30 transition-colors duration-200"
+                                            class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
+                                            title="Download"
                                         >
-                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                             </svg>
-                                            Download
+                                            DL
                                         </a>
                                     </td>
                                 </tr>
