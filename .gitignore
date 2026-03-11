@@ -75,3 +75,4 @@ VPS_ACCESS.md
 /wiki/LocalSettings.php
 /wiki/extensions/*
 !/wiki/extensions/.gitkeep
+/public/baseq3-hd/

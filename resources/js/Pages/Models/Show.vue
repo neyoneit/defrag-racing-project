@@ -158,14 +158,22 @@ const isShadowModel = computed(() => props.model.category === 'shadow');
 
 // Ground textures for shadow viewer
 const groundTextures = [
-    { path: '/baseq3/textures/base_wall/concrete.jpg', label: 'Concrete' },
-    { path: '/baseq3/textures/base_floor/metfloor1.jpg', label: 'Metal' },
-    { path: '/baseq3/textures/base_floor/diamond2c.jpg', label: 'Diamond' },
-    { path: '/baseq3/textures/base_floor/tilefloor7.jpg', label: 'Tile' },
-    { path: '/baseq3/textures/base_floor/clangdark.jpg', label: 'Clang' },
-    { path: '/baseq3/textures/base_floor/dirt.jpg', label: 'Dirt' },
-    { path: '/baseq3/textures/base_floor/smallstone.jpg', label: 'Stone' },
-    { path: '/baseq3/textures/base_floor/clang_floor2.jpg', label: 'Grid' },
+    { path: '/baseq3-hd/textures/base_wall/concrete.jpg', label: 'Concrete' },
+    { path: '/baseq3-hd/textures/base_floor/metfloor1.jpg', label: 'Metal' },
+    { path: '/baseq3-hd/textures/base_floor/diamond2c.jpg', label: 'Diamond' },
+    { path: '/baseq3-hd/textures/base_floor/tilefloor7.jpg', label: 'Tile' },
+    { path: '/baseq3-hd/textures/base_floor/clangdark.jpg', label: 'Clang Dark' },
+    { path: '/baseq3-hd/textures/base_floor/clang_floor.jpg', label: 'Clang' },
+    { path: '/baseq3-hd/textures/base_floor/clang_floor2.jpg', label: 'Grid' },
+    { path: '/baseq3-hd/textures/base_floor/dirt.jpg', label: 'Dirt' },
+    { path: '/baseq3-hd/textures/base_floor/smallstone.jpg', label: 'Stone' },
+    { path: '/baseq3-hd/textures/base_floor/hfloor3.jpg', label: 'Hex' },
+    { path: '/baseq3-hd/textures/base_floor/metalbridge06.jpg', label: 'Bridge' },
+    { path: '/baseq3-hd/textures/gothic_floor/blocks17floor.jpg', label: 'Gothic' },
+    { path: '/baseq3-hd/textures/gothic_floor/largeblockfloor3.jpg', label: 'Blocks' },
+    { path: '/baseq3-hd/textures/gothic_floor/q1metal7_99.jpg', label: 'Q1 Metal' },
+    { path: '/baseq3-hd/textures/stone/rockwall.jpg', label: 'Rock' },
+    { path: '/baseq3-hd/textures/stone/pjrock1.jpg', label: 'Pebbles' },
 ];
 const selectedGroundTexture = ref(groundTextures[0].path);
 

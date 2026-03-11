@@ -32,7 +32,7 @@ const props = defineProps({
     },
     groundTexturePath: {
         type: String,
-        default: '/baseq3/textures/base_wall/concrete.jpg'
+        default: '/baseq3-hd/textures/base_wall/concrete.jpg'
     }
 });
 
@@ -253,7 +253,7 @@ async function loadGroundTexture(texPath) {
 
         groundTex.wrapS = THREE.RepeatWrapping;
         groundTex.wrapT = THREE.RepeatWrapping;
-        groundTex.repeat.set(2, 2);
+        groundTex.repeat.set(6, 6);
         groundTex.magFilter = THREE.LinearFilter;
         groundTex.minFilter = THREE.LinearMipmapLinearFilter;
 
