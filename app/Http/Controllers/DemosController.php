@@ -419,7 +419,7 @@ class DemosController extends Controller
 
         // Rate limiting: allow a larger cap to support archive imports
         // Max demos allowed to be uploaded/processed per user per 5 minutes
-        $RATE_LIMIT_MAX = 50000;
+        $RATE_LIMIT_MAX = 100000;
     $userId = Auth::id();
         $rateLimitKey = "demo_upload_rate_limit_{$userId}";
         $currentUploads = Cache::get($rateLimitKey, 0);
@@ -432,7 +432,7 @@ class DemosController extends Controller
         }
 
         $request->validate([
-            'demos' => 'required|array|min:1|max:50000', // Max 50,000 uploads per request (files or archives)
+            'demos' => 'required|array|min:1|max:100000', // Max 100,000 uploads per request (files or archives)
             // Allow larger files for archives; per-file max 512MB (512000 KB)
             'demos.*' => 'required|file|max:512000',
         ]);
@@ -577,8 +577,8 @@ class DemosController extends Controller
                     $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);
                     $demo->update(['file_path' => $path]);
 
-                    // Don't dispatch processing yet — wait until all batches are uploaded
-                    // Processing is triggered separately via startProcessing()
+                    // Dispatch immediately for processing
+                    ProcessDemoJob::dispatch($demo);
 
                     $queuedDemos[] = $demo;
                     $filesProcessed++;

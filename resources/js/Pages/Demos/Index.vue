@@ -499,7 +499,7 @@ const clearAllFiles = () => {
     }
 };
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 300;
 
 const uploadDemos = async () => {
     if (selectedFiles.value.length === 0) {
