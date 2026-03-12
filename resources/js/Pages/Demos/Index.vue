@@ -3,6 +3,7 @@ import MainLayout from '@/Layouts/MainLayout.vue';
 
 export default {
     layout: MainLayout,
+    inheritAttrs: false,
 }
 </script>
 
@@ -888,23 +889,27 @@ const pollOnce = async () => {
         // Backend returns recently completed demos (last 5 min + tracked IDs)
         const completed = response.data.completed_demos || [];
         if (completed.length > 0) {
+            let newCompleted;
             if (trackingDemoIds.value.length > 0) {
-                // When tracking specific IDs (after upload), show all tracked completed demos
-                // regardless of time — they were dispatched during upload which could take minutes
                 const trackedSet = new Set(trackingDemoIds.value);
-                recentlyProcessed.value = completed.filter(d => trackedSet.has(d.id));
+                newCompleted = completed.filter(d => trackedSet.has(d.id));
             } else if (actionStartedAt.value) {
-                // Filter to only show results since last user action (reprocess)
-                recentlyProcessed.value = completed.filter(d => new Date(d.updated_at) >= actionStartedAt.value);
+                newCompleted = completed.filter(d => new Date(d.updated_at) >= actionStartedAt.value);
             } else {
-                recentlyProcessed.value = completed;
+                newCompleted = completed;
             }
+
+            // Accumulate results (merge new into existing) to prevent race conditions
+            // with fast polling where out-of-order responses could overwrite results
+            const existingMap = new Map(recentlyProcessed.value.map(d => [d.id, d]));
+            newCompleted.forEach(d => existingMap.set(d.id, d)); // update or add
+            recentlyProcessed.value = Array.from(existingMap.values());
         }
 
-        // Stop polling when nothing is processing/queued globally (but wait at least 5s after action to catch fast completions)
+        // Stop polling when nothing is processing/queued globally (but never during active upload)
         const timeSinceAction = actionStartedAt.value ? (Date.now() - actionStartedAt.value.getTime()) : Infinity;
         const globalRemaining = (response.data.queue_stats?.total_queued || 0) + (response.data.queue_stats?.total_processing || 0);
-        if ((response.data.processing_demos || []).length === 0 && globalRemaining === 0 && timeSinceAction > 5000) {
+        if (!uploading.value && (response.data.processing_demos || []).length === 0 && globalRemaining === 0 && timeSinceAction > 5000) {
             if (processingStartTime.value) {
                 processingDuration.value = ((Date.now() - processingStartTime.value) / 1000).toFixed(1);
                 processingStartTime.value = null;
@@ -926,7 +931,7 @@ const startStatusPolling = () => {
     // Immediate first poll
     pollOnce();
 
-    statusPolling.value = setInterval(() => pollOnce(), 3000);
+    statusPolling.value = setInterval(() => pollOnce(), 200);
 };
 
 const stopStatusPolling = () => {
