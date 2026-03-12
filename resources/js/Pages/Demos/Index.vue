@@ -874,7 +874,10 @@ const groupedDemos = computed(() => {
 });
 
 // Status polling functions
+let pollInFlight = false;
 const pollOnce = async () => {
+    if (pollInFlight) return; // prevent stacking requests
+    pollInFlight = true;
     try {
         let response;
         if (trackingDemoIds.value.length > 0) {
@@ -920,6 +923,8 @@ const pollOnce = async () => {
         }
     } catch (error) {
         console.error('Status polling error:', error);
+    } finally {
+        pollInFlight = false;
     }
 };
 
@@ -931,7 +936,7 @@ const startStatusPolling = () => {
     // Immediate first poll
     pollOnce();
 
-    statusPolling.value = setInterval(() => pollOnce(), 200);
+    statusPolling.value = setInterval(() => pollOnce(), 2000);
 };
 
 const stopStatusPolling = () => {
