@@ -76,3 +76,7 @@ VPS_ACCESS.md
 /wiki/extensions/*
 !/wiki/extensions/.gitkeep
 /public/baseq3-hd/
+
+# Python bytecode
+__pycache__/
+*.pyc
