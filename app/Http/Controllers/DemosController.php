@@ -577,13 +577,13 @@ class DemosController extends Controller
                     $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);
                     $demo->update(['file_path' => $path]);
 
-                    // Dispatch immediately for processing
-                    ProcessDemoJob::dispatch($demo);
+                    // Don't dispatch processing yet — wait until all batches are uploaded
+                    // Processing is triggered separately via startProcessing()
 
                     $queuedDemos[] = $demo;
                     $filesProcessed++;
 
-                    Log::info("Demo queued for processing", [
+                    Log::info("Demo uploaded (awaiting processing)", [
                         'demo_id' => $demo->id,
                         'filename' => $demo->original_filename,
                         'user_id' => $userId,
@@ -1021,6 +1021,38 @@ class DemosController extends Controller
     public function uploadPublic(Request $request)
     {
         abort(404);
+    }
+
+    /**
+     * Start processing all uploaded (unprocessed) demos for the current user
+     */
+    public function startProcessing()
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            abort(403, 'Unauthorized');
+        }
+
+        $demos = UploadedDemo::where('user_id', $userId)
+            ->where('status', 'uploaded')
+            ->get();
+
+        $dispatched = 0;
+        foreach ($demos as $demo) {
+            ProcessDemoJob::dispatch($demo);
+            $dispatched++;
+        }
+
+        Log::info("Started processing for user", [
+            'user_id' => $userId,
+            'dispatched' => $dispatched,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'dispatched' => $dispatched,
+            'message' => "{$dispatched} demo(s) queued for processing",
+        ]);
     }
 
     /**

@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
     Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
 
+    Route::post('/demos/start-processing', [DemosController::class, 'startProcessing'])->name('demos.startProcessing');
     Route::post('/demos/reprocess-all-failed', [DemosController::class, 'reprocessAllFailed'])->name('demos.reprocessAllFailed');
 
     // Manual assignment routes

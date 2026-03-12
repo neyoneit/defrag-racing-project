@@ -557,6 +557,15 @@ const uploadDemos = async () => {
             fileInput.value.value = '';
         }
 
+        // All files uploaded — now trigger processing
+        if (allDemoIds.length > 0) {
+            try {
+                await axios.post(route('demos.startProcessing'));
+            } catch (e) {
+                console.error('Failed to start processing:', e);
+            }
+        }
+
         // Start polling for all uploaded demo IDs
         recentlyProcessed.value = [];
         actionStartedAt.value = new Date();
