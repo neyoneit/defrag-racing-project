@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Optional
 
-from console_string_utils import get_time_span
+from console_string_utils import get_time_span, remove_colors
 from demo_names import DemoNames, normalize_name
 from ext import Ext
 from demoparser import const
