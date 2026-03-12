@@ -34,6 +34,7 @@ const selectedFiles = ref([]);
 const uploading = ref(false);
 const uploadErrors = ref([]);
 const uploadSuccess = ref([]);
+const uploadSummary = ref(null); // { total_sent, total_received, queued, duplicates, errors, skipped_frontend }
 const errorsExpanded = ref(false);
 const successExpanded = ref(false);
 
@@ -67,6 +68,7 @@ const processingDemos = ref([]);
 const queueStats = ref({});
 const statusPolling = ref(null);
 const uploadProgress = ref(0);
+const trackingDemoIds = ref([]);
 
 const activelyProcessingDemos = computed(() => (processingDemos.value || []).filter(d => d.status === 'processing'));
 const queuedDemoCount = computed(() => (queueStats.value?.total_queued || 0));
@@ -75,6 +77,33 @@ const recentlyProcessed = ref([]);
 const reprocessMessage = ref('');
 const actionStartedAt = ref(null);
 const showReprocessConfirm = ref(false);
+const processingStartTime = ref(null);
+const processingDuration = ref(null);
+const processingResultsExpanded = ref(false);
+
+const processingSummary = computed(() => {
+    if (recentlyProcessed.value.length === 0) return null;
+    const groups = {
+        assigned: { label: 'Assigned', color: 'green', demos: [] },
+        'fallback-assigned': { label: 'Fallback', color: 'blue', demos: [] },
+        processed: { label: 'Processed', color: 'green', demos: [] },
+        failed: { label: 'Failed', color: 'red', demos: [] },
+        'failed-validity': { label: 'Invalid', color: 'orange', demos: [] },
+        'unsupported-version': { label: 'Unsupported', color: 'purple', demos: [] },
+    };
+    recentlyProcessed.value.forEach(d => {
+        if (groups[d.status]) groups[d.status].demos.push(d);
+        else if (groups.failed) groups.failed.demos.push(d);
+    });
+    // Only return groups that have demos
+    const active = {};
+    for (const [key, group] of Object.entries(groups)) {
+        if (group.demos.length > 0) active[key] = group;
+    }
+    const successCount = (groups.assigned.demos.length + groups['fallback-assigned'].demos.length + groups.processed.demos.length);
+    const failCount = recentlyProcessed.value.length - successCount;
+    return { groups: active, total: recentlyProcessed.value.length, success: successCount, fail: failCount };
+});
 
 const reprocessAllFailed = async () => {
     showReprocessConfirm.value = false;
@@ -84,6 +113,8 @@ const reprocessAllFailed = async () => {
         const response = await axios.post(route('demos.reprocessAllFailed'));
         reprocessMessage.value = response.data.message;
         recentlyProcessed.value = [];
+        processingDuration.value = null;
+        processingStartTime.value = Date.now();
         actionStartedAt.value = new Date();
         startStatusPolling();
         router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
@@ -499,7 +530,7 @@ const clearAllFiles = () => {
     }
 };
 
-const BATCH_SIZE = 300;
+const BATCH_SIZE = 100;
 
 const uploadDemos = async () => {
     if (selectedFiles.value.length === 0) {
@@ -511,13 +542,19 @@ const uploadDemos = async () => {
     uploadProgress.value = 0;
     uploadErrors.value = [];
     uploadSuccess.value = [];
+    uploadSummary.value = null;
 
+    const uploadStartTime = Date.now();
     const files = [...selectedFiles.value];
     const totalFiles = files.length;
     const totalBatches = Math.ceil(totalFiles / BATCH_SIZE);
     let allUploaded = [];
     let allErrors = [];
     let allDemoIds = [];
+    let totalReceived = 0;
+    let totalQueued = 0;
+    let totalDuplicates = 0;
+    let totalOtherErrors = 0;
 
     try {
         for (let i = 0; i < totalBatches; i++) {
@@ -545,11 +582,32 @@ const uploadDemos = async () => {
                 allErrors.push(...(response.data.errors || []));
                 const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
                 allDemoIds.push(...demoIds);
+
+                // Accumulate summary from server
+                if (response.data.summary) {
+                    totalReceived += response.data.summary.total_received || 0;
+                    totalQueued += response.data.summary.queued || 0;
+                    totalDuplicates += response.data.summary.duplicates || 0;
+                    totalOtherErrors += response.data.summary.errors || 0;
+                }
             }
         }
 
         uploadSuccess.value = allUploaded;
         uploadErrors.value = allErrors;
+
+        // Build upload summary
+        const skippedFrontend = totalFiles - totalReceived;
+        const uploadDuration = ((Date.now() - uploadStartTime) / 1000).toFixed(1);
+        uploadSummary.value = {
+            total_selected: totalFiles,
+            total_sent: totalReceived,
+            queued: totalQueued,
+            duplicates: totalDuplicates,
+            errors: totalOtherErrors,
+            skipped_frontend: skippedFrontend > 0 ? skippedFrontend : 0,
+            duration: uploadDuration,
+        };
 
         // Clear selected files
         selectedFiles.value = [];
@@ -557,27 +615,18 @@ const uploadDemos = async () => {
             fileInput.value.value = '';
         }
 
-        // All files uploaded — now trigger processing
-        if (allDemoIds.length > 0) {
-            try {
-                await axios.post(route('demos.startProcessing'));
-            } catch (e) {
-                console.error('Failed to start processing:', e);
-            }
-        }
-
-        // Start polling for all uploaded demo IDs
+        // Start polling for all uploaded demo IDs (demos are already dispatched during upload)
         recentlyProcessed.value = [];
+        processingDuration.value = null;
+        processingStartTime.value = Date.now();
+        trackingDemoIds.value = allDemoIds;
         actionStartedAt.value = new Date();
         startStatusPolling();
 
         // Immediately reload the demos list
         router.reload({ only: ['userDemos', 'publicDemos'] });
 
-        // Clear success message after 30 seconds (give user time to see it)
-        setTimeout(() => {
-            uploadSuccess.value = [];
-        }, 30000);
+        // Results stay visible until user dismisses them
     } catch (error) {
         console.error('Upload error:', error);
         uploadErrors.value = [...allErrors, 'Upload failed: ' + (error.response?.data?.message || error.message)];
@@ -782,24 +831,40 @@ const groupedDemos = computed(() => {
 // Status polling functions
 const pollOnce = async () => {
     try {
-        const response = await axios.get(route('demos.status'));
+        let response;
+        if (trackingDemoIds.value.length > 0) {
+            // Use POST to avoid URL length limits with large tracking arrays
+            response = await axios.post(route('demos.status'), { tracking_ids: trackingDemoIds.value });
+        } else {
+            response = await axios.get(route('demos.status'));
+        }
         processingDemos.value = response.data.processing_demos;
         queueStats.value = response.data.queue_stats;
 
-        // Backend returns recently completed demos (last 5 min)
+        // Backend returns recently completed demos (last 5 min + tracked IDs)
         const completed = response.data.completed_demos || [];
         if (completed.length > 0) {
-            if (actionStartedAt.value) {
-                // Filter to only show results since last user action (upload/reprocess)
+            if (trackingDemoIds.value.length > 0) {
+                // When tracking specific IDs (after upload), show all tracked completed demos
+                // regardless of time — they were dispatched during upload which could take minutes
+                const trackedSet = new Set(trackingDemoIds.value);
+                recentlyProcessed.value = completed.filter(d => trackedSet.has(d.id));
+            } else if (actionStartedAt.value) {
+                // Filter to only show results since last user action (reprocess)
                 recentlyProcessed.value = completed.filter(d => new Date(d.updated_at) >= actionStartedAt.value);
             } else {
-                // No action started — show all recent results (e.g. from manual dispatch or page load)
                 recentlyProcessed.value = completed;
             }
         }
 
-        // Stop polling when nothing is processing/queued
-        if ((response.data.processing_demos || []).length === 0) {
+        // Stop polling when nothing is processing/queued (but wait at least 5s after action to catch fast completions)
+        const timeSinceAction = actionStartedAt.value ? (Date.now() - actionStartedAt.value.getTime()) : Infinity;
+        if ((response.data.processing_demos || []).length === 0 && timeSinceAction > 5000) {
+            if (processingStartTime.value) {
+                processingDuration.value = ((Date.now() - processingStartTime.value) / 1000).toFixed(1);
+                processingStartTime.value = null;
+            }
+            trackingDemoIds.value = [];
             stopStatusPolling();
             router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
         }
@@ -1237,6 +1302,47 @@ watch(selectedPhysics, () => {
                         <div class="text-xs text-gray-400 mt-2">Progress: {{ uploadProgress }}%</div>
                     </div>
 
+                    <!-- Upload Summary -->
+                    <div v-if="uploadSummary" class="mt-6 p-4 bg-gradient-to-r from-blue-900/30 to-blue-800/20 rounded-xl border border-blue-700/50">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                            <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="text-blue-300 font-semibold">Upload Summary</span>
+                            </div>
+                            <button @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+                            <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+                                <div class="text-gray-400 text-xs">Selected</div>
+                                <div class="text-white font-bold text-lg">{{ uploadSummary.total_selected.toLocaleString() }}</div>
+                            </div>
+                            <div v-if="uploadSummary.skipped_frontend > 0" class="bg-yellow-900/30 rounded-lg px-3 py-2 text-center border border-yellow-700/30">
+                                <div class="text-yellow-400 text-xs">Skipped (non-demo)</div>
+                                <div class="text-yellow-300 font-bold text-lg">{{ uploadSummary.skipped_frontend.toLocaleString() }}</div>
+                            </div>
+                            <div class="bg-green-900/30 rounded-lg px-3 py-2 text-center border border-green-700/30">
+                                <div class="text-green-400 text-xs">Queued</div>
+                                <div class="text-green-300 font-bold text-lg">{{ uploadSummary.queued.toLocaleString() }}</div>
+                            </div>
+                            <div v-if="uploadSummary.duplicates > 0" class="bg-orange-900/30 rounded-lg px-3 py-2 text-center border border-orange-700/30">
+                                <div class="text-orange-400 text-xs">Duplicates</div>
+                                <div class="text-orange-300 font-bold text-lg">{{ uploadSummary.duplicates.toLocaleString() }}</div>
+                            </div>
+                            <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-3 py-2 text-center border border-red-700/30">
+                                <div class="text-red-400 text-xs">Errors</div>
+                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
+                            </div>
+                            <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+                                <div class="text-gray-400 text-xs">Duration</div>
+                                <div class="text-white font-bold text-lg">{{ uploadSummary.duration }}s</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Upload Results -->
                     <div v-if="uploadErrors.length > 0" class="mt-6 p-4 bg-gradient-to-r from-red-900/30 to-red-800/20 rounded-xl border border-red-700/50">
                         <button @click="errorsExpanded = !errorsExpanded" class="w-full flex items-center justify-between">
@@ -1300,42 +1406,90 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Processing Results (shows after demos finish processing) -->
-                <div v-if="recentlyProcessed.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
+                <div v-if="processingSummary" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-cyan-500/30">
+                    <!-- Summary header -->
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-base font-semibold text-gray-200">Processing Results</h3>
-                        <button @click="recentlyProcessed = []" class="text-xs text-gray-400 hover:text-gray-200">Dismiss</button>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            <h3 class="text-base font-semibold text-cyan-300">Processing Results</h3>
+                        </div>
+                        <button @click="recentlyProcessed = []; processingDuration = null;" class="text-gray-500 hover:text-gray-300 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
-                    <div class="space-y-1.5 max-h-60 overflow-y-auto">
-                        <div v-for="demo in recentlyProcessed" :key="demo.id" class="flex items-start space-x-2 p-2 rounded-lg"
-                            :class="{
-                                'bg-green-900/20 border border-green-700/30': ['assigned', 'fallback-assigned', 'processed'].includes(demo.status),
-                                'bg-red-900/20 border border-red-700/30': demo.status === 'failed',
-                                'bg-orange-900/20 border border-orange-700/30': demo.status === 'failed-validity',
-                                'bg-purple-900/20 border border-purple-700/30': demo.status === 'unsupported-version',
-                            }">
-                            <svg v-if="['assigned', 'fallback-assigned', 'processed'].includes(demo.status)" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <svg v-else class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            <div class="min-w-0 flex-1">
-                                <div class="text-sm text-gray-200 truncate">{{ demo.processed_filename || demo.original_filename }}</div>
-                                <div class="text-xs mt-0.5" :class="{
-                                    'text-green-300': ['assigned', 'fallback-assigned', 'processed'].includes(demo.status),
-                                    'text-red-300': demo.status === 'failed',
-                                    'text-orange-300': demo.status === 'failed-validity',
-                                    'text-purple-300': demo.status === 'unsupported-version',
-                                }">
-                                    <template v-if="demo.status === 'assigned'">Assigned to record — {{ demo.map_name }} {{ demo.player_name }}</template>
-                                    <template v-else-if="demo.status === 'fallback-assigned'">Processed — {{ demo.map_name }} (offline record created)</template>
-                                    <template v-else-if="demo.status === 'processed'">Processed successfully — {{ demo.map_name }}</template>
-                                    <template v-else-if="demo.status === 'failed-validity'">Invalid demo — {{ demo.processing_output }}</template>
-                                    <template v-else-if="demo.status === 'unsupported-version'">Unsupported demo version — {{ demo.processing_output }}</template>
-                                    <template v-else-if="demo.status === 'failed'">Failed — {{ demo.processing_output }}</template>
-                                    <template v-else>{{ demo.status }}</template>
-                                </div>
+                    <!-- Summary stats grid -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+                        <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+                            <div class="text-gray-400 text-xs">Total</div>
+                            <div class="text-white font-bold text-lg">{{ processingSummary.total.toLocaleString() }}</div>
+                        </div>
+                        <div v-if="processingSummary.success > 0" class="bg-green-900/30 rounded-lg px-3 py-2 text-center border border-green-700/30">
+                            <div class="text-green-400 text-xs">Success</div>
+                            <div class="text-green-300 font-bold text-lg">{{ processingSummary.success.toLocaleString() }}</div>
+                        </div>
+                        <div v-if="processingSummary.fail > 0" class="bg-red-900/30 rounded-lg px-3 py-2 text-center border border-red-700/30">
+                            <div class="text-red-400 text-xs">Failed</div>
+                            <div class="text-red-300 font-bold text-lg">{{ processingSummary.fail.toLocaleString() }}</div>
+                        </div>
+                        <div v-if="processingDuration" class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+                            <div class="text-gray-400 text-xs">Duration</div>
+                            <div class="text-white font-bold text-lg">{{ processingDuration }}s</div>
+                        </div>
+                        <div v-else-if="processingStartTime" class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
+                            <div class="text-gray-400 text-xs">Duration</div>
+                            <div class="text-yellow-300 font-bold text-lg animate-pulse">running...</div>
+                        </div>
+                    </div>
+
+                    <!-- Grouped details (collapsible) -->
+                    <div class="mt-4">
+                        <button @click="processingResultsExpanded = !processingResultsExpanded" class="w-full flex items-center justify-between p-3 bg-gradient-to-r from-cyan-900/20 to-cyan-800/10 rounded-xl border border-cyan-700/30">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-cyan-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                                <span class="text-cyan-300 font-semibold text-sm">Details</span>
+                                <span class="ml-2 px-2 py-0.5 bg-cyan-500/20 text-cyan-300 text-xs rounded-full">{{ processingSummary.total }}</span>
                             </div>
+                            <svg class="w-4 h-4 text-cyan-400 transition-transform" :class="{ 'rotate-180': processingResultsExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <div v-if="processingResultsExpanded" class="mt-3 space-y-2 max-h-80 overflow-y-auto pr-1">
+                            <details v-for="(group, status) in processingSummary.groups" :key="status" class="group">
+                                <summary class="cursor-pointer flex items-center gap-2 text-sm py-1.5 px-2 rounded-lg hover:bg-white/5"
+                                    :class="{
+                                        'text-green-300': ['assigned', 'fallback-assigned', 'processed'].includes(status),
+                                        'text-red-300': status === 'failed',
+                                        'text-orange-300': status === 'failed-validity',
+                                        'text-purple-300': status === 'unsupported-version',
+                                    }">
+                                    <svg class="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                    {{ group.label }}
+                                    <span class="px-1.5 py-0.5 text-[10px] rounded-full"
+                                        :class="{
+                                            'bg-green-500/20 text-green-400': ['assigned', 'fallback-assigned', 'processed'].includes(status),
+                                            'bg-red-500/20 text-red-400': status === 'failed',
+                                            'bg-orange-500/20 text-orange-400': status === 'failed-validity',
+                                            'bg-purple-500/20 text-purple-400': status === 'unsupported-version',
+                                        }">{{ group.demos.length }}</span>
+                                </summary>
+                                <div class="ml-5 mt-1 space-y-1">
+                                    <div v-for="demo in group.demos" :key="demo.id" class="flex items-start space-x-1.5">
+                                        <svg v-if="['assigned', 'fallback-assigned', 'processed'].includes(demo.status)" class="w-3 h-3 text-green-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                        <svg v-else class="w-3 h-3 text-red-400/60 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        <div class="min-w-0 flex-1">
+                                            <span class="text-xs text-gray-300">{{ demo.processed_filename || demo.original_filename }}</span>
+                                            <span v-if="demo.map_name" class="text-[10px] text-gray-500 ml-1">{{ demo.map_name }}</span>
+                                            <span v-if="demo.processing_output" class="text-[10px] text-gray-500 ml-1">— {{ demo.processing_output }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
                     </div>
                 </div>

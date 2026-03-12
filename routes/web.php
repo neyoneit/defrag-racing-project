@@ -84,11 +84,7 @@ Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name
 
 // Demo upload routes (requires authentication)
 Route::middleware('auth')->group(function () {
-    Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
-    Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
-    Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
-
-    Route::get('/demos/status', [DemosController::class, 'status'])->name('demos.status');
+    Route::match(['get', 'post'], '/demos/status', [DemosController::class, 'status'])->name('demos.status');
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
     Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
 

@@ -591,12 +591,30 @@ class DemosController extends Controller
         // Update rate limit counter
         Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addMinutes(5));
 
+        // Count error types for summary
+        $duplicateCount = count(array_filter($errors, fn($e) => str_contains($e, 'Duplicate') || str_contains($e, 'already uploaded')));
+        $otherErrorCount = count($errors) - $duplicateCount;
+
+        Log::info("Demo upload batch completed", [
+            'user_id' => $userId,
+            'total_files' => count($demoFiles),
+            'queued' => count($queuedDemos),
+            'duplicates' => $duplicateCount,
+            'errors' => $otherErrorCount,
+        ]);
+
         return response()->json([
             'success' => true,
             'uploaded' => $queuedDemos,
             'errors' => $errors,
             'message' => count($queuedDemos) . ' demo(s) queued for processing' .
                         (count($errors) > 0 ? ', ' . count($errors) . ' failed' : ''),
+            'summary' => [
+                'total_received' => count($demoFiles),
+                'queued' => count($queuedDemos),
+                'duplicates' => $duplicateCount,
+                'errors' => $otherErrorCount,
+            ],
             'queue_info' => [
                 'total_queued' => count($queuedDemos),
                 'estimated_completion' => now()->addSeconds(count($queuedDemos) * 30)->format('H:i:s'),
@@ -901,7 +919,7 @@ class DemosController extends Controller
         $completedDemos = $completedQuery->orderBy('updated_at', 'desc')->limit(100)->get();
 
         // Also include tracked IDs if provided (for specific batch tracking)
-        $trackingIds = $request->get('tracking_ids');
+        $trackingIds = $request->input('tracking_ids');
         if ($trackingIds && is_array($trackingIds)) {
             $trackedCompleted = UploadedDemo::whereIn('id', $trackingIds)
                 ->whereNotIn('status', ['uploaded', 'pending', 'processing'])
