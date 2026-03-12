@@ -555,6 +555,7 @@ const uploadDemos = async () => {
     let totalQueued = 0;
     let totalDuplicates = 0;
     let totalOtherErrors = 0;
+    let totalReplaced = 0;
 
     try {
         for (let i = 0; i < totalBatches; i++) {
@@ -589,6 +590,7 @@ const uploadDemos = async () => {
                     totalQueued += response.data.summary.queued || 0;
                     totalDuplicates += response.data.summary.duplicates || 0;
                     totalOtherErrors += response.data.summary.errors || 0;
+                    totalReplaced += response.data.summary.replaced || 0;
                 }
             }
         }
@@ -603,6 +605,7 @@ const uploadDemos = async () => {
             total_selected: totalFiles,
             total_sent: totalReceived,
             queued: totalQueued,
+            replaced: totalReplaced,
             duplicates: totalDuplicates,
             errors: totalOtherErrors,
             skipped_frontend: skippedFrontend > 0 ? skippedFrontend : 0,
@@ -1327,6 +1330,7 @@ watch(selectedPhysics, () => {
                             <div class="bg-green-900/30 rounded-lg px-3 py-2 text-center border border-green-700/30">
                                 <div class="text-green-400 text-xs">Queued</div>
                                 <div class="text-green-300 font-bold text-lg">{{ uploadSummary.queued.toLocaleString() }}</div>
+                                <div v-if="uploadSummary.replaced > 0" class="text-[10px] text-cyan-400 mt-0.5">({{ uploadSummary.replaced }} replaced failed)</div>
                             </div>
                             <div v-if="uploadSummary.duplicates > 0" class="bg-orange-900/30 rounded-lg px-3 py-2 text-center border border-orange-700/30">
                                 <div class="text-orange-400 text-xs">Duplicates</div>

@@ -529,6 +529,8 @@ class DemosController extends Controller
                 ->keyBy('original_filename');
 
             // Phase 3: Filter, create records, store files, dispatch
+            $reuploadableStatuses = ['failed', 'failed-validity', 'unsupported-version'];
+            $replacedCount = 0;
             foreach ($demoCandidate as $candidate) {
                 try {
                     $demoFile = $candidate['file'];
@@ -536,12 +538,13 @@ class DemosController extends Controller
                     $originalName = $candidate['name'];
 
                     // Check hash duplicate
-                    $reuploadableStatuses = ['failed', 'failed-validity', 'unsupported-version'];
+                    $replacedThisDemo = false;
                     if ($existingByHash->has($fileHash)) {
                         $existing = $existingByHash->get($fileHash);
                         if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByHash->forget($fileHash);
+                            $replacedThisDemo = true;
                         } else {
                             $demoName = $existing->processed_filename ?: $existing->original_filename;
                             $errors[] = $originalName . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
@@ -555,11 +558,14 @@ class DemosController extends Controller
                         if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByName->forget($originalName);
+                            $replacedThisDemo = true;
                         } else {
                             $errors[] = $originalName . ': Filename already uploaded by you';
                             continue;
                         }
                     }
+
+                    if ($replacedThisDemo) $replacedCount++;
 
                     // Create DB record
                     $demo = UploadedDemo::create([
@@ -615,6 +621,7 @@ class DemosController extends Controller
                 'queued' => count($queuedDemos),
                 'duplicates' => $duplicateCount,
                 'errors' => $otherErrorCount,
+                'replaced' => $replacedCount ?? 0,
             ],
             'queue_info' => [
                 'total_queued' => count($queuedDemos),
