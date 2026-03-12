@@ -12,6 +12,71 @@
     import axios from 'axios';
 
     const showAddToMaplistModal = ref(false);
+
+    // Assign demo to online record
+    const showAssignModal = ref(false);
+    const assigningRecord = ref(null);
+    const assignPhysics = ref('VQ3');
+    const availableRecords = ref([]);
+    const selectedRecordId = ref(null);
+    const loadingRecords = ref(false);
+
+    const openAssignModal = async (record, physics) => {
+        assigningRecord.value = record;
+        assignPhysics.value = physics;
+        showAssignModal.value = true;
+        selectedRecordId.value = null;
+
+        // Load online records for this map + physics
+        loadingRecords.value = true;
+        try {
+            const response = await axios.get(`/demos/maps/${encodeURIComponent(props.map.name)}/records`, {
+                params: { physics: physics }
+            });
+            availableRecords.value = response.data;
+        } catch (error) {
+            console.error('Error loading records:', error);
+        } finally {
+            loadingRecords.value = false;
+        }
+    };
+
+    // Suggested matches — records sorted by time distance to demo's time
+    const suggestedRecords = computed(() => {
+        if (!assigningRecord.value || availableRecords.value.length === 0) return [];
+        const demoTime = assigningRecord.value.time_ms || assigningRecord.value.time;
+        if (!demoTime) return [];
+        return [...availableRecords.value]
+            .map(r => ({ ...r, timeDiff: Math.abs(r.time - demoTime) }))
+            .sort((a, b) => a.timeDiff - b.timeDiff)
+            .slice(0, 5);
+    });
+
+    const closeAssignModal = () => {
+        showAssignModal.value = false;
+        assigningRecord.value = null;
+        availableRecords.value = [];
+        selectedRecordId.value = null;
+    };
+
+    const assignDemoToRecord = async () => {
+        if (!selectedRecordId.value || !assigningRecord.value?.demo) return;
+
+        try {
+            const response = await axios.post(`/demos/${assigningRecord.value.demo.id}/assign`, {
+                record_id: selectedRecordId.value
+            });
+
+            if (response.data.success) {
+                closeAssignModal();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error assigning demo:', error);
+            alert('Failed to assign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
     const tags = ref([]);
     const availableTags = ref([]);
     const suggestedTags = ref([]);
@@ -877,7 +942,7 @@
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" @assign="openAssignModal($event, 'VQ3')" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -927,7 +992,7 @@
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" @assign="openAssignModal($event, 'CPM')" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -963,6 +1028,114 @@
             @close="showAddToMaplistModal = false"
             @added="showAddToMaplistModal = false"
         />
+
+        <!-- Assign Demo to Online Record Modal -->
+        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeAssignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
+                    <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Demo info -->
+                <div v-if="assigningRecord" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-white/5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="text-sm"><span class="text-gray-500">Map:</span> <span class="text-gray-200 font-medium">{{ map.name }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Physics:</span> <span class="font-medium" :class="assignPhysics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assignPhysics }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(assigningRecord.player_name || assigningRecord.name)"></span></div>
+                        <div v-if="assigningRecord.time" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningRecord.time) }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div v-if="loadingRecords" class="text-center py-8">
+                    <div class="text-gray-400 text-lg">Loading records...</div>
+                </div>
+
+                <!-- Suggested matches -->
+                <div v-if="!loadingRecords && suggestedRecords.length > 0" class="mb-5">
+                    <label class="block text-sm font-medium text-green-400 mb-2">
+                        Closest time matches
+                    </label>
+                    <div class="border border-green-700/30 rounded-lg bg-green-900/10 overflow-hidden">
+                        <button
+                            v-for="record in suggestedRecords"
+                            :key="'suggested-' + record.id"
+                            @click="selectedRecordId = record.id"
+                            :class="[
+                                'w-full text-left px-4 py-3 hover:bg-green-800/20 border-b border-green-800/20 last:border-b-0 transition-all',
+                                selectedRecordId === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
+                            ]"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500" :class="record.timeDiff === 0 ? 'text-green-400 font-bold' : ''">
+                                        {{ record.timeDiff === 0 ? 'EXACT' : (record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff)) + ' diff' }}
+                                    </span>
+                                    <span class="text-sm font-mono" :class="selectedRecordId === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Records list -->
+                <div v-if="!loadingRecords && availableRecords.length > 0" class="mb-6">
+                    <label class="block text-sm font-medium text-gray-400 mb-3">
+                        All records ({{ availableRecords.length }})
+                    </label>
+                    <div class="max-h-[400px] overflow-y-auto border border-gray-700/50 rounded-lg">
+                        <button
+                            v-for="record in availableRecords"
+                            :key="record.id"
+                            @click="selectedRecordId = record.id"
+                            :class="[
+                                'w-full text-left px-4 py-3 hover:bg-white/5 border-b border-gray-800/50 last:border-b-0 transition-all',
+                                selectedRecordId === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
+                            ]"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <span class="text-sm font-mono" :class="selectedRecordId === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- No records -->
+                <div v-else class="mb-6 text-center text-gray-400 py-8">
+                    No online records found for {{ map.name }} ({{ assignPhysics }})
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="assignDemoToRecord"
+                        :disabled="!selectedRecordId"
+                        :class="[
+                            'px-5 py-2.5 rounded-lg text-white font-medium transition-colors',
+                            selectedRecordId ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 cursor-not-allowed'
+                        ]"
+                    >
+                        Assign Demo
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 

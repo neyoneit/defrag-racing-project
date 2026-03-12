@@ -7,6 +7,7 @@ use App\Models\Record;
 use App\Models\OfflineRecord;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\Process;
 
 class DemoProcessorService
 {
@@ -110,7 +111,7 @@ class DemoProcessorService
                 'country' => $metadata['country'] ?? null,
                 'record_date' => $metadata['record_date'] ?? null,
                 'validity' => $metadata['validity'] ?? null,
-                'processing_output' => $output,
+                'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] ' . $output,
                 'status' => $status,
             ]);
 
@@ -166,9 +167,15 @@ class DemoProcessorService
             // Move the raw demo file to failed directory for admin review
             $this->moveToFailedDirectory($demo);
 
+            // Detect unsupported demo file versions (not dm_68)
+            $status = 'failed';
+            if (str_contains($e->getMessage(), 'Could not parse demo file')) {
+                $status = 'unsupported-version';
+            }
+
             $demo->update([
-                'status' => 'failed',
-                'processing_output' => $e->getMessage(),
+                'status' => $status,
+                'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] ' . $e->getMessage(),
             ]);
 
             // Clean up temp files on error
@@ -189,14 +196,28 @@ class DemoProcessorService
         // Use new Python implementation with JSON output for full metadata
         $processSingleScript = dirname($this->batchRenamerPath) . '/process_single_demo.py';
 
-        // Run the Python script with --json flag to get full metadata including record date
-        $command = 'cd ' . escapeshellarg(dirname($this->batchRenamerPath)) . ' && ';
-        $command .= 'python3 -W ignore ' . escapeshellarg($processSingleScript) . ' ' . escapeshellarg($filepath) . ' --json 2>/dev/null';
+        // Dynamic timeout: 120s base + 3s per MB of file size
+        $fileSizeMB = filesize($filepath) / 1024 / 1024;
+        $processTimeout = max(120, 120 + (int)($fileSizeMB * 3));
 
-        $output = shell_exec($command);
+        // Use Symfony Process to properly manage child process lifecycle
+        $process = new Process(
+            ['python3', '-W', 'ignore', $processSingleScript, $filepath, '--json'],
+            dirname($this->batchRenamerPath),
+        );
+        $process->setTimeout($processTimeout);
 
-        if ($output === null) {
-            throw new \Exception('Failed to execute Python demo processor');
+        try {
+            $process->run();
+        } catch (\Symfony\Component\Process\Exception\ProcessTimedOutException $e) {
+            throw new \Exception("Python demo processor timed out after {$processTimeout}s (file: " . round($fileSizeMB) . "MB)");
+        }
+
+        $output = $process->getOutput();
+        $stderr = $process->getErrorOutput();
+
+        if ($process->getExitCode() !== 0 && empty($output)) {
+            throw new \Exception('Failed to execute Python demo processor' . ($stderr ? ': ' . substr($stderr, 0, 500) : ''));
         }
 
         // Return the JSON output directly - parseRenamerOutput will handle it

@@ -111,6 +111,10 @@ class DemosController extends Controller
                     $query->where('status', 'failed-validity');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
+                } elseif ($filterStatus === 'unsupported-version') {
+                    $query->where('status', 'unsupported-version');
+                } elseif ($filterStatus === 'uploaded') {
+                    $query->whereIn('status', ['uploaded', 'pending', 'processing']);
                 }
 
                 // Apply search filter
@@ -176,11 +180,13 @@ class DemosController extends Controller
                     'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
                     'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
                     // Status counts for ALL tab
+                    'uploaded' => (clone $baseQuery)->whereIn('status', ['uploaded', 'pending', 'processing'])->count(),
                     'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
                     'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
                     'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
                     'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
                     'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
+                    'unsupported_version' => (clone $baseQuery)->where('status', 'unsupported-version')->count(),
                     // Status counts for ONLINE tab
                     'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
                     'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
@@ -216,6 +222,10 @@ class DemosController extends Controller
                     $query->where('status', 'failed-validity');
                 } elseif ($filterStatus === 'failed') {
                     $query->where('status', 'failed');
+                } elseif ($filterStatus === 'unsupported-version') {
+                    $query->where('status', 'unsupported-version');
+                } elseif ($filterStatus === 'uploaded') {
+                    $query->whereIn('status', ['uploaded', 'pending', 'processing']);
                 }
 
                 // Apply search filter
@@ -242,11 +252,13 @@ class DemosController extends Controller
                     'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
                     'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
                     // Status counts for ALL tab
+                    'uploaded' => (clone $baseQuery)->whereIn('status', ['uploaded', 'pending', 'processing'])->count(),
                     'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
                     'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
                     'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
                     'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
                     'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
+                    'unsupported_version' => (clone $baseQuery)->where('status', 'unsupported-version')->count(),
                     // Status counts for ONLINE tab
                     'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
                     'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
@@ -407,7 +419,7 @@ class DemosController extends Controller
 
         // Rate limiting: allow a larger cap to support archive imports
         // Max demos allowed to be uploaded/processed per user per 5 minutes
-        $RATE_LIMIT_MAX = 10000;
+        $RATE_LIMIT_MAX = 50000;
     $userId = Auth::id();
         $rateLimitKey = "demo_upload_rate_limit_{$userId}";
         $currentUploads = Cache::get($rateLimitKey, 0);
@@ -420,7 +432,7 @@ class DemosController extends Controller
         }
 
         $request->validate([
-            'demos' => 'required|array|min:1|max:10000', // Max 10,000 uploads per request (files or archives)
+            'demos' => 'required|array|min:1|max:50000', // Max 50,000 uploads per request (files or archives)
             // Allow larger files for archives; per-file max 512MB (512000 KB)
             'demos.*' => 'required|file|max:512000',
         ]);
@@ -529,13 +541,7 @@ class DemosController extends Controller
                     if ($existingDemo) {
                         // Allow re-upload if the previous attempt failed
                         if ($existingDemo->status === 'failed') {
-                            // Clean up local failed files
-                            $failedDir = storage_path("app/demos/failed/{$existingDemo->id}");
-                            if (is_dir($failedDir)) {
-                                array_map('unlink', glob($failedDir . '/*'));
-                                rmdir($failedDir);
-                            }
-                            $existingDemo->delete();
+                            $this->cleanupFailedDemo($existingDemo);
                         } else {
                             $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
                             $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
@@ -550,12 +556,7 @@ class DemosController extends Controller
 
                     if ($existingByFilename) {
                         if ($existingByFilename->status === 'failed') {
-                            $failedDir = storage_path("app/demos/failed/{$existingByFilename->id}");
-                            if (is_dir($failedDir)) {
-                                array_map('unlink', glob($failedDir . '/*'));
-                                rmdir($failedDir);
-                            }
-                            $existingByFilename->delete();
+                            $this->cleanupFailedDemo($existingByFilename);
                         } else {
                             $errors[] = $demoFile->getClientOriginalName() . ': Filename already uploaded by you';
                             continue;
@@ -868,11 +869,12 @@ class DemosController extends Controller
     {
         $demoIds = $request->get('demo_ids');
 
-        // If demo_ids provided, allow public polling for those specific demos (guest uploads)
-        if ($demoIds && is_array($demoIds)) {
+        // If demo_ids provided and user is NOT logged in, allow public polling for those specific demos (guest uploads)
+        if ($demoIds && is_array($demoIds) && !Auth::check()) {
             $demos = UploadedDemo::whereIn('id', $demoIds)->with(['record.user'])->get();
             return response()->json([
                 'processing_demos' => $demos->filter(function ($d) { return in_array($d->status, ['uploaded', 'pending', 'processing']); })->values(),
+                'completed_demos' => $demos->filter(function ($d) { return !in_array($d->status, ['uploaded', 'pending', 'processing']); })->values(),
                 'queue_stats' => [
                     'total_queued' => UploadedDemo::whereIn('status', ['uploaded', 'pending'])->count(),
                     'total_processing' => UploadedDemo::where('status', 'processing')->count(),
@@ -905,8 +907,35 @@ class DemosController extends Controller
             'user_processing' => $isAdmin ? UploadedDemo::where('status', 'processing')->count() : UploadedDemo::where('user_id', $userId)->where('status', 'processing')->count(),
         ];
 
+        // Return recently completed demos (last 5 min) — no frontend tracking needed
+        $recentCutoff = now()->subMinutes(5);
+        $completedQuery = UploadedDemo::whereNotIn('status', ['uploaded', 'pending', 'processing'])
+            ->where('updated_at', '>=', $recentCutoff)
+            ->select(['id', 'original_filename', 'processed_filename', 'status', 'processing_output', 'map_name', 'time_ms', 'player_name', 'updated_at']);
+        if (!$isAdmin) {
+            $completedQuery->where('user_id', $userId);
+        }
+        $completedDemos = $completedQuery->orderBy('updated_at', 'desc')->limit(100)->get();
+
+        // Also include tracked IDs if provided (for specific batch tracking)
+        $trackingIds = $request->get('tracking_ids');
+        if ($trackingIds && is_array($trackingIds)) {
+            $trackedCompleted = UploadedDemo::whereIn('id', $trackingIds)
+                ->whereNotIn('status', ['uploaded', 'pending', 'processing'])
+                ->select(['id', 'original_filename', 'processed_filename', 'status', 'processing_output', 'map_name', 'time_ms', 'player_name', 'updated_at'])
+                ->get();
+            // Merge without duplicates
+            $existingIds = $completedDemos->pluck('id')->toArray();
+            foreach ($trackedCompleted as $demo) {
+                if (!in_array($demo->id, $existingIds)) {
+                    $completedDemos->push($demo);
+                }
+            }
+        }
+
         return response()->json([
             'processing_demos' => $processingDemos,
+            'completed_demos' => $completedDemos,
             'queue_stats' => $queueStats,
             'timestamp' => now()->toISOString(),
         ]);
@@ -995,6 +1024,55 @@ class DemosController extends Controller
     }
 
     /**
+     * Reprocess all failed demos (admin only)
+     */
+    public function reprocessAllFailed()
+    {
+        $currentUser = Auth::user();
+        if (!$currentUser || !isset($currentUser->admin) || !$currentUser->admin) {
+            abort(403, 'Unauthorized');
+        }
+
+        $failed = UploadedDemo::where('status', 'failed')->get();
+        $dispatched = 0;
+        $missing = 0;
+        $demoIds = [];
+
+        // Clear failed jobs from the failed_jobs table so retry counters reset
+        \Illuminate\Support\Facades\DB::table('failed_jobs')
+            ->where('payload', 'like', '%ProcessDemoJob%')
+            ->delete();
+
+        foreach ($failed as $demo) {
+            if (!file_exists($demo->full_path)) {
+                $missing++;
+                continue;
+            }
+
+            // Clear the unique lock for this demo so ShouldBeUnique doesn't block
+            $uniqueKey = 'laravel_unique_job:' . \App\Jobs\ProcessDemoJob::class . $demo->id;
+            \Illuminate\Support\Facades\Cache::forget($uniqueKey);
+
+            $demo->update([
+                'status' => 'uploaded',
+                'processing_output' => null,
+            ]);
+
+            \App\Jobs\ProcessDemoJob::dispatch($demo);
+            $demoIds[] = $demo->id;
+            $dispatched++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'dispatched' => $dispatched,
+            'missing' => $missing,
+            'demo_ids' => $demoIds,
+            'message' => "{$dispatched} failed demo(s) queued for reprocessing" . ($missing > 0 ? ", {$missing} skipped (missing files)" : ''),
+        ]);
+    }
+
+    /**
      * Delete a demo (only if user owns it and it's not assigned)
      */
     public function destroy(UploadedDemo $demo)
@@ -1008,7 +1086,7 @@ class DemosController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        if ($demo->record_id) {
+        if ($demo->record_id || in_array($demo->status, ['assigned', 'fallback-assigned'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Cannot delete demo that is assigned to a record',
@@ -1262,6 +1340,18 @@ class DemosController extends Controller
         }
 
         return $extractedFiles;
+    }
+
+    /**
+     * Clean up a failed demo: remove local files and delete DB record
+     */
+    private function cleanupFailedDemo(UploadedDemo $demo)
+    {
+        $failedDir = storage_path("app/demos/failed/{$demo->id}");
+        if (is_dir($failedDir)) {
+            $this->rrmdir($failedDir);
+        }
+        $demo->delete();
     }
 
     /**

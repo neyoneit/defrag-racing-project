@@ -50,6 +50,19 @@ const categorizedErrors = computed(() => {
     });
     return cats;
 });
+// Upload info modal state
+const showUploadInfo = ref(false);
+const uploadInfoTitle = ref('');
+const uploadInfoMessage = ref('');
+const uploadInfoType = ref('info'); // 'info', 'warning', 'error'
+
+const showUploadInfoModal = (title, message, type = 'info') => {
+    uploadInfoTitle.value = title;
+    uploadInfoMessage.value = message;
+    uploadInfoType.value = type;
+    showUploadInfo.value = true;
+};
+
 const processingDemos = ref([]);
 const queueStats = ref({});
 const statusPolling = ref(null);
@@ -57,6 +70,29 @@ const uploadProgress = ref(0);
 
 const activelyProcessingDemos = computed(() => (processingDemos.value || []).filter(d => d.status === 'processing'));
 const queuedDemoCount = computed(() => (queueStats.value?.total_queued || 0));
+const reprocessingFailed = ref(false);
+const recentlyProcessed = ref([]);
+const reprocessMessage = ref('');
+const actionStartedAt = ref(null);
+const showReprocessConfirm = ref(false);
+
+const reprocessAllFailed = async () => {
+    showReprocessConfirm.value = false;
+    reprocessingFailed.value = true;
+    reprocessMessage.value = '';
+    try {
+        const response = await axios.post(route('demos.reprocessAllFailed'));
+        reprocessMessage.value = response.data.message;
+        recentlyProcessed.value = [];
+        actionStartedAt.value = new Date();
+        startStatusPolling();
+        router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
+    } catch (error) {
+        reprocessMessage.value = 'Failed: ' + (error.response?.data?.message || error.message);
+    } finally {
+        reprocessingFailed.value = false;
+    }
+};
 
 // Filter state (for Your Uploads section)
 const activeTab = ref('all'); // all, online, offline
@@ -198,6 +234,7 @@ const demoCountsComputed = computed(() => {
         processed: 0,
         failed_validity: 0,
         failed: 0,
+        unsupported_version: 0,
         online_assigned: 0,
         online_fallback_assigned: 0,
         online_processed: 0,
@@ -216,22 +253,26 @@ const demoCountsComputed = computed(() => {
             all: counts.all,
             online: counts.online,
             offline: counts.offline,
+            uploaded: counts.uploaded,
             assigned: counts.online_assigned,
             fallback_assigned: counts.online_fallback_assigned,
             processed: counts.online_processed,
             failed_validity: counts.online_failed_validity,
             failed: counts.online_failed,
+            unsupported_version: counts.unsupported_version,
         };
     } else if (activeTab.value === 'offline') {
         return {
             all: counts.all,
             online: counts.online,
             offline: counts.offline,
+            uploaded: counts.uploaded,
             assigned: counts.offline_assigned,
             fallback_assigned: counts.offline_fallback_assigned,
             processed: counts.offline_processed,
             failed_validity: counts.offline_failed_validity,
             failed: counts.offline_failed,
+            unsupported_version: counts.unsupported_version,
         };
     } else {
         // 'all' tab - show total counts
@@ -239,11 +280,13 @@ const demoCountsComputed = computed(() => {
             all: counts.all,
             online: counts.online,
             offline: counts.offline,
+            uploaded: counts.uploaded,
             assigned: counts.assigned,
             fallback_assigned: counts.fallback_assigned,
             processed: counts.processed,
             failed_validity: counts.failed_validity,
             failed: counts.failed,
+            unsupported_version: counts.unsupported_version,
         };
     }
 });
@@ -259,6 +302,7 @@ const browseCountsComputed = computed(() => {
         processed: 0,
         failed_validity: 0,
         failed: 0,
+        unsupported_version: 0,
         online_assigned: 0,
         online_fallback_assigned: 0,
         online_processed: 0,
@@ -382,7 +426,11 @@ const handleFileSelect = (event) => {
 
     if (validFiles.length !== files.length) {
         const skipped = files.length - validFiles.length;
-        alert(`Found ${validFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
+        showUploadInfoModal(
+            'Files Filtered',
+            `Found ${validFiles.length} demo file(s). Skipped ${skipped} non-demo file(s).\n\nOnly demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`,
+            'info'
+        );
     }
 
     selectedFiles.value = [...selectedFiles.value, ...validFiles];
@@ -427,7 +475,11 @@ const handleDrop = async (e) => {
 
         if (validFiles.length !== files.length) {
             const skipped = files.length - validFiles.length;
-            alert(`Found ${validFiles.length} demo files. Skipped ${skipped} non-demo file(s). Only demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`);
+            showUploadInfoModal(
+                'Files Filtered',
+                `Found ${validFiles.length} demo file(s). Skipped ${skipped} non-demo file(s).\n\nOnly demo files (.dm_68, .dm_66, etc.) and archives (.zip, .rar, .7z) are accepted.`,
+                'info'
+            );
         }
 
         if (validFiles.length > 0) {
@@ -451,7 +503,7 @@ const BATCH_SIZE = 50;
 
 const uploadDemos = async () => {
     if (selectedFiles.value.length === 0) {
-        alert('Please select demo files to upload');
+        showUploadInfoModal('No Files Selected', 'Please select demo files to upload.', 'warning');
         return;
     }
 
@@ -506,19 +558,17 @@ const uploadDemos = async () => {
         }
 
         // Start polling for all uploaded demo IDs
-        if (allDemoIds.length > 0) {
-            startStatusPolling(allDemoIds);
-        } else {
-            startStatusPolling();
-        }
+        recentlyProcessed.value = [];
+        actionStartedAt.value = new Date();
+        startStatusPolling();
 
         // Immediately reload the demos list
         router.reload({ only: ['userDemos', 'publicDemos'] });
 
-        // Clear success message after 10 seconds
+        // Clear success message after 30 seconds (give user time to see it)
         setTimeout(() => {
             uploadSuccess.value = [];
-        }, 10000);
+        }, 30000);
     } catch (error) {
         console.error('Upload error:', error);
         uploadErrors.value = [...allErrors, 'Upload failed: ' + (error.response?.data?.message || error.message)];
@@ -654,6 +704,7 @@ const getStatusColor = (status) => {
         case 'assigned': return 'text-purple-500';
         case 'failed-validity': return 'text-orange-500';
         case 'failed': return 'text-red-500';
+        case 'unsupported-version': return 'text-purple-500';
         default: return 'text-gray-500';
     }
 };
@@ -666,7 +717,10 @@ const reprocessDemo = async (demoId) => {
     try {
         const response = await axios.post(route('demos.reprocess', demoId));
         if (response.data.success) {
-            router.reload({ only: ['userDemos', 'publicDemos'] });
+            recentlyProcessed.value = [];
+            actionStartedAt.value = new Date();
+            startStatusPolling();
+            router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
         }
     } catch (error) {
         alert('Failed to reprocess demo: ' + (error.response?.data?.message || error.message));
@@ -717,40 +771,43 @@ const groupedDemos = computed(() => {
 });
 
 // Status polling functions
-const startStatusPolling = (targetDemoIds = null) => {
+const pollOnce = async () => {
+    try {
+        const response = await axios.get(route('demos.status'));
+        processingDemos.value = response.data.processing_demos;
+        queueStats.value = response.data.queue_stats;
+
+        // Backend returns recently completed demos (last 5 min)
+        const completed = response.data.completed_demos || [];
+        if (completed.length > 0) {
+            if (actionStartedAt.value) {
+                // Filter to only show results since last user action (upload/reprocess)
+                recentlyProcessed.value = completed.filter(d => new Date(d.updated_at) >= actionStartedAt.value);
+            } else {
+                // No action started — show all recent results (e.g. from manual dispatch or page load)
+                recentlyProcessed.value = completed;
+            }
+        }
+
+        // Stop polling when nothing is processing/queued
+        if ((response.data.processing_demos || []).length === 0) {
+            stopStatusPolling();
+            router.reload({ only: ['userDemos', 'publicDemos', 'demoCounts'], preserveState: true });
+        }
+    } catch (error) {
+        console.error('Status polling error:', error);
+    }
+};
+
+const startStatusPolling = () => {
     if (statusPolling.value) {
         clearInterval(statusPolling.value);
     }
 
-    statusPolling.value = setInterval(async () => {
-        try {
-            const params = {};
-            if (targetDemoIds && targetDemoIds.length > 0 && targetDemoIds.length <= 100) {
-                params.demo_ids = targetDemoIds;
-            }
+    // Immediate first poll
+    pollOnce();
 
-            const response = await axios.get(route('demos.status'), { params });
-            processingDemos.value = response.data.processing_demos;
-            queueStats.value = response.data.queue_stats;
-
-            // If we target specific demo ids, stop polling when none of them are queued/processing
-            if (targetDemoIds && targetDemoIds.length > 0) {
-                const stillProcessing = (response.data.processing_demos || []).filter(d => targetDemoIds.includes(d.id)).length;
-                if (stillProcessing === 0) {
-                    stopStatusPolling();
-                    router.reload({ only: ['userDemos', 'publicDemos'] });
-                }
-            } else {
-                // Stop polling if no demos are processing/queued (global)
-                if ((response.data.processing_demos || []).length === 0) {
-                    stopStatusPolling();
-                    router.reload({ only: ['userDemos', 'publicDemos'] }); // Final reload when all done
-                }
-            }
-        } catch (error) {
-            console.error('Status polling error:', error);
-        }
-    }, 3000); // Poll every 3 seconds
+    statusPolling.value = setInterval(() => pollOnce(), 3000);
 };
 
 const stopStatusPolling = () => {
@@ -760,7 +817,7 @@ const stopStatusPolling = () => {
     }
 };
 
-// Start polling on component mount if there are processing demos
+// Start polling on component mount if there are processing demos or saved tracking
 const checkForProcessingDemos = async () => {
     if ($page.props.auth.user) {
         try {
@@ -768,7 +825,10 @@ const checkForProcessingDemos = async () => {
             processingDemos.value = response.data.processing_demos;
             queueStats.value = response.data.queue_stats;
 
-            if (response.data.processing_demos.length > 0) {
+            const hasWork = response.data.processing_demos.length > 0
+                || (response.data.queue_stats.total_queued || 0) > 0
+                || (response.data.queue_stats.total_processing || 0) > 0;
+            if (hasWork) {
                 startStatusPolling();
             }
         } catch (error) {
@@ -791,8 +851,32 @@ onUnmounted(() => {
 const openAssignModal = (demo) => {
     assigningDemo.value = demo;
     showAssignModal.value = true;
-    searchMaps();
+
+    // Pre-fill physics from demo metadata
+    if (demo.physics) {
+        selectedPhysics.value = demo.physics;
+    }
+
+    // Pre-fill map from demo metadata and auto-select + load records
+    if (demo.map_name) {
+        searchQuery.value = demo.map_name;
+        selectedMap.value = demo.map_name;
+        loadRecords();
+    } else {
+        searchMaps();
+    }
 };
+
+// Suggested matches — records sorted by time distance to demo's time
+const suggestedRecords = computed(() => {
+    if (!assigningDemo.value || availableRecords.value.length === 0) return [];
+    const demoTime = assigningDemo.value.time_ms;
+    if (!demoTime) return [];
+    return [...availableRecords.value]
+        .map(r => ({ ...r, timeDiff: Math.abs(r.time - demoTime) }))
+        .sort((a, b) => a.timeDiff - b.timeDiff)
+        .slice(0, 5);
+});
 
 const closeAssignModal = () => {
     showAssignModal.value = false;
@@ -1206,19 +1290,66 @@ watch(selectedPhysics, () => {
                     </div>
                 </div>
 
+                <!-- Processing Results (shows after demos finish processing) -->
+                <div v-if="recentlyProcessed.length > 0" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-semibold text-gray-200">Processing Results</h3>
+                        <button @click="recentlyProcessed = []" class="text-xs text-gray-400 hover:text-gray-200">Dismiss</button>
+                    </div>
+                    <div class="space-y-1.5 max-h-60 overflow-y-auto">
+                        <div v-for="demo in recentlyProcessed" :key="demo.id" class="flex items-start space-x-2 p-2 rounded-lg"
+                            :class="{
+                                'bg-green-900/20 border border-green-700/30': ['assigned', 'fallback-assigned', 'processed'].includes(demo.status),
+                                'bg-red-900/20 border border-red-700/30': demo.status === 'failed',
+                                'bg-orange-900/20 border border-orange-700/30': demo.status === 'failed-validity',
+                                'bg-purple-900/20 border border-purple-700/30': demo.status === 'unsupported-version',
+                            }">
+                            <svg v-if="['assigned', 'fallback-assigned', 'processed'].includes(demo.status)" class="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <svg v-else class="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm text-gray-200 truncate">{{ demo.processed_filename || demo.original_filename }}</div>
+                                <div class="text-xs mt-0.5" :class="{
+                                    'text-green-300': ['assigned', 'fallback-assigned', 'processed'].includes(demo.status),
+                                    'text-red-300': demo.status === 'failed',
+                                    'text-orange-300': demo.status === 'failed-validity',
+                                    'text-purple-300': demo.status === 'unsupported-version',
+                                }">
+                                    <template v-if="demo.status === 'assigned'">Assigned to record — {{ demo.map_name }} {{ demo.player_name }}</template>
+                                    <template v-else-if="demo.status === 'fallback-assigned'">Processed — {{ demo.map_name }} (offline record created)</template>
+                                    <template v-else-if="demo.status === 'processed'">Processed successfully — {{ demo.map_name }}</template>
+                                    <template v-else-if="demo.status === 'failed-validity'">Invalid demo — {{ demo.processing_output }}</template>
+                                    <template v-else-if="demo.status === 'unsupported-version'">Unsupported demo version — {{ demo.processing_output }}</template>
+                                    <template v-else-if="demo.status === 'failed'">Failed — {{ demo.processing_output }}</template>
+                                    <template v-else>{{ demo.status }}</template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Global Processing Status (always visible) -->
                 <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
                     <h3 class="text-base font-semibold text-gray-200 mb-3">Global Queue Status</h3>
 
                     <!-- Queue Statistics (always show) -->
                     <div class="grid grid-cols-2 gap-2">
-                        <div v-if="$page.props.auth.user" class="bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-3 text-center border border-yellow-600/30">
+                        <div v-if="$page.props.auth.user" class="relative group bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-3 text-center border border-yellow-600/30 cursor-help">
                             <div class="text-2xl font-bold text-yellow-400">{{ (queueStats.user_queued || 0) + (queueStats.user_processing || 0) }}</div>
                             <div class="text-xs text-yellow-300 mt-1">Your Remaining</div>
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                Your demos not yet finished: {{ queueStats.user_queued || 0 }} waiting in queue, {{ queueStats.user_processing || 0 }} being processed right now
+                            </div>
                         </div>
-                        <div class="bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-lg p-3 text-center border border-green-600/30">
+                        <div class="relative group bg-gradient-to-br from-green-600/20 to-green-700/10 rounded-lg p-3 text-center border border-green-600/30 cursor-help">
                             <div class="text-2xl font-bold text-green-400">{{ (queueStats.total_queued || 0) + (queueStats.total_processing || 0) }}</div>
                             <div class="text-xs text-green-300 mt-1">Total Remaining</div>
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 border border-gray-600 rounded-lg text-xs text-gray-200 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                                Demos from all users not yet finished: {{ queueStats.total_queued || 0 }} waiting in queue, {{ queueStats.total_processing || 0 }} being processed right now
+                            </div>
                         </div>
                     </div>
 
@@ -1328,6 +1459,16 @@ watch(selectedPhysics, () => {
                                     Fallback <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
                                 </button>
                                 <button
+                                    v-if="$page.props.auth.user?.admin && (demoCountsComputed.uploaded || 0) > 0"
+                                    @click="changeStatusFilter('uploaded')"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
+                                    :class="activeStatusFilter === 'uploaded'
+                                        ? 'bg-cyan-600 text-white'
+                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                                >
+                                    Uploaded <span class="opacity-75">({{ demoCountsComputed.uploaded || 0 }})</span>
+                                </button>
+                                <button
                                     @click="changeStatusFilter('processed')"
                                     class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'processed'
@@ -1354,6 +1495,25 @@ watch(selectedPhysics, () => {
                                 >
                                     Failed <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
                                 </button>
+                                <button
+                                    v-if="(demoCountsComputed.unsupported_version || 0) > 0"
+                                    @click="changeStatusFilter('unsupported-version')"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all"
+                                    :class="activeStatusFilter === 'unsupported-version'
+                                        ? 'bg-purple-600 text-white'
+                                        : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                                >
+                                    Unsupported <span class="opacity-75">({{ demoCountsComputed.unsupported_version || 0 }})</span>
+                                </button>
+                                <button
+                                    v-if="$page.props.auth.user?.admin && (demoCountsComputed.failed || 0) > 0"
+                                    @click="showReprocessConfirm = true"
+                                    :disabled="reprocessingFailed"
+                                    class="px-2.5 py-1 rounded text-xs font-medium transition-all bg-orange-700/30 text-orange-300 hover:bg-orange-700/50 border border-orange-600/30 disabled:opacity-50"
+                                >
+                                    {{ reprocessingFailed ? 'Reprocessing...' : 'Reprocess All Failed' }}
+                                </button>
+                                <span v-if="reprocessMessage" class="text-xs text-yellow-300 ml-2">{{ reprocessMessage }}</span>
                             </div>
 
                             <!-- Row 2: Search Input -->
@@ -1574,13 +1734,17 @@ watch(selectedPhysics, () => {
                                                         'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
                                                         'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
                                                         'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
-                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed'].includes(demo.status)
+                                                        'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'unsupported-version',
+                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                                     }"
-                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                                    @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
                                                     @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
                                                 >
                                                     {{ demo.status }}
+                                                    <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
                                                     <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
@@ -1867,16 +2031,28 @@ watch(selectedPhysics, () => {
                                         </span>
                                     </td>
                                     <td class="px-3 py-3 text-sm">
-                                        <a
-                                            :href="route('demos.download', demo.id)"
-                                            class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
-                                            title="Download"
-                                        >
-                                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                            </svg>
-                                            DL
-                                        </a>
+                                        <div class="flex items-center space-x-1">
+                                            <a
+                                                :href="route('demos.download', demo.id)"
+                                                class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
+                                                title="Download"
+                                            >
+                                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                                DL
+                                            </a>
+                                            <button
+                                                v-if="$page.props.auth.user && !demo.record_id && ['processed', 'fallback-assigned', 'failed'].includes(demo.status)"
+                                                @click="openAssignModal(demo)"
+                                                class="inline-flex items-center px-2 py-1 bg-green-600/20 text-green-300 text-[11px] font-medium rounded hover:bg-green-600/30 transition-colors"
+                                                title="Assign to online record"
+                                            >
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -1897,36 +2073,31 @@ watch(selectedPhysics, () => {
         </div>
 
         <!-- Manual Assignment Modal -->
-        <div v-if="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeAssignModal">
-            <div class="backdrop-blur-xl bg-black/40 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/5" @click.stop>
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-semibold text-gray-200">Assign Demo to Record</h3>
-                    <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200">
+        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeAssignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
+                    <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
                     </button>
                 </div>
 
-                <div v-if="assigningDemo" class="mb-4 p-3 bg-gray-700 rounded">
-                    <p class="text-sm text-gray-300">
-                        <strong>Demo:</strong> {{ assigningDemo.processed_filename || assigningDemo.original_filename }}
-                    </p>
-                    <p v-if="assigningDemo.map_name" class="text-sm text-gray-300">
-                        <strong>Detected Map:</strong> {{ assigningDemo.map_name }}
-                    </p>
-                    <p v-if="assigningDemo.physics" class="text-sm text-gray-300">
-                        <strong>Detected Physics:</strong> {{ assigningDemo.physics }}
-                    </p>
-                    <p v-if="assigningDemo.time_ms" class="text-sm text-gray-300">
-                        <strong>Demo Time:</strong> {{ formatTime(assigningDemo.time_ms) }}
-                    </p>
+                <!-- Demo info -->
+                <div v-if="assigningDemo" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-white/5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="text-sm"><span class="text-gray-500">Demo:</span> <span class="text-gray-200 font-medium truncate block">{{ assigningDemo.processed_filename || assigningDemo.original_filename }}</span></div>
+                        <div v-if="assigningDemo.physics" class="text-sm"><span class="text-gray-500">Physics:</span> <span class="font-medium" :class="assigningDemo.physics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assigningDemo.physics }}</span></div>
+                        <div v-if="assigningDemo.map_name" class="text-sm"><span class="text-gray-500">Map:</span> <span class="text-gray-200 font-medium">{{ assigningDemo.map_name }}</span></div>
+                        <div v-if="assigningDemo.time_ms" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningDemo.time_ms) }}</span></div>
+                    </div>
                 </div>
 
                 <!-- Physics Selection -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Physics</label>
-                    <select v-model="selectedPhysics" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Physics</label>
+                    <select v-model="selectedPhysics" @change="selectedMap && loadRecords()" class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white">
                         <option value="VQ3">VQ3</option>
                         <option value="CPM">CPM</option>
                     </select>
@@ -1934,26 +2105,27 @@ watch(selectedPhysics, () => {
 
                 <!-- Map Search -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Search Map</label>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Search Map</label>
                     <input
                         v-model="searchQuery"
+                        @input="searchMaps"
                         type="text"
                         placeholder="Type map name..."
-                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                        class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500"
                     />
                 </div>
 
                 <!-- Available Maps -->
-                <div v-if="availableMaps.length > 0" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">Available Maps</label>
-                    <div class="max-h-32 overflow-y-auto border border-gray-600 rounded">
+                <div v-if="availableMaps.length > 0 && !selectedMap" class="mb-4">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Available Maps</label>
+                    <div class="max-h-32 overflow-y-auto border border-gray-700/50 rounded-lg">
                         <button
                             v-for="map in availableMaps"
                             :key="map"
                             @click="selectMap(map)"
                             :class="[
-                                'w-full text-left px-3 py-2 hover:bg-gray-600 border-b border-gray-600 last:border-b-0',
-                                selectedMap === map ? 'bg-blue-600 text-white' : 'text-gray-300'
+                                'w-full text-left px-4 py-2.5 hover:bg-white/5 border-b border-gray-800/50 last:border-b-0 transition-colors',
+                                selectedMap === map ? 'bg-blue-600/30 text-white' : 'text-gray-300'
                             ]"
                         >
                             {{ map }}
@@ -1961,57 +2133,95 @@ watch(selectedPhysics, () => {
                     </div>
                 </div>
 
+                <!-- Selected map indicator -->
+                <div v-if="selectedMap" class="mb-4 flex items-center gap-2">
+                    <span class="text-sm text-gray-400">Map:</span>
+                    <span class="text-sm font-medium text-gray-200 bg-gray-800 px-3 py-1 rounded-lg">{{ selectedMap }}</span>
+                    <button @click="selectedMap = ''; availableRecords = []; selectedRecord = ''" class="text-xs text-gray-500 hover:text-gray-300">(change)</button>
+                </div>
+
                 <!-- Loading indicator for maps -->
                 <div v-if="loadingMaps" class="mb-4 text-center">
                     <div class="text-gray-400">Loading maps...</div>
                 </div>
 
-                <!-- Available Records -->
-                <div v-if="selectedMap && availableRecords.length > 0" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
-                        Records for {{ selectedMap }} ({{ selectedPhysics }})
+                <!-- Suggested matches -->
+                <div v-if="selectedMap && !loadingRecords && suggestedRecords.length > 0" class="mb-5">
+                    <label class="block text-sm font-medium text-green-400 mb-2">
+                        Closest time matches
                     </label>
-                    <div class="max-h-64 overflow-y-auto border border-gray-600 rounded">
+                    <div class="border border-green-700/30 rounded-lg bg-green-900/10 overflow-hidden">
+                        <button
+                            v-for="record in suggestedRecords"
+                            :key="'suggested-' + record.id"
+                            @click="selectedRecord = record.id"
+                            :class="[
+                                'w-full text-left px-4 py-3 hover:bg-green-800/20 border-b border-green-800/20 last:border-b-0 transition-all',
+                                selectedRecord === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
+                            ]"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs" :class="record.timeDiff === 0 ? 'text-green-400 font-bold' : 'text-gray-500'">
+                                        {{ record.timeDiff === 0 ? 'EXACT' : (record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff)) + ' diff' }}
+                                    </span>
+                                    <span class="text-sm font-mono" :class="selectedRecord === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- All Records -->
+                <div v-if="selectedMap && !loadingRecords && availableRecords.length > 0" class="mb-6">
+                    <label class="block text-sm font-medium text-gray-400 mb-3">
+                        All records ({{ availableRecords.length }})
+                    </label>
+                    <div class="max-h-[400px] overflow-y-auto border border-gray-700/50 rounded-lg">
                         <button
                             v-for="record in availableRecords"
                             :key="record.id"
                             @click="selectedRecord = record.id"
                             :class="[
-                                'w-full text-left px-3 py-2 hover:bg-gray-600 border-b border-gray-600 last:border-b-0',
-                                selectedRecord === record.id ? 'bg-green-600 text-white' : 'text-gray-300'
+                                'w-full text-left px-4 py-3 hover:bg-white/5 border-b border-gray-800/50 last:border-b-0 transition-all',
+                                selectedRecord === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
                             ]"
                         >
                             <div class="flex justify-between items-center">
-                                <span>#{{ record.rank }} - {{ record.player_name }}</span>
-                                <span class="text-sm">{{ record.formatted_time }}</span>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <span class="text-sm font-mono" :class="selectedRecord === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
                             </div>
                         </button>
                     </div>
                 </div>
 
                 <!-- Loading indicator for records -->
-                <div v-if="loadingRecords" class="mb-4 text-center">
+                <div v-if="loadingRecords" class="mb-4 text-center py-4">
                     <div class="text-gray-400">Loading records...</div>
                 </div>
 
                 <!-- No records found -->
-                <div v-if="selectedMap && !loadingRecords && availableRecords.length === 0" class="mb-4 text-center text-gray-400">
+                <div v-if="selectedMap && !loadingRecords && availableRecords.length === 0" class="mb-6 text-center text-gray-400 py-8">
                     No records found for {{ selectedMap }} ({{ selectedPhysics }})
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex justify-end space-x-3">
-                    <button
-                        @click="closeAssignModal"
-                        class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500"
-                    >
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
                         Cancel
                     </button>
                     <button
                         @click="assignDemo"
                         :disabled="!selectedRecord"
                         :class="[
-                            'px-4 py-2 rounded text-white',
+                            'px-5 py-2.5 rounded-lg text-white font-medium transition-colors',
                             selectedRecord ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 cursor-not-allowed'
                         ]"
                     >
@@ -2024,6 +2234,29 @@ watch(selectedPhysics, () => {
 
     <!-- Custom Tooltip for Failed and Assigned Demos -->
     <Teleport to="body">
+        <!-- Failed Demo Tooltip -->
+        <div
+            v-if="hoveredDemo && hoveredDemo.status === 'unsupported-version' && hoveredDemo.processing_output"
+            class="fixed z-50 pointer-events-none"
+            :style="{
+                left: tooltipPosition.x + 15 + 'px',
+                top: tooltipPosition.y + 15 + 'px',
+                maxWidth: '500px'
+            }"
+        >
+            <div class="bg-gray-900 border border-purple-600/50 rounded-lg shadow-2xl p-3 text-xs">
+                <div class="font-semibold text-purple-300 mb-2 flex items-center">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Unparseable Demo
+                </div>
+                <div class="text-[11px] text-purple-200/80 leading-relaxed">
+                    This demo file could not be parsed. It may be corrupted or recorded with an incompatible engine version.
+                </div>
+            </div>
+        </div>
+
         <!-- Failed Demo Tooltip -->
         <div
             v-if="hoveredDemo && hoveredDemo.status === 'failed' && hoveredDemo.processing_output"
@@ -2154,6 +2387,76 @@ watch(selectedPhysics, () => {
                 </div>
                 <div class="text-[10px] text-orange-200/70 border-t border-orange-600/30 pt-2 mt-2">
                     ⚠️ This online demo created a fallback offline record but can still be matched to an online record later.
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Reprocess Confirm Modal -->
+    <Teleport to="body">
+        <div v-if="showReprocessConfirm" class="fixed inset-0 z-[60] flex items-center justify-center" @click.self="showReprocessConfirm = false">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-100">Reprocess Failed Demos</h3>
+                        <p class="text-sm text-gray-400">{{ demoCountsComputed.failed }} demo(s) will be queued</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-300 mb-6">All failed demos will be sent back to the processing queue. You can track the progress in the queue status above.</p>
+                <div class="flex justify-end space-x-3">
+                    <button @click="showReprocessConfirm = false" class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 border border-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="reprocessAllFailed" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-orange-600 hover:bg-orange-500 transition-colors">
+                        Reprocess All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Upload Info Modal -->
+    <Teleport to="body">
+        <div v-if="showUploadInfo" class="fixed inset-0 z-[60] flex items-center justify-center" @click.self="showUploadInfo = false">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                        :class="{
+                            'bg-blue-500/20': uploadInfoType === 'info',
+                            'bg-yellow-500/20': uploadInfoType === 'warning',
+                            'bg-red-500/20': uploadInfoType === 'error'
+                        }"
+                    >
+                        <svg v-if="uploadInfoType === 'info'" class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <svg v-else-if="uploadInfoType === 'warning'" class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <svg v-else class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-100">{{ uploadInfoTitle }}</h3>
+                </div>
+                <p class="text-sm text-gray-300 mb-6 whitespace-pre-line">{{ uploadInfoMessage }}</p>
+                <div class="flex justify-end">
+                    <button @click="showUploadInfo = false" class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+                        :class="{
+                            'bg-blue-600 hover:bg-blue-500': uploadInfoType === 'info',
+                            'bg-yellow-600 hover:bg-yellow-500': uploadInfoType === 'warning',
+                            'bg-red-600 hover:bg-red-500': uploadInfoType === 'error'
+                        }"
+                    >
+                        OK
+                    </button>
                 </div>
             </div>
         </div>

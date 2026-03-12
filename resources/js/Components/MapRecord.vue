@@ -14,6 +14,8 @@
         }
     });
 
+    const emit = defineEmits(['assign']);
+
     const page = usePage();
     const showTooltip = ref(false);
     const showUploaderTooltip = ref(false);
@@ -277,6 +279,18 @@
                     <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
                 </svg>
             </a>
+
+            <!-- Assign to Online Record Button (for online demos without record_id) -->
+            <button
+                v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
+                @click.stop="emit('assign', record)"
+                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
+                title="Assign to online record"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+            </button>
 
             <!-- Report Demo Button -->
             <button
