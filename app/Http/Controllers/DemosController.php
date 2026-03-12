@@ -536,9 +536,10 @@ class DemosController extends Controller
                     $originalName = $candidate['name'];
 
                     // Check hash duplicate
+                    $reuploadableStatuses = ['failed', 'failed-validity', 'unsupported-version'];
                     if ($existingByHash->has($fileHash)) {
                         $existing = $existingByHash->get($fileHash);
-                        if ($existing->status === 'failed') {
+                        if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByHash->forget($fileHash);
                         } else {
@@ -551,7 +552,7 @@ class DemosController extends Controller
                     // Check filename duplicate
                     if ($existingByName->has($originalName)) {
                         $existing = $existingByName->get($originalName);
-                        if ($existing->status === 'failed') {
+                        if (in_array($existing->status, $reuploadableStatuses)) {
                             $this->cleanupFailedDemo($existing);
                             $existingByName->forget($originalName);
                         } else {
