@@ -556,6 +556,13 @@ const uploadDemos = async () => {
     let totalDuplicates = 0;
     let totalOtherErrors = 0;
     let totalReplaced = 0;
+    let pollingStarted = false;
+
+    // Prepare tracking state before upload loop so polling can work during upload
+    recentlyProcessed.value = [];
+    processingDuration.value = null;
+    processingStartTime.value = Date.now();
+    actionStartedAt.value = new Date();
 
     try {
         for (let i = 0; i < totalBatches; i++) {
@@ -565,36 +572,72 @@ const uploadDemos = async () => {
                 formData.append('demos[]', file);
             });
 
-            const response = await axios.post(route('demos.upload'), formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                onUploadProgress: function (progressEvent) {
-                    if (progressEvent.lengthComputable) {
-                        const batchProgress = (progressEvent.loaded / progressEvent.total);
-                        const overallProgress = ((i + batchProgress) / totalBatches) * 100;
-                        uploadProgress.value = Math.round(overallProgress);
+            console.log(`[Upload] Batch ${i + 1}/${totalBatches} sending ${batchFiles.length} files...`);
+            try {
+                const response = await axios.post(route('demos.upload'), formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                    timeout: 120000, // 2 min timeout per batch
+                    onUploadProgress: function (progressEvent) {
+                        if (progressEvent.lengthComputable) {
+                            const batchProgress = (progressEvent.loaded / progressEvent.total);
+                            const overallProgress = ((i + batchProgress) / totalBatches) * 100;
+                            uploadProgress.value = Math.round(overallProgress);
+                        }
                     }
-                }
-            });
+                });
 
-            if (response.data.success) {
-                allUploaded.push(...(response.data.uploaded || []));
-                allErrors.push(...(response.data.errors || []));
-                const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
-                allDemoIds.push(...demoIds);
+                if (response.data.success) {
+                    console.log(`[Upload] Batch ${i + 1}/${totalBatches} done: queued=${response.data.summary?.queued || 0}, dupes=${response.data.summary?.duplicates || 0}`);
+                    allUploaded.push(...(response.data.uploaded || []));
+                    allErrors.push(...(response.data.errors || []));
+                    const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
+                    allDemoIds.push(...demoIds);
 
-                // Accumulate summary from server
-                if (response.data.summary) {
-                    totalReceived += response.data.summary.total_received || 0;
-                    totalQueued += response.data.summary.queued || 0;
-                    totalDuplicates += response.data.summary.duplicates || 0;
-                    totalOtherErrors += response.data.summary.errors || 0;
-                    totalReplaced += response.data.summary.replaced || 0;
+                    // Add new IDs to tracking immediately so polling picks them up
+                    trackingDemoIds.value = [...allDemoIds];
+
+                    // Start polling after first successful batch (shows queue status during upload)
+                    if (!pollingStarted) {
+                        pollingStarted = true;
+                        startStatusPolling();
+                    }
+
+                    // Accumulate summary from server
+                    if (response.data.summary) {
+                        totalReceived += response.data.summary.total_received || 0;
+                        totalQueued += response.data.summary.queued || 0;
+                        totalDuplicates += response.data.summary.duplicates || 0;
+                        totalOtherErrors += response.data.summary.errors || 0;
+                        totalReplaced += response.data.summary.replaced || 0;
+                    }
+
+                    // Update upload summary live after each batch
+                    uploadSummary.value = {
+                        total_selected: totalFiles,
+                        total_sent: totalReceived,
+                        queued: totalQueued,
+                        replaced: totalReplaced,
+                        duplicates: totalDuplicates,
+                        errors: totalOtherErrors,
+                        skipped_frontend: 0,
+                        duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
+                        batch_progress: `${i + 1}/${totalBatches}`,
+                    };
+                    uploadSuccess.value = allUploaded;
+                    uploadErrors.value = allErrors;
+                } else {
+                    console.error(`[Upload] Batch ${i + 1}/${totalBatches} returned success=false`, response.data);
                 }
+            } catch (batchError) {
+                console.error(`[Upload] Batch ${i + 1}/${totalBatches} FAILED:`, batchError.message, batchError.code);
+                allErrors.push(`Batch ${i + 1} failed: ${batchError.message}`);
+                // Continue with next batch instead of aborting entire upload
             }
         }
 
+        console.log(`[Upload] All batches done. Total queued=${totalQueued}, dupes=${totalDuplicates}, errors=${allErrors.length}`);
         uploadSuccess.value = allUploaded;
         uploadErrors.value = allErrors;
 
@@ -618,13 +661,11 @@ const uploadDemos = async () => {
             fileInput.value.value = '';
         }
 
-        // Start polling for all uploaded demo IDs (demos are already dispatched during upload)
-        recentlyProcessed.value = [];
-        processingDuration.value = null;
-        processingStartTime.value = Date.now();
+        // Ensure final tracking IDs are set (polling already started during upload)
         trackingDemoIds.value = allDemoIds;
-        actionStartedAt.value = new Date();
-        startStatusPolling();
+        if (!pollingStarted) {
+            startStatusPolling();
+        }
 
         // Immediately reload the demos list
         router.reload({ only: ['userDemos', 'publicDemos'] });
@@ -1315,7 +1356,7 @@ watch(selectedPhysics, () => {
                             </svg>
                             <span class="text-blue-300 font-semibold">Upload Summary</span>
                             </div>
-                            <button @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
+                            <button v-if="!uploading" @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
@@ -1340,6 +1381,10 @@ watch(selectedPhysics, () => {
                             <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-3 py-2 text-center border border-red-700/30">
                                 <div class="text-red-400 text-xs">Errors</div>
                                 <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
+                            </div>
+                            <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-3 py-2 text-center border border-blue-700/30">
+                                <div class="text-blue-400 text-xs">Batch</div>
+                                <div class="text-blue-300 font-bold text-lg">{{ uploadSummary.batch_progress }}</div>
                             </div>
                             <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
                                 <div class="text-gray-400 text-xs">Duration</div>
