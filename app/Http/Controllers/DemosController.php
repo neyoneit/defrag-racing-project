@@ -455,155 +455,138 @@ class DemosController extends Controller
             ], 413);
         }
 
-        // Process files in chunks of 10 for better memory management
+        // Phase 1: Separate archives from demo files, compute hashes
         $demoFiles = $request->file('demos');
-        $chunks = array_chunk($demoFiles, 10);
+        $demoCandidate = []; // ['file' => UploadedFile, 'hash' => string, 'name' => string]
+        $archiveTempDir = storage_path('app/temp_archives');
 
-        foreach ($chunks as $chunkIndex => $chunk) {
-            foreach ($chunk as $index => $demoFile) {
-                try {
-                    $extension = strtolower($demoFile->getClientOriginalExtension());
-                    $originalName = $demoFile->getClientOriginalName();
+        foreach ($demoFiles as $demoFile) {
+            try {
+                $extension = strtolower($demoFile->getClientOriginalExtension());
+                $originalName = $demoFile->getClientOriginalName();
 
-                    // Robust archive detection: check reported extension and original filename
-                    $isArchiveExt = $this->isArchiveExtension($extension);
-                    $isArchiveName = (bool) preg_match('/\.(zip|rar|7z)$/i', $originalName);
-                    $isArchiveContent = false;
+                // Quick archive detection: check extension and filename first (skip content check for .dm_* files)
+                $isArchiveExt = $this->isArchiveExtension($extension);
+                $isArchiveName = (bool) preg_match('/\.(zip|rar|7z)$/i', $originalName);
+                $isArchive = $isArchiveExt || $isArchiveName;
+
+                // Only do expensive content-based check if extension is ambiguous
+                if (!$isArchive && !preg_match('/^dm_\d+$/', $extension)) {
                     try {
-                        $isArchiveContent = $this->isArchiveByContent($demoFile->getPathname());
+                        $isArchive = $this->isArchiveByContent($demoFile->getPathname());
                     } catch (\Throwable $t) {
-                        Log::warning('Archive content detection failed', ['file' => $originalName, 'error' => $t->getMessage()]);
+                        // ignore
                     }
+                }
 
-                    // Aggregate archive detection flags
-                    $isArchive = $isArchiveExt || $isArchiveName || $isArchiveContent;
-
-                    // Always log archive detection results for visibility
-                    Log::info('Upload archive detection', [
-                        'original_name' => $originalName,
-                        'reported_extension' => $extension,
-                        'isArchiveExt' => $isArchiveExt,
-                        'isArchiveName' => $isArchiveName,
-                        'isArchiveContent' => $isArchiveContent,
-                        'client_path' => $demoFile->getPathname(),
-                    ]);
-
-                    // If the upload is an archive, queue it for async extraction and processing
-                    if ($isArchive) {
-                        try {
-                            // Store archive temporarily
-                            $archiveFilename = 'archive_' . uniqid() . '_' . $originalName;
-                            $archivePath = storage_path('app/temp_archives/' . $archiveFilename);
-
-                            if (!is_dir(storage_path('app/temp_archives'))) {
-                                mkdir(storage_path('app/temp_archives'), 0755, true);
-                            }
-
-                            $demoFile->move(storage_path('app/temp_archives'), $archiveFilename);
-
-                            // Dispatch job to extract archive and queue individual demos
-                            \App\Jobs\ExtractAndQueueArchiveJob::dispatch($archivePath, $userId, $originalName);
-
-                            Log::info("Archive queued for extraction", [
-                                'filename' => $originalName,
-                                'user_id' => $userId,
-                                'archive_path' => $archivePath,
-                            ]);
-
-                            $filesProcessed++;
-                        } catch (\Exception $e) {
-                            $errors[] = $demoFile->getClientOriginalName() . ': Failed to queue archive - ' . $e->getMessage();
-                            Log::error('Archive queueing failed', ['file' => $demoFile->getClientOriginalName(), 'error' => $e->getMessage()]);
-                            continue;
+                if ($isArchive) {
+                    try {
+                        $archiveFilename = 'archive_' . uniqid() . '_' . $originalName;
+                        $archivePath = $archiveTempDir . '/' . $archiveFilename;
+                        if (!is_dir($archiveTempDir)) {
+                            mkdir($archiveTempDir, 0755, true);
                         }
-
-                        continue; // move to next uploaded file
+                        $demoFile->move($archiveTempDir, $archiveFilename);
+                        \App\Jobs\ExtractAndQueueArchiveJob::dispatch($archivePath, $userId, $originalName);
+                        $filesProcessed++;
+                    } catch (\Exception $e) {
+                        $errors[] = $originalName . ': Failed to queue archive - ' . $e->getMessage();
                     }
+                    continue;
+                }
 
-                    // Handle plain demo files (.dm_*)
-                    if (!preg_match('/^dm_\d+$/', $extension)) {
-                        $reason = 'extension_mismatch';
-                        Log::warning('Demo rejected: invalid format', [
-                            'file' => $demoFile->getClientOriginalName(),
-                            'reported_extension' => $extension,
-                            'reason' => $reason,
-                            'client_path' => $demoFile->getPathname(),
-                        ]);
-                        $errors[] = $demoFile->getClientOriginalName() . ': Invalid demo file format';
-                        continue;
-                    }
+                if (!preg_match('/^dm_\d+$/', $extension)) {
+                    $errors[] = $originalName . ': Invalid demo file format';
+                    continue;
+                }
 
-                    // Calculate file hash for duplicate detection
-                    $fileHash = md5_file($demoFile->getPathname());
+                // Compute hash
+                $fileHash = md5_file($demoFile->getPathname());
+                $demoCandidate[] = [
+                    'file' => $demoFile,
+                    'hash' => $fileHash,
+                    'name' => $originalName,
+                ];
+            } catch (\Exception $e) {
+                $errors[] = $demoFile->getClientOriginalName() . ': Upload failed - ' . $e->getMessage();
+            }
+        }
 
-                    // Check for duplicate file content (MD5 hash)
-                    $existingDemo = UploadedDemo::where('file_hash', $fileHash)->first();
-                    if ($existingDemo) {
-                        // Allow re-upload if the previous attempt failed
-                        if ($existingDemo->status === 'failed') {
-                            $this->cleanupFailedDemo($existingDemo);
+        // Phase 2: Bulk duplicate detection (2 queries instead of 2×N)
+        if (!empty($demoCandidate)) {
+            $allHashes = array_column($demoCandidate, 'hash');
+            $allNames = array_column($demoCandidate, 'name');
+
+            // Batch query: existing demos by hash
+            $existingByHash = UploadedDemo::whereIn('file_hash', $allHashes)
+                ->get()
+                ->keyBy('file_hash');
+
+            // Batch query: existing demos by filename for this user
+            $existingByName = UploadedDemo::where('user_id', $userId)
+                ->whereIn('original_filename', $allNames)
+                ->get()
+                ->keyBy('original_filename');
+
+            // Phase 3: Filter, create records, store files, dispatch
+            foreach ($demoCandidate as $candidate) {
+                try {
+                    $demoFile = $candidate['file'];
+                    $fileHash = $candidate['hash'];
+                    $originalName = $candidate['name'];
+
+                    // Check hash duplicate
+                    if ($existingByHash->has($fileHash)) {
+                        $existing = $existingByHash->get($fileHash);
+                        if ($existing->status === 'failed') {
+                            $this->cleanupFailedDemo($existing);
+                            $existingByHash->forget($fileHash);
                         } else {
-                            $demoName = $existingDemo->processed_filename ?: $existingDemo->original_filename;
-                            $errors[] = $demoFile->getClientOriginalName() . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
+                            $demoName = $existing->processed_filename ?: $existing->original_filename;
+                            $errors[] = $originalName . ': Duplicate file content (already uploaded as: ' . $demoName . ')';
                             continue;
                         }
                     }
 
-                    // Also check for duplicate filename by same user
-                    $existingByFilename = UploadedDemo::where('user_id', $userId)
-                        ->where('original_filename', $demoFile->getClientOriginalName())
-                        ->first();
-
-                    if ($existingByFilename) {
-                        if ($existingByFilename->status === 'failed') {
-                            $this->cleanupFailedDemo($existingByFilename);
+                    // Check filename duplicate
+                    if ($existingByName->has($originalName)) {
+                        $existing = $existingByName->get($originalName);
+                        if ($existing->status === 'failed') {
+                            $this->cleanupFailedDemo($existing);
+                            $existingByName->forget($originalName);
                         } else {
-                            $errors[] = $demoFile->getClientOriginalName() . ': Filename already uploaded by you';
+                            $errors[] = $originalName . ': Filename already uploaded by you';
                             continue;
                         }
                     }
 
-                    // Create database record first to get the ID
+                    // Create DB record
                     $demo = UploadedDemo::create([
-                        'original_filename' => $demoFile->getClientOriginalName(),
-                        'file_path' => '', // Will be set after moving file
+                        'original_filename' => $originalName,
+                        'file_path' => '',
                         'file_size' => $demoFile->getSize(),
                         'file_hash' => $fileHash,
                         'user_id' => $userId,
                         'status' => 'uploaded',
                     ]);
 
-                    // Store the uploaded file locally in temp directory using demo ID
+                    // Store file and update path
                     $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);
                     $demo->update(['file_path' => $path]);
 
-                    // Dispatch immediately for processing
+                    // Dispatch for processing
                     ProcessDemoJob::dispatch($demo);
 
                     $queuedDemos[] = $demo;
                     $filesProcessed++;
-
-                    Log::info("Demo uploaded (awaiting processing)", [
-                        'demo_id' => $demo->id,
-                        'filename' => $demo->original_filename,
-                        'user_id' => $userId,
-                    ]);
-
                 } catch (\Exception $e) {
-                    $errors[] = $demoFile->getClientOriginalName() . ': Upload failed - ' . $e->getMessage();
-                    Log::error("Demo upload failed", [
-                        'filename' => $demoFile->getClientOriginalName(),
-                        'user_id' => $userId,
-                        'error' => $e->getMessage()
-                    ]);
+                    $errors[] = $candidate['name'] . ': Upload failed - ' . $e->getMessage();
                 }
             }
-
-            // Memory cleanup after each chunk
-            if ($chunkIndex % 3 === 0) {
-                gc_collect_cycles();
-            }
         }
+
+        // Memory cleanup
+        gc_collect_cycles();
 
         // Update rate limit counter
         Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addMinutes(5));
