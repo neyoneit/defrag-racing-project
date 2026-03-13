@@ -558,6 +558,8 @@ const uploadDemos = async () => {
     let totalDuplicates = 0;
     let totalOtherErrors = 0;
     let totalReplaced = 0;
+    let totalRetriedBatches = 0;
+    let totalFailedBatchFiles = 0;
     let pollingStarted = false;
 
     // Prepare tracking state before upload loop so polling can work during upload
@@ -575,67 +577,107 @@ const uploadDemos = async () => {
             });
 
             console.log(`[Upload] Batch ${i + 1}/${totalBatches} sending ${batchFiles.length} files...`);
-            try {
-                const response = await axios.post(route('demos.upload'), formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                    timeout: 120000, // 2 min timeout per batch
-                    onUploadProgress: function (progressEvent) {
-                        if (progressEvent.lengthComputable) {
-                            const batchProgress = (progressEvent.loaded / progressEvent.total);
-                            const overallProgress = ((i + batchProgress) / totalBatches) * 100;
-                            uploadProgress.value = Math.round(overallProgress);
+
+            const MAX_RETRIES = 2;
+            const RETRY_TIMEOUTS = [120000, 180000, 240000]; // 2min, 3min, 4min
+            let batchSuccess = false;
+
+            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    if (attempt > 0) {
+                        console.log(`[Upload] Batch ${i + 1}/${totalBatches} retry ${attempt}/${MAX_RETRIES} (timeout: ${RETRY_TIMEOUTS[attempt]}ms)...`);
+                    }
+
+                    const response = await axios.post(route('demos.upload'), formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                        timeout: RETRY_TIMEOUTS[attempt],
+                        onUploadProgress: function (progressEvent) {
+                            if (progressEvent.lengthComputable) {
+                                const batchProgress = (progressEvent.loaded / progressEvent.total);
+                                const overallProgress = ((i + batchProgress) / totalBatches) * 100;
+                                uploadProgress.value = Math.round(overallProgress);
+                            }
                         }
+                    });
+
+                    if (response.data.success) {
+                        if (attempt > 0) {
+                            console.log(`[Upload] Batch ${i + 1}/${totalBatches} succeeded on retry ${attempt}`);
+                            totalRetriedBatches++;
+                        }
+                        console.log(`[Upload] Batch ${i + 1}/${totalBatches} done: queued=${response.data.summary?.queued || 0}, dupes=${response.data.summary?.duplicates || 0}`);
+                        allUploaded.push(...(response.data.uploaded || []));
+                        allErrors.push(...(response.data.errors || []));
+                        const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
+                        allDemoIds.push(...demoIds);
+
+                        // Add new IDs to tracking immediately so polling picks them up
+                        trackingDemoIds.value = [...allDemoIds];
+
+                        // Start polling after first successful batch (shows queue status during upload)
+                        if (!pollingStarted) {
+                            pollingStarted = true;
+                            startStatusPolling();
+                        }
+
+                        // Accumulate summary from server
+                        if (response.data.summary) {
+                            totalReceived += response.data.summary.total_received || 0;
+                            totalQueued += response.data.summary.queued || 0;
+                            totalDuplicates += response.data.summary.duplicates || 0;
+                            totalOtherErrors += response.data.summary.errors || 0;
+                            totalReplaced += response.data.summary.replaced || 0;
+                        }
+
+                        // Update upload summary live after each batch
+                        uploadSummary.value = {
+                            total_selected: totalFiles,
+                            total_sent: totalReceived,
+                            queued: totalQueued,
+                            replaced: totalReplaced,
+                            duplicates: totalDuplicates,
+                            errors: totalOtherErrors,
+                            skipped_frontend: 0,
+                            retried_batches: totalRetriedBatches,
+                            failed_batch_files: totalFailedBatchFiles,
+                            duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
+                            batch_progress: `${i + 1}/${totalBatches}`,
+                        };
+                        uploadSuccess.value = allUploaded;
+                        uploadErrors.value = allErrors;
+                        batchSuccess = true;
+                    } else {
+                        console.error(`[Upload] Batch ${i + 1}/${totalBatches} returned success=false`, response.data);
+                        batchSuccess = true; // Don't retry server-side failures
                     }
-                });
+                    break; // Success or server error — don't retry
+                } catch (batchError) {
+                    const isLastAttempt = attempt >= MAX_RETRIES;
+                    if (isLastAttempt) {
+                        console.error(`[Upload] Batch ${i + 1}/${totalBatches} FAILED after ${MAX_RETRIES + 1} attempts:`, batchError.message);
+                        totalFailedBatchFiles += batchFiles.length;
+                        allErrors.push(`Batch ${i + 1} failed after ${MAX_RETRIES + 1} attempts (${batchFiles.length} files): ${batchError.message}`);
 
-                if (response.data.success) {
-                    console.log(`[Upload] Batch ${i + 1}/${totalBatches} done: queued=${response.data.summary?.queued || 0}, dupes=${response.data.summary?.duplicates || 0}`);
-                    allUploaded.push(...(response.data.uploaded || []));
-                    allErrors.push(...(response.data.errors || []));
-                    const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
-                    allDemoIds.push(...demoIds);
-
-                    // Add new IDs to tracking immediately so polling picks them up
-                    trackingDemoIds.value = [...allDemoIds];
-
-                    // Start polling after first successful batch (shows queue status during upload)
-                    if (!pollingStarted) {
-                        pollingStarted = true;
-                        startStatusPolling();
+                        // Update summary to show failed files live
+                        uploadSummary.value = {
+                            total_selected: totalFiles,
+                            total_sent: totalReceived,
+                            queued: totalQueued,
+                            replaced: totalReplaced,
+                            duplicates: totalDuplicates,
+                            errors: totalOtherErrors,
+                            skipped_frontend: 0,
+                            retried_batches: totalRetriedBatches,
+                            failed_batch_files: totalFailedBatchFiles,
+                            duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
+                            batch_progress: `${i + 1}/${totalBatches}`,
+                        };
+                    } else {
+                        console.warn(`[Upload] Batch ${i + 1}/${totalBatches} attempt ${attempt + 1} failed: ${batchError.message}, retrying...`);
                     }
-
-                    // Accumulate summary from server
-                    if (response.data.summary) {
-                        totalReceived += response.data.summary.total_received || 0;
-                        totalQueued += response.data.summary.queued || 0;
-                        totalDuplicates += response.data.summary.duplicates || 0;
-                        totalOtherErrors += response.data.summary.errors || 0;
-                        totalReplaced += response.data.summary.replaced || 0;
-                    }
-
-                    // Update upload summary live after each batch
-                    uploadSummary.value = {
-                        total_selected: totalFiles,
-                        total_sent: totalReceived,
-                        queued: totalQueued,
-                        replaced: totalReplaced,
-                        duplicates: totalDuplicates,
-                        errors: totalOtherErrors,
-                        skipped_frontend: 0,
-                        duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
-                        batch_progress: `${i + 1}/${totalBatches}`,
-                    };
-                    uploadSuccess.value = allUploaded;
-                    uploadErrors.value = allErrors;
-                } else {
-                    console.error(`[Upload] Batch ${i + 1}/${totalBatches} returned success=false`, response.data);
                 }
-            } catch (batchError) {
-                console.error(`[Upload] Batch ${i + 1}/${totalBatches} FAILED:`, batchError.message, batchError.code);
-                allErrors.push(`Batch ${i + 1} failed: ${batchError.message}`);
-                // Continue with next batch instead of aborting entire upload
             }
         }
 
@@ -654,6 +696,8 @@ const uploadDemos = async () => {
             duplicates: totalDuplicates,
             errors: totalOtherErrors,
             skipped_frontend: skippedFrontend > 0 ? skippedFrontend : 0,
+            retried_batches: totalRetriedBatches,
+            failed_batch_files: totalFailedBatchFiles,
             duration: uploadDuration,
         };
 
@@ -1395,6 +1439,16 @@ watch(selectedPhysics, () => {
                             <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-3 py-2 text-center border border-red-700/30">
                                 <div class="text-red-400 text-xs">Errors</div>
                                 <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
+                            </div>
+                            <div v-if="uploadSummary.retried_batches > 0" class="bg-amber-900/30 rounded-lg px-3 py-2 text-center border border-amber-700/30">
+                                <div class="text-amber-400 text-xs">Retried Batches</div>
+                                <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }}</div>
+                                <div class="text-[10px] text-amber-400/70 mt-0.5">succeeded on retry</div>
+                            </div>
+                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-3 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30">
+                                <div class="text-red-400 text-xs font-semibold">Failed Uploads</div>
+                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }}</div>
+                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">re-upload needed</div>
                             </div>
                             <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-3 py-2 text-center border border-blue-700/30">
                                 <div class="text-blue-400 text-xs">Batch</div>
