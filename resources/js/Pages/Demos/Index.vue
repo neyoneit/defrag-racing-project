@@ -1418,45 +1418,44 @@ watch(selectedPhysics, () => {
                                 </button>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
-                            <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
-                                <div class="text-gray-400 text-xs">Selected</div>
-                                <div class="text-white font-bold text-lg">{{ uploadSummary.total_selected.toLocaleString() }}</div>
+                        <div class="flex flex-wrap gap-2 text-sm">
+                            <div class="bg-gray-800/50 rounded-lg px-2.5 py-1.5 text-center min-w-[80px]">
+                                <div class="text-gray-400 text-[10px]">Selected</div>
+                                <div class="text-white font-bold text-base">{{ uploadSummary.total_selected.toLocaleString() }}</div>
                             </div>
-                            <div v-if="uploadSummary.skipped_frontend > 0" class="bg-yellow-900/30 rounded-lg px-3 py-2 text-center border border-yellow-700/30">
-                                <div class="text-yellow-400 text-xs">Skipped (non-demo)</div>
-                                <div class="text-yellow-300 font-bold text-lg">{{ uploadSummary.skipped_frontend.toLocaleString() }}</div>
+                            <div v-if="uploadSummary.skipped_frontend > 0" class="bg-yellow-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-yellow-700/30">
+                                <div class="text-yellow-400 text-[10px]">Skipped</div>
+                                <div class="text-yellow-300 font-bold text-base">{{ uploadSummary.skipped_frontend.toLocaleString() }}</div>
                             </div>
-                            <div class="bg-green-900/30 rounded-lg px-3 py-2 text-center border border-green-700/30">
-                                <div class="text-green-400 text-xs">Queued</div>
-                                <div class="text-green-300 font-bold text-lg">{{ uploadSummary.queued.toLocaleString() }}</div>
-                                <div v-if="uploadSummary.replaced > 0" class="text-[10px] text-cyan-400 mt-0.5">({{ uploadSummary.replaced }} replaced failed)</div>
+                            <div class="bg-green-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-green-700/30">
+                                <div class="text-green-400 text-[10px]">Queued</div>
+                                <div class="text-green-300 font-bold text-base">{{ uploadSummary.queued.toLocaleString() }}</div>
+                                <div v-if="uploadSummary.replaced > 0" class="text-[9px] text-cyan-400">({{ uploadSummary.replaced }} replaced)</div>
                             </div>
-                            <div v-if="uploadSummary.duplicates > 0" class="bg-orange-900/30 rounded-lg px-3 py-2 text-center border border-orange-700/30">
-                                <div class="text-orange-400 text-xs">Duplicates</div>
-                                <div class="text-orange-300 font-bold text-lg">{{ uploadSummary.duplicates.toLocaleString() }}</div>
+                            <div v-if="uploadSummary.duplicates > 0" class="bg-orange-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-orange-700/30">
+                                <div class="text-orange-400 text-[10px]">Duplicates</div>
+                                <div class="text-orange-300 font-bold text-base">{{ uploadSummary.duplicates.toLocaleString() }}</div>
                             </div>
-                            <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-3 py-2 text-center border border-red-700/30">
-                                <div class="text-red-400 text-xs">Errors</div>
-                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
+                            <div v-if="uploadSummary.errors > 0" class="bg-red-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-red-700/30">
+                                <div class="text-red-400 text-[10px]">Errors</div>
+                                <div class="text-red-300 font-bold text-base">{{ uploadSummary.errors.toLocaleString() }}</div>
                             </div>
-                            <div v-if="uploadSummary.retried_batches > 0" class="bg-amber-900/30 rounded-lg px-3 py-2 text-center border border-amber-700/30">
-                                <div class="text-amber-400 text-xs">Recovered</div>
-                                <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }} {{ uploadSummary.retried_batches === 1 ? 'batch' : 'batches' }}</div>
-                                <div class="text-[10px] text-amber-400/70 mt-0.5">recovered automatically</div>
+                            <div v-if="uploadSummary.retried_batches > 0" class="bg-amber-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-amber-700/30">
+                                <div class="text-amber-400 text-[10px]">Recovered</div>
+                                <div class="text-amber-300 font-bold text-base">{{ uploadSummary.retried_batches }} {{ uploadSummary.retried_batches === 1 ? 'batch' : 'batches' }}</div>
                             </div>
-                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-3 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30">
-                                <div class="text-red-400 text-xs font-semibold">Not Uploaded</div>
-                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }} files</div>
-                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">please re-upload your demos</div>
+                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border-2 border-red-500/60 ring-1 ring-red-500/30">
+                                <div class="text-red-400 text-[10px] font-semibold">Not Uploaded</div>
+                                <div class="text-red-300 font-bold text-base">{{ uploadSummary.failed_batch_files.toLocaleString() }} files</div>
+                                <div class="text-[9px] text-red-400 font-medium">re-upload needed</div>
                             </div>
-                            <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-3 py-2 text-center border border-blue-700/30">
-                                <div class="text-blue-400 text-xs">Batch</div>
-                                <div class="text-blue-300 font-bold text-lg">{{ uploadSummary.batch_progress }}</div>
+                            <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-2.5 py-1.5 text-center min-w-[80px] border border-blue-700/30">
+                                <div class="text-blue-400 text-[10px]">Batch</div>
+                                <div class="text-blue-300 font-bold text-base">{{ uploadSummary.batch_progress }}</div>
                             </div>
-                            <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
-                                <div class="text-gray-400 text-xs">Duration</div>
-                                <div class="text-white font-bold text-lg">{{ uploadSummary.duration }}s</div>
+                            <div class="bg-gray-800/50 rounded-lg px-2.5 py-1.5 text-center min-w-[80px]">
+                                <div class="text-gray-400 text-[10px]">Duration</div>
+                                <div class="text-white font-bold text-base">{{ uploadSummary.duration }}s</div>
                             </div>
                         </div>
                     </div>
