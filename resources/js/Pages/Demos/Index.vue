@@ -81,6 +81,7 @@ const showReprocessConfirm = ref(false);
 const processingStartTime = ref(null);
 const processingDuration = ref(null);
 const processingResultsExpanded = ref(false);
+const globalQueueExpanded = ref(true);
 
 const processingSummary = computed(() => {
     if (recentlyProcessed.value.length === 0) return null;
@@ -1366,9 +1367,12 @@ watch(selectedPhysics, () => {
                             </svg>
                             <span class="text-blue-300 font-semibold">Upload Summary</span>
                             </div>
-                            <button v-if="!uploading" @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-500 text-xs">updates per batch</span>
+                                <button v-if="!uploading" @click="uploadSummary = null; uploadErrors = []; uploadSuccess = []" class="text-gray-400 hover:text-white transition-colors" title="Dismiss all results">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
                             <div class="bg-gray-800/50 rounded-lg px-3 py-2 text-center">
@@ -1473,9 +1477,12 @@ watch(selectedPhysics, () => {
                             <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                             <h3 class="text-base font-semibold text-cyan-300">Processing Results</h3>
                         </div>
-                        <button @click="recentlyProcessed = []; processingDuration = null;" class="text-gray-500 hover:text-gray-300 transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500 text-xs">updates every 2s</span>
+                            <button @click="recentlyProcessed = []; processingDuration = null;" class="text-gray-500 hover:text-gray-300 transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
                     </div>
                     <!-- Summary stats grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
@@ -1556,10 +1563,18 @@ watch(selectedPhysics, () => {
 
                 <!-- Global Processing Status (always visible) -->
                 <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
-                    <h3 class="text-base font-semibold text-gray-200 mb-3">Global Queue Status</h3>
+                    <button @click="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between mb-3">
+                        <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500 text-xs">updates every 2s</span>
+                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': globalQueueExpanded }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
 
-                    <!-- Queue Statistics (always show) -->
-                    <div class="grid grid-cols-2 gap-2">
+                    <!-- Queue Statistics -->
+                    <div v-show="globalQueueExpanded" class="grid grid-cols-2 gap-2">
                         <div v-if="$page.props.auth.user" class="relative group bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg p-3 text-center border border-yellow-600/30 cursor-help">
                             <div class="text-2xl font-bold text-yellow-400">{{ (queueStats.user_queued || 0) + (queueStats.user_processing || 0) }}</div>
                             <div class="text-xs text-yellow-300 mt-1">Your Remaining</div>
@@ -1577,7 +1592,7 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Actively Processing (only demos currently being worked on by workers) -->
-                    <div v-if="activelyProcessingDemos.length > 0" class="mt-4 space-y-2">
+                    <div v-if="activelyProcessingDemos.length > 0" v-show="globalQueueExpanded" class="mt-4 space-y-2">
                         <h4 class="text-sm font-semibold text-blue-300">Actively Processing ({{ activelyProcessingDemos.length }}):</h4>
                         <div v-for="demo in activelyProcessingDemos" :key="demo.id" class="flex items-center justify-between bg-blue-900/20 rounded-lg p-2 border border-blue-600/30">
                             <div class="flex items-center space-x-2">
@@ -1599,7 +1614,7 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Queued count (just a summary, not the full list) -->
-                    <div v-if="queuedDemoCount > 0" class="mt-3">
+                    <div v-if="queuedDemoCount > 0" v-show="globalQueueExpanded" class="mt-3">
                         <div class="text-xs text-gray-400">{{ queuedDemoCount }} demo(s) waiting in queue</div>
                     </div>
                 </div>
