@@ -9,6 +9,26 @@ const props = defineProps({
 
 const search = ref(props.filters?.search || '');
 const statusFilter = ref(props.filters?.status || '');
+const statusDropdownOpen = ref(false);
+
+const statuses = [
+    { value: '', label: 'All Statuses' },
+    { value: 'open', label: 'Open' },
+    { value: 'claimed', label: 'Claimed' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'disputed', label: 'Disputed' },
+    { value: 'closed', label: 'Closed' },
+];
+
+const selectedStatusLabel = () => {
+    return statuses.find(s => s.value === statusFilter.value)?.label || 'All Statuses';
+};
+
+const selectStatus = (value) => {
+    statusFilter.value = value;
+    statusDropdownOpen.value = false;
+    filterChallenges();
+};
 
 const formatTime = (milliseconds) => {
     const seconds = Math.floor(milliseconds / 1000);
@@ -81,7 +101,7 @@ const getStatusColor = (status) => {
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
             <!-- Filters -->
-            <div class="mb-6 backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4">
+            <div class="mb-6 backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4 relative z-20">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
                             v-model="search"
@@ -90,18 +110,29 @@ const getStatusColor = (status) => {
                             placeholder="Search by title or map..."
                             class="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                         />
-                        <select
-                            v-model="statusFilter"
-                            @change="filterChallenges"
-                            class="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-                        >
-                            <option value="">All Statuses</option>
-                            <option value="open">Open</option>
-                            <option value="claimed">Claimed</option>
-                            <option value="completed">Completed</option>
-                            <option value="disputed">Disputed</option>
-                            <option value="closed">Closed</option>
-                        </select>
+                        <div class="relative">
+                            <button
+                                @click="statusDropdownOpen = !statusDropdownOpen"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                            >
+                                <span>{{ selectedStatusLabel() }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="statusDropdownOpen ? 'rotate-180' : ''">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                            <div v-if="statusDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                                <button
+                                    v-for="status in statuses"
+                                    :key="status.value"
+                                    @click="selectStatus(status.value)"
+                                    :class="statusFilter === status.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
+                                    class="w-full px-4 py-2 text-left text-sm transition-colors"
+                                >
+                                    {{ status.label }}
+                                </button>
+                            </div>
+                            <div v-if="statusDropdownOpen" @click="statusDropdownOpen = false" class="fixed inset-0 z-40"></div>
+                        </div>
                     </div>
                 </div>
 

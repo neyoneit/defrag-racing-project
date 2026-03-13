@@ -1073,7 +1073,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             id="kick_player_id"
                                             v-model="kickUserId"
                                             :values="[]"
-                                            :options="myClan.players.map(p => p.user)"
+                                            :options="myClan.players.filter(p => p.user.id !== myClan.admin_id).map(p => p.user)"
                                         />
                                         <InputError :message="kickForm.errors.player_id" class="mt-2" />
                                     </div>

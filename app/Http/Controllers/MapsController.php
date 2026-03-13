@@ -14,6 +14,7 @@ use App\Models\Map;
 use App\Models\MddProfile;
 
 use App\Filters\MapFilters;
+use App\Services\NameMatcher;
 
 class MapsController extends Controller
 {
@@ -437,5 +438,100 @@ class MapsController extends Controller
         $offlineRecords->setCollection($combined);
 
         return $offlineRecords;
+    }
+
+    /**
+     * Get unassigned demos that potentially match online records for a map.
+     * Returns record_id => [matching demos] for matches above 30% confidence.
+     */
+    public function getDemoMatches(Request $request, $mapname)
+    {
+        $nameMatcher = app(NameMatcher::class);
+
+        // Get all unassigned demos for this map
+        $demos = UploadedDemo::where('map_name', $mapname)
+            ->whereNull('record_id')
+            ->whereIn('status', ['processed', 'fallback-assigned'])
+            ->whereNotNull('player_name')
+            ->get(['id', 'player_name', 'time_ms', 'physics', 'gametype', 'original_filename', 'created_at']);
+
+        if ($demos->isEmpty()) {
+            return response()->json([]);
+        }
+
+        // Get all online records for this map with user info
+        $records = Record::where('mapname', $mapname)
+            ->with('user:id,name,plain_name,mdd_id')
+            ->get(['id', 'name', 'mdd_id', 'gametype', 'time']);
+
+        if ($records->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $matches = [];
+
+        // Helper to extract physics base (CPM/VQ3) and CTF number
+        $parsePhysics = function ($physics, $gametype) {
+            $base = 'VQ3';
+            $ctfNum = null;
+
+            // Record gametype: "ctf1_vq3", "ctf2_cpm", "run_vq3", etc.
+            if ($gametype && preg_match('/ctf(\d+)_(cpm|vq3)/i', $gametype, $m)) {
+                $base = strtoupper($m[2]);
+                $ctfNum = $m[1];
+            } elseif ($gametype && preg_match('/run_(cpm|vq3)/i', $gametype, $m)) {
+                $base = strtoupper($m[1]);
+            }
+
+            // Demo physics: "CPM", "CPM.1", "VQ3.2", etc. — takes priority
+            if ($physics) {
+                $parts = explode('.', strtoupper($physics));
+                $base = $parts[0] ?: $base;
+                if (isset($parts[1])) {
+                    $ctfNum = $parts[1];
+                }
+            }
+
+            return [$base, $ctfNum];
+        };
+
+        foreach ($records as $record) {
+            $recordName = $record->user ? $record->user->plain_name ?? $record->user->name : $record->name;
+            if (empty($recordName)) continue;
+
+            [$recordBase, $recordCtf] = $parsePhysics(null, $record->gametype);
+
+            foreach ($demos as $demo) {
+                [$demoBase, $demoCtf] = $parsePhysics($demo->physics, $demo->gametype);
+
+                // Physics base must match (CPM vs VQ3)
+                if ($demoBase !== $recordBase) continue;
+
+                // If both have CTF numbers, they must match
+                if ($recordCtf !== null && $demoCtf !== null && $recordCtf !== $demoCtf) continue;
+
+                // Time must match exactly — without exact time match, assignment makes no sense
+                if (!$demo->time_ms || $demo->time_ms !== $record->time) continue;
+
+                $confidence = $nameMatcher->calculateConfidence($demo->player_name, $recordName);
+                if ($confidence >= 30) {
+                    $matches[$record->id][] = [
+                        'demo_id' => $demo->id,
+                        'player_name' => $demo->player_name,
+                        'record_player_name' => $recordName,
+                        'confidence' => $confidence,
+                        'time_ms' => $demo->time_ms,
+                        'filename' => $demo->original_filename,
+                    ];
+                }
+            }
+
+            // Sort matches by confidence descending
+            if (isset($matches[$record->id])) {
+                usort($matches[$record->id], fn($a, $b) => $b['confidence'] - $a['confidence']);
+            }
+        }
+
+        return response()->json($matches);
     }
 }

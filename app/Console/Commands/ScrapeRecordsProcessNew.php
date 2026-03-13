@@ -72,27 +72,45 @@ class ScrapeRecordsProcessNew extends Command
                         ->where('mode', $record['mode'])
                         ->where('mdd_id', $record['mdd_id'])
                         ->where('mapname', strtolower($record['map']))
+                        ->where('time', $record['time'])
                         ->first();
 
-                    if ($existing && $existing->time === $record['time']) {
-                        // Exact duplicate - skip
+                    if ($existing) {
+                        // Exact duplicate (same player, map, physics, mode, time) - skip
                         $totalDuplicates++;
                         $queueItem->update(['status' => 'completed']);
                         continue;
                     }
 
-                    if ($existing && $existing->time !== $record['time']) {
-                        // Time changed - move to history
+                    // Check if player has existing record with different time (improvement)
+                    $existingDifferentTime = Record::where('physics', $record['physics'])
+                        ->where('mode', $record['mode'])
+                        ->where('mdd_id', $record['mdd_id'])
+                        ->where('mapname', strtolower($record['map']))
+                        ->where('time', '!=', $record['time'])
+                        ->first();
+
+                    if ($existingDifferentTime) {
+                        // Time changed - move old record to history
                         $historic = new RecordHistory();
-                        $historic->fill($existing->toArray());
+                        $historic->fill($existingDifferentTime->toArray());
                         $historic->save();
-                        $existing->delete();
+                        $existingDifferentTime->delete();
                         $totalUpdated++;
                     }
 
-                    // Insert new record
-                    $this->insertRecord($record);
-                    $totalInserted++;
+                    // Insert new record (unique index prevents race condition duplicates)
+                    try {
+                        $this->insertRecord($record);
+                        $totalInserted++;
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        if ($e->errorInfo[1] == 1062) {
+                            // Duplicate entry - another worker already inserted it
+                            $totalDuplicates++;
+                        } else {
+                            throw $e;
+                        }
+                    }
                     $queueItem->update(['status' => 'completed']);
                     $totalProcessed++;
 

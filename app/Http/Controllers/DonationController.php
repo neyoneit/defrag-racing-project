@@ -38,10 +38,16 @@ class DonationController extends Controller
     public function getProgress()
     {
         $currentYear = now()->year;
+        $currentMonth = now()->month;
 
-        // Get current year's approved donations and self-raised money
-        $donations = SiteDonation::approved()->whereYear('donation_date', $currentYear)->get();
-        $selfRaisedMoney = SelfRaisedMoney::whereYear('earned_date', $currentYear)->get();
+        // Get current month's approved donations and self-raised money
+        $donations = SiteDonation::approved()
+            ->whereYear('donation_date', $currentYear)
+            ->whereMonth('donation_date', $currentMonth)
+            ->get();
+        $selfRaisedMoney = SelfRaisedMoney::whereYear('earned_date', $currentYear)
+            ->whereMonth('earned_date', $currentMonth)
+            ->get();
         $goal = DonationGoal::where('year', $currentYear)->first();
 
         // Get exchange rates
@@ -61,13 +67,14 @@ class DonationController extends Controller
 
         $totalEUR = $donationsEUR + $selfRaisedEUR;
         $yearlyGoal = $goal ? $goal->yearly_goal : 1200;
-        $percentage = min(($totalEUR / $yearlyGoal) * 100, 100);
+        $monthlyGoal = round($yearlyGoal / 12, 2);
+        $percentage = min(($totalEUR / $monthlyGoal) * 100, 100);
 
         return response()->json([
             'total' => round($totalEUR, 2),
             'donations' => round($donationsEUR, 2),
             'selfRaised' => round($selfRaisedEUR, 2),
-            'goal' => $yearlyGoal,
+            'goal' => $monthlyGoal,
             'percentage' => round($percentage, 1),
             'currency' => 'EUR',
         ]);

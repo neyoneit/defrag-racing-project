@@ -11,10 +11,14 @@
         oldtop: {
             type: Boolean,
             default: false
+        },
+        demoMatches: {
+            type: Array,
+            default: () => []
         }
     });
 
-    const emit = defineEmits(['assign']);
+    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record']);
 
     const page = usePage();
     const showTooltip = ref(false);
@@ -189,6 +193,17 @@
                 v-html="q3tohtml(displayName)"
             ></span>
 
+            <!-- Verified badge - record has an assigned demo -->
+            <span
+                v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                class="ml-1 flex-shrink-0 text-green-400"
+                title="Verified — demo attached"
+            >
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+            </span>
+
             <!-- Badge for demos in Demos Top - shows verification type or validity flag -->
             <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
                 OFFLINE
@@ -289,6 +304,30 @@
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+            </button>
+
+            <!-- Assign Demo to this Record (reverse: record has matching unassigned demos, no demo yet) -->
+            <button
+                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
+                @click.stop="emit('assign-from-record', record)"
+                class="p-1 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
+                :title="`${demoMatches.length} possible demo match${demoMatches.length > 1 ? 'es' : ''}`"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                </svg>
+            </button>
+
+            <!-- Reassign Demo (record already has a demo, allow changing it) -->
+            <button
+                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                @click.stop="emit('reassign-record', record)"
+                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
+                title="Reassign demo"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                 </svg>
             </button>
 

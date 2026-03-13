@@ -701,9 +701,13 @@ const closeServerDropdown = () => {
                             @click="showServerDropdown = !showServerDropdown"
                             class="w-full backdrop-blur-xl bg-black/60 border border-white/10 text-white rounded-lg px-4 py-2 cursor-pointer hover:border-white/20 transition">
                             <div v-if="!selectedServer" class="text-gray-400">Choose a server...</div>
-                            <div v-else class="flex items-center gap-2">
-                                <span v-html="q3tohtml(selectedServer.name)"></span>
-                                <span class="text-gray-400">({{ selectedServer.players_current }}/{{ selectedServer.players_max }}) - {{ selectedServer.location }}</span>
+                            <div v-else class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span v-html="q3tohtml(selectedServer.name)" class="truncate"></span>
+                                    <span v-if="selectedServer.map" class="text-gray-500 text-xs">{{ selectedServer.map }}</span>
+                                </div>
+                                <span v-if="selectedServer.online_players && selectedServer.online_players.length > 0" class="text-green-400 text-xs font-bold flex-shrink-0">{{ selectedServer.online_players.length }} playing</span>
+                                <span v-else class="text-gray-600 text-xs font-bold flex-shrink-0">EMPTY</span>
                             </div>
                         </div>
                         <div v-if="showServerDropdown" class="absolute z-50 w-full mt-1 backdrop-blur-xl bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
@@ -711,10 +715,16 @@ const closeServerDropdown = () => {
                                 v-for="server in servers"
                                 :key="server.id"
                                 @click="selectedServer = server; showServerDropdown = false"
-                                class="px-4 py-2 hover:bg-white/10 cursor-pointer transition border-b border-white/5 last:border-0">
-                                <div class="flex items-center gap-2">
+                                class="px-4 py-2.5 hover:bg-white/10 cursor-pointer transition border-b border-white/5 last:border-0">
+                                <div class="flex items-center justify-between gap-2">
                                     <span v-html="q3tohtml(server.name)"></span>
-                                    <span class="text-gray-400 text-sm">({{ server.players_current }}/{{ server.players_max }}) - {{ server.location }}</span>
+                                    <span v-if="server.online_players && server.online_players.length > 0" class="text-green-400 text-xs font-bold">{{ server.online_players.length }} playing</span>
+                                    <span v-else class="text-gray-600 text-xs font-bold">EMPTY</span>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5">
+                                    <span v-if="server.map" class="text-gray-400">{{ server.map }}</span>
+                                    <span v-if="server.map && server.location"> · </span>
+                                    <span>{{ server.location }}</span>
                                 </div>
                             </div>
                         </div>

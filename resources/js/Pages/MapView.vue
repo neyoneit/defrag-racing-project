@@ -77,6 +77,85 @@
         }
     };
 
+    // Reverse assign: record → demo matches
+    const demoMatchesMap = ref({});
+    const showReverseAssignModal = ref(false);
+    const reverseAssignRecord = ref(null);
+    const reverseAssignDemos = ref([]);
+    const selectedDemoId = ref(null);
+
+    const loadDemoMatches = async () => {
+        try {
+            const response = await axios.get(`/maps/${encodeURIComponent(props.map.name)}/demo-matches`);
+            demoMatchesMap.value = response.data;
+        } catch (error) {
+            console.error('Error loading demo matches:', error);
+        }
+    };
+
+    const openReverseAssignModal = (record, demos) => {
+        reverseAssignRecord.value = record;
+        reverseAssignDemos.value = demos;
+        selectedDemoId.value = demos.length > 0 ? demos[0].demo_id : null;
+        showReverseAssignModal.value = true;
+    };
+
+    const closeReverseAssignModal = () => {
+        showReverseAssignModal.value = false;
+        reverseAssignRecord.value = null;
+        reverseAssignDemos.value = [];
+        selectedDemoId.value = null;
+    };
+
+    const assignDemoFromRecord = async () => {
+        if (!selectedDemoId.value || !reverseAssignRecord.value) return;
+        try {
+            const response = await axios.post(`/demos/${selectedDemoId.value}/assign`, {
+                record_id: reverseAssignRecord.value.id
+            });
+            if (response.data.success) {
+                closeReverseAssignModal();
+                loadDemoMatches();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error assigning demo:', error);
+            alert('Failed to assign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
+    // Reassign: record already has a demo, allow changing or removing
+    const showReassignModal = ref(false);
+    const reassignRecord = ref(null);
+    const reassignCurrentDemo = ref(null);
+
+    const openReassignModal = (record) => {
+        reassignRecord.value = record;
+        reassignCurrentDemo.value = record.uploaded_demos?.[0] || null;
+        showReassignModal.value = true;
+    };
+
+    const closeReassignModal = () => {
+        showReassignModal.value = false;
+        reassignRecord.value = null;
+        reassignCurrentDemo.value = null;
+    };
+
+    const unassignDemo = async () => {
+        if (!reassignCurrentDemo.value) return;
+        try {
+            const response = await axios.post(`/demos/${reassignCurrentDemo.value.id}/unassign`);
+            if (response.data.success) {
+                closeReassignModal();
+                loadDemoMatches();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error unassigning demo:', error);
+            alert('Failed to unassign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
     const tags = ref([]);
     const availableTags = ref([]);
     const suggestedTags = ref([]);
@@ -257,6 +336,9 @@
         } catch (error) {
             console.error('Error fetching suggested tags:', error);
         }
+
+        // Load demo matches for assign icons on records
+        loadDemoMatches();
     });
 
     const filteredTags = computed(() => {
@@ -900,7 +982,7 @@
                                 : 'bg-white/10 text-gray-300'
                         ]"
                     >
-                        <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                        <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                         <span>VQ3</span>
                     </button>
                     <button
@@ -912,7 +994,7 @@
                                 : 'bg-white/10 text-gray-300'
                         ]"
                     >
-                        <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                        <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                         <span>CPM</span>
                     </button>
                 </div>
@@ -924,7 +1006,7 @@
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
                             </div>
                             <div class="text-right min-w-[80px]">
@@ -942,7 +1024,7 @@
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" @assign="openAssignModal($event, 'VQ3')" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -974,7 +1056,7 @@
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
                             </div>
                             <div class="text-right min-w-[80px]">
@@ -992,7 +1074,7 @@
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" @assign="openAssignModal($event, 'CPM')" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1132,6 +1214,140 @@
                         ]"
                     >
                         Assign Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reverse Assign: Record → Demo Modal -->
+        <div v-if="showReverseAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReverseAssignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-purple-500/20 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-purple-300">Assign Demo to Record</h3>
+                    <button @click="closeReverseAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Record info -->
+                <div v-if="reverseAssignRecord" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-purple-500/10">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="text-sm"><span class="text-gray-500">Record:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(reverseAssignRecord.user?.name || reverseAssignRecord.name)"></span></div>
+                        <div class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(reverseAssignRecord.time) }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Matching demos -->
+                <div v-if="reverseAssignDemos.length > 0" class="mb-6">
+                    <label class="block text-sm font-medium text-purple-400 mb-2">
+                        Matching demos ({{ reverseAssignDemos.length }})
+                    </label>
+                    <div class="border border-purple-700/30 rounded-lg bg-purple-900/10 overflow-hidden">
+                        <button
+                            v-for="demo in reverseAssignDemos"
+                            :key="demo.demo_id"
+                            @click="selectedDemoId = demo.demo_id"
+                            :class="[
+                                'w-full text-left px-5 py-4 hover:bg-purple-800/20 border-b border-purple-800/20 last:border-b-0 transition-all',
+                                selectedDemoId === demo.demo_id ? 'bg-purple-600/20 ring-1 ring-purple-500/50' : ''
+                            ]"
+                        >
+                            <!-- Player name + confidence -->
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-lg font-bold" :class="{
+                                    'text-green-400': demo.confidence >= 80,
+                                    'text-yellow-400': demo.confidence >= 50 && demo.confidence < 80,
+                                    'text-orange-400': demo.confidence < 50
+                                }">{{ demo.confidence }}%</span>
+                                <span class="text-lg font-semibold text-gray-100" v-html="q3tohtml(demo.player_name)"></span>
+                                <span v-if="demo.time_ms" class="text-base font-mono text-gray-300 ml-auto">{{ formatTime(demo.time_ms) }}</span>
+                            </div>
+
+                            <!-- Filename -->
+                            <div class="mb-2 text-sm text-gray-300 break-all">
+                                {{ demo.filename }}
+                            </div>
+
+                            <!-- Match reasoning -->
+                            <div class="text-sm text-gray-300 leading-relaxed bg-gray-800/50 rounded-md px-3 py-2 border-l-2" :class="{
+                                'border-green-500': demo.confidence >= 80,
+                                'border-yellow-500': demo.confidence >= 50 && demo.confidence < 80,
+                                'border-orange-500': demo.confidence < 50
+                            }">
+                                <span v-if="demo.confidence === 100">
+                                    Exact name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is identical to record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>".
+                                </span>
+                                <span v-else-if="demo.confidence >= 80">
+                                    Very similar name — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" closely matches record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span v-else-if="demo.confidence >= 50">
+                                    Partial name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is somewhat similar to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span v-else>
+                                    Weak name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" has low similarity to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span class="text-green-400 font-medium"> Time matches exactly.</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeReverseAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="assignDemoFromRecord"
+                        :disabled="!selectedDemoId"
+                        :class="[
+                            'px-5 py-2.5 rounded-lg text-white font-medium transition-colors',
+                            selectedDemoId ? 'bg-purple-600 hover:bg-purple-500' : 'bg-gray-600 cursor-not-allowed'
+                        ]"
+                    >
+                        Assign Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Reassign Modal -->
+        <div v-if="showReassignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReassignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl border border-yellow-500/20 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-yellow-300">Reassign Demo</h3>
+                    <button @click="closeReassignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Current assignment info -->
+                <div v-if="reassignCurrentDemo" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-yellow-500/10">
+                    <div class="text-sm text-gray-400 mb-2">Currently assigned demo:</div>
+                    <div class="grid grid-cols-1 gap-2">
+                        <div class="text-sm"><span class="text-gray-500">File:</span> <span class="text-gray-200 break-all">{{ reassignCurrentDemo.original_filename }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200" v-html="q3tohtml(reassignCurrentDemo.player_name || 'Unknown')"></span></div>
+                        <div v-if="reassignCurrentDemo.time_ms" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono">{{ formatTime(reassignCurrentDemo.time_ms) }}</span></div>
+                    </div>
+                </div>
+
+                <p class="text-sm text-gray-400 mb-6">
+                    Unassigning the demo will remove it from this record. It will become available for reassignment to a different record.
+                </p>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeReassignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="unassignDemo"
+                        class="px-5 py-2.5 rounded-lg text-white font-medium transition-colors bg-yellow-600 hover:bg-yellow-500"
+                    >
+                        Unassign Demo
                     </button>
                 </div>
             </div>

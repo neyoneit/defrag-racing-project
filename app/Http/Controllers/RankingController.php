@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\PlayerRating;
+use Illuminate\Support\Facades\DB;
 
 class RankingController extends Controller
 {
@@ -39,12 +40,16 @@ class RankingController extends Controller
             return redirect()->route('ranking', ['cpmPage' => $cpmRatings->lastPage()]);
         }
 
+        // Get last recalculation time from player_ratings table
+        $lastRecalculation = DB::table('player_ratings')->max('updated_at');
+
         // render the view
         return Inertia::render('RankingView')
             ->with('vq3Ratings', $vq3Ratings)
             ->with('cpmRatings', $cpmRatings)
             ->with('myVq3Rating', $myVq3Rating)
-            ->with('myCpmRating', $myCpmRating);
+            ->with('myCpmRating', $myCpmRating)
+            ->with('lastRecalculation', $lastRecalculation);
     }
 
     private function getRatings(string $physics, string $gametype, string $rankingtype, string $category = 'overall'): LengthAwarePaginator

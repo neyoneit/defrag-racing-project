@@ -9,6 +9,7 @@
         cpmRatings: Object,
         myVq3Rating: Object,
         myCpmRating: Object,
+        lastRecalculation: String,
     });
 
     const order = ref('ASC');
@@ -137,23 +138,53 @@
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-                    <!-- Left: Title -->
+                    <!-- Left: Title + Info -->
                     <div>
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Player Rankings</h1>
+                        <div class="flex items-center gap-3 text-gray-500">
+                            <div class="relative group">
+                                <button class="flex items-center gap-1.5 text-xs hover:text-gray-300 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                                    </svg>
+                                    <span class="text-[11px] font-semibold">How it works</span>
+                                </button>
+                                <div class="absolute left-0 top-full mt-2 w-80 backdrop-blur-xl bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
+                                    <p class="text-xs text-gray-400 leading-relaxed">
+                                        Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record.
+                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> — your best maps count the most, weaker ones are diminished.
+                                        The final rating is a weighted average of all your map scores. Players with fewer than <span class="text-gray-300 font-semibold">10 records</span> receive a proportional penalty.
+                                        Maps with fewer than <span class="text-gray-300 font-semibold">5 players</span> or very short top times are excluded.
+                                    </p>
+                                </div>
+                            </div>
+                            <div v-if="lastRecalculation" class="flex items-center gap-1.5 text-[11px]">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                                </svg>
+                                <span>{{ new Date(lastRecalculation).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(lastRecalculation).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Right: Filters -->
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
                         <!-- Ranking Type Toggle (Separate Block) -->
-                        <div class="flex sm:flex-col gap-2 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-2.5 w-full sm:w-auto">
-                            <button
-                                v-for="rt in rankingtypes"
-                                :key="rt"
-                                @click="selectRankingType(rt)"
-                                :class="rankingtype === rt ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
-                                class="px-4 py-2 rounded-lg border text-sm font-semibold uppercase transition-all whitespace-nowrap flex-1 sm:flex-none">
-                                {{ rt.replace('_', ' ') }}
-                            </button>
+                        <div class="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-2.5 w-full sm:w-auto sm:min-w-[270px]">
+                            <div class="flex sm:flex-col gap-2">
+                                <button
+                                    v-for="rt in rankingtypes"
+                                    :key="rt"
+                                    @click="selectRankingType(rt)"
+                                    :class="rankingtype === rt ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
+                                    class="px-4 py-2 rounded-lg border text-sm font-semibold uppercase transition-all whitespace-nowrap flex-1 sm:flex-none"
+                                    :title="rt === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record'">
+                                    {{ rt.replace('_', ' ') }}
+                                </button>
+                            </div>
+                            <div class="text-xs mt-2 text-center" :class="rankingtype === 'active_players' ? 'text-blue-400' : 'text-gray-300'">
+                                {{ rankingtype === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record' }}
+                            </div>
                         </div>
 
                         <!-- Categories & Gametypes -->
@@ -256,9 +287,17 @@
                 <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                            <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                             <h2 class="text-lg font-bold text-blue-400">VQ3 Rankings <span class="text-sm font-normal text-gray-400">({{ vq3Ratings.total }})</span></h2>
                         </div>
+                    </div>
+                    <!-- Column Headers -->
+                    <div class="flex items-center gap-2 sm:gap-3 px-4 py-1.5 border-b border-white/5 text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                        <div class="w-5 sm:w-8 flex-shrink-0 text-center">#</div>
+                        <div class="flex-shrink-0 w-5 sm:w-6"></div>
+                        <div class="flex-1 min-w-0">Player</div>
+                        <div class="w-16 sm:w-20 flex-shrink-0 text-right">Rating</div>
+                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">Last Active</div>
                     </div>
                     <div class="px-2 py-1">
                         <div v-if="vq3Ratings.total > 0">
@@ -284,9 +323,17 @@
                 <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                            <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                             <h2 class="text-lg font-bold text-purple-400">CPM Rankings <span class="text-sm font-normal text-gray-400">({{ cpmRatings.total }})</span></h2>
                         </div>
+                    </div>
+                    <!-- Column Headers -->
+                    <div class="flex items-center gap-2 sm:gap-3 px-4 py-1.5 border-b border-white/5 text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                        <div class="w-5 sm:w-8 flex-shrink-0 text-center">#</div>
+                        <div class="flex-shrink-0 w-5 sm:w-6"></div>
+                        <div class="flex-1 min-w-0">Player</div>
+                        <div class="w-16 sm:w-20 flex-shrink-0 text-right">Rating</div>
+                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">Last Active</div>
                     </div>
                     <div class="px-2 py-1">
                         <div v-if="cpmRatings.total > 0">

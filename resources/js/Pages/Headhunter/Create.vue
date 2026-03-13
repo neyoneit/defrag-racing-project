@@ -1,5 +1,31 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
+
+const physicsOpen = ref(false);
+const modeOpen = ref(false);
+const currencyOpen = ref(false);
+
+const physicsOptions = [
+    { value: 'vq3', label: 'VQ3' },
+    { value: 'cpm', label: 'CPM' },
+];
+
+const modeOptions = [
+    { value: 'run', label: 'Run' },
+    { value: 'strafe', label: 'Strafe' },
+    { value: 'freestyle', label: 'Freestyle' },
+    { value: 'fastcaps', label: 'Fastcaps' },
+    { value: 'any', label: 'Any' },
+];
+
+const currencyOptions = [
+    { value: 'USD', label: 'USD' },
+    { value: 'EUR', label: 'EUR' },
+    { value: 'GBP', label: 'GBP' },
+    { value: 'CAD', label: 'CAD' },
+    { value: 'AUD', label: 'AUD' },
+];
 
 const form = useForm({
     title: '',
@@ -104,28 +130,31 @@ const submit = () => {
 
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300 mb-2">Physics *</label>
-                                <select
-                                    v-model="form.physics"
-                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-                                >
-                                    <option value="vq3">VQ3</option>
-                                    <option value="cpm">CPM</option>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="physicsOpen = !physicsOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
+                                        <span>{{ physicsOptions.find(o => o.value === form.physics)?.label }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="physicsOpen ? 'rotate-180' : ''"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                    </button>
+                                    <div v-if="physicsOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                                        <button type="button" v-for="opt in physicsOptions" :key="opt.value" @click="form.physics = opt.value; physicsOpen = false" :class="form.physics === opt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'" class="w-full px-4 py-2 text-left text-sm transition-colors">{{ opt.label }}</button>
+                                    </div>
+                                    <div v-if="physicsOpen" @click="physicsOpen = false" class="fixed inset-0 z-40"></div>
+                                </div>
                                 <div v-if="form.errors.physics" class="text-red-400 text-sm mt-1">{{ form.errors.physics }}</div>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-semibold text-gray-300 mb-2">Mode *</label>
-                                <select
-                                    v-model="form.mode"
-                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-                                >
-                                    <option value="run">Run</option>
-                                    <option value="strafe">Strafe</option>
-                                    <option value="freestyle">Freestyle</option>
-                                    <option value="fastcaps">Fastcaps</option>
-                                    <option value="any">Any</option>
-                                </select>
+                                <div class="relative">
+                                    <button type="button" @click="modeOpen = !modeOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
+                                        <span>{{ modeOptions.find(o => o.value === form.mode)?.label }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="modeOpen ? 'rotate-180' : ''"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                    </button>
+                                    <div v-if="modeOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                                        <button type="button" v-for="opt in modeOptions" :key="opt.value" @click="form.mode = opt.value; modeOpen = false" :class="form.mode === opt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'" class="w-full px-4 py-2 text-left text-sm transition-colors">{{ opt.label }}</button>
+                                    </div>
+                                    <div v-if="modeOpen" @click="modeOpen = false" class="fixed inset-0 z-40"></div>
+                                </div>
                                 <div v-if="form.errors.mode" class="text-red-400 text-sm mt-1">{{ form.errors.mode }}</div>
                             </div>
                         </div>
@@ -164,16 +193,16 @@ const submit = () => {
 
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-300 mb-2">Currency</label>
-                                        <select
-                                            v-model="form.reward_currency"
-                                            class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-                                        >
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
-                                            <option value="CAD">CAD</option>
-                                            <option value="AUD">AUD</option>
-                                        </select>
+                                        <div class="relative">
+                                            <button type="button" @click="currencyOpen = !currencyOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
+                                                <span>{{ form.reward_currency }}</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="currencyOpen ? 'rotate-180' : ''"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                            </button>
+                                            <div v-if="currencyOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                                                <button type="button" v-for="opt in currencyOptions" :key="opt.value" @click="form.reward_currency = opt.value; currencyOpen = false" :class="form.reward_currency === opt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'" class="w-full px-4 py-2 text-left text-sm transition-colors">{{ opt.label }}</button>
+                                            </div>
+                                            <div v-if="currencyOpen" @click="currencyOpen = false" class="fixed inset-0 z-40"></div>
+                                        </div>
                                     </div>
                                 </div>
 

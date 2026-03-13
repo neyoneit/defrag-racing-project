@@ -31,6 +31,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('ratings:calculate --physics=vq3')->withoutOverlapping()->daily();
         $schedule->command('ratings:calculate --physics=cpm')->withoutOverlapping()->daily();
 
+        // Update last_activity in player_ratings from records (~20s)
+        $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();
+
         // Cache WR/Top3 counts for clan statistics (updates cached_wr_count and cached_top3_count on users table)
         $schedule->command('rankings:cache')->withoutOverlapping()->hourly();
 
