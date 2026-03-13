@@ -1441,14 +1441,14 @@ watch(selectedPhysics, () => {
                                 <div class="text-red-300 font-bold text-lg">{{ uploadSummary.errors.toLocaleString() }}</div>
                             </div>
                             <div v-if="uploadSummary.retried_batches > 0" class="bg-amber-900/30 rounded-lg px-3 py-2 text-center border border-amber-700/30">
-                                <div class="text-amber-400 text-xs">Retried Batches</div>
-                                <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }}</div>
-                                <div class="text-[10px] text-amber-400/70 mt-0.5">succeeded on retry</div>
+                                <div class="text-amber-400 text-xs">Recovered</div>
+                                <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }} {{ uploadSummary.retried_batches === 1 ? 'batch' : 'batches' }}</div>
+                                <div class="text-[10px] text-amber-400/70 mt-0.5">recovered automatically</div>
                             </div>
                             <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-3 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30">
-                                <div class="text-red-400 text-xs font-semibold">Failed Uploads</div>
-                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }}</div>
-                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">re-upload needed</div>
+                                <div class="text-red-400 text-xs font-semibold">Not Uploaded</div>
+                                <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }} files</div>
+                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">please re-upload your demos</div>
                             </div>
                             <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-3 py-2 text-center border border-blue-700/30">
                                 <div class="text-blue-400 text-xs">Batch</div>
