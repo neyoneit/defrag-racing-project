@@ -17,10 +17,11 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 0; // Unlimited — error handling is in handle() catch block
-    public $maxExceptions = 0;
+    public $tries = 3;
+    public $maxExceptions = 3;
     public $uniqueFor = 600;
     public $timeout = 600;
+    public $backoff = [2, 5, 10]; // seconds between retries
 
     protected $demo;
 
@@ -71,6 +72,27 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
             ]);
 
         } catch (Throwable $e) {
+            // Retry on deadlock/lock timeout — these are transient DB conflicts
+            $isDeadlock = str_contains($e->getMessage(), 'Deadlock found')
+                || str_contains($e->getMessage(), 'Lock wait timeout');
+
+            if ($isDeadlock && $this->attempts() < $this->tries) {
+                Log::warning("Demo processing hit deadlock, will retry", [
+                    'demo_id' => $this->demo->id,
+                    'attempt' => $this->attempts(),
+                    'error' => $e->getMessage(),
+                ]);
+
+                // Reset status so retry can pick it up
+                $this->demo->update([
+                    'status' => 'uploaded',
+                    'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Deadlock detected (attempt ' . $this->attempts() . '), retrying...'
+                ]);
+
+                // Re-throw to let Laravel retry the job
+                throw $e;
+            }
+
             Log::error("Demo processing failed", [
                 'demo_id' => $this->demo->id,
                 'error' => $e->getMessage(),
@@ -81,7 +103,7 @@ class ProcessDemoJob implements ShouldQueue, ShouldBeUnique
                 'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Processing failed: ' . $e->getMessage()
             ]);
 
-            // Do NOT re-throw — job completes as "DONE" from Laravel's perspective
+            // Do NOT re-throw for non-deadlock errors — job completes as "DONE"
             // The demo status is already set to 'failed' in the database
         }
     }

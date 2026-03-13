@@ -164,8 +164,19 @@ class DemoProcessorService
                 'error' => $e->getMessage(),
             ]);
 
-            // Move the raw demo file to failed directory for admin review
-            $this->moveToFailedDirectory($demo);
+            // Compress the raw demo file to 7z before moving to failed directory
+            $compressedPath = null;
+            try {
+                $compressedPath = $this->compressDemo($tempFile, $demo->original_filename);
+            } catch (\Exception $compressError) {
+                Log::error('Failed to compress failed demo', [
+                    'demo_id' => $demo->id,
+                    'error' => $compressError->getMessage(),
+                ]);
+            }
+
+            // Move compressed (or raw if compression failed) file to failed directory
+            $this->moveToFailedDirectory($demo, $compressedPath);
 
             // Detect unsupported demo file versions (not dm_68)
             $status = 'failed';
@@ -173,10 +184,17 @@ class DemoProcessorService
                 $status = 'unsupported-version';
             }
 
-            $demo->update([
+            // Update processed_filename to reflect 7z if compression succeeded
+            $updateData = [
                 'status' => $status,
                 'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] ' . $e->getMessage(),
-            ]);
+            ];
+            if ($compressedPath) {
+                $format = config('app.demo_compression_format', '7z');
+                $updateData['processed_filename'] = pathinfo($demo->original_filename, PATHINFO_FILENAME) . '.' . $format;
+            }
+
+            $demo->update($updateData);
 
             // Clean up temp files on error
             if (isset($tempDir) && file_exists($tempDir)) {
@@ -518,13 +536,20 @@ class DemoProcessorService
             // Use the compressed local path if provided, otherwise try the stored file_path
             $sourcePath = $compressedLocalPath ?? storage_path("app/{$demo->file_path}");
 
+            // Determine destination filename - use compressed extension if source is compressed
+            $destFilename = $demo->processed_filename ?? $demo->original_filename;
+            if ($compressedLocalPath) {
+                $format = config('app.demo_compression_format', '7z');
+                $destFilename = pathinfo($demo->original_filename, PATHINFO_FILENAME) . '.' . $format;
+            }
+
             // Move file to failed directory
             if (file_exists($sourcePath)) {
-                $destPath = $failedDir . '/' . ($demo->processed_filename ?? $demo->original_filename);
+                $destPath = $failedDir . '/' . $destFilename;
                 rename($sourcePath, $destPath);
 
                 // Update file_path to point to failed directory (local path, not Backblaze)
-                $demo->update(['file_path' => "demos/failed/{$demo->id}/" . ($demo->processed_filename ?? $demo->original_filename)]);
+                $demo->update(['file_path' => "demos/failed/{$demo->id}/" . $destFilename]);
 
                 Log::info('Moved failed demo to failed directory', [
                     'demo_id' => $demo->id,

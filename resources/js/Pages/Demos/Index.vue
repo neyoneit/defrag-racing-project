@@ -1697,7 +1697,7 @@ watch(selectedPhysics, () => {
                                     Fallback <span class="opacity-75">({{ demoCountsComputed.fallback_assigned || 0 }})</span>
                                 </button>
                                 <button
-                                    v-if="$page.props.auth.user?.admin && (demoCountsComputed.uploaded || 0) > 0"
+                                    v-if="(demoCountsComputed.uploaded || 0) > 0"
                                     @click="changeStatusFilter('uploaded')"
                                     class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'uploaded'
@@ -1734,7 +1734,6 @@ watch(selectedPhysics, () => {
                                     Failed <span class="opacity-75">({{ demoCountsComputed.failed }})</span>
                                 </button>
                                 <button
-                                    v-if="(demoCountsComputed.unsupported_version || 0) > 0"
                                     @click="changeStatusFilter('unsupported-version')"
                                     class="px-2.5 py-1 rounded text-xs font-medium transition-all"
                                     :class="activeStatusFilter === 'unsupported-version'
@@ -2160,6 +2159,15 @@ watch(selectedPhysics, () => {
                                     : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
                             >
                                 Failed <span class="opacity-75">({{ browseCountsComputed.failed }})</span>
+                            </button>
+                            <button
+                                @click="changeBrowseStatusFilter('unsupported-version')"
+                                class="px-2.5 py-1 rounded text-xs font-medium transition-all"
+                                :class="activeBrowseStatus === 'unsupported-version'
+                                    ? 'bg-purple-600 text-white'
+                                    : 'bg-gray-700/30 text-gray-400 hover:bg-gray-700/50 border border-gray-600/30'"
+                            >
+                                Unsupported <span class="opacity-75">({{ browseCountsComputed.unsupported_version || 0 }})</span>
                             </button>
                         </div>
 
