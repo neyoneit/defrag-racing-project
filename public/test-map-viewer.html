@@ -79,6 +79,11 @@
     <div id="info">
         <strong>3D Map Viewer</strong><br>
         <span id="mapName">Loading...</span><br><br>
+        <label for="mapSelect" style="font-size:12px;color:#aaa;">Select Map:</label><br>
+        <select id="mapSelect" onchange="loadSelectedMap()" style="width:100%;padding:6px 8px;margin:4px 0 8px;background:#1a1a2e;color:#fff;border:1px solid #3b82f6;border-radius:5px;font-size:13px;cursor:pointer;">
+            <option value="pado">pado</option>
+            <option value="pornstar-cpmrun">pornstar-cpmrun</option>
+        </select>
         <small>
             Click to enter fly mode<br>
             WASD: Move<br>
@@ -128,8 +133,8 @@
 
             controls = new THREE.PointerLockControls(camera, document.body);
 
-            // Click to activate pointer lock (fly mode)
-            document.addEventListener('click', () => {
+            // Click on 3D view to activate pointer lock (fly mode)
+            document.getElementById('container').addEventListener('click', () => {
                 controls.lock();
             });
 
@@ -190,6 +195,25 @@
             animate();
         }
 
+        async function loadSelectedMap() {
+            const map = document.getElementById('mapSelect').value;
+
+            // Update URL without reload
+            window.history.replaceState(null, '', window.location.pathname + '?map=' + map);
+
+            // Clear existing meshes and skybox from scene
+            mapMeshes.forEach(mesh => { scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); });
+            skyMeshes.forEach(mesh => { scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); });
+            mapMeshes = [];
+            skyMeshes = [];
+            textures = {};
+            if (scene.background) { scene.background.dispose(); scene.background = null; }
+
+            // Reload map data
+            document.getElementById('loading').style.display = 'block';
+            await loadBSPMap();
+        }
+
         async function loadBSPMap() {
             try {
                 document.getElementById('loading').textContent = 'Loading BSP data...';
@@ -197,6 +221,10 @@
                 // Get map name from URL parameter, default to 'pado'
                 const urlParams = new URLSearchParams(window.location.search);
                 const mapName = urlParams.get('map') || 'pado';
+
+                // Sync dropdown with current map
+                const select = document.getElementById('mapSelect');
+                if (select) select.value = mapName;
 
                 const response = await fetch(window.location.origin + '/api/test-map-data?map=' + mapName);
                 if (!response.ok) throw new Error('Failed to load map data');
