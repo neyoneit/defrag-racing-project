@@ -7,7 +7,7 @@
 </script>
 
 <template>
-    <Link class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-purple-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-purple-500/5" :href="route(player.mdd ? 'profile.mdd' : 'profile.index', player.id)">
+    <Link class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/5" :href="route(player.mdd ? 'profile.mdd' : 'profile.index', player.id)">
         <!-- Avatar -->
         <div class="shrink-0 relative">
             <img class="h-12 w-12 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-purple-500/50 transition-all shadow-lg" :src="player.profile_photo_path ? '/storage/' + player.profile_photo_path : '/images/null.jpg'" :alt="player.name">

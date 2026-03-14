@@ -89,7 +89,7 @@
 
 <template>
     <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block group">
-        <div class="backdrop-blur-xl bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
+        <div class="bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
             <!-- Map Thumbnail -->
             <div class="relative w-full aspect-video bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
                 <!-- Physics Badge -->
@@ -101,13 +101,13 @@
 
                 <!-- Items Overlay - Bottom Right -->
                 <div class="absolute bottom-2 right-2 flex flex-col gap-0.5">
-                    <div v-if="weaponsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 backdrop-blur-sm rounded px-1 py-0.5">
+                    <div v-if="weaponsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
                         <div v-for="weapon in weaponsList" :key="weapon" :title="weapon" :class="`sprite-items sprite-${weapon} w-3 h-3`"></div>
                     </div>
-                    <div v-if="itemsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 backdrop-blur-sm rounded px-1 py-0.5">
+                    <div v-if="itemsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
                         <div v-for="item in itemsList" :key="item" :title="item" :class="`sprite-items sprite-${item} w-3 h-3`"></div>
                     </div>
-                    <div v-if="functionsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 backdrop-blur-sm rounded px-1 py-0.5">
+                    <div v-if="functionsList.length > 0" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
                         <div v-for="func in functionsList" :key="func" :title="func" :class="`sprite-items sprite-${func} w-3 h-3`"></div>
                     </div>
                 </div>

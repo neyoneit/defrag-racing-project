@@ -2,7 +2,7 @@
     <div class="min-h-screen flex items-center justify-center px-4 main-background">
         <div class="max-w-md w-full">
             <!-- Error Card -->
-            <div class="backdrop-blur-xl bg-black/80 rounded-xl shadow-2xl p-8 border border-white/10 text-center">
+            <div class="bg-black/80 rounded-xl shadow-2xl p-8 border border-white/10 text-center">
                 <!-- Error Icon -->
                 <div class="mb-6">
                     <div class="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">

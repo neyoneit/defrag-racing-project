@@ -105,7 +105,7 @@ const handleSubmit = (e) => {
                 <input type="hidden" name="_token" :value="csrfToken" />
 
                 <!-- Category Selection -->
-                <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6">
+                <div class="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6">
                     <label class="block text-sm font-bold text-white mb-3">Category</label>
                     <div class="grid grid-cols-3 gap-3">
                         <button
@@ -129,7 +129,7 @@ const handleSubmit = (e) => {
                 </div>
 
                 <!-- File Upload -->
-                <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6">
+                <div class="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 p-6">
                     <label class="block text-sm font-bold text-white mb-3">
                         PK3 Files
                         <span class="text-gray-400 font-normal">(select multiple)</span>

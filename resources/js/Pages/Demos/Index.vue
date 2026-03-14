@@ -1166,7 +1166,7 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Download Limit Info (Compact, Right Side) -->
-                    <div v-if="downloadLimitInfo" class="backdrop-blur-xl rounded-lg px-4 py-2 shadow-xl border" :class="downloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : downloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                    <div v-if="downloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="downloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : downloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
                         <div class="flex items-center gap-2">
                             <svg v-if="downloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1200,7 +1200,7 @@ watch(selectedPhysics, () => {
             <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-6 shadow-2xl border border-white/5">
+                <div class="bg-black/40 rounded-xl p-4 mb-6 shadow-2xl border border-white/5">
                     <h3 class="text-lg font-bold text-gray-100 mb-3 flex items-center">
                         <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -1523,7 +1523,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Processing Results (shows after demos finish processing) -->
-                <div v-if="processingSummary" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-cyan-500/30">
+                <div v-if="processingSummary" class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-cyan-500/30">
                     <!-- Summary header -->
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
@@ -1615,7 +1615,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Global Processing Status (always visible) -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
+                <div class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
                     <button @click="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between mb-3">
                         <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
                         <div class="flex items-center gap-2">
@@ -1673,7 +1673,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Your Uploads Section (authenticated users only) -->
-                <div v-if="$page.props.auth.user && userDemos" class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <div v-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2120,7 +2120,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Browse All Demos Section (for everyone) -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         Browse All Demos
                     </h3>
@@ -2372,8 +2372,8 @@ watch(selectedPhysics, () => {
         </div>
 
         <!-- Manual Assignment Modal -->
-        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeAssignModal">
-            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
+        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeAssignModal">
+            <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
                     <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
@@ -2694,7 +2694,7 @@ watch(selectedPhysics, () => {
     <!-- Reprocess Confirm Modal -->
     <Teleport to="body">
         <div v-if="showReprocessConfirm" class="fixed inset-0 z-[60] flex items-center justify-center" @click.self="showReprocessConfirm = false">
-            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="fixed inset-0 bg-black/60"></div>
             <div class="relative bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
                 <div class="flex items-center space-x-3 mb-4">
                     <div class="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
@@ -2723,7 +2723,7 @@ watch(selectedPhysics, () => {
     <!-- Upload Info Modal -->
     <Teleport to="body">
         <div v-if="showUploadInfo" class="fixed inset-0 z-[60] flex items-center justify-center" @click.self="showUploadInfo = false">
-            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="fixed inset-0 bg-black/60"></div>
             <div class="relative bg-gray-800 border border-gray-600/50 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
                 <div class="flex items-center space-x-3 mb-4">
                     <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"

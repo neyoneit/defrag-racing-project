@@ -927,7 +927,7 @@
                             v-show="gametypeStats[gt] && gametypeStats[gt] > 0"
                             @click="sortByGametype(gt)"
                             :class="[
-                                'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm',
+                                'px-4 py-2 rounded-lg font-bold text-sm transition-all',
                                 gametype === gt
                                     ? 'bg-blue-500/80 text-white shadow-lg ring-2 ring-blue-400'
                                     : 'bg-white/10 text-gray-300 hover:bg-white/20'
@@ -942,7 +942,7 @@
                     <div class="flex flex-wrap gap-4 justify-center items-center text-sm">
                         <button
                             @click="sortByTime"
-                            class="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
+                            class="flex items-center gap-2 bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
                             :title="column === 'time' ? 'Currently sorting by fastest time' : 'Currently sorting by date set'"
                         >
                             <img v-if="column === 'time'" src="/images/powerups/haste.svg" class="w-5 h-5" alt="Fastest" />
@@ -955,11 +955,11 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
                             </svg>
                         </button>
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                        <div class="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
                             <span class="text-gray-300">Old Top:</span>
                             <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
                         </div>
-                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                        <div class="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
                             <span class="text-gray-300">Demos Top:</span>
                             <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
                         </div>
@@ -976,7 +976,7 @@
                     <button
                         @click="mobilePhysics = mobilePhysics === 'VQ3' ? 'both' : 'VQ3'"
                         :class="[
-                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2',
                             mobilePhysics === 'VQ3'
                                 ? 'bg-blue-500/80 text-white shadow-lg ring-2 ring-blue-400'
                                 : 'bg-white/10 text-gray-300'
@@ -988,7 +988,7 @@
                     <button
                         @click="mobilePhysics = mobilePhysics === 'CPM' ? 'both' : 'CPM'"
                         :class="[
-                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2',
                             mobilePhysics === 'CPM'
                                 ? 'bg-purple-500/80 text-white shadow-lg ring-2 ring-purple-400'
                                 : 'bg-white/10 text-gray-300'
@@ -1001,7 +1001,7 @@
 
                 <div class="md:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1051,7 +1051,7 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1112,8 +1112,8 @@
         />
 
         <!-- Assign Demo to Online Record Modal -->
-        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeAssignModal">
-            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
+        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeAssignModal">
+            <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
                     <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
@@ -1220,8 +1220,8 @@
         </div>
 
         <!-- Reverse Assign: Record → Demo Modal -->
-        <div v-if="showReverseAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReverseAssignModal">
-            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-purple-500/20 shadow-2xl" @click.stop>
+        <div v-if="showReverseAssignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeReverseAssignModal">
+            <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-purple-500/20 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-purple-300">Assign Demo to Record</h3>
                     <button @click="closeReverseAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
@@ -1313,8 +1313,8 @@
             </div>
         </div>
         <!-- Reassign Modal -->
-        <div v-if="showReassignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReassignModal">
-            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl border border-yellow-500/20 shadow-2xl" @click.stop>
+        <div v-if="showReassignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeReassignModal">
+            <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl border border-yellow-500/20 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-yellow-300">Reassign Demo</h3>
                     <button @click="closeReassignModal" class="text-gray-400 hover:text-gray-200 transition-colors">

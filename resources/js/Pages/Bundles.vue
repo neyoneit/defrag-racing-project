@@ -80,7 +80,7 @@
             <div class="flex flex-col lg:flex-row gap-6">
                 <!-- Categories Sidebar -->
                 <div class="lg:w-80 flex-shrink-0">
-                    <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5 sticky top-6">
+                    <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5 sticky top-6">
                         <div class="p-4 border-b border-white/5 bg-black/20">
                             <h3 class="text-lg font-bold text-white">Categories</h3>
                         </div>
@@ -109,7 +109,7 @@
 
                 <!-- Bundles Content -->
                 <div class="flex-1">
-                    <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                    <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
                         <!-- Category Header -->
                         <div v-if="currentCategory" class="p-6 border-b border-white/5 bg-black/20">
                             <h2 class="text-2xl font-black text-white mb-1">{{ currentCategory.name }}</h2>

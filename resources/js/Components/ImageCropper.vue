@@ -59,7 +59,7 @@
     <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <!-- Background overlay -->
-            <div class="fixed inset-0 transition-opacity bg-black/80 backdrop-blur-sm" @click="handleClose"></div>
+            <div class="fixed inset-0 transition-opacity bg-black/80" @click="handleClose"></div>
 
             <!-- Modal panel -->
             <div class="inline-block w-full max-w-5xl my-8 overflow-hidden text-left align-middle transition-all transform bg-gradient-to-br from-gray-900 to-black border border-white/10 shadow-2xl rounded-2xl relative z-10">

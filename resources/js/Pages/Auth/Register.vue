@@ -42,7 +42,7 @@
             <div class="w-full max-w-lg">
 
             <!-- Register Card -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
+            <div class="bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
                 <form @submit.prevent="submit" class="space-y-5">
                     <!-- Username Field -->
                     <div>

@@ -69,7 +69,7 @@
 </script>
 
 <template>
-    <div class="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl transition-all duration-300 hover:border-blue-500/30">
+    <div class="bg-white/5 border border-white/10 rounded-xl transition-all duration-300 hover:border-blue-500/30">
         <!-- Player Header -->
         <div class="p-4 flex items-center gap-3">
             <img

@@ -82,7 +82,7 @@
 
 <template>
     <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block">
-        <div class="backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-blue-500/50 transition-all group hover:transform hover:scale-105">
+        <div class="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-blue-500/50 transition-all group hover:transform hover:scale-105">
             <!-- Map Thumbnail -->
             <div class="relative h-40 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`" onerror="this.style.backgroundImage='url(\'/images/unknown.jpg\')'">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>

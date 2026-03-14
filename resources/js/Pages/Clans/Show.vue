@@ -85,10 +85,10 @@
                 <!-- Clan Logo with effects -->
                 <div class="relative group mb-6">
                     <!-- Default glow (when no effect) -->
-                    <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-2xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 rounded-full"></div>
+                    <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 rounded-full opacity-50 group-hover:opacity-75 transition-opacity duration-500" style="box-shadow: 0 0 30px rgba(59,130,246,0.6);"></div>
 
                     <!-- Glow Effect -->
-                    <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-2xl opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
+                    <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full opacity-60" :style="`box-shadow: 0 0 40px ${avatarEffectColor};`"></div>
 
                     <!-- Pulse Effect -->
                     <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${avatarEffectColor};`"></div>
@@ -134,8 +134,8 @@
 
                     <!-- Orbs Effect -->
                     <div v-if="clan.name_effect === 'orbs'" class="absolute inset-0 -inset-x-32 -inset-y-16 pointer-events-none overflow-hidden">
-                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; background: radial-gradient(circle, ${hexToRgba(effectColor, 0.4)} 0%, ${hexToRgba(effectColor, 0.3)} 50%, transparent 100%);`"></div>
-                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; background: radial-gradient(circle, ${hexToRgba(effectColor, 0.4)} 0%, ${hexToRgba(effectColor, 0.3)} 50%, transparent 100%);`"></div>
+                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full" :style="`animation: orb-float 6s ease-in-out infinite; box-shadow: 0 0 60px 30px ${hexToRgba(effectColor, 0.3)};`"></div>
+                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; box-shadow: 0 0 60px 30px ${hexToRgba(effectColor, 0.3)};`"></div>
                     </div>
 
                     <!-- Lines Effect -->
@@ -154,8 +154,8 @@
 
                     <!-- Glitch Effect -->
                     <div v-if="clan.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-start justify-center pt-6">
-                        <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h1>
-                        <h1 class="absolute text-6xl font-black blur-[1px]" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h1>
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 2s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h1>
+                        <h1 class="absolute text-6xl font-black" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 2s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h1>
                     </div>
 
                     <!-- Wave Effect -->
@@ -198,7 +198,7 @@
                 </div>
 
                 <!-- Stats Bar -->
-                <div class="flex items-center gap-6 bg-black/40 backdrop-blur-xl rounded-full px-8 py-3 border border-white/20 shadow-2xl">
+                <div class="flex items-center gap-6 bg-black/40 rounded-full px-8 py-3 border border-white/20 shadow-2xl">
                     <div class="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
@@ -217,7 +217,7 @@
 
         <!-- Members Section -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-12 relative z-10">
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+            <div class="bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <!-- Section Header -->
                 <div class="bg-gradient-to-r from-blue-600/20 to-blue-800/20 border-b border-white/10 px-8 py-6">
                     <h2 class="text-3xl font-black text-white flex items-center gap-3">
@@ -235,7 +235,7 @@
                             v-for="player in players"
                             :key="player.id"
                             :href="route('profile.index', player.id)"
-                            class="group relative overflow-visible rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
+                            class="group relative overflow-visible rounded-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20 hover:z-50"
                         >
                             <!-- Card Background Glow -->
                             <div class="absolute inset-0 bg-gradient-to-br from-blue-600/0 to-blue-700/0 group-hover:from-blue-600/10 group-hover:to-blue-700/10 transition-all duration-500 rounded-xl"></div>
@@ -306,7 +306,7 @@
 
         <!-- Rival Clans Section -->
         <div v-if="statistics.special_sections && statistics.special_sections.rival_clans && statistics.special_sections.rival_clans.length > 0" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 mt-6 relative z-10 pb-20">
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+            <div class="bg-black/40 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <!-- Section Header -->
                 <div class="bg-gradient-to-r from-red-600/20 to-orange-800/20 border-b border-white/10 px-8 py-6">
                     <h2 class="text-3xl font-black text-white flex items-center gap-3">

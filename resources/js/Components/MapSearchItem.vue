@@ -23,7 +23,7 @@
 </script>
 
 <template>
-    <div class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-green-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-green-500/5" @click="onClick">
+    <div class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-green-500/30 hover:shadow-lg hover:shadow-green-500/5" @click="onClick">
         <div class="flex items-center gap-4">
             <!-- Thumbnail -->
             <div class="shrink-0 w-12 h-12 rounded-lg ring-2 ring-white/10 group-hover:ring-green-500/50 transition-all overflow-hidden">

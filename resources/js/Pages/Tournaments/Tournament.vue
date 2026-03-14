@@ -135,7 +135,7 @@
             </div>
 
             <!-- Main Content Card -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+            <div class="bg-black/40 rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
                 <!-- Tabs -->
                 <Tabs2 :tabs="tabs" :activeTab="tab" />
 

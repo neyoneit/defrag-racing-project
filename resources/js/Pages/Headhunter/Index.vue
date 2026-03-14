@@ -101,7 +101,7 @@ const getStatusColor = (status) => {
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
             <!-- Filters -->
-            <div class="mb-6 backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4 relative z-20">
+            <div class="mb-6 bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-4 relative z-20">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
                             v-model="search"
@@ -141,7 +141,7 @@ const getStatusColor = (status) => {
                     <div
                         v-for="challenge in challenges.data"
                         :key="challenge.id"
-                        class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300"
+                        class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl overflow-hidden hover:border-blue-500/50 transition-all duration-300"
                     >
                         <Link :href="route('headhunter.show', challenge.id)" class="block p-6">
                             <div class="flex items-start justify-between gap-4">
@@ -227,7 +227,7 @@ const getStatusColor = (status) => {
                     </div>
 
                     <!-- Empty State -->
-                    <div v-if="challenges.data.length === 0" class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-12 text-center">
+                    <div v-if="challenges.data.length === 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-xl p-12 text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-600 mx-auto mb-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                         </svg>

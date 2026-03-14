@@ -55,7 +55,7 @@
 </script>
 
 <template>
-    <div class="mb-6 backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+    <div class="mb-6 bg-white/5 rounded-xl border border-white/10 overflow-hidden">
         <RoundPart :round="round">
             <template #additional>
                 <div class="flex flex-col md:flex-row md:items-center gap-4 p-4 border-t border-white/10" v-if="active">

@@ -41,7 +41,7 @@ const submit = () => {
             <div class="w-full max-w-md">
 
             <!-- Login Card -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
+            <div class="bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
                 <!-- Status Message -->
                 <div v-if="status" class="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
                     <p class="text-sm font-medium text-green-400">{{ status }}</p>
