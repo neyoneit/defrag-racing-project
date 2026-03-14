@@ -45,6 +45,9 @@ class Kernel extends ConsoleKernel
 
         // Rematch all unassigned demos against current user aliases (runs daily at 2am)
         $schedule->command('demos:rematch-all')->withoutOverlapping()->dailyAt('02:00');
+
+        // Recalculate all player profile stats (WRs, totals, avg rank, etc.) daily at 3am
+        $schedule->command('process:all-player-stats')->withoutOverlapping()->dailyAt('03:00');
     }
 
     /**
