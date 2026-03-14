@@ -147,12 +147,12 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                                     </svg>
-                                    <span class="text-[11px] font-semibold">How it works</span>
+                                    <span class="text-[11px] font-semibold underline decoration-dotted decoration-gray-500 underline-offset-2">How it works</span>
                                 </button>
                                 <div class="absolute left-0 top-full mt-2 w-80 bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
                                     <p class="text-xs text-gray-400 leading-relaxed">
                                         Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record.
-                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> — your best maps count the most, weaker ones are diminished.
+                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> -your best maps count the most, weaker ones are diminished.
                                         The final rating is a weighted average of all your map scores. Players with fewer than <span class="text-gray-300 font-semibold">10 records</span> receive a proportional penalty.
                                         Maps with fewer than <span class="text-gray-300 font-semibold">5 players</span> or very short top times are excluded.
                                     </p>
@@ -182,8 +182,14 @@
                                     {{ rt.replace('_', ' ') }}
                                 </button>
                             </div>
-                            <div class="text-xs mt-2 text-center" :class="rankingtype === 'active_players' ? 'text-blue-400' : 'text-gray-300'">
-                                {{ rankingtype === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record' }}
+                            <div class="text-xs mt-2 text-gray-400 relative group/hint cursor-help flex items-center justify-center gap-1">
+                                <svg class="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="underline decoration-dotted decoration-gray-500 underline-offset-2">{{ rankingtype === 'active_players' ? 'Recently active players only' : 'All time rankings' }}</span>
+                                <div class="absolute top-full mt-1 left-1/2 -translate-x-1/2 hidden group-hover/hint:block z-20 w-56 p-2 bg-black/95 border border-white/20 rounded-lg text-xs text-gray-300 text-center shadow-lg">
+                                    {{ rankingtype === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record in this physics' }}
+                                </div>
                             </div>
                         </div>
 
