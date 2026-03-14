@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HeadhunterChallenge;
 use App\Models\ChallengeParticipant;
+use App\Models\Map;
 use App\Models\Record;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -73,7 +74,9 @@ class HeadhunterController extends Controller
                 ->withDanger('You are banned from creating Headhunter challenges.');
         }
 
-        return Inertia::render('Headhunter/Create');
+        return Inertia::render('Headhunter/Create', [
+            'maps' => Map::orderBy('name')->select('name', 'thumbnail')->get(),
+        ]);
     }
 
     public function store(Request $request)
