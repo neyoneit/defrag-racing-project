@@ -17,6 +17,9 @@ class ScrapeProfile implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 3;
+    public $backoff = [10, 60, 300];
+
     private $mdd_id;
 
     public function __construct($mdd_id) {
@@ -25,13 +28,19 @@ class ScrapeProfile implements ShouldQueue
     }
 
     public function handle(): void {
-        list($name, $country) = $this->get_profile($this->mdd_id);
-
         $profile = MddProfile::where('id', $this->mdd_id)->first();
 
         if ($profile) {
             return;
         }
+
+        $result = $this->get_profile($this->mdd_id);
+
+        if ($result === null) {
+            return;
+        }
+
+        list($name, $country) = $result;
 
         $user = User::where('mdd_id', $this->mdd_id)->first();
 
