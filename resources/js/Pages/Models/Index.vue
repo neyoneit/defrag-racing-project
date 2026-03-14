@@ -402,7 +402,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </svg>
                             </button>
                             <!-- Dropdown panel -->
-                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <input
                                     v-model="baseModelSearch"
                                     type="text"
@@ -454,7 +454,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </svg>
                             </button>
                             <!-- Dropdown panel -->
-                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <input
                                     v-model="authorSearch"
                                     type="text"
