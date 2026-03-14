@@ -575,17 +575,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Performance</h3>
-                    <div class="space-y-2">
-                        <!-- Header row with CPM/VQ3 labels -->
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs text-gray-500"></span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
-                            </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
+                            <span class="text-xs text-gray-600">/</span>
+                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
                         </div>
+                    </div>
+                    <div class="space-y-2">
                         <div class="flex justify-between items-center group relative">
                             <span class="text-xs text-gray-400 cursor-help">Total Records</span>
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
@@ -657,17 +655,15 @@
 
                 <!-- Map Features -->
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Map Features</h3>
-                    <div class="space-y-2">
-                        <!-- Header row with CPM/VQ3 labels -->
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs text-gray-500"></span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
-                            </div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
+                            <span class="text-xs text-gray-600">/</span>
+                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
                         </div>
+                    </div>
+                    <div class="space-y-2">
                         <div class="flex justify-between items-center group relative">
                             <span class="text-xs text-gray-400 cursor-help">Unique Maps</span>
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
@@ -715,6 +711,31 @@
                     </div>
                 </div>
 
+                <!-- Record Types -->
+                <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
+                            <span class="text-xs text-gray-600">/</span>
+                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div v-for="stat in stats.filter(s => s.value !== 'world_records' && ((profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0))" :key="stat.value" class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">{{ stat.label.replace(' Records', '') }}</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Records set on {{ stat.label.toLowerCase() }} maps or with specific game modes
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-purple-400">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
+                                <span class="text-xs text-gray-600">/</span>
+                                <span class="text-sm font-bold text-blue-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Activity & Misc -->
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Activity</h3>
@@ -746,33 +767,6 @@
                                 The weapon category where you have the most world records
                             </div>
                             <span class="text-sm font-bold text-white capitalize">{{ profile.weapon_specialist }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Record Types -->
-                <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
-                    <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Record Types</h3>
-                    <div class="space-y-2">
-                        <!-- Header row with CPM/VQ3 labels -->
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs text-gray-500"></span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
-                            </div>
-                        </div>
-                        <div v-for="stat in stats.filter(s => s.value !== 'world_records' && ((profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0))" :key="stat.value" class="flex justify-between items-center group relative">
-                            <span class="text-xs text-gray-400 cursor-help">{{ stat.label.replace(' Records', '') }}</span>
-                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
-                                Records set on {{ stat.label.toLowerCase() }} maps or with specific game modes
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
-                            </div>
                         </div>
                     </div>
                 </div>
