@@ -2321,13 +2321,35 @@ watch(selectedPhysics, () => {
                                     <td class="px-6 py-4 text-sm">
                                         <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
                                             :class="{
-                                                'bg-purple-900/50 text-purple-200': demo.status === 'assigned',
-                                                'bg-orange-900/50 text-orange-200': demo.status === 'fallback-assigned',
-                                                'bg-yellow-900/50 text-yellow-200': demo.status === 'processed',
-                                                'bg-red-900/50 text-red-200': demo.status === 'failed',
-                                                'bg-gray-900/50 text-gray-300': !['assigned', 'fallback-assigned', 'processed', 'failed'].includes(demo.status)
-                                            }">
+                                                'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
+                                                'bg-blue-900/50 text-blue-200': demo.status === 'processing',
+                                                'bg-green-900/50 text-green-200': demo.status === 'processed',
+                                                'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
+                                                'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
+                                                'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
+                                                'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'unsupported-version',
+                                                'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
+                                            }"
+                                            @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
+                                            @mouseleave="hideTooltip"
+                                            @mousemove="hoveredDemo?.id === demo.id ? updateTooltipPosition($event) : null"
+                                        >
                                             {{ demo.status ? demo.status.charAt(0).toUpperCase() + demo.status.slice(1) : '-' }}
+                                            <svg v-if="demo.status === 'unsupported-version' && demo.processing_output" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <svg v-if="demo.status === 'failed' && demo.processing_output" class="w-3 h-3 ml-1 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <svg v-if="demo.status === 'assigned' && (demo.record || demo.offline_record)" class="w-3 h-3 ml-1 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <svg v-if="demo.status === 'fallback-assigned' && demo.offline_record" class="w-3 h-3 ml-1 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <svg v-if="demo.status === 'failed-validity' && demo.validity" class="w-3 h-3 ml-1 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
                                         </span>
                                     </td>
                                     <td class="px-3 py-3 text-sm">
