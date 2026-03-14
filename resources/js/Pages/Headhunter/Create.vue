@@ -87,7 +87,7 @@ const form = useForm({
 
 const submit = () => {
     // Convert time to milliseconds without modifying the form field
-    const timeInput = form.target_time;
+    const timeInput = form.target_time.trim();
     let milliseconds = 0;
 
     if (timeInput.includes(':')) {
@@ -96,9 +96,16 @@ const submit = () => {
         const [seconds, ms] = rest.split('.');
         milliseconds = (parseInt(minutes) * 60 * 1000) + (parseInt(seconds) * 1000) + parseInt(ms || 0);
     } else {
-        // Format: SS.mmm
-        const [seconds, ms] = timeInput.split('.');
-        milliseconds = (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        const dotCount = (timeInput.match(/\./g) || []).length;
+        if (dotCount === 2) {
+            // Format: M.SS.mmm (e.g., 1.19.200)
+            const [minutes, seconds, ms] = timeInput.split('.');
+            milliseconds = (parseInt(minutes) * 60 * 1000) + (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        } else {
+            // Format: SS.mmm
+            const [seconds, ms] = timeInput.split('.');
+            milliseconds = (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        }
     }
 
     // Use transform to send converted data without modifying the form
@@ -239,10 +246,10 @@ const submit = () => {
                                 v-model="form.target_time"
                                 type="text"
                                 required
-                                placeholder="e.g., 1:23.456 or 45.123"
+                                placeholder="e.g., 1:23.456 or 1.23.456 or 45.123"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Format: MM:SS.mmm (minutes:seconds.milliseconds) or SS.mmm</p>
+                            <p class="text-xs text-gray-500 mt-1">Format: M:SS.mmm or M.SS.mmm or SS.mmm</p>
                             <div v-if="form.errors.target_time" class="text-red-400 text-sm mt-1">{{ form.errors.target_time }}</div>
                         </div>
 
