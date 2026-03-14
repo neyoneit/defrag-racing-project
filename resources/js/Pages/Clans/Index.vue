@@ -1263,7 +1263,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     </div>
 
                     <div class="border-t border-white/5 bg-transparent p-3" v-if="clans.total > clans.per_page">
-                        <Pagination :current_page="clans.current_page" :last_page="clans.last_page" :link="clans.first_page_url" />
+                        <Pagination :current_page="clans.current_page" :last_page="clans.last_page" :link="clans.first_page_url" :only="['clans']" />
                     </div>
                 </div>
             </div>

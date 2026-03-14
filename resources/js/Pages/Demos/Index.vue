@@ -2114,6 +2114,7 @@ watch(selectedPhysics, () => {
                                 :current_page="userDemos.current_page"
                                 :link="userDemos.path + '?'"
                                 pageName="userPage"
+                                :only="['userDemos', 'publicDemos']"
                             />
                         </div>
                     </template>
@@ -2365,6 +2366,7 @@ watch(selectedPhysics, () => {
                             :current_page="publicDemos.current_page"
                             :link="publicDemos.path + '?'"
                             pageName="browsePage"
+                            :only="['userDemos', 'publicDemos']"
                         />
                     </div>
                 </div>

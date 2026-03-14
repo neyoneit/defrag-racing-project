@@ -13,7 +13,7 @@
         },
         only: {
             type: Array,
-            default: () => ['userDemos', 'publicDemos']
+            default: () => []
         }
     });
 
@@ -59,7 +59,7 @@
         router.visit(url, {
             preserveScroll: true,
             preserveState: true,
-            only: props.only,
+            ...(props.only.length > 0 ? { only: props.only } : {}),
             onSuccess: () => {
                 // Update browser URL so it reflects the current page
                 window.history.replaceState(window.history.state, '', url);
