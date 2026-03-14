@@ -305,22 +305,19 @@
         localStorage.setItem('mapview_show_oldtop', value ? '1' : '0');
         router.reload({
             data: {
-                showOldtop: value
+                showOldtop: value,
+                showOffline: showOfflineLocal.value
             }
         })
     }
 
     const onChangeOffline = (value) => {
-        // If turning on offline, turn off oldtop
-        if (value) {
-            showOldtopLocal.value = false;
-        }
         showOfflineLocal.value = value;
         localStorage.setItem('mapview_show_offline', value ? '1' : '0');
         router.reload({
             data: {
                 showOffline: value,
-                showOldtop: false
+                showOldtop: showOldtopLocal.value
             }
         })
     }
@@ -452,64 +449,60 @@
         }, 200);
     };
 
-    const getVq3Records = computed(() => {
-        // Show offline records if toggle is on
-        if (props.showOffline && props.vq3OfflineRecords) {
-            return props.vq3OfflineRecords
-        }
+    const mergeRecordSources = (onlineRecords, oldRecords, offlineRecords) => {
+        let combined = [...onlineRecords.data];
 
-        // Show oldtop records if toggle is on
-        if (props.showOldtop) {
-            let oldtop_data = props.vq3OldRecords.data.map((item) => {
-                item['oldtop'] = true
-                return item
+        // Merge oldtop records
+        if (props.showOldtop && oldRecords) {
+            let oldtop_data = oldRecords.data.map((item) => {
+                item['oldtop'] = true;
+                return item;
             });
-
-            let result = {
-                total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
-                data: [...props.vq3Records.data, ...oldtop_data],
-                first_page_url: props.vq3Records.first_page_url,
-                current_page: props.vq3Records.current_page,
-                last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
-                per_page: props.vq3Records.per_page
-            }
-
-            result.data.sort((a, b) => a.time - b.time)
-            return result
+            combined = [...combined, ...oldtop_data];
         }
 
-        // Default: show online records
-        return props.vq3Records
+        // Merge offline/demo records
+        if (props.showOffline && offlineRecords) {
+            combined = [...combined, ...offlineRecords.data];
+        }
+
+        // Sort by time and recalculate ranks
+        combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
+        combined = combined.map((item, index) => ({ ...item, rank: index + 1 }));
+
+        let maxTotal = onlineRecords.total;
+        let maxLastPage = onlineRecords.last_page;
+        if (props.showOldtop && oldRecords) {
+            maxTotal = Math.max(maxTotal, oldRecords.total);
+            maxLastPage = Math.max(maxLastPage, oldRecords.last_page);
+        }
+        if (props.showOffline && offlineRecords) {
+            maxTotal = Math.max(maxTotal, offlineRecords.total);
+            maxLastPage = Math.max(maxLastPage, offlineRecords.last_page);
+        }
+
+        return {
+            total: maxTotal,
+            data: combined,
+            first_page_url: onlineRecords.first_page_url,
+            current_page: onlineRecords.current_page,
+            last_page: maxLastPage,
+            per_page: onlineRecords.per_page
+        };
+    };
+
+    const getVq3Records = computed(() => {
+        if (props.showOldtop || props.showOffline) {
+            return mergeRecordSources(props.vq3Records, props.vq3OldRecords, props.vq3OfflineRecords);
+        }
+        return props.vq3Records;
     })
 
     const getCpmRecords = computed(() => {
-        // Show offline records if toggle is on
-        if (props.showOffline && props.cpmOfflineRecords) {
-            return props.cpmOfflineRecords
+        if (props.showOldtop || props.showOffline) {
+            return mergeRecordSources(props.cpmRecords, props.cpmOldRecords, props.cpmOfflineRecords);
         }
-
-        // Show oldtop records if toggle is on
-        if (props.showOldtop) {
-            let oldtop_data = props.cpmOldRecords.data.map((item) => {
-                item['oldtop'] = true
-                return item
-            });
-
-            let result = {
-                total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
-                data: [...props.cpmRecords.data, ...oldtop_data],
-                first_page_url: props.cpmRecords.first_page_url,
-                current_page: props.cpmRecords.current_page,
-                last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
-                per_page: props.cpmRecords.per_page
-            }
-
-            result.data.sort((a, b) => a.time - b.time)
-            return result
-        }
-
-        // Default: show online records
-        return props.cpmRecords
+        return props.cpmRecords;
     })
 
     // Helper functions for weapon/item/function icons and names
@@ -976,6 +969,14 @@
                             <span class="text-gray-300">Demos Top:</span>
                             <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
                         </div>
+                        <div class="text-xs text-gray-500">
+                            <Link v-if="page.props.auth?.user" href="/user/profile#map-view-defaults" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
+                                Set your defaults
+                            </Link>
+                            <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
+                                <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to save defaults
+                            </span>
+                        </div>
                     </div>
 
 </div> <!-- Close content layer -->
@@ -1037,7 +1038,7 @@
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1087,7 +1088,7 @@
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>

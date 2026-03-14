@@ -232,6 +232,14 @@ class SettingsController extends Controller
         $user->save();
     }
 
+    public function mapViewPreferences(Request $request) {
+        $user = $request->user();
+
+        $user->default_show_oldtop = $request->boolean('default_show_oldtop');
+        $user->default_show_offline = $request->boolean('default_show_offline');
+        $user->save();
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 

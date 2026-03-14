@@ -180,6 +180,7 @@ Route::post('/settings/mdd/verify', [SettingsController::class, 'verify'])->name
 Route::post('/settings/notifications', [SettingsController::class, 'notifications'])->name('settings.notifications');
 Route::post('/settings/background', [SettingsController::class, 'background'])->name('settings.background');
 Route::delete('/settings/background', [SettingsController::class, 'deleteBackground'])->name('settings.background.destroy');
+Route::post('/settings/map-view-preferences', [SettingsController::class, 'mapViewPreferences'])->name('settings.map-view-preferences');
 
 
 Route::get('/notifications/records', [NotificationsController::class, 'records'])->middleware('auth')->name('notifications.index');
