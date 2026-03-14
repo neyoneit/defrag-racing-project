@@ -91,16 +91,6 @@
         font-size: 14px;
     }
 
-    /* Make black Q3 text (^0) visible with white outline - like subtitles/memes */
-    .online-player-name-text :deep(.q3c-0) {
-        text-shadow:
-            -1px -1px 0 #fff,
-            1px -1px 0 #fff,
-            -1px 1px 0 #fff,
-            1px 1px 0 #fff,
-            0 0 3px #fff !important;
-    }
-
     .player-name-stroke {
         text-shadow:
             -1px -1px 0 #000,
