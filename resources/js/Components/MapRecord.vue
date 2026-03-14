@@ -252,32 +252,8 @@
             </div>
         </Teleport>
 
-        <!-- Time - MASSIVE and eye-catching -->
-        <div class="text-right">
-            <div
-                class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                :class="{
-                    'text-amber-300': record.oldtop,
-                    'text-emerald-300': isMyRecord && !record.oldtop,
-                    'text-white': !isMyRecord && !record.oldtop
-                }"
-            >
-                {{ formatTime(record.time) }}
-            </div>
-            <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                -{{ formatTime(timeDiff) }}
-            </div>
-        </div>
-
-        <!-- Date & Demo - More visible -->
-        <div class="flex items-center gap-2 opacity-90 group-hover:opacity-100 transition-opacity">
-            <div
-                class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                :title="record.date_set"
-            >
-                {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}
-            </div>
-
+        <!-- Action Icons - Fixed width to keep time/date columns aligned -->
+        <div class="flex items-center gap-1 w-16 justify-end flex-shrink-0">
             <a
                 v-if="(record.uploaded_demos && record.uploaded_demos.length > 0) || (isOfflineRecord && record.demo) || (isOnlineDemo && record.demo)"
                 :href="(isOfflineRecord || isOnlineDemo) ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
@@ -295,7 +271,6 @@
                 </svg>
             </a>
 
-            <!-- Assign to Online Record Button (for online demos without record_id) -->
             <button
                 v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
@@ -307,7 +282,6 @@
                 </svg>
             </button>
 
-            <!-- Assign Demo to this Record (reverse: record has matching unassigned demos, no demo yet) -->
             <button
                 v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
                 @click.stop="emit('assign-from-record', record)"
@@ -319,7 +293,6 @@
                 </svg>
             </button>
 
-            <!-- Reassign Demo (record already has a demo, allow changing it) -->
             <button
                 v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                 @click.stop="emit('reassign-record', record)"
@@ -331,7 +304,6 @@
                 </svg>
             </button>
 
-            <!-- Report Demo Button -->
             <button
                 v-if="canReportDemo && getDemoForReport"
                 @click.stop="showReportModal = true"
@@ -342,7 +314,33 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             </button>
+        </div>
 
+        <!-- Time - MASSIVE and eye-catching -->
+        <div class="text-right flex-shrink-0 min-w-[70px]">
+            <div
+                class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                :class="{
+                    'text-amber-300': record.oldtop,
+                    'text-emerald-300': isMyRecord && !record.oldtop,
+                    'text-white': !isMyRecord && !record.oldtop
+                }"
+            >
+                {{ formatTime(record.time) }}
+            </div>
+            <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                -{{ formatTime(timeDiff) }}
+            </div>
+        </div>
+
+        <!-- Date -->
+        <div class="flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">
+            <div
+                class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                :title="record.date_set"
+            >
+                {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}
+            </div>
         </div>
 
         <!-- Left side badges -->
