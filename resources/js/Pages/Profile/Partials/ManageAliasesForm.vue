@@ -150,7 +150,7 @@ const cancelAddAlias = () => {
                     id="new_alias"
                     v-model="newAlias"
                     type="text"
-                    placeholder="Enter alias (e.g., ^4[^7gt^4]^7neiT^4.)"
+                    placeholder="Enter alias (e.g., [gt]neiT.)"
                     class="mt-1 block w-full"
                     :disabled="processing"
                     maxlength="255"

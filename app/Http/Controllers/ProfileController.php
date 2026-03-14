@@ -7,6 +7,7 @@ use Inertia\Inertia;
 
 use App\Models\User;
 use App\Models\Record;
+use App\Models\Map;
 use App\Models\MddProfile;
 
 use Illuminate\Support\Facades\DB;
@@ -136,18 +137,7 @@ class ProfileController extends Controller {
         ", [$user->mdd_id]);
         $mostActiveMonthData = $mostActiveMonth[0] ?? null;
 
-        // Weapon Specialist - Which weapon type you dominate most (by WR count)
-        $weaponStats = [];
-        $weapons = ['rocket', 'plasma', 'grenade', 'bfg', 'mg', 'sg', 'lg', 'rg'];
-        foreach ($weapons as $weapon) {
-            $weaponStats[$weapon] = Record::where('mdd_id', $user->mdd_id)
-                ->where('mode', 'LIKE', "%{$weapon}%")
-                ->where('rank', 1)
-                ->count();
-        }
-        arsort($weaponStats);
-        $weaponSpecialist = array_key_first($weaponStats);
-        $weaponSpecialistCount = $weaponStats[$weaponSpecialist] ?? 0;
+        // Weapon Specialist - now cached in mdd_profiles table via processStats()
 
         // Marathon Runner - Longest time record set
         $marathonRecord = Record::where('mdd_id', $user->mdd_id)
@@ -234,8 +224,6 @@ class ProfileController extends Controller {
             $profileData->vq3_dominance = $dominanceVq3;
             $profileData->first_record_date = $firstRecordDate;
             $profileData->most_active_month = $mostActiveMonthData;
-            $profileData->weapon_specialist = $weaponSpecialist;
-            $profileData->weapon_specialist_count = $weaponSpecialistCount;
             $profileData->marathon_record = $marathonRecord;
         }
 
@@ -437,15 +425,7 @@ class ProfileController extends Controller {
         $mostActiveMonth = DB::select("SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count FROM records WHERE mdd_id = ? GROUP BY month ORDER BY count DESC LIMIT 1", [$user->id]);
         $mostActiveMonthData = $mostActiveMonth[0] ?? null;
 
-        // Weapon Specialist
-        $weaponStats = [];
-        $weapons = ['rocket', 'plasma', 'grenade', 'bfg', 'mg', 'sg', 'lg', 'rg'];
-        foreach ($weapons as $weapon) {
-            $weaponStats[$weapon] = Record::where('mdd_id', $user->id)->where('mode', 'LIKE', "%{$weapon}%")->where('rank', 1)->count();
-        }
-        arsort($weaponStats);
-        $weaponSpecialist = array_key_first($weaponStats);
-        $weaponSpecialistCount = $weaponStats[$weaponSpecialist] ?? 0;
+        // Weapon Specialist - now cached in mdd_profiles table via processStats()
 
         // Marathon Runner
         $marathonRecord = Record::where('mdd_id', $user->id)->orderBy('time', 'DESC')->first(['time', 'mapname', 'physics', 'mode']);
@@ -523,8 +503,6 @@ class ProfileController extends Controller {
         $user->vq3_dominance = $dominanceVq3;
         $user->first_record_date = $firstRecordDate;
         $user->most_active_month = $mostActiveMonthData;
-        $user->weapon_specialist = $weaponSpecialist;
-        $user->weapon_specialist_count = $weaponSpecialistCount;
         $user->marathon_record = $marathonRecord;
 
         // Get competitors and rivals (with error handling)
