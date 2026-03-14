@@ -231,7 +231,7 @@
                                 <div v-if="showResultsSection" class="fixed inset-0 z-40" @click="closeSearch"></div>
 
                                 <!-- Search Results Dropdown -->
-                                <div v-if="showResultsSection" class="absolute top-full mt-2 right-0 rounded-xl shadow-2xl backdrop-blur-xl bg-gray-950 border border-white/10 flex overflow-hidden z-50" style="width: 600px; max-height: 600px;" @click.stop>
+                                <div v-if="showResultsSection" class="absolute top-full mt-2 right-0 rounded-xl shadow-2xl bg-gray-950 border border-white/10 flex overflow-hidden z-50" style="width: 600px; max-height: 600px;" @click.stop>
 
                                     <!-- Left Sidebar - Filter Tabs -->
                                     <div class="flex flex-col border-r border-white/10 w-40 shrink-0">
@@ -291,7 +291,7 @@
 
                                             <!-- Demos -->
                                             <div v-if="demos?.length > 0 && searchCategory == 'demos'" @click="closeSearch">
-                                                <Link v-for="demo in demos" :key="demo.id" :href="route('demos.index')" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-orange-500/5">
+                                                <Link v-for="demo in demos" :key="demo.id" :href="route('demos.index')" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/5">
                                                     <!-- Icon -->
                                                     <div class="shrink-0 flex items-center justify-center w-12 h-12 rounded-lg bg-orange-500/20 ring-2 ring-white/10 group-hover:ring-orange-500/50 transition-all">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-orange-400">
@@ -314,7 +314,7 @@
 
                                             <!-- Clans -->
                                             <div v-if="clans?.length > 0 && searchCategory == 'clans'" @click="closeSearch">
-                                                <Link v-for="clan in clans" :key="clan.id" :href="route('clans.show', clan.id)" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-cyan-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-cyan-500/5">
+                                                <Link v-for="clan in clans" :key="clan.id" :href="route('clans.show', clan.id)" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/5">
                                                     <!-- Icon -->
                                                     <div class="shrink-0 flex items-center justify-center w-12 h-12 rounded-lg bg-cyan-500/20 ring-2 ring-white/10 group-hover:ring-cyan-500/50 transition-all">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-cyan-400">
@@ -337,7 +337,7 @@
 
                                             <!-- Bundles -->
                                             <div v-if="bundles?.length > 0 && searchCategory == 'bundles'" @click="closeSearch">
-                                                <Link v-for="bundle in bundles" :key="bundle.id" :href="route('bundles', bundle.id)" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-yellow-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-yellow-500/5">
+                                                <Link v-for="bundle in bundles" :key="bundle.id" :href="route('bundles', bundle.id)" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-yellow-500/30 hover:shadow-lg hover:shadow-yellow-500/5">
                                                     <!-- Icon -->
                                                     <div class="shrink-0 flex items-center justify-center w-12 h-12 rounded-lg bg-yellow-500/20 ring-2 ring-white/10 group-hover:ring-yellow-500/50 transition-all">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400">

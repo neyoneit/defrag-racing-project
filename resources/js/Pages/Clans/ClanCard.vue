@@ -49,7 +49,7 @@
 
 <template>
     <div
-        class="group relative overflow-visible rounded-xl transition-all duration-300 hover:scale-[1.01] backdrop-blur-xl"
+        class="group relative overflow-visible rounded-xl transition-all duration-300 hover:scale-[1.01]"
         :class="highlighted ? 'bg-gradient-to-br from-blue-600/20 to-blue-800/20 border-2 border-blue-500/30' : 'bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 hover:border-blue-500/30'"
     >
         <!-- Background Image -->
@@ -71,7 +71,7 @@
                         <div v-if="!clan.avatar_effect || clan.avatar_effect === 'none'" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 blur-lg opacity-0 group-hover/link:opacity-40 transition-opacity duration-500 rounded-full pointer-events-none"></div>
 
                         <!-- Glow Effect -->
-                        <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75 pointer-events-none" :style="`background-color: ${avatarEffectColor};`"></div>
+                        <div v-if="clan.avatar_effect === 'glow'" class="absolute inset-0 rounded-full opacity-50 pointer-events-none" :style="`background-color: ${avatarEffectColor}; box-shadow: 0 0 20px ${avatarEffectColor};`"></div>
 
                         <!-- Pulse Effect -->
                         <div v-if="clan.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75 pointer-events-none" :style="`background-color: ${avatarEffectColor};`"></div>
@@ -137,8 +137,8 @@
 
                             <!-- Glitch Effect -->
                             <div v-if="clan.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-center">
-                                <h3 class="absolute text-2xl font-bold blur-[1px] truncate" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h3>
-                                <h3 class="absolute text-2xl font-bold blur-[1px] truncate" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h3>
+                                <h3 class="absolute text-2xl font-bold truncate" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 2s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(clan.name)"></h3>
+                                <h3 class="absolute text-2xl font-bold truncate" :style="`color: ${hexToRgba(effectColor, 0.3)}; animation: glitch-text 2s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(clan.name)"></h3>
                             </div>
 
                             <!-- Wave Text Effect -->
@@ -239,7 +239,7 @@
                                         />
                                     </Link>
                                     <template #content>
-                                        <div class="py-2 px-3 bg-gray-900 backdrop-blur-sm rounded-lg border border-white/10 whitespace-nowrap">
+                                        <div class="py-2 px-3 bg-gray-900 rounded-lg border border-white/10 whitespace-nowrap">
                                             <div class="text-gray-200 font-medium" v-html="q3tohtml(player.user?.name)"></div>
                                         </div>
                                     </template>

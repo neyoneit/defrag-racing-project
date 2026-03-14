@@ -276,7 +276,7 @@ const updateNotifications = () => {
             <!-- Profile, MDD & Social Media Grid -->
             <div class="grid grid-cols-3 gap-4">
                 <!-- Profile Card -->
-                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/60 border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -344,23 +344,23 @@ const updateNotifications = () => {
                 </div>
 
                 <!-- MDD Verification -->
-                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                     <VerifyMddProfile :user="user" />
                 </div>
 
                 <!-- Social Media -->
-                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
             </div>
 
             <!-- Player Aliases Card -->
-            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+            <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                 <ManageAliasesForm :user="user" />
             </div>
 
             <!-- Profile Images Card -->
-            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
+            <div class="rounded-xl bg-black/60 border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -463,7 +463,7 @@ const updateNotifications = () => {
             </div>
 
             <!-- Preferences Card -->
-            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
+            <div class="rounded-xl bg-black/60 border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -572,7 +572,7 @@ const updateNotifications = () => {
             <!-- Notifications & Security Grid -->
             <div class="grid grid-cols-2 gap-4">
                 <!-- Notifications Card -->
-                <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/60 border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -711,17 +711,17 @@ const updateNotifications = () => {
 
                 <!-- Security Cards Stacked -->
                 <div class="space-y-4">
-                    <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+                    <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                         <UpdatePasswordForm />
                     </div>
-                    <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+                    <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                         <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
                     </div>
                 </div>
             </div>
 
             <!-- Sessions -->
-            <div class="rounded-xl backdrop-blur-xl bg-black/60 border border-white/10 overflow-hidden">
+            <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                 <LogoutOtherBrowserSessionsForm :sessions="sessions" />
             </div>
 

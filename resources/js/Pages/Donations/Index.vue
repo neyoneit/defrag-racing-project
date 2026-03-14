@@ -491,7 +491,7 @@ const getYearProgress = (year, yearTotal) => {
         <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
 
             <!-- Current Year Progress -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <div class="relative mb-2">
                     <h2 class="text-2xl font-bold text-white text-center">{{ currentYear }} Progress</h2>
 
@@ -517,7 +517,7 @@ const getYearProgress = (year, yearTotal) => {
                         <Teleport to="body">
                             <div
                                 v-if="isDropdownOpen"
-                                class="fixed w-80 max-h-96 overflow-y-auto backdrop-blur-xl bg-black/90 rounded-lg border border-white/10 shadow-2xl z-[9999]"
+                                class="fixed w-80 max-h-96 overflow-y-auto bg-black/90 rounded-lg border border-white/10 shadow-2xl z-[9999]"
                                 :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }"
                             >
                                 <!-- Popular Currencies Header (not sticky) -->
@@ -554,7 +554,7 @@ const getYearProgress = (year, yearTotal) => {
                                     <!-- Separator and All Currencies Header (sticky) -->
                                     <div
                                         v-if="popularCurrencies.includes(currency) && availableCurrencies.indexOf(currency) === popularCurrencies.filter(c => availableCurrencies.includes(c)).length - 1"
-                                        class="sticky top-0 border-t border-white/20 bg-black/95 backdrop-blur-xl"
+                                        class="sticky top-0 border-t border-white/20 bg-black/95"
                                     >
                                         <div class="px-4 py-2 text-xs text-gray-400 uppercase tracking-wide flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -611,7 +611,7 @@ const getYearProgress = (year, yearTotal) => {
             </div>
 
             <!-- Where Donations Go -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <h2 class="text-2xl font-bold text-white mb-4 text-center">Where Your Support Goes</h2>
                 <div class="max-w-3xl mx-auto space-y-4 text-gray-300">
                     <div id="operational-costs">
@@ -659,7 +659,7 @@ const getYearProgress = (year, yearTotal) => {
             </div>
 
             <!-- Donate Button -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
+            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
                 <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
                 <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
 
@@ -678,7 +678,7 @@ const getYearProgress = (year, yearTotal) => {
             <div class="space-y-4">
                 <h2 class="text-3xl font-bold text-white text-center mb-6">Donation History</h2>
 
-                <div v-for="yearData in groupedByYear" :key="yearData.year" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+                <div v-for="yearData in groupedByYear" :key="yearData.year" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                     <div
                         class="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
                         @click="toggleYear(yearData.year)"
@@ -783,7 +783,7 @@ const getYearProgress = (year, yearTotal) => {
             </div>
 
             <!-- All-Time Total -->
-            <div class="mt-12 backdrop-blur-xl bg-black/60 border border-white/10 rounded-xl p-8 text-center">
+            <div class="mt-12 bg-black/60 border border-white/10 rounded-xl p-8 text-center">
                 <h2 class="text-2xl font-bold text-white mb-4">All-Time Total</h2>
 
                 <!-- Progress Bar showing split -->

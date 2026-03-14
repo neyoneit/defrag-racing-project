@@ -75,7 +75,7 @@ const getStatusColor = (status) => {
         <!-- Content Section -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
                 <!-- Challenge Header -->
-                <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
+                <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8 mb-6">
                     <div class="flex items-start justify-between gap-4 mb-6">
                         <div class="flex-1">
                             <div class="flex items-center gap-3 mb-3">
@@ -101,14 +101,14 @@ const getStatusColor = (status) => {
 
                     <!-- Challenge Details -->
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-4">
+                        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
                             <div class="text-sm text-gray-400 mb-1">Map</div>
                             <Link :href="`/maps/${challenge.mapname}`" class="text-white font-bold hover:text-blue-400 transition-colors">
                                 {{ challenge.mapname }}
                             </Link>
                         </div>
 
-                        <div class="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-4">
+                        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
                             <div class="text-sm text-gray-400 mb-1">Physics & Mode</div>
                             <div class="flex items-center gap-2">
                                 <img :src="`/images/modes/${challenge.physics}-icon.svg`" class="w-5 h-5" :alt="challenge.physics" />
@@ -116,12 +116,12 @@ const getStatusColor = (status) => {
                             </div>
                         </div>
 
-                        <div class="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-4">
+                        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
                             <div class="text-sm text-gray-400 mb-1">Target Time</div>
                             <div class="text-yellow-400 font-black text-xl">{{ formatTime(challenge.target_time) }}</div>
                         </div>
 
-                        <div class="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-4">
+                        <div class="bg-black/40 border border-white/10 rounded-xl p-4">
                             <div class="text-sm text-gray-400 mb-1">Participants</div>
                             <div class="text-white font-bold text-xl">{{ challenge.participants?.length || 0 }}</div>
                         </div>
@@ -211,14 +211,14 @@ const getStatusColor = (status) => {
                 </div>
 
                 <!-- Approved Participants -->
-                <div v-if="challenge.participants && challenge.participants.length > 0" class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
+                <div v-if="challenge.participants && challenge.participants.length > 0" class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
                     <h2 class="text-2xl font-black text-white mb-6">Successful Completions</h2>
 
                     <div class="space-y-4">
                         <div
                             v-for="participant in challenge.participants"
                             :key="participant.id"
-                            class="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl p-4"
+                            class="bg-black/40 border border-white/10 rounded-xl p-4"
                         >
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-4">
@@ -268,7 +268,7 @@ const getStatusColor = (status) => {
             <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 bg-black/75 transition-opacity" aria-hidden="true" @click="showSubmitModal = false"></div>
 
-                <div class="inline-block align-bottom backdrop-blur-xl bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="inline-block align-bottom bg-gradient-to-br from-gray-900/95 to-gray-950/95 border border-white/10 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     <div class="p-6">
                         <h3 class="text-2xl font-black text-white mb-4">Submit Proof</h3>
 

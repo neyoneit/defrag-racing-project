@@ -391,7 +391,7 @@ const closeServerDropdown = () => {
                 </div>
 
                 <!-- Maplist Header Card -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-2xl border border-white/5 p-6 md:p-8 shadow-2xl">
+                <div class="bg-black/40 rounded-2xl border border-white/5 p-6 md:p-8 shadow-2xl">
                     <!-- Edit Mode -->
                     <div v-if="isEditing">
                         <div class="mb-6">
@@ -537,7 +537,7 @@ const closeServerDropdown = () => {
 
                         <!-- Stats Cards Row -->
                         <div class="flex flex-wrap gap-4 mb-6">
-                            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-xl border border-blue-500/30 backdrop-blur-sm">
+                            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-xl border border-blue-500/30">
                                 <div class="p-2 bg-blue-500/20 rounded-lg">
                                     <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
@@ -549,7 +549,7 @@ const closeServerDropdown = () => {
                                 </div>
                             </div>
 
-                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-red-600/20 to-red-700/10 rounded-xl border border-red-500/30 backdrop-blur-sm">
+                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-red-600/20 to-red-700/10 rounded-xl border border-red-500/30">
                                 <div class="p-2 bg-red-500/20 rounded-lg">
                                     <svg class="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
@@ -561,7 +561,7 @@ const closeServerDropdown = () => {
                                 </div>
                             </div>
 
-                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-xl border border-yellow-500/30 backdrop-blur-sm">
+                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-xl border border-yellow-500/30">
                                 <div class="p-2 bg-yellow-500/20 rounded-lg">
                                     <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -574,7 +574,7 @@ const closeServerDropdown = () => {
                             </div>
 
                             <!-- Creator Info (only for non-Play Later) -->
-                            <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-xl border border-purple-500/30 backdrop-blur-sm hover:border-purple-400/50 transition-all group overflow-visible">
+                            <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-xl border border-purple-500/30 hover:border-purple-400/50 transition-all group overflow-visible">
                                 <div class="relative w-14 h-14 flex-shrink-0">
                                     <div :class="'avatar-effect-' + (maplist.user?.avatar_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}; --border-color: ${maplist.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 24px`">
                                         <img
@@ -631,7 +631,7 @@ const closeServerDropdown = () => {
                                         @blur="handleTagInputBlur"
                                         type="text"
                                         placeholder="Add custom tag..."
-                                        class="flex-1 px-4 py-2 backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        class="flex-1 px-4 py-2 bg-black/40 border border-white/5 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         :disabled="addingTag" />
                                     <button
                                         @click="addCustomTag"
@@ -646,7 +646,7 @@ const closeServerDropdown = () => {
                                     <div
                                         v-if="showAllTags && allTags.length > 0"
                                         :style="dropdownStyle"
-                                        class="fixed backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg shadow-xl p-3 z-[99999]">
+                                        class="fixed bg-black/40 border border-white/5 rounded-lg shadow-xl p-3 z-[99999]">
                                         <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
                                         <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto">
                                             <button
@@ -694,12 +694,12 @@ const closeServerDropdown = () => {
                 </div>
 
                 <!-- Server Selection (for Play Later only) -->
-                <div v-if="isPlayLater && servers && servers.length > 0" class="backdrop-blur-xl bg-black/40 border border-white/5 rounded-lg p-4 mb-4 relative z-30" @click.stop>
+                <div v-if="isPlayLater && servers && servers.length > 0" class="bg-black/40 border border-white/5 rounded-lg p-4 mb-4 relative z-30" @click.stop>
                     <label class="block text-sm font-semibold text-gray-300 mb-2">Select Server to Play:</label>
                     <div class="relative">
                         <div
                             @click="showServerDropdown = !showServerDropdown"
-                            class="w-full backdrop-blur-xl bg-black/60 border border-white/10 text-white rounded-lg px-4 py-2 cursor-pointer hover:border-white/20 transition">
+                            class="w-full bg-black/60 border border-white/10 text-white rounded-lg px-4 py-2 cursor-pointer hover:border-white/20 transition">
                             <div v-if="!selectedServer" class="text-gray-400">Choose a server...</div>
                             <div v-else class="flex items-center justify-between gap-2">
                                 <div class="flex items-center gap-2 min-w-0">
@@ -710,7 +710,7 @@ const closeServerDropdown = () => {
                                 <span v-else class="text-gray-600 text-xs font-bold flex-shrink-0">EMPTY</span>
                             </div>
                         </div>
-                        <div v-if="showServerDropdown" class="absolute z-50 w-full mt-1 backdrop-blur-xl bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
+                        <div v-if="showServerDropdown" class="absolute z-50 w-full mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
                             <div
                                 v-for="server in servers"
                                 :key="server.id"

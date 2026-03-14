@@ -349,7 +349,7 @@ function currentViewerModel() {
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 py-6">
 
             <!-- ==================== STEP 1: Upload Form ==================== -->
-            <div v-if="step === 1" class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 p-8 shadow-2xl">
+            <div v-if="step === 1" class="bg-black/40 rounded-xl border border-white/5 p-8 shadow-2xl">
                 <!-- Error -->
                 <div v-if="uploadError" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
                     <div class="flex items-center gap-3">
@@ -521,7 +521,7 @@ function currentViewerModel() {
             <!-- ==================== STEP 2: Preview & GIF Generation ==================== -->
             <div v-if="step === 2" class="space-y-6">
                 <!-- Progress info -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 p-6 shadow-2xl">
+                <div class="bg-black/40 rounded-xl border border-white/5 p-6 shadow-2xl">
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h2 class="text-xl font-bold text-white">Preview & Generate Thumbnails</h2>
@@ -562,7 +562,7 @@ function currentViewerModel() {
                     <div
                         v-for="(model, idx) in detectedModels"
                         :key="idx"
-                        class="backdrop-blur-xl bg-black/40 rounded-xl border p-4 shadow-2xl"
+                        class="bg-black/40 rounded-xl border p-4 shadow-2xl"
                         :class="currentModelIndex === idx ? 'border-blue-500/50' : generatedGifs[idx]?.rotateBlob ? 'border-green-500/20' : 'border-white/5'">
 
                         <div class="flex items-center gap-3 mb-3">
@@ -616,7 +616,7 @@ function currentViewerModel() {
                 </div>
 
                 <!-- 3D Viewer (square aspect ratio to match GIF output) -->
-                <div v-if="currentModelIndex >= 0 && currentViewerModel()?.viewer_path" class="backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 overflow-hidden shadow-2xl mx-auto" style="width: 800px; max-width: 100%;">
+                <div v-if="currentModelIndex >= 0 && currentViewerModel()?.viewer_path" class="bg-black/40 rounded-xl border border-white/5 overflow-hidden shadow-2xl mx-auto" style="width: 800px; max-width: 100%;">
                     <div class="relative" style="width: 800px; height: 800px; max-width: 100%;">
                         <!-- Shadow viewer for shadow models -->
                         <ShadowViewer
@@ -690,7 +690,7 @@ function currentViewerModel() {
             </div>
 
             <!-- ==================== STEP 3: Done ==================== -->
-            <div v-if="step === 3" class="backdrop-blur-xl bg-black/40 rounded-xl border border-green-500/20 p-8 shadow-2xl text-center">
+            <div v-if="step === 3" class="bg-black/40 rounded-xl border border-green-500/20 p-8 shadow-2xl text-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-green-400 mx-auto mb-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

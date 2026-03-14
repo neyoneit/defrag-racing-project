@@ -1400,7 +1400,7 @@ const confirmNsfw = () => {
     <Head :title="model.name" />
 
     <!-- NSFW Age Gate Modal -->
-    <div v-if="needsNsfwGate && !isThumbnailMode" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+    <div v-if="needsNsfwGate && !isThumbnailMode" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
         <div class="max-w-md mx-auto p-8 bg-gray-900/90 border border-red-500/30 rounded-2xl text-center shadow-2xl">
             <div class="text-5xl mb-4">🔞</div>
             <h2 class="text-2xl font-black text-white mb-3">Age-Restricted Content</h2>
@@ -1458,7 +1458,7 @@ const confirmNsfw = () => {
                     <!-- Left Column: 3D Viewer / Preview -->
                     <div :class="isThumbnailMode ? 'w-full h-full' : ''" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                         <!-- 3D Viewer Card -->
-                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 pt-4 px-4 pb-4 mb-6']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
+                        <div :class="[isThumbnailMode ? 'w-full h-full' : 'bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 pt-4 px-4 pb-4 mb-6']" :style="isThumbnailMode ? 'width: 100%; height: 100%; margin: 0; padding: 0;' : ''">
                             <!-- Header (top of viewer card) -->
                             <div v-if="!isThumbnailMode" class="mb-4">
                                 <!-- Row 1: Title + Command + Tags -->
@@ -1726,7 +1726,7 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- Technical Details -->
-                        <div class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
+                        <div class="bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-6 border border-white/10 mb-6">
                             <h3 class="text-lg font-bold text-white mb-4">Technical Details</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div v-if="model.poly_count">
@@ -1769,7 +1769,7 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- Description / Author Notes -->
-                        <div v-if="model.description" class="backdrop-blur-xl bg-gradient-to-br from-white/5 to-white/[0.02] rounded-xl p-4 border border-white/10 mb-6">
+                        <div v-if="model.description" class="bg-gradient-to-br from-white/5 to-white/[0.02] rounded-xl p-4 border border-white/10 mb-6">
                             <h3 class="text-sm font-semibold text-gray-400 mb-2">Author Notes</h3>
                             <p class="text-gray-400 text-xs whitespace-pre-line leading-relaxed">{{ model.description }}</p>
                         </div>
@@ -1925,9 +1925,9 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- ANIMATION BUTTONS -->
-                        <div v-if="animationsReady && !isWeaponModel" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
+                        <div v-if="animationsReady && !isWeaponModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
                             <!-- Login overlay for non-authenticated users -->
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-xl flex items-center justify-center">
+                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl flex items-center justify-center">
                                 <a href="/login" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-sm transition-colors shadow-lg">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -1994,8 +1994,8 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- Light Controls Card (not for shadow models) -->
-                        <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-xl"></div>
+                        <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
+                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl"></div>
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Lighting</h4>
                                 <button @click="showLightControls = !showLightControls" class="px-3 py-1 rounded text-xs font-semibold transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30">
@@ -2175,7 +2175,7 @@ const confirmNsfw = () => {
                         </div>
 
                         <!-- Animation Controls Card -->
-                        <div v-if="animationsReady && !isThumbnailMode" class="backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
+                        <div v-if="animationsReady && !isThumbnailMode" class="bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Controls</h4>
 
@@ -2208,8 +2208,8 @@ const confirmNsfw = () => {
 
                         <!-- Sound Controls Card -->
                         <!-- Sounds -->
-                        <div v-if="soundsReady && !isThumbnailMode" class="relative backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-4 mb-6">
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 backdrop-blur-[2px] rounded-xl"></div>
+                        <div v-if="soundsReady && !isThumbnailMode" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-4 mb-6">
+                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl"></div>
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
                                 <button @click="toggleSounds" :class="[
@@ -2256,7 +2256,7 @@ const confirmNsfw = () => {
 
                         <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
                         <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8">
-                            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                            <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                                 <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics</h3>
 
                                 <!-- Backend Timings -->
@@ -2304,7 +2304,7 @@ const confirmNsfw = () => {
                 leave-to-class="translate-y-2 opacity-0">
                 <div v-if="showNotification" class="fixed top-8 right-8 z-50 max-w-md">
                     <div :class="[
-                        'backdrop-blur-xl rounded-2xl border shadow-2xl p-6',
+                        'rounded-2xl border shadow-2xl p-6',
                         notificationType === 'success'
                             ? 'bg-green-500/20 border-green-500/30'
                             : 'bg-red-500/20 border-red-500/30'

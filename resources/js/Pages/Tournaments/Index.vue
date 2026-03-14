@@ -115,7 +115,7 @@
         <!-- Modern Tournaments Container -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- Warning Message -->
-            <div v-if="records < 50" class="backdrop-blur-xl bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <div v-if="records < 50" class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
                 <div class="flex items-start gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 shrink-0 mt-0.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
@@ -133,7 +133,7 @@
             </div>
 
             <!-- Tabs and Content -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+            <div class="bg-black/40 rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
                 <!-- Tabs Header -->
                 <Tabs :tabs="tabs" :onClick="toggleTab" :activeTab="activeTab" />
 
@@ -167,7 +167,7 @@
 
                     <!-- Historical Tournaments -->
                     <div v-show="activeTab === 'Historical Tournaments'" id="historical-tab" class="space-y-4">
-                        <div class="backdrop-blur-xl bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
+                        <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
                             <p class="text-blue-300 text-sm text-center">
                                 Want to submit a historical tournament? Contact <a class="text-blue-200 hover:text-white underline font-medium" :href="route('profile.index', 8)" v-html="q3tohtml('^4[^7gt^4]^7neiT^7.')"></a> on Discord.
                             </p>

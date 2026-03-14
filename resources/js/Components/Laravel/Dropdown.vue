@@ -12,7 +12,7 @@ const props = defineProps({
     },
     contentClasses: {
         type: Array,
-        default: () => ['p-2', 'bg-gray-950', 'backdrop-blur-xl', 'border', 'border-white/10'],
+        default: () => ['p-2', 'bg-gray-950', 'border', 'border-white/10'],
     },
 });
 

@@ -231,7 +231,7 @@
 
         <!-- Content Section -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-8">
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+            <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
 
                 <!-- Modern Tab Navigation -->
                 <div class="flex border-b border-white/10">

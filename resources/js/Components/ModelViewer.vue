@@ -1276,7 +1276,7 @@ defineExpose({
         <canvas ref="canvas" class="model-canvas"></canvas>
 
         <!-- Loading overlay -->
-        <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div v-if="loading" class="absolute inset-0 flex items-center justify-center bg-black/50">
             <div class="text-center">
                 <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
                 <p class="mt-4 text-white font-semibold">Loading 3D Model...</p>
@@ -1284,7 +1284,7 @@ defineExpose({
         </div>
 
         <!-- Error overlay -->
-        <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div v-if="error" class="absolute inset-0 flex items-center justify-center bg-black/50">
             <div class="text-center max-w-md p-6">
                 <div class="text-amber-400 text-5xl mb-4">⚠️</div>
                 <p class="text-white font-bold mb-2">Failed to load model</p>
@@ -1294,7 +1294,7 @@ defineExpose({
         </div>
 
         <!-- Controls hint -->
-        <div v-if="showGrid" class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 text-xs text-gray-300">
+        <div v-if="showGrid" class="absolute bottom-4 left-4 bg-black/60 rounded-lg px-4 py-2 text-xs text-gray-300">
             <div class="flex items-center gap-2">
                 <span>🖱️</span>
                 <span>Left click: Rotate | Right click: Pan | Scroll: Zoom</span>
@@ -1314,7 +1314,7 @@ defineExpose({
                 @touchstart.prevent="startFiring"
                 @touchend.prevent="stopFiring"
                 @contextmenu.prevent
-                class="bg-red-600/80 hover:bg-red-500 backdrop-blur-sm rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-red-500/50 active:scale-95 select-none"
+                class="bg-red-600/80 hover:bg-red-500 rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-red-500/50 active:scale-95 select-none"
             >
                 🔫 FIRE
             </button>
@@ -1327,7 +1327,7 @@ defineExpose({
                 @touchstart.prevent="startFiringWithHit"
                 @touchend.prevent="stopFiring"
                 @contextmenu.prevent
-                class="bg-orange-600/80 hover:bg-orange-500 backdrop-blur-sm rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-orange-500/50 active:scale-95 select-none"
+                class="bg-orange-600/80 hover:bg-orange-500 rounded-lg px-6 py-3 text-white font-bold shadow-lg transition-all hover:shadow-orange-500/50 active:scale-95 select-none"
             >
                 💥 FIRE + HIT
             </button>

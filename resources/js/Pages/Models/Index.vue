@@ -295,7 +295,7 @@ const getModelTypeBadgeClass = (type) => {
                 <aside class="w-64 flex-shrink-0">
                     <div class="sticky top-6 space-y-4">
                         <!-- Search Filter -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -312,7 +312,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Category Filter -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -334,7 +334,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Sort Options -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
@@ -358,7 +358,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Preview Mode -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
@@ -383,7 +383,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Base Model Filter -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5 base-model-dropdown">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5 base-model-dropdown">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
@@ -435,7 +435,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Author Filter -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -487,7 +487,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- My Uploads Filter -->
-                        <div v-if="$page.props.auth.user" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -568,7 +568,7 @@ const getModelTypeBadgeClass = (type) => {
                         <Link v-for="(model, index) in models.data" :key="model.id"
                               :href="model.is_nsfw && !$page.props.auth.user ? route('login') : route('models.show', model.id)"
                               @click="saveBackUrl()"
-                              class="group backdrop-blur-xl bg-black/40 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
+                              class="group bg-black/40 rounded-xl border border-white/5 hover:border-white/20 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20 overflow-hidden">
 
                             <!-- Thumbnail -->
                             <div class="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center relative overflow-hidden">
@@ -589,7 +589,7 @@ const getModelTypeBadgeClass = (type) => {
 
                                 <!-- NSFW overlay -->
                                 <div v-if="model.is_nsfw && !$page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40">
-                                    <span class="px-4 py-2 bg-red-600/80 backdrop-blur-sm rounded-lg text-sm font-black text-white border border-red-500/50">
+                                    <span class="px-4 py-2 bg-red-600/80 rounded-lg text-sm font-black text-white border border-red-500/50">
                                         NSFW
                                     </span>
                                 </div>
@@ -597,17 +597,17 @@ const getModelTypeBadgeClass = (type) => {
                                 <!-- Badges -->
                                 <div class="absolute top-3 right-3 flex flex-col gap-2 items-end">
                                     <!-- NSFW Badge -->
-                                    <div v-if="model.is_nsfw" class="px-3 py-1 bg-red-600/80 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-red-500/40">
+                                    <div v-if="model.is_nsfw" class="px-3 py-1 bg-red-600/80 rounded-full text-xs font-bold text-white border border-red-500/40">
                                         NSFW
                                     </div>
 
                                     <!-- Category Badge -->
-                                    <div class="px-3 py-1 bg-black/60 backdrop-blur-sm rounded-full text-xs font-bold text-white border border-white/20">
+                                    <div class="px-3 py-1 bg-black/60 rounded-full text-xs font-bold text-white border border-white/20">
                                         {{ model.category }}
                                     </div>
 
                                     <!-- Approval Status Badge (only for My Uploads) -->
-                                    <div v-if="myUploads" :class="getApprovalStatusBadgeClass(model.approval_status)" class="px-3 py-1 backdrop-blur-sm rounded-full text-xs font-bold">
+                                    <div v-if="myUploads" :class="getApprovalStatusBadgeClass(model.approval_status)" class="px-3 py-1 rounded-full text-xs font-bold">
                                         {{ getApprovalStatusLabel(model.approval_status) }}
                                     </div>
                                 </div>
@@ -676,7 +676,7 @@ const getModelTypeBadgeClass = (type) => {
 
                     <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
                     <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8">
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                             <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics</h3>
 
                             <!-- Backend Timings -->

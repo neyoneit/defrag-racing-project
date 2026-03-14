@@ -108,7 +108,7 @@
             <!-- Round Info Section -->
             <div class="space-y-4">
                 <!-- Countdown Timer -->
-                <div v-if="showCountdown" class="backdrop-blur-xl bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-4">
+                <div v-if="showCountdown" class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-4">
                     <div class="text-center mb-4">
                         <div class="font-bold text-sm text-blue-300 uppercase tracking-wider">Finishes In</div>
                     </div>

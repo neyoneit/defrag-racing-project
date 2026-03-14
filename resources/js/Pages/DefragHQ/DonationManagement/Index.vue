@@ -153,7 +153,7 @@ const totalSelfRaised = computed(() => {
             <h1 class="text-3xl font-bold text-white mb-8">Donation Management</h1>
 
             <!-- Donation Goal Section -->
-            <div class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-8">
+            <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6 mb-8">
                 <h2 class="text-xl font-bold text-white mb-4">Yearly Goal</h2>
                 <form @submit.prevent="submitGoal" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -199,7 +199,7 @@ const totalSelfRaised = computed(() => {
             </div>
 
             <!-- Donations Section -->
-            <div class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-8">
+            <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6 mb-8">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-bold text-white">Donations (Total: {{ totalDonations }} EUR)</h2>
                     <button
@@ -319,7 +319,7 @@ const totalSelfRaised = computed(() => {
             </div>
 
             <!-- Self-Raised Money Section -->
-            <div class="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+            <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-xl font-bold text-white">Self-Raised Money (Total: {{ totalSelfRaised }} EUR)</h2>
                     <button

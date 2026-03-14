@@ -35,7 +35,7 @@ const commitItems = props.commits;
         <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
 
             <!-- Future & Ongoing -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-5">
+            <div class="bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-5">
                 <!-- FUTURE PLANNED -->
                 <div class="mb-8">
                     <h3 class="text-xl font-bold text-purple-400 mb-4 flex items-center gap-2">
@@ -58,7 +58,7 @@ const commitItems = props.commits;
             </div>
 
             <!-- DONE — Commits from git -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-8">
+            <div class="bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-8">
                 <div>
                     <h3 class="text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
                         <span class="text-2xl">✅</span> Done — {{ commitItems.length }} Commits

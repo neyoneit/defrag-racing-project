@@ -149,7 +149,7 @@
                                     </svg>
                                     <span class="text-[11px] font-semibold">How it works</span>
                                 </button>
-                                <div class="absolute left-0 top-full mt-2 w-80 backdrop-blur-xl bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
+                                <div class="absolute left-0 top-full mt-2 w-80 bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
                                     <p class="text-xs text-gray-400 leading-relaxed">
                                         Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record.
                                         Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> — your best maps count the most, weaker ones are diminished.
@@ -170,7 +170,7 @@
                     <!-- Right: Filters -->
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
                         <!-- Ranking Type Toggle (Separate Block) -->
-                        <div class="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-2.5 w-full sm:w-auto sm:min-w-[270px]">
+                        <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 w-full sm:w-auto sm:min-w-[270px]">
                             <div class="flex sm:flex-col gap-2">
                                 <button
                                     v-for="rt in rankingtypes"
@@ -217,7 +217,7 @@
 
                             <!-- Row 2: Gametypes -->
                             <div class="flex items-center gap-2 sm:gap-3 justify-start sm:justify-end flex-wrap">
-                                <div v-for="group in gametypeGroups" :key="group.label" class="flex items-center gap-2 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-2">
+                                <div v-for="group in gametypeGroups" :key="group.label" class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl p-2">
                                     <button
                                         v-for="gt in group.types"
                                         :key="gt.value"
@@ -239,7 +239,7 @@
             <!-- My Ratings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- My VQ3 Rating -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400">
@@ -260,7 +260,7 @@
                 </div>
 
                 <!-- My CPM Rating -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-purple-400">
@@ -284,7 +284,7 @@
             <!-- All Rankings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Rankings -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
@@ -312,7 +312,7 @@
                 </div>
 
                 <!-- CPM Rankings -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->

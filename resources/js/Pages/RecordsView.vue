@@ -64,7 +64,7 @@
                     <!-- Gamemode Filter -->
                     <div class="flex flex-wrap gap-3">
                         <!-- All Modes -->
-                        <div class="flex gap-2 bg-black/30 backdrop-blur-sm rounded-lg p-1 border border-white/10">
+                        <div class="flex gap-2 bg-black/30 rounded-lg p-1 border border-white/10">
                             <button
                                 @click="sortByMode('all')"
                                 :class="[
@@ -78,7 +78,7 @@
                         </div>
 
                         <!-- Run Mode -->
-                        <div class="flex gap-2 bg-black/30 backdrop-blur-sm rounded-lg p-1 border border-green-500/20">
+                        <div class="flex gap-2 bg-black/30 rounded-lg p-1 border border-green-500/20">
                             <button
                                 @click="sortByMode('run')"
                                 :class="[
@@ -92,7 +92,7 @@
                         </div>
 
                         <!-- CTF Modes -->
-                        <div class="flex gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-1 border border-red-500/20">
+                        <div class="flex gap-1 bg-black/30 rounded-lg p-1 border border-red-500/20">
                             <button
                                 @click="sortByMode('ctf')"
                                 :class="[
@@ -125,7 +125,7 @@
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Records -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
@@ -142,7 +142,7 @@
                 </div>
 
                 <!-- CPM Records -->
-                <div class="backdrop-blur-xl bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />

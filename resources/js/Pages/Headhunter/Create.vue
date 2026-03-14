@@ -103,7 +103,7 @@ const submit = () => {
         <!-- Content Section -->
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
                 <!-- Form -->
-                <div class="backdrop-blur-xl bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
+                <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
                     <h1 class="text-3xl font-black text-white mb-6">Create New Challenge</h1>
 
                     <form @submit.prevent="submit" class="space-y-6">

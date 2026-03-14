@@ -249,7 +249,7 @@
 
                                 <!-- Search Results Dropdown -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl backdrop-blur-xl bg-gray-950 border border-white/10 overflow-hidden z-[60] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
+                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl bg-gray-950 border border-white/10 overflow-hidden z-[60] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
                                          :style="{ top: searchDropdownPosition.top + 'px', maxHeight: '70vh' }"
                                          @click.stop>
 
@@ -291,7 +291,7 @@
                                                     <span v-if="demos?.length > 0" class="text-[10px] opacity-60">({{ demos.length }})</span>
                                                 </div>
                                                 <div v-if="demos?.length > 0" class="space-y-2" @click="closeSearch">
-                                                    <div v-for="demo in demos" :key="demo.id" class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 backdrop-blur-sm hover:shadow-lg hover:shadow-orange-500/5">
+                                                    <div v-for="demo in demos" :key="demo.id" class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/5">
                                                         <div class="flex items-center gap-3">
                                                             <div class="shrink-0">
                                                                 <div class="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">

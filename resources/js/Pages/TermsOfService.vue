@@ -19,7 +19,7 @@ defineProps({
             </div>
 
             <!-- Terms Content Card -->
-            <div class="backdrop-blur-xl bg-black/40 rounded-2xl p-8 lg:p-12 shadow-2xl border border-white/10 mb-8">
+            <div class="bg-black/40 rounded-2xl p-8 lg:p-12 shadow-2xl border border-white/10 mb-8">
                 <div
                     class="prose prose-invert prose-headings:text-white prose-headings:font-black prose-p:text-gray-300 prose-strong:text-white prose-a:text-blue-400 prose-a:no-underline hover:prose-a:text-blue-300 prose-ul:text-gray-300 prose-ol:text-gray-300 prose-li:text-gray-300 max-w-none"
                     v-html="terms"

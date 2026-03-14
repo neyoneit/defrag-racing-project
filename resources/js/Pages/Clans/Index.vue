@@ -426,7 +426,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     My Clan
                 </h2>
                 <div class="relative">
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-blue-700/10 blur-xl pointer-events-none"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-blue-700/5 pointer-events-none"></div>
                     <div class="relative">
                         <ClanCard
                             :clan="myClan"
@@ -443,7 +443,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Edit Clan Section -->
                         <div v-if="showEditClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
                                     <h3 class="text-lg font-medium text-white">Edit Clan</h3>
                                     <PrimaryButton @click="submitForm" type="button">
@@ -583,8 +583,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                                     <!-- Orbs Effect Preview -->
                                                     <div v-if="form.name_effect === 'orbs'" class="absolute inset-0 -inset-x-32 -inset-y-16 pointer-events-none overflow-hidden">
-                                                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; background: radial-gradient(circle, ${hexToRgba(previewEffectColor, 0.4)} 0%, ${hexToRgba(previewEffectColor, 0.3)} 50%, transparent 100%);`"></div>
-                                                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; background: radial-gradient(circle, ${hexToRgba(previewEffectColor, 0.4)} 0%, ${hexToRgba(previewEffectColor, 0.3)} 50%, transparent 100%);`"></div>
+                                                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 w-40 h-40 rounded-full" :style="`animation: orb-float 6s ease-in-out infinite; box-shadow: 0 0 60px 30px ${hexToRgba(previewEffectColor, 0.3)};`"></div>
+                                                        <div class="absolute -right-8 top-1/2 -translate-y-1/2 w-48 h-48 rounded-full" :style="`animation: orb-float 6s ease-in-out infinite; animation-delay: 1s; box-shadow: 0 0 60px 30px ${hexToRgba(previewEffectColor, 0.3)};`"></div>
                                                     </div>
 
                                                     <!-- Lines Effect Preview -->
@@ -603,8 +603,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                                                     <!-- Glitch Effect Preview -->
                                                     <div v-if="form.name_effect === 'glitch'" class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                                        <h1 class="absolute text-4xl font-black blur-[1px]" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 0.5s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(form.name)"></h1>
-                                                        <h1 class="absolute text-4xl font-black blur-[1px]" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 0.5s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(form.name)"></h1>
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 2s infinite; transform: translate(2px, -1px);`" v-html="q3tohtml(form.name)"></h1>
+                                                        <h1 class="absolute text-4xl font-black" :style="`color: ${hexToRgba(previewEffectColor, 0.3)}; animation: glitch-text 2s infinite; animation-delay: 0.2s; transform: translate(-2px, 1px);`" v-html="q3tohtml(form.name)"></h1>
                                                     </div>
 
                                                     <!-- Wave Effect Preview -->
@@ -754,7 +754,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             <div class="bg-black/40 rounded-lg p-6 flex items-center justify-center border border-white/10">
                                                 <div class="relative">
                                                     <!-- Glow Effect -->
-                                                    <div v-if="form.avatar_effect === 'glow'" class="absolute inset-0 rounded-full blur-xl opacity-75" :style="`background-color: ${previewAvatarEffectColor};`"></div>
+                                                    <div v-if="form.avatar_effect === 'glow'" class="absolute inset-0 rounded-full opacity-50" :style="`box-shadow: 0 0 20px ${previewAvatarEffectColor};`"></div>
 
                                                     <!-- Pulse Effect -->
                                                     <div v-if="form.avatar_effect === 'pulse'" class="absolute inset-0 rounded-full animate-ping opacity-75" :style="`background-color: ${previewAvatarEffectColor};`"></div>
@@ -1013,7 +1013,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Member Notes Section -->
                         <div v-if="showEditMemberNotes && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Member Details</h3>
                                 </div>
@@ -1031,7 +1031,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Invite Player Panel -->
                         <div v-if="showInvitePlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Invite Player</h3>
                                 </div>
@@ -1061,7 +1061,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Kick Player Panel -->
                         <div v-if="showKickPlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Kick Player</h3>
                                 </div>
@@ -1091,7 +1091,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Transfer Ownership Panel -->
                         <div v-if="showTransferOwnership && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Transfer Ownership</h3>
                                 </div>
@@ -1121,7 +1121,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Leave Clan Panel -->
                         <div v-if="showLeaveClan && myClan.admin_id !== $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Leave Clan</h3>
                                 </div>
@@ -1142,7 +1142,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Dismantle Clan Panel -->
                         <div v-if="showDismantleClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Dismantle Clan</h3>
                                 </div>

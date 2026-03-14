@@ -15,7 +15,7 @@
 </script>
 
 <template>
-    <div class="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-300 hover:scale-[1.01]">
+    <div class="group relative overflow-hidden rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-300 hover:scale-[1.01]">
         <div class="relative p-6">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <!-- Content -->

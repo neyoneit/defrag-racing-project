@@ -6,7 +6,7 @@
 
             <!-- Modal -->
             <div class="flex min-h-full items-center justify-center p-4">
-                <div class="relative backdrop-blur-xl bg-black/80 rounded-xl shadow-2xl max-w-2xl w-full border border-white/10">
+                <div class="relative bg-black/80 rounded-xl shadow-2xl max-w-2xl w-full border border-white/10">
                     <!-- Header -->
                     <div class="px-6 py-4 border-b border-white/10">
                         <h3 class="text-xl font-bold text-white">Report Demo</h3>

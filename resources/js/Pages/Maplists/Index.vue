@@ -386,7 +386,7 @@ const createMaplist = async () => {
                 <aside class="w-64 flex-shrink-0 hidden lg:block">
                     <div class="sticky top-6 space-y-4">
                         <!-- Search -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -403,7 +403,7 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- Sort Options -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
@@ -427,7 +427,7 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- View Filter (only for logged in users) -->
-                        <div v-if="page.props.auth.user" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div v-if="page.props.auth.user" class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
@@ -452,7 +452,7 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- Author Filter -->
-                        <div class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
+                        <div class="bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -504,7 +504,7 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- Quick Access (logged in, public view only) -->
-                        <div v-if="page.props.auth.user && currentView === 'public' && myPlayLater" class="backdrop-blur-xl bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div v-if="page.props.auth.user && currentView === 'public' && myPlayLater" class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
@@ -581,7 +581,7 @@ const createMaplist = async () => {
                             <span class="text-sm font-normal text-gray-400">({{ drafts.length }})</span>
                         </h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            <div v-for="draft in drafts" :key="draft.id" class="backdrop-blur-xl bg-gray-800/90 border border-yellow-500/30 rounded-lg p-4 hover:bg-gray-700/90 transition-all">
+                            <div v-for="draft in drafts" :key="draft.id" class="bg-gray-800/90 border border-yellow-500/30 rounded-lg p-4 hover:bg-gray-700/90 transition-all">
                                 <div class="flex justify-between items-start mb-2">
                                     <h3 class="font-bold text-white">{{ draft.name }}</h3>
                                     <span class="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded-full">Draft</span>

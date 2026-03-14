@@ -280,7 +280,7 @@
 </script>
 
 <template>
-    <div class="backdrop-blur-xl bg-black/40 rounded-2xl border border-white/10 p-6 mb-8 shadow-2xl">
+    <div class="bg-black/40 rounded-2xl border border-white/10 p-6 mb-8 shadow-2xl">
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
             <div class="flex items-center gap-3">
                 <div class="p-2 bg-blue-500/20 rounded-lg">
