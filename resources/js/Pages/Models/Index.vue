@@ -179,7 +179,12 @@ const applyFilters = (updates) => {
     });
 };
 
-const switchCategory = (category) => applyFilters({ category });
+const switchCategory = (category) => {
+    selectedBaseModels.value = [];
+    selectedAuthors.value = [];
+    searchQuery.value = '';
+    applyFilters({ category, base_model: null, authors: null, search: null });
+};
 const changeSort = (newSort) => applyFilters({ sort: newSort });
 
 const toggleMyUploads = () => {
