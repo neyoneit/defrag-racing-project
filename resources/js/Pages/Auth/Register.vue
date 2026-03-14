@@ -37,7 +37,7 @@
             </div>
         </div>
 
-        <div class="flex justify-center px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
+        <div class="relative z-10 flex justify-center px-4 sm:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- Modern Register Card -->
             <div class="w-full max-w-lg">
 

@@ -50,23 +50,33 @@ const padZero = (num) => {
 };
 
 const q3tohtml = (name) => {
-    let colored_name = '';
+    let result = '';
     let color = '7';
+    let buffer = '';
+
+    const flush = () => {
+        if (buffer) {
+            result += `<span class="q3c-${color}">${buffer}</span>`;
+            buffer = '';
+        }
+    };
 
     for (let i = 0; i < name.length; i++) {
         if (name[i] == '^') {
             if (name[i + 1] == '^') {
-                colored_name += '^';
+                buffer += '^';
             } else {
+                flush();
                 color = name[i + 1];
                 i++;
             }
         } else {
-            colored_name += `<span class="q3c-${color}">${name[i]}</span>`;
+            buffer += name[i];
         }
     }
+    flush();
 
-    return colored_name;
+    return result;
 };
 
 const timeSince = (date) => {

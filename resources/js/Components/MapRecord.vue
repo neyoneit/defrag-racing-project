@@ -155,7 +155,7 @@
             :is="getRoute ? Link : 'div'"
             :href="getRoute"
             :class="[
-                'flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1',
+                'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200 group-hover:ml-1',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
             @mouseenter="!getRoute && !isOfflineRecord && (showTooltip = true); isOfflineRecord && (showUploaderTooltip = true)"
@@ -183,7 +183,7 @@
             <span
                 :class="[
                     'name-effect-' + (record.user?.name_effect || 'none'),
-                    'text-sm font-semibold truncate group-hover/player:text-blue-400 transition-colors', {
+                    'text-sm font-semibold whitespace-nowrap overflow-visible group-hover/player:text-blue-400 transition-colors', {
                         'text-amber-200': record.oldtop,
                         'text-emerald-200': isMyRecord && !record.oldtop,
                         'text-gray-200': !isMyRecord && !record.oldtop

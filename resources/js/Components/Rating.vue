@@ -114,7 +114,7 @@
             <!-- Player Info -->
             <div class="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
                 <img :src="`/images/flags/${bestratingCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestratingCountry">
-                <span :class="'name-effect-' + (rating.user?.name_effect || 'none')" :style="`--effect-color: ${rating.user?.color || '#ffffff'}`" class="text-[11px] sm:text-sm font-semibold text-gray-300 group-hover:text-white truncate group-hover:text-blue-200 transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]" v-html="q3tohtml(rating.user?.name ?? rating.name)"></span>
+                <span :class="'name-effect-' + (rating.user?.name_effect || 'none')" :style="`--effect-color: ${rating.user?.color || '#ffffff'}`" class="text-[11px] sm:text-sm font-semibold text-gray-300 group-hover:text-white whitespace-nowrap overflow-visible group-hover:text-blue-200 transition-all" v-html="q3tohtml(rating.user?.name ?? rating.name)"></span>
             </div>
 
             <!-- Rating Score -->
