@@ -179,7 +179,12 @@ const applyFilters = (updates) => {
     });
 };
 
-const switchCategory = (category) => applyFilters({ category });
+const switchCategory = (category) => {
+    selectedBaseModels.value = [];
+    selectedAuthors.value = [];
+    searchQuery.value = '';
+    applyFilters({ category, base_model: null, authors: null, search: null });
+};
 const changeSort = (newSort) => applyFilters({ sort: newSort });
 
 const toggleMyUploads = () => {
@@ -289,7 +294,7 @@ const getModelTypeBadgeClass = (type) => {
         </div>
 
         <!-- Main Content with Sidebar -->
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6" style="margin-top: -6rem;">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10" style="margin-top: -6rem;">
             <div class="flex gap-6">
                 <!-- Left Sidebar - Filters -->
                 <aside class="w-64 flex-shrink-0">
@@ -402,7 +407,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </svg>
                             </button>
                             <!-- Dropdown panel -->
-                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <input
                                     v-model="baseModelSearch"
                                     type="text"
@@ -454,7 +459,7 @@ const getModelTypeBadgeClass = (type) => {
                                 </svg>
                             </button>
                             <!-- Dropdown panel -->
-                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <input
                                     v-model="authorSearch"
                                     type="text"

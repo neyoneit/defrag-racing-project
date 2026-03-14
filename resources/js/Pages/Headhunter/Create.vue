@@ -2,9 +2,35 @@
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 
+const props = defineProps({
+    maps: {
+        type: Array,
+        default: () => [],
+    },
+});
+
 const physicsOpen = ref(false);
 const modeOpen = ref(false);
 const currencyOpen = ref(false);
+const mapSearch = ref('');
+const mapDropdownOpen = ref(false);
+
+const filteredMaps = computed(() => {
+    if (!mapSearch.value) return [];
+    const search = mapSearch.value.toLowerCase();
+    return props.maps.filter(m => m.name.toLowerCase().includes(search)).slice(0, 20);
+});
+
+const selectedMap = computed(() => {
+    if (!mapSearch.value) return null;
+    return props.maps.find(m => m.name === mapSearch.value) || null;
+});
+
+const selectMap = (map) => {
+    form.mapname = map.name;
+    mapSearch.value = map.name;
+    mapDropdownOpen.value = false;
+};
 
 const physicsOptions = [
     { value: 'vq3', label: 'VQ3' },
@@ -61,7 +87,7 @@ const form = useForm({
 
 const submit = () => {
     // Convert time to milliseconds without modifying the form field
-    const timeInput = form.target_time;
+    const timeInput = form.target_time.trim();
     let milliseconds = 0;
 
     if (timeInput.includes(':')) {
@@ -70,9 +96,16 @@ const submit = () => {
         const [seconds, ms] = rest.split('.');
         milliseconds = (parseInt(minutes) * 60 * 1000) + (parseInt(seconds) * 1000) + parseInt(ms || 0);
     } else {
-        // Format: SS.mmm
-        const [seconds, ms] = timeInput.split('.');
-        milliseconds = (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        const dotCount = (timeInput.match(/\./g) || []).length;
+        if (dotCount === 2) {
+            // Format: M.SS.mmm (e.g., 1.19.200)
+            const [minutes, seconds, ms] = timeInput.split('.');
+            milliseconds = (parseInt(minutes) * 60 * 1000) + (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        } else {
+            // Format: SS.mmm
+            const [seconds, ms] = timeInput.split('.');
+            milliseconds = (parseInt(seconds) * 1000) + parseInt(ms || 0);
+        }
     }
 
     // Use transform to send converted data without modifying the form
@@ -135,15 +168,43 @@ const submit = () => {
 
                         <!-- Map Details -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
+                            <div class="relative">
                                 <label class="block text-sm font-semibold text-gray-300 mb-2">Map Name *</label>
-                                <input
-                                    v-model="form.mapname"
-                                    type="text"
-                                    required
-                                    placeholder="e.g., q3ctf1"
-                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
-                                />
+                                <div class="relative">
+                                    <input
+                                        v-model="mapSearch"
+                                        @input="form.mapname = mapSearch; mapDropdownOpen = true"
+                                        @focus="mapDropdownOpen = true"
+                                        type="text"
+                                        required
+                                        autocomplete="off"
+                                        placeholder="Start typing map name..."
+                                        :class="[
+                                            'w-full bg-black/40 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:ring-1 transition-colors',
+                                            selectedMap ? 'border border-green-500/50 focus:border-green-500/50 focus:ring-green-500/50' : mapSearch ? 'border border-red-500/30 focus:border-red-500/50 focus:ring-red-500/50' : 'border border-white/10 focus:border-blue-500/50 focus:ring-blue-500/50'
+                                        ]"
+                                    />
+                                    <div v-if="selectedMap" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    </div>
+                                    <div v-else-if="mapSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-red-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </div>
+                                </div>
+                                <!-- Map thumbnail preview -->
+                                <div v-if="selectedMap" class="mt-2 flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-lg p-2">
+                                    <img v-if="selectedMap.thumbnail" :src="`/storage/${selectedMap.thumbnail}`" @error="$event.target.style.display='none'" class="w-16 h-10 object-cover rounded" />
+                                    <div v-else class="w-16 h-10 bg-black/40 rounded flex items-center justify-center text-gray-600 text-xs">No img</div>
+                                    <span class="text-sm text-green-400 font-medium">{{ selectedMap.name }}</span>
+                                </div>
+                                <div v-if="mapDropdownOpen && filteredMaps.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-y-auto max-h-60 z-50 shadow-2xl">
+                                    <button type="button" v-for="map in filteredMaps" :key="map.name" @click="selectMap(map)" :class="form.mapname === map.name ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'" class="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-3">
+                                        <img v-if="map.thumbnail" :src="`/storage/${map.thumbnail}`" @error="$event.target.style.display='none'" class="w-12 h-8 object-cover rounded flex-shrink-0" />
+                                        <div v-else class="w-12 h-8 bg-black/40 rounded flex-shrink-0"></div>
+                                        <span>{{ map.name }}</span>
+                                    </button>
+                                </div>
+                                <div v-if="mapDropdownOpen && filteredMaps.length > 0" @click="mapDropdownOpen = false" class="fixed inset-0 z-40"></div>
                                 <div v-if="form.errors.mapname" class="text-red-400 text-sm mt-1">{{ form.errors.mapname }}</div>
                             </div>
 
@@ -185,10 +246,10 @@ const submit = () => {
                                 v-model="form.target_time"
                                 type="text"
                                 required
-                                placeholder="e.g., 1:23.456 or 45.123"
+                                placeholder="e.g., 1:23.456 or 1.23.456 or 45.123"
                                 class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
-                            <p class="text-xs text-gray-500 mt-1">Format: MM:SS.mmm (minutes:seconds.milliseconds) or SS.mmm</p>
+                            <p class="text-xs text-gray-500 mt-1">Format: M:SS.mmm or M.SS.mmm or SS.mmm</p>
                             <div v-if="form.errors.target_time" class="text-red-400 text-sm mt-1">{{ form.errors.target_time }}</div>
                         </div>
 

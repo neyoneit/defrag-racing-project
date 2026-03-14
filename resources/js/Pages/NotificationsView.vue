@@ -573,7 +573,7 @@
 
                     <!-- Pagination -->
                     <div class="flex justify-center p-6 border-t border-white/5" v-if="systemNotificationsPage?.total > systemNotificationsPage?.per_page">
-                        <Pagination :current_page="systemNotificationsPage?.current_page" :last_page="systemNotificationsPage?.last_page" :link="systemNotificationsPage?.first_page_url" />
+                        <Pagination :current_page="systemNotificationsPage?.current_page" :last_page="systemNotificationsPage?.last_page" :link="systemNotificationsPage?.first_page_url" :only="['systemNotificationsPage']" />
                     </div>
 
                     <!-- Empty State -->

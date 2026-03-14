@@ -59,7 +59,7 @@
 
                 <!-- Pagination -->
                 <div class="flex justify-center p-6 border-t border-white/5" v-if="notifications.total > notifications.per_page">
-                    <Pagination :current_page="notifications.current_page" :last_page="notifications.last_page" :link="notifications.first_page_url" />
+                    <Pagination :current_page="notifications.current_page" :last_page="notifications.last_page" :link="notifications.first_page_url" :only="['notifications']" />
                 </div>
 
                 <!-- Empty State -->

@@ -307,7 +307,7 @@
                         </div>
                     </div>
                     <div v-if="vq3Ratings.total > vq3Ratings.per_page" class="border-t border-blue-500/20 p-4">
-                        <Pagination pageName="vq3Page" :last_page="vq3Ratings.last_page" :current_page="vq3Ratings.current_page" :link="vq3Ratings.first_page_url" />
+                        <Pagination pageName="vq3Page" :last_page="vq3Ratings.last_page" :current_page="vq3Ratings.current_page" :link="vq3Ratings.first_page_url" :only="['vq3Ratings', 'cpmRatings']" />
                     </div>
                 </div>
 
@@ -335,7 +335,7 @@
                         </div>
                     </div>
                     <div v-if="cpmRatings.total > cpmRatings.per_page" class="border-t border-purple-500/20 p-4">
-                        <Pagination pageName="cpmPage" :last_page="cpmRatings.last_page" :current_page="cpmRatings.current_page" :link="cpmRatings.first_page_url" />
+                        <Pagination pageName="cpmPage" :last_page="cpmRatings.last_page" :current_page="cpmRatings.current_page" :link="cpmRatings.first_page_url" :only="['vq3Ratings', 'cpmRatings']" />
                     </div>
                 </div>
             </div>
