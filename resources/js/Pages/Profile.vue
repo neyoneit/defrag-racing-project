@@ -504,14 +504,14 @@
                         <!-- Clan + Stats Row -->
                         <div class="flex items-center gap-3 flex-wrap">
                             <!-- Clan Badge -->
-                            <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/20 border border-blue-400/40 hover:border-blue-300/60 hover:bg-blue-600/30 transition-all hover:scale-105 shadow-xl group">
+                            <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/30 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-600/40 transition-all hover:scale-105 shadow-xl group">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
                                 <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Clan</span>
                                 <span class="text-sm font-black text-white group-hover:text-blue-100 transition" v-html="q3tohtml(user.clan.name)"></span>
                             </Link>
 
                             <!-- CPM WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-400/30 shadow-xl">
+                            <div class="px-3 py-1.5 rounded-lg bg-purple-500/30 border border-purple-400/40 shadow-xl">
                                 <div class="flex items-center gap-2">
                                     <div>
                                         <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider leading-none">CPM</div>
@@ -522,7 +522,7 @@
                             </div>
 
                             <!-- VQ3 WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-400/30 shadow-xl">
+                            <div class="px-3 py-1.5 rounded-lg bg-blue-500/30 border border-blue-400/40 shadow-xl">
                                 <div class="flex items-center gap-2">
                                     <div>
                                         <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider leading-none">VQ3</div>
@@ -536,7 +536,7 @@
                         <!-- Social Links -->
                         <div class="flex items-center gap-2">
                             <!-- Twitch -->
-                            <a v-if="user?.twitch_name" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-600/20 border border-purple-400/40 hover:border-purple-300/60 hover:bg-purple-600/30 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <a v-if="user?.twitch_name" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-600/30 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg">
                                     <g fill="currentColor">
                                         <path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/>
@@ -546,7 +546,7 @@
                             </a>
 
                             <!-- Discord -->
-                            <div @click="copy(user?.discord_name)" v-if="user?.discord_name" class="group cursor-pointer relative px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-400/40 hover:border-indigo-300/60 hover:bg-indigo-600/30 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <div @click="copy(user?.discord_name)" v-if="user?.discord_name" class="group cursor-pointer relative px-3 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/>
                                 </svg>
@@ -555,7 +555,7 @@
                             </div>
 
                             <!-- Twitter -->
-                            <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-600/20 border border-sky-400/40 hover:border-sky-300/60 hover:bg-sky-600/30 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-600/30 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <g fill="currentColor">
                                         <path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/>
@@ -570,7 +570,7 @@
         </div>
 
         <!-- EPIC REDESIGN - Main Content -->
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
             <!-- Stats Grid - Clean Text Layout -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
