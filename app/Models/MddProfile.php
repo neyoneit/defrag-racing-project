@@ -38,6 +38,8 @@ class MddProfile extends Model
         'vq3_grenade_records',
         'vq3_plasma_records',
         'vq3_bfg_records',
+        'weapon_specialist',
+        'weapon_specialist_count',
     ];
 
     public function records() {
@@ -178,6 +180,19 @@ class MddProfile extends Model
 
         $this->vq3_plasma_records = $vq3_plasma_records;
         $this->vq3_bfg_records = $vq3_bfg_records;
+
+        // Weapon Specialist - weapon with the most total records (CPM + VQ3)
+        $weaponTotals = [
+            'Rocket' => $cpm_rocket_records + $vq3_rocket_records,
+            'Plasma' => $cpm_plasma_records + $vq3_plasma_records,
+            'Grenade' => $cpm_grenade_records + $vq3_grenade_records,
+            'BFG' => $cpm_bfg_records + $vq3_bfg_records,
+        ];
+        arsort($weaponTotals);
+        $topWeapon = array_key_first($weaponTotals);
+        $topCount = $weaponTotals[$topWeapon];
+        $this->weapon_specialist = $topCount > 0 ? $topWeapon : null;
+        $this->weapon_specialist_count = $topCount;
 
         if ($user) {
             $this->user_id = $user->id;

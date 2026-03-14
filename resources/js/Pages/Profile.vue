@@ -764,7 +764,7 @@
                         <div v-if="profile.weapon_specialist" class="flex justify-between items-center group relative">
                             <span class="text-xs text-gray-400 cursor-help">Best Weapon</span>
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
-                                The weapon category where you have the most world records
+                                The weapon category where you have the most records
                             </div>
                             <span class="text-sm font-bold text-white capitalize">{{ profile.weapon_specialist }}</span>
                         </div>
