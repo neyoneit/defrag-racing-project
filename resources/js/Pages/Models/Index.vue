@@ -289,7 +289,7 @@ const getModelTypeBadgeClass = (type) => {
         </div>
 
         <!-- Main Content with Sidebar -->
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6" style="margin-top: -6rem;">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10" style="margin-top: -6rem;">
             <div class="flex gap-6">
                 <!-- Left Sidebar - Filters -->
                 <aside class="w-64 flex-shrink-0">
