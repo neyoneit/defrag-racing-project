@@ -33,6 +33,7 @@
     const models = ref([]);
 
     const showResultsSection = ref(false);
+    const activeSearchTab = ref('maps');
 
     const resultsSection = ref(null);
     const searchSection = ref(null);
@@ -258,8 +259,88 @@
                                     </div>
 
                                     <div v-else class="flex flex-col h-full">
-                                        <!-- Grid Layout - All results side by side in 1 row, 4 columns -->
-                                        <div ref="resultsSection" class="grid grid-cols-4 auto-rows-fr gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[70vh]">
+                                        <!-- Mobile Tabs (< lg) -->
+                                        <div class="lg:hidden flex border-b border-white/10">
+                                            <button @click="activeSearchTab = 'maps'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'maps' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300']">
+                                                MAPS<span v-if="maps.data?.length > 0" class="ml-1 opacity-60">({{ maps.data.length }})</span>
+                                            </button>
+                                            <button @click="activeSearchTab = 'players'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'players' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-500 hover:text-gray-300']">
+                                                PLAYERS<span v-if="players?.length > 0" class="ml-1 opacity-60">({{ players.length }})</span>
+                                            </button>
+                                            <button @click="activeSearchTab = 'demos'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'demos' ? 'text-orange-400 border-b-2 border-orange-400' : 'text-gray-500 hover:text-gray-300']">
+                                                DEMOS<span v-if="demos?.length > 0" class="ml-1 opacity-60">({{ demos.length }})</span>
+                                            </button>
+                                            <button @click="activeSearchTab = 'models'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'models' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300']">
+                                                MODELS<span v-if="models?.length > 0" class="ml-1 opacity-60">({{ models.length }})</span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Mobile Tab Content (< lg) -->
+                                        <div class="lg:hidden p-4 overflow-y-auto defrag-scrollbar max-h-[70vh]">
+                                            <!-- Maps -->
+                                            <div v-if="activeSearchTab === 'maps'">
+                                                <div v-if="maps.data?.length > 0" class="space-y-2" @click="closeSearch">
+                                                    <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
+                                                </div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">No maps found</div>
+                                            </div>
+                                            <!-- Players -->
+                                            <div v-if="activeSearchTab === 'players'">
+                                                <div v-if="players?.length > 0" class="space-y-2" @click="closeSearch">
+                                                    <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
+                                                </div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">No players found</div>
+                                            </div>
+                                            <!-- Demos -->
+                                            <div v-if="activeSearchTab === 'demos'">
+                                                <div v-if="demos?.length > 0" class="space-y-2" @click="closeSearch">
+                                                    <div v-for="demo in demos" :key="demo.id" class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/5">
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="shrink-0">
+                                                                <div class="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-orange-400">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                                    </svg>
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex-1 min-w-0">
+                                                                <div class="text-base font-black text-white group-hover:text-orange-400 transition-colors truncate">{{ demo.filename }}</div>
+                                                                <div class="text-xs text-gray-400 font-semibold mt-0.5">Uploaded {{ new Date(demo.created_at).toLocaleDateString() }}</div>
+                                                            </div>
+                                                            <svg class="w-5 h-5 text-gray-600 group-hover:text-orange-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">No demos found</div>
+                                            </div>
+                                            <!-- Models -->
+                                            <div v-if="activeSearchTab === 'models'">
+                                                <div v-if="models?.length > 0" class="space-y-2" @click="closeSearch">
+                                                    <Link v-for="model in models" :key="model.id" :href="`/models/${model.id}`" class="group flex items-center gap-2 cursor-pointer rounded-lg hover:bg-white/5 p-2 transition-all border border-transparent hover:border-blue-500/30">
+                                                        <div class="shrink-0">
+                                                            <div v-if="model.head_icon" class="w-8 h-8 rounded-lg overflow-hidden border border-blue-500/30">
+                                                                <img :src="`/storage/${model.head_icon}`" :alt="model.name" class="w-full h-full object-cover" />
+                                                            </div>
+                                                            <div v-else class="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex-1 min-w-0">
+                                                            <div class="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">{{ model.name }}</div>
+                                                            <div class="text-xs text-gray-400">{{ model.author || 'Unknown' }}</div>
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                                <div v-else class="text-xs text-gray-600 text-center py-8">No models found</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Desktop Grid Layout (>= lg) -->
+                                        <div ref="resultsSection" class="hidden lg:grid grid-cols-4 auto-rows-fr gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[70vh]">
                                             <!-- Maps Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-green-400 mb-3 pb-2 border-b border-green-500/30 flex items-center justify-between">
