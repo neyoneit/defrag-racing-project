@@ -70,6 +70,8 @@ Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->whe
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
 Route::get('/models/{model}/download-extras', [ModelsController::class, 'downloadExtras'])->name('models.downloadExtras');
 Route::post('/models/{id}/approve', [ModelsController::class, 'approveModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.approve');
+Route::post('/models/{id}/flag-nsfw', [ModelsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('models.flag-nsfw');
+Route::post('/models/{id}/unflag-nsfw', [ModelsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('models.unflag-nsfw');
 Route::delete('/models/{id}', [ModelsController::class, 'destroyModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.destroy');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');

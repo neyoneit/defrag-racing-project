@@ -1380,10 +1380,38 @@ const getBoxClass = (type) => {
 };
 
 const needsNsfwGate = computed(() => {
-    return props.model.is_nsfw && !page.props.auth.user?.nsfw_confirmed;
+    return localIsNsfw.value && !page.props.auth.user?.nsfw_confirmed;
 });
 
 const confirmingNsfw = ref(false);
+const flaggingNsfw = ref(false);
+const localIsNsfw = ref(props.model.is_nsfw);
+
+const flagAsNsfw = async () => {
+    if (flaggingNsfw.value) return;
+    flaggingNsfw.value = true;
+    try {
+        await axios.post(`/models/${props.model.id}/flag-nsfw`);
+        localIsNsfw.value = true;
+    } catch (e) {
+        alert('Failed to flag: ' + (e.response?.data?.message || e.message));
+    } finally {
+        flaggingNsfw.value = false;
+    }
+};
+
+const unflagNsfw = async () => {
+    if (flaggingNsfw.value) return;
+    flaggingNsfw.value = true;
+    try {
+        await axios.post(`/models/${props.model.id}/unflag-nsfw`);
+        localIsNsfw.value = false;
+    } catch (e) {
+        alert('Failed to unflag: ' + (e.response?.data?.message || e.message));
+    } finally {
+        flaggingNsfw.value = false;
+    }
+};
 
 const confirmNsfw = () => {
     confirmingNsfw.value = true;
@@ -1473,7 +1501,7 @@ const confirmNsfw = () => {
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
-                                        <span v-if="model.is_nsfw" class="px-2 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">NSFW</span>
+                                        <span v-if="localIsNsfw" class="px-2 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">NSFW</span>
                                         <span class="px-2 py-0.5 bg-blue-500/15 border border-blue-500/20 rounded text-[10px] font-semibold text-blue-400 capitalize">{{ model.category }}</span>
                                         <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-[10px] px-2 py-0.5 rounded font-semibold">
                                             {{ getModelTypeLabel(model.model_type) }}
@@ -1923,6 +1951,30 @@ const confirmNsfw = () => {
                                 <span v-else class="text-red-400">{{ scrapeResult.error }}</span>
                             </div>
                         </div>
+
+                        <!-- Flag as NSFW (community moderation) -->
+                        <button
+                            v-if="!localIsNsfw && $page.props.auth?.user && !isThumbnailMode"
+                            @click="flagAsNsfw"
+                            :disabled="flaggingNsfw"
+                            class="w-full mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm font-semibold text-red-400/70 hover:text-red-400 hover:bg-red-500/20 hover:border-red-500/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            {{ flaggingNsfw ? 'Flagging...' : 'Flag this model as NSFW content' }}
+                        </button>
+
+                        <!-- Unflag NSFW (admin only) -->
+                        <button
+                            v-if="localIsNsfw && $page.props.auth?.user && !isThumbnailMode"
+                            @click="unflagNsfw"
+                            :disabled="flaggingNsfw"
+                            class="w-full mb-6 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm font-semibold text-green-400/70 hover:text-green-400 hover:bg-green-500/20 hover:border-green-500/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            {{ flaggingNsfw ? 'Removing...' : 'Remove NSFW flag from this model' }}
+                        </button>
 
                         <!-- ANIMATION BUTTONS -->
                         <div v-if="animationsReady && !isWeaponModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">

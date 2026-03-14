@@ -2607,6 +2607,37 @@ class ModelsController extends Controller
         return back();
     }
 
+    public function flagNsfw($id)
+    {
+        if (!Auth::check()) {
+            abort(403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+
+        if ($model->is_nsfw) {
+            return response()->json(['success' => false, 'message' => 'Already flagged as NSFW.']);
+        }
+
+        $model->is_nsfw = true;
+        $model->save();
+
+        return response()->json(['success' => true, 'message' => "Model \"{$model->name}\" flagged as NSFW."]);
+    }
+
+    public function unflagNsfw($id)
+    {
+        if (!Auth::check()) {
+            abort(403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+        $model->is_nsfw = false;
+        $model->save();
+
+        return response()->json(['success' => true, 'message' => "Model \"{$model->name}\" NSFW flag removed."]);
+    }
+
     /**
      * Generate still PNG thumbnail from idle GIF (middle frame extraction)
      */
