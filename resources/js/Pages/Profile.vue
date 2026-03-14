@@ -984,7 +984,7 @@
                                      class="w-8 h-8 rounded-full"
                                      :alt="rival.plain_name" />
                                 <div class="flex-1">
-                                    <div class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors" v-html="q3tohtml(rival.user?.name || rival.name || rival.plain_name)"></div>
                                     <div class="text-xs text-gray-400">Beaten on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-blue-400">{{ rival.times_beaten }}×</div>
@@ -1003,7 +1003,7 @@
                                      class="w-8 h-8 rounded-full"
                                      :alt="rival.plain_name" />
                                 <div class="flex-1">
-                                    <div class="text-sm font-bold text-white group-hover:text-red-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-sm font-bold text-white group-hover:text-red-300 transition-colors" v-html="q3tohtml(rival.user?.name || rival.name || rival.plain_name)"></div>
                                     <div class="text-xs text-gray-400">Beat you on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-red-400">{{ rival.times_beaten }}×</div>

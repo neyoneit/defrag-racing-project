@@ -178,12 +178,12 @@
                                     @click="selectRankingType(rt)"
                                     :class="rankingtype === rt ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
                                     class="px-4 py-2 rounded-lg border text-sm font-semibold uppercase transition-all whitespace-nowrap flex-1 sm:flex-none"
-                                    :title="rt === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record'">
+                                    :title="rt === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record'">
                                     {{ rt.replace('_', ' ') }}
                                 </button>
                             </div>
                             <div class="text-xs mt-2 text-center" :class="rankingtype === 'active_players' ? 'text-blue-400' : 'text-gray-300'">
-                                {{ rankingtype === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record' }}
+                                {{ rankingtype === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record' }}
                             </div>
                         </div>
 
