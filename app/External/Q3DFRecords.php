@@ -51,10 +51,18 @@ class Q3DFRecords {
 
         while ($attempt < $maxRetries && $response === false) {
             try {
-                $response = @file_get_contents($this->url . $page);
+                $ch = curl_init($this->url . $page);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
 
-                if ($response === false) {
-                    throw new \Exception("Failed to fetch page");
+                if ($response === false || $httpCode !== 200) {
+                    $response = false;
+                    throw new \Exception("Failed to fetch page (HTTP {$httpCode})");
                 }
             } catch (\Exception $e) {
                 $attempt++;

@@ -291,14 +291,6 @@
                             <h2 class="text-lg font-bold text-blue-400">VQ3 Rankings <span class="text-sm font-normal text-gray-400">({{ vq3Ratings.total }})</span></h2>
                         </div>
                     </div>
-                    <!-- Column Headers -->
-                    <div class="flex items-center gap-2 sm:gap-3 px-4 py-1.5 border-b border-white/5 text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                        <div class="w-5 sm:w-8 flex-shrink-0 text-center">#</div>
-                        <div class="flex-shrink-0 w-5 sm:w-6"></div>
-                        <div class="flex-1 min-w-0">Player</div>
-                        <div class="w-16 sm:w-20 flex-shrink-0 text-right">Rating</div>
-                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">Last Active</div>
-                    </div>
                     <div class="px-2 py-1">
                         <div v-if="vq3Ratings.total > 0">
                             <Rating v-for="rating in vq3Ratings.data" :key="rating.id" :rating="rating" :rank="rating.rank"/>
@@ -314,7 +306,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="vq3Ratings.total > vq3Ratings.per_page" class="border-t border-blue-500/20 bg-transparent p-4">
+                    <div v-if="vq3Ratings.total > vq3Ratings.per_page" class="border-t border-blue-500/20 p-4">
                         <Pagination pageName="vq3Page" :last_page="vq3Ratings.last_page" :current_page="vq3Ratings.current_page" :link="vq3Ratings.first_page_url" />
                     </div>
                 </div>
@@ -326,14 +318,6 @@
                             <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                             <h2 class="text-lg font-bold text-purple-400">CPM Rankings <span class="text-sm font-normal text-gray-400">({{ cpmRatings.total }})</span></h2>
                         </div>
-                    </div>
-                    <!-- Column Headers -->
-                    <div class="flex items-center gap-2 sm:gap-3 px-4 py-1.5 border-b border-white/5 text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                        <div class="w-5 sm:w-8 flex-shrink-0 text-center">#</div>
-                        <div class="flex-shrink-0 w-5 sm:w-6"></div>
-                        <div class="flex-1 min-w-0">Player</div>
-                        <div class="w-16 sm:w-20 flex-shrink-0 text-right">Rating</div>
-                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">Last Active</div>
                     </div>
                     <div class="px-2 py-1">
                         <div v-if="cpmRatings.total > 0">
@@ -350,7 +334,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="cpmRatings.total > cpmRatings.per_page" class="border-t border-purple-500/20 bg-transparent p-4">
+                    <div v-if="cpmRatings.total > cpmRatings.per_page" class="border-t border-purple-500/20 p-4">
                         <Pagination pageName="cpmPage" :last_page="cpmRatings.last_page" :current_page="cpmRatings.current_page" :link="cpmRatings.first_page_url" />
                     </div>
                 </div>

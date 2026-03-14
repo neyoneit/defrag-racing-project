@@ -28,7 +28,7 @@
 </script>
 
 <template>
-    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px]">
+    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px] hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
         <!-- Background Map Thumbnail (always visible, blurred) - extends to edges with overflow-hidden -->
         <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img
@@ -41,18 +41,18 @@
         </div>
 
         <!-- Content (relative to background) -->
-        <div class="relative flex items-center gap-2 sm:gap-3 w-full">
+        <div class="relative flex items-center gap-2 sm:gap-3 w-full transition-all duration-300">
             <!-- Rank -->
             <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
                 <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
                 <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
                 <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-300 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-300 group-hover:text-white transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.rank }}</span>
             </div>
 
             <!-- Map Name -->
             <div class="w-28 sm:w-40 flex-shrink-0">
-                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
             </div>
 
             <!-- Player Info -->
@@ -79,7 +79,7 @@
                 </div>
                 <div class="flex items-center gap-1 sm:gap-1.5 min-w-0">
                     <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
-                    <span :class="'name-effect-' + (record.user?.name_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}`" class="text-[10px] sm:text-xs font-semibold text-gray-300 group-hover:text-white truncate group-hover/player:text-blue-200 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
+                    <span :class="'name-effect-' + (record.user?.name_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}`" class="text-[11px] sm:text-sm font-semibold text-gray-300 group-hover:text-white truncate group-hover/player:text-blue-200 transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
                 </div>
             </component>
 
@@ -112,7 +112,7 @@
 
             <!-- Time -->
             <div class="w-12 sm:w-20 flex-shrink-0 text-right">
-                <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
             </div>
 
             <!-- Physics Icon -->
@@ -123,7 +123,7 @@
 
             <!-- Date -->
             <div class="w-14 sm:w-20 flex-shrink-0 text-right">
-                <div class="text-[8px] sm:text-[10px] text-gray-300 group-hover:text-white font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                <div class="text-[8px] sm:text-[10px] text-gray-300 group-hover:text-white font-mono transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]" :title="record.date_set">
                     {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
                 </div>
             </div>
