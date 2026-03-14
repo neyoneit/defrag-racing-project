@@ -127,6 +127,7 @@
     background: linear-gradient(90deg, rgba(187, 187, 187, 0.136) 0%, rgba(21, 250, 13, 0.116) 100%);
 }
 
+
 /* Clan Name Effects */
 @keyframes float {
     0%, 100% { transform: translateY(0px); }
