@@ -162,6 +162,17 @@
     const newTagInput = ref('');
     const showTagSuggestions = ref(false);
     const showAllTags = ref(false);
+    const tagInputContainer = ref(null);
+    const tagDropdownStyle = computed(() => {
+        if (!tagInputContainer.value) return {};
+        const rect = tagInputContainer.value.getBoundingClientRect();
+        return {
+            position: 'fixed',
+            top: rect.bottom + 8 + 'px',
+            left: rect.left + 'px',
+            width: rect.width + 'px',
+        };
+    });
     const addingTag = ref(false);
     const adoptingTag = ref(false);
 
@@ -671,9 +682,9 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative overflow-hidden border border-white/10">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10">
                     <!-- Map thumbnail as card background -->
-                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability -->
                         <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95"></div>
                     </div>
@@ -797,7 +808,7 @@
                         </div>
 
                         <!-- Add tag input (for logged in users) -->
-                        <div v-if="$page.props.auth.user" class="relative z-[70]">
+                        <div v-if="$page.props.auth.user" ref="tagInputContainer" class="relative z-[70]">
                             <div class="flex gap-2">
                                 <input
                                     v-model="newTagInput"
@@ -818,20 +829,22 @@
                                 </button>
                             </div>
 
-                            <!-- Available tags dropdown (shown below when focused) -->
-                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-2xl p-3 z-[200]">
-                                <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
-                                <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
-                                    <button
-                                        v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
-                                        :key="availableTag.id"
-                                        @click="addTag(availableTag.display_name)"
-                                        class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
-                                    >
-                                        {{ availableTag.display_name }}
-                                    </button>
+                            <!-- Available tags dropdown (teleported to body to avoid overflow clipping) -->
+                            <Teleport to="body">
+                                <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" :style="tagDropdownStyle" class="bg-[#111827] border border-white/20 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-3 z-[9999]">
+                                    <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
+                                    <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
+                                        <button
+                                            v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
+                                            :key="availableTag.id"
+                                            @mousedown.prevent="addTag(availableTag.display_name)"
+                                            class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
+                                        >
+                                            {{ availableTag.display_name }}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            </Teleport>
                         </div>
                     </div>
 
