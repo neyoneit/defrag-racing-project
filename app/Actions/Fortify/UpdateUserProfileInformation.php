@@ -27,20 +27,22 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
 
         if (isset($input['photo'])) {
             $image = $input['photo'];
-            $img = Image::make($image);
-
-            $width = $img->width();
-            $height = $img->height();
-
-            $imageName = uniqid() . '.' . $image->getClientOriginalExtension();
+            $extension = strtolower($image->getClientOriginalExtension());
+            $imageName = uniqid() . '.' . $extension;
             $uploadPath = public_path('storage/profile-photos');
 
-            if ($width > 100 || $height > 100) {
-                $image = Image::make($image)->fit(100, 100);
-                $image->save($uploadPath . '/' . $imageName);
+            if ($extension === 'gif') {
+                // GIFs: store directly to preserve animation
+                $image->move($uploadPath, $imageName);
                 $input['photo'] = 'profile-photos/' . $imageName;
             } else {
-                $input['photo'] = $image->store('profile-photos', 'public');
+                $img = Image::make($image);
+                if ($img->width() > 100 || $img->height() > 100) {
+                    Image::make($image)->fit(100, 100)->save($uploadPath . '/' . $imageName);
+                    $input['photo'] = 'profile-photos/' . $imageName;
+                } else {
+                    $input['photo'] = $image->store('profile-photos', 'public');
+                }
             }
         }
 

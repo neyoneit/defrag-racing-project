@@ -371,11 +371,16 @@ const updateNotifications = () => {
                             </div>
                             <h2 class="text-sm font-bold text-white">Profile Images</h2>
                         </div>
-                        <div v-if="profileForm.recentlySuccessful || backgroundForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                            <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span class="text-xs font-medium text-green-400">Saved</span>
+                        <div class="flex items-center gap-2">
+                            <div v-if="profileForm.recentlySuccessful || backgroundForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span class="text-xs font-medium text-green-400">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="updateProfile" :disabled="profileForm.processing">
+                                Save
+                            </PrimaryButton>
                         </div>
                     </div>
 
