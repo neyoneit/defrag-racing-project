@@ -29,6 +29,25 @@
     const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
+    const unclaimedDismissed = ref(localStorage.getItem('hide_unclaimed_tooltip') === '1');
+    let hideTimeout = null;
+
+    const showTooltipDelayed = () => {
+        clearTimeout(hideTimeout);
+        showTooltip.value = true;
+    };
+
+    const hideTooltipDelayed = () => {
+        hideTimeout = setTimeout(() => {
+            showTooltip.value = false;
+        }, 300);
+    };
+
+    const dismissUnclaimed = () => {
+        localStorage.setItem('hide_unclaimed_tooltip', '1');
+        unclaimedDismissed.value = true;
+        showTooltip.value = false;
+    };
 
     const canReportDemo = computed(() => {
         return isLoggedIn.value && page.props.canReportDemos;
@@ -155,8 +174,8 @@
                 'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200 group-hover:ml-1',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
-            @mouseenter="!getRoute && !isOfflineRecord && (showTooltip = true); isOfflineRecord && (showUploaderTooltip = true)"
-            @mouseleave="!getRoute && !isOfflineRecord && (showTooltip = false); isOfflineRecord && (showUploaderTooltip = false)"
+            @mouseenter="!getRoute && !isOfflineRecord && showTooltipDelayed(); isOfflineRecord && (showUploaderTooltip = true)"
+            @mouseleave="!getRoute && !isOfflineRecord && hideTooltipDelayed(); isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects -->
@@ -240,9 +259,9 @@
             </template>
         </component>
 
-        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in and not dismissed -->
+        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn && !unclaimedDismissed">
+            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999]" @mouseenter="showTooltipDelayed()" @mouseleave="hideTooltipDelayed()">
                 <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
                     <div class="flex items-center gap-4 mb-3">
                         <span class="text-5xl animate-bounce">🔓</span>
@@ -253,6 +272,10 @@
                     </div>
                     <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
                         Register now and link your q3df.org account to see detailed profile page and much more!
+                    </div>
+                    <div class="flex items-center gap-2 mt-3 cursor-pointer pointer-events-auto" @click.stop="dismissUnclaimed">
+                        <input type="checkbox" class="w-4 h-4 rounded border-orange-300 bg-orange-400/30 text-orange-800 focus:ring-orange-300 focus:ring-offset-0 cursor-pointer pointer-events-none" />
+                        <span class="text-sm font-semibold text-orange-100">Don't show this again</span>
                     </div>
                 </div>
             </div>

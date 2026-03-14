@@ -9,6 +9,25 @@
     const page = usePage();
     const showTooltip = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
+    const unclaimedDismissed = ref(localStorage.getItem('hide_unclaimed_tooltip') === '1');
+    let hideTimeout = null;
+
+    const showTooltipDelayed = () => {
+        clearTimeout(hideTimeout);
+        showTooltip.value = true;
+    };
+
+    const hideTooltipDelayed = () => {
+        hideTimeout = setTimeout(() => {
+            showTooltip.value = false;
+        }, 300);
+    };
+
+    const dismissUnclaimed = () => {
+        localStorage.setItem('hide_unclaimed_tooltip', '1');
+        unclaimedDismissed.value = true;
+        showTooltip.value = false;
+    };
 
     const bestrecordCountry = computed(() => {
         let country = props.record.user?.country ?? props.record.country;
@@ -64,8 +83,8 @@
                     'flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 group/player hover:bg-white/5 -my-2 py-2 px-1 sm:px-2 -ml-1 sm:-ml-2 rounded transition-colors',
                     !getRoute && isLoggedIn ? 'cursor-default opacity-70' : !getRoute ? 'cursor-help opacity-70' : 'cursor-pointer'
                 ]"
-                @mouseenter="!getRoute && (showTooltip = true)"
-                @mouseleave="!getRoute && (showTooltip = false)"
+                @mouseenter="!getRoute && showTooltipDelayed()"
+                @mouseleave="!getRoute && hideTooltipDelayed()"
             >
                 <div class="overflow-visible flex-shrink-0">
                     <div :class="'avatar-effect-' + (record.user?.avatar_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 14px`">
@@ -83,9 +102,9 @@
                 </div>
             </component>
 
-            <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
-            <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
-                <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
+            <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in and not dismissed -->
+            <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn && !unclaimedDismissed">
+                <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999]" @mouseenter="showTooltipDelayed()" @mouseleave="hideTooltipDelayed()">
                     <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
                         <div class="flex items-center gap-4 mb-3">
                             <span class="text-5xl animate-bounce">🔓</span>
@@ -96,6 +115,10 @@
                         </div>
                         <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
                             Register now and link your q3df.org account to see detailed profile page and much more!
+                        </div>
+                        <div class="flex items-center gap-2 mt-3 cursor-pointer pointer-events-auto" @click.stop="dismissUnclaimed">
+                            <input type="checkbox" class="w-4 h-4 rounded border-orange-300 bg-orange-400/30 text-orange-800 focus:ring-orange-300 focus:ring-offset-0 cursor-pointer pointer-events-none" />
+                            <span class="text-sm font-semibold text-orange-100">Don't show this again</span>
                         </div>
                     </div>
                 </div>
