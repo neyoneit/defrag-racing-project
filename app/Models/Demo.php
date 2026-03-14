@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Laravel\Scout\Searchable;
 
 class Demo extends Model {
     use HasFactory;
+    use Searchable;
 
     protected $fillable = [
         'round_id',
@@ -32,5 +34,13 @@ class Demo extends Model {
 
     public function round() {
         return $this->belongsTo(Round::class);
+    }
+
+    public function toSearchableArray() {
+        return [
+            'id' => (string) $this->id,
+            'filename' => $this->filename,
+            'created_at' => $this->created_at->timestamp,
+        ];
     }
 }

@@ -4,10 +4,6 @@
 
     const footerPages = usePage().props.footerPages;
 
-    console.log(usePage().props.testProp); // should show the message
-    console.log(usePage().props.footerPages); // should show the message
-    console.log("Yo!"); // should show the message
-
     const specialPages = {
     'privacy-policy': 'pages.privacy-policy',
     'privacy-policy-twitch': 'pages.privacy-policy-twitch',

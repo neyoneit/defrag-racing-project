@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\RecordNotification;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class ProcessNotificationsJob implements ShouldQueue
 {
@@ -79,20 +80,36 @@ class ProcessNotificationsJob implements ShouldQueue
     }
 
     public function shouldSendNotification ($currentRecord) {
-        $previousNotification = RecordNotification::query()
-            ->where('user_id', $currentRecord->user_id)
-            ->where('mapname', $currentRecord->mapname)
-            ->where('physics', $currentRecord->physics)
-            ->where('mode', $currentRecord->mode)
-            ->where('mdd_id', $this->record->mdd_id)
-            ->orderBy('created_at', 'DESC')
-            ->first();
+        // Create a cache key for this specific notification check
+        $cacheKey = sprintf(
+            'notification_check:%d:%s:%s:%s:%d',
+            $currentRecord->user_id,
+            $currentRecord->mapname,
+            $currentRecord->physics,
+            $currentRecord->mode,
+            $this->record->mdd_id
+        );
+
+        // Cache the result for 5 minutes to avoid repeated DB queries
+        $previousNotification = Cache::remember($cacheKey, 300, function () use ($currentRecord) {
+            return RecordNotification::query()
+                ->select(['id', 'date_set', 'created_at']) // Only select needed columns
+                ->where('user_id', $currentRecord->user_id)
+                ->where('mapname', $currentRecord->mapname)
+                ->where('physics', $currentRecord->physics)
+                ->where('mode', $currentRecord->mode)
+                ->where('mdd_id', $this->record->mdd_id)
+                ->orderBy('created_at', 'DESC')
+                ->first();
+        });
 
         if (! $previousNotification) {
             return true;
         }
 
         if ($previousNotification->date_set <= $currentRecord->date_set) {
+            // Invalidate cache when sending a new notification
+            Cache::forget($cacheKey);
             return true;
         }
 

@@ -248,9 +248,48 @@ class ManageClanController extends Controller {
 
         $request->validate([
             'name' => 'required',
+            'tag' => 'nullable|string|min:2|max:10',
+            'name_effect' => 'nullable|in:particles,orbs,lines,matrix,glitch,wave,neon,rgb,flicker,hologram,none',
+            'name_shadow_enabled' => 'nullable|boolean',
+            'name_shadow_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
+            'avatar_effect' => 'nullable|in:glow,pulse,ring,shine,border,particles,spin,none',
+            'effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
+            'avatar_effect_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
+            'featured_stats' => 'nullable|array|max:3',
+            'featured_stats.*' => 'in:total_records,world_records,podium_finishes,top10_positions,avg_wr_age,map_coverage',
         ]);
 
         $clan->name = $request->name;
+
+        if ($request->has('tag')) {
+            $clan->tag = $request->tag;
+        }
+
+        if ($request->has('name_effect')) {
+            $clan->name_effect = $request->name_effect;
+        }
+
+        // Always update shadow enabled (checkbox sends true/false or nothing)
+        $clan->name_shadow_enabled = $request->input('name_shadow_enabled', false);
+
+        if ($request->has('name_shadow_color')) {
+            $clan->name_shadow_color = $request->name_shadow_color;
+        }
+
+        if ($request->has('avatar_effect')) {
+            $clan->avatar_effect = $request->avatar_effect;
+        }
+
+        if ($request->has('effect_color')) {
+            $clan->effect_color = $request->effect_color;
+        }
+
+        if ($request->has('avatar_effect_color')) {
+            $clan->avatar_effect_color = $request->avatar_effect_color;
+        }
+
+        // Always update featured_stats (can be empty array or have values)
+        $clan->featured_stats = $request->input('featured_stats', []);
 
         if ($request->file('image')) {
             $image = $request->file('image');
@@ -273,8 +312,86 @@ class ManageClanController extends Controller {
             $clan->image = $file;
         }
 
+        if ($request->file('background')) {
+            $background = $request->file('background');
+            $file = $background->store('clans/backgrounds', 'public');
+            $clan->background = $file;
+        }
+
         $clan->save();
 
         return redirect()->route('clans.index')->withSuccess('Clan updated Successfully');
+    }
+
+    public function updateMemberNote (Clan $clan, User $user, Request $request) {
+        if ($clan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of the clan.');
+        }
+
+        $clanPlayer = ClanPlayer::where('clan_id', $clan->id)->where('user_id', $user->id)->first();
+
+        if (! $clanPlayer) {
+            return redirect()->back()->withDanger('The player is not in the clan.');
+        }
+
+        $request->validate([
+            'note' => 'nullable|string|max:1000',
+            'position' => 'nullable|string|max:50',
+            'config_file' => [
+                'nullable',
+                'file',
+                'max:2048',
+                function ($attribute, $value, $fail) {
+                    if ($value) {
+                        $extension = strtolower($value->getClientOriginalExtension());
+                        if ($extension !== 'cfg') {
+                            $fail('The config file field must be a file of type: cfg.');
+                        }
+                    }
+                },
+            ],
+        ]);
+
+        $clanPlayer->note = $request->note;
+        $clanPlayer->position = $request->position;
+
+        // Handle config file upload
+        if ($request->hasFile('config_file')) {
+            // Delete old config file if exists
+            if ($clanPlayer->config_file && \Storage::disk('public')->exists($clanPlayer->config_file)) {
+                \Storage::disk('public')->delete($clanPlayer->config_file);
+            }
+
+            $file = $request->file('config_file');
+            $fileName = $user->id . '_' . time() . '.cfg';
+            $filePath = $file->storeAs('clans/configs', $fileName, 'public');
+            $clanPlayer->config_file = $filePath;
+        }
+
+        $clanPlayer->save();
+
+        return redirect()->back()->withSuccess('Member note updated successfully.');
+    }
+
+    public function deleteMemberConfig (Clan $clan, User $user, Request $request) {
+        if ($clan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of the clan.');
+        }
+
+        $clanPlayer = ClanPlayer::where('clan_id', $clan->id)->where('user_id', $user->id)->first();
+
+        if (! $clanPlayer) {
+            return redirect()->back()->withDanger('The player is not in the clan.');
+        }
+
+        // Delete the config file from storage
+        if ($clanPlayer->config_file && \Storage::disk('public')->exists($clanPlayer->config_file)) {
+            \Storage::disk('public')->delete($clanPlayer->config_file);
+        }
+
+        $clanPlayer->config_file = null;
+        $clanPlayer->save();
+
+        return redirect()->back()->withSuccess('Config file deleted successfully.');
     }
 }

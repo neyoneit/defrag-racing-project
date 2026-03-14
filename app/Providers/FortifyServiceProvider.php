@@ -34,10 +34,29 @@ class FortifyServiceProvider extends ServiceProvider
     }
 
     public function django_verify_password ($password, $old_hash) {
-        list($algorithm, $iterations, $salt, $encoded_hash) = explode('$', $old_hash);
+        // Defensive checks: old_hash must be a non-empty string and match the
+        // expected Django pbkdf2 format: algorithm$iterations$salt$encoded_hash
+        if (empty($old_hash) || !is_string($old_hash)) {
+            return false;
+        }
 
-        $hash = base64_decode($encoded_hash, true);
+        // Limit to 4 parts to avoid unexpected splits in salt containing '$'
+        $parts = explode('$', $old_hash, 4);
+        if (count($parts) < 4) {
+            return false;
+        }
 
+        list($algorithm, $iterations, $salt, $encoded_hash) = $parts;
+
+        if ($algorithm !== 'pbkdf2_sha256') {
+            return false;
+        }
+
+        if (!ctype_digit((string) $iterations) || (int) $iterations <= 0) {
+            return false;
+        }
+
+        // Recompute the formatted hash string using the same algorithm/signature
         $hashed_password = $this->django_hash_password($password, $salt, (int)$iterations);
 
         return hash_equals($hashed_password, $old_hash);
@@ -70,19 +89,50 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            if ($user->password !== 'NOPASS') {
-                return Hash::check($request->password, $user->password) ? $user : null;
+            // If password is explicitly set to the sentinel 'NOPASS', fall back to
+            // verifying against the legacy Django hash stored in `oldhash`.
+            if ($user->password === 'NOPASS') {
+                if (! $this->django_verify_password($request->password, $user->oldhash)) {
+                    return null;
+                }
+
+                // Migrate the verified password to Laravel's bcrypt storage.
+                $user->password = Hash::make($request->password);
+                $user->save();
+
+                return $user;
             }
 
-            if (! $this->django_verify_password($request->password, $user->oldhash)) {
-                return null;
+            // Some legacy accounts may have the Django pbkdf2 hash stored directly
+            // in the `password` column (or other non-bcrypt string). Avoid calling
+            // Hash::check on values that are not bcrypt hashes because the
+            // Bcrypt hasher will raise an exception for unsupported formats.
+            $pw = $user->password ?? '';
+
+            $looksLikeBcrypt = str_starts_with($pw, '$2y$') || str_starts_with($pw, '$2a$') || str_starts_with($pw, '$2b$');
+
+            if (! $looksLikeBcrypt) {
+                // Use the oldhash if present, otherwise try the password field as a
+                // legacy Django-style hash (e.g. "pbkdf2_sha256$...").
+                $legacyHash = $user->oldhash ?: $user->password;
+
+                if (! $legacyHash) {
+                    return null;
+                }
+
+                if (! $this->django_verify_password($request->password, $legacyHash)) {
+                    return null;
+                }
+
+                // Migrate to bcrypt for future logins.
+                $user->password = Hash::make($request->password);
+                $user->save();
+
+                return $user;
             }
 
-            $user->password = Hash::make($request->password);
-            $user->save();
-
-            
-            return $user;
+            // Normal bcrypt password path.
+            return Hash::check($request->password, $user->password) ? $user : null;
         });
     }
 }

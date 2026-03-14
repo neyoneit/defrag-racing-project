@@ -55,28 +55,25 @@
 </script>
 
 <template>
-    <div class="mb-5 p-5 rounded-md mx-auto bg-blackop-30">
+    <div class="mb-6 backdrop-blur-xl bg-white/5 rounded-xl border border-white/10 overflow-hidden">
         <RoundPart :round="round">
             <template #additional>
-                <div class="flex items-center" v-if="active">
-                    <div scope="row" class="text-lg text-gray-400" style="min-width: 150px;">
-                        Upload
+                <div class="flex flex-col md:flex-row md:items-center gap-4 p-4 border-t border-white/10" v-if="active">
+                    <div class="text-lg font-bold text-gray-300 md:min-w-[150px]">
+                        Upload Demo
                     </div>
-    
-                    <form @submit.prevent="submitForm" class="text-white flex-grow rounded-md">
-                        <div class="flex">
+
+                    <form @submit.prevent="submitForm" class="flex-grow">
+                        <div class="flex gap-2">
                             <input accept=".dm_68" type="file" name="file" id="demo" class="hidden" @change="changeUploadFileName">
-                            <label for="demo" class="rounded-md cursor-pointer flex-grow flex items-center bg-blackop-30">
-                                <div class="flex justify-between items-center w-full rounded-md px-4">
-                                    <div class="break-all" :title="uploadFileName">
-                                        {{ uploadFileName }}
-                                    </div>
+                            <label for="demo" class="flex-grow px-4 py-3 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-all">
+                                <div class="text-white truncate" :title="uploadFileName">
+                                    {{ uploadFileName }}
                                 </div>
                             </label>
-        
-                            <button type="submit" class="rounded-md px-4 ml-2 cursor-pointer bg-blackop-30 hover:bg-blackop-50 py-2">
+
+                            <button type="submit" class="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all flex items-center justify-center">
                                 <svg width="20px" height="20px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <title/>
                                     <g id="Complete">
                                         <g id="upload">
                                             <g>
@@ -92,8 +89,8 @@
                             </button>
                         </div>
 
-                        <div class="text-gray-400 ml-2" v-if="form.errors.demo">
-                            <small>{{ form.errors.demo }}</small>
+                        <div class="mt-2 text-red-400 text-sm" v-if="form.errors.demo">
+                            {{ form.errors.demo }}
                         </div>
                     </form>
                 </div>

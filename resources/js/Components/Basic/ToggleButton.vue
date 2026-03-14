@@ -115,6 +115,11 @@ export default {
     },
     created() {
         this.setConfigData();
+    },
+    watch: {
+        'options.isActive': function(newValue) {
+            this.isActive = newValue;
+        }
     }
 }
 </script>

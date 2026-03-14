@@ -1,0 +1,15 @@
+[Unit]
+Description=Defrag Demo Queue Workers
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=lukas
+WorkingDirectory=/home/lukas/projects/defrag-racing-project
+ExecStart=/home/lukas/projects/defrag-racing-project/start-queue-workers.sh 8
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -49,10 +49,34 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'notification_settings',
         'created_at',
         'color',
+        'avatar_effect',
+        'name_effect',
+        'avatar_border_color',
         'defrag_news',
         'tournament_news',
+        'clan_notifications',
         'records_vq3',
         'records_cpm',
+        'preview_records',
+        'preview_system',
+        'discord_id',
+        'discord_token',
+        'discord_refresh_token',
+        'discord_token_expires_at',
+        'twitch_id',
+        'twitch_token',
+        'twitch_refresh_token',
+        'twitch_token_expires_at',
+        'is_live',
+        'live_status_checked_at',
+        'steam_id',
+        'steam_name',
+        'steam_avatar',
+        'twitter_id',
+        'twitter_token',
+        'twitter_refresh_token',
+        'twitter_token_expires_at',
+        'nsfw_confirmed',
     ];
 
     /**
@@ -75,6 +99,8 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'preview_system' => 'array',
+        'nsfw_confirmed' => 'boolean',
     ];
 
     /**
@@ -233,5 +259,143 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
             $best_demo->best = true;
             $best_demo->save();
         }
+    }
+
+    /**
+     * Get user's maplists
+     */
+    public function maplists()
+    {
+        return $this->hasMany(Maplist::class);
+    }
+
+    /**
+     * Get user's "Play Later" maplist
+     */
+    public function playLaterMaplist()
+    {
+        return $this->hasOne(Maplist::class)->where('is_play_later', true);
+    }
+
+    /**
+     * Get maplists the user has liked
+     */
+    public function likedMaplists()
+    {
+        return $this->belongsToMany(Maplist::class, 'maplist_likes')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get maplists the user has favorited
+     */
+    public function favoritedMaplists()
+    {
+        return $this->belongsToMany(Maplist::class, 'maplist_favorites')
+            ->withTimestamps();
+    }
+
+    /**
+     * Boot method to create "Play Later" maplist for new users
+     */
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            Maplist::create([
+                'user_id' => $user->id,
+                'name' => 'Play Later',
+                'description' => 'Save maps to play later',
+                'is_public' => false,
+                'is_play_later' => true,
+            ]);
+        });
+    }
+
+    /**
+     * Get user's aliases
+     */
+    public function aliases()
+    {
+        return $this->hasMany(UserAlias::class);
+    }
+
+    /**
+     * Get alias suggestions received by this user
+     */
+    public function aliasSuggestions()
+    {
+        return $this->hasMany(AliasSuggestion::class, 'user_id');
+    }
+
+    /**
+     * Get alias suggestions made by this user
+     */
+    public function suggestedAliases()
+    {
+        return $this->hasMany(AliasSuggestion::class, 'suggested_by_user_id');
+    }
+
+    /**
+     * Get user's uploaded demos
+     */
+    public function uploadedDemos()
+    {
+        return $this->hasMany(UploadedDemo::class, 'user_id');
+    }
+
+    /**
+     * Get user's records
+     */
+    public function records()
+    {
+        return $this->hasMany(Record::class, 'user_id');
+    }
+
+    /**
+     * Get user's top 5 most downloaded demos
+     */
+    public function topDownloadedDemos()
+    {
+        return $this->uploadedDemos()
+            ->orderBy('download_count', 'desc')
+            ->limit(5);
+    }
+
+    /**
+     * Check if user can upload demos
+     * Requires 30 records and not being upload-restricted
+     */
+    public function canUploadDemos()
+    {
+        if ($this->upload_restricted) {
+            return false;
+        }
+
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
+    }
+
+    /**
+     * Check if user can assign/reassign demos
+     * Requires 30 records and not being assignment-restricted
+     */
+    public function canAssignDemos()
+    {
+        if ($this->assignment_restricted) {
+            return false;
+        }
+
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
+    }
+
+    /**
+     * Check if user can report demos/aliases
+     * Requires 30 records
+     */
+    public function canReportDemos()
+    {
+        // Must have at least 30 records
+        return $this->records()->count() >= 30;
     }
 }

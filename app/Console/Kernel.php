@@ -14,8 +14,11 @@ class Kernel extends ConsoleKernel
      * Define the application's command schedule.
      */
     protected function schedule(Schedule $schedule): void {
-        // mdd scrapes...
-        $schedule->command('scrape:servers')->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
+    // mdd scrapes...
+    // scrape online servers every minute
+    $schedule->command('scrape:servers 0')->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
+    // scrape offline servers less frequently (every 5 minutes)
+    $schedule->command('scrape:servers 1')->withoutOverlapping()->evenInMaintenanceMode()->everyFiveMinutes();
         $schedule->job(new GetLastMddRecords)->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
         $schedule->command('scrape:maps')->withoutOverlapping()->evenInMaintenanceMode()->everyTwoMinutes();
 
@@ -23,7 +26,25 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('tournaments:notifications-send')->everyTwoMinutes();
 
-        $schedule->command('run:calculate-ratings')->withoutOverlapping()->everySixHours(); // ->runInBackground();
+        // Calculate VQ3 and CPM ratings using Rust - all 8 categories (overall, rocket, plasma, grenade, slick, tele, bfg, strafe)
+        // VQ3: ~89s, CPM: ~166s = ~4.5 minutes total for all 16 category rankings
+        $schedule->command('ratings:calculate --physics=vq3')->withoutOverlapping()->daily();
+        $schedule->command('ratings:calculate --physics=cpm')->withoutOverlapping()->daily();
+
+        // Update last_activity in player_ratings from records (~20s)
+        $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();
+
+        // Cache WR/Top3 counts for clan statistics (updates cached_wr_count and cached_top3_count on users table)
+        $schedule->command('rankings:cache')->withoutOverlapping()->hourly();
+
+        // Check Twitch live status every 2 minutes
+        $schedule->command('twitch:check-live-status')->withoutOverlapping()->everyTwoMinutes();
+
+        // Process overdue Headhunter challenge disputes and auto-ban creators
+        $schedule->command('headhunter:process-disputes')->withoutOverlapping()->daily();
+
+        // Rematch all unassigned demos against current user aliases (runs daily at 2am)
+        $schedule->command('demos:rematch-all')->withoutOverlapping()->dailyAt('02:00');
     }
 
     /**

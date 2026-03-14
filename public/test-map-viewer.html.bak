@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Map Viewer Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: #2563eb;
+        }
+
+        #error {
+            color: #ff4444;
+            padding: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="loading">Loading map...</div>
+    <div id="info">
+        <strong>3D Map Viewer</strong><br>
+        <span id="mapName">Loading...</span><br><br>
+        <small>
+            🖱️ Left click + drag: Rotate<br>
+            🖱️ Right click + drag: Pan<br>
+            🖱️ Scroll: Zoom<br>
+        </small>
+    </div>
+    <div id="controls">
+        <button class="control-btn" onclick="resetCamera()">Reset View</button>
+        <button class="control-btn" onclick="toggleWireframe()">Toggle Wireframe</button>
+        <button class="control-btn" onclick="toggleTextures()">Toggle Textures</button>
+    </div>
+    <div id="error"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let mapMesh;
+        let wireframeEnabled = false;
+        let texturesEnabled = true;
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+            scene.fog = new THREE.Fog(0x0a0a0a, 1000, 10000);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
+            camera.position.set(2000, 1000, 2000);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 100;
+            controls.maxDistance = 10000;
+
+            // Minimal lighting since vertex colors have lighting baked in
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            scene.add(ambientLight);
+
+            // Grid helper
+            const gridSize = 10000;
+            const gridDivisions = 50;
+            const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Axes helper
+            const axesHelper = new THREE.AxesHelper(500);
+            scene.add(axesHelper);
+
+            // Window resize
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Load map
+            loadBSPMap();
+
+            // Animate
+            animate();
+        }
+
+        async function loadBSPMap() {
+            try {
+                document.getElementById('loading').textContent = 'Loading BSP data...';
+
+                // Load the BSP JSON data
+                const response = await fetch(window.location.origin + '/api/test-map-data');
+
+                if (!response.ok) {
+                    throw new Error('Failed to load map data');
+                }
+
+                const mapData = await response.json();
+
+                document.getElementById('mapName').textContent = mapData.name || 'Unknown Map';
+                document.getElementById('loading').textContent = 'Building 3D geometry...';
+
+                // Create geometry from BSP data
+                createMapGeometry(mapData);
+
+                document.getElementById('loading').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error loading map:', error);
+                document.getElementById('loading').textContent = 'Error loading map!';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function createMapGeometry(mapData) {
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const colors = [];
+            const indices = [];
+            const normals = [];
+
+            let vertexIndex = 0;
+
+            // Process each face
+            mapData.faces.forEach(face => {
+                const faceVertices = face.vertices;
+                if (faceVertices.length < 3) return;
+
+                // Use per-vertex colors if available (has lighting baked in)
+                const useVertexColors = face.colors && face.colors.length === faceVertices.length;
+
+                // Fallback face color
+                const fallbackColor = new THREE.Color(
+                    face.color[0] / 255,
+                    face.color[1] / 255,
+                    face.color[2] / 255
+                );
+
+                // Calculate face normal for proper lighting
+                const v0 = new THREE.Vector3(faceVertices[0][0], faceVertices[0][1], faceVertices[0][2]);
+                const v1 = new THREE.Vector3(faceVertices[1][0], faceVertices[1][1], faceVertices[1][2]);
+                const v2 = new THREE.Vector3(faceVertices[2][0], faceVertices[2][1], faceVertices[2][2]);
+
+                const edge1 = new THREE.Vector3().subVectors(v1, v0);
+                const edge2 = new THREE.Vector3().subVectors(v2, v0);
+                const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+
+                // Add vertices with colors and normals
+                const startIndex = vertexIndex;
+                faceVertices.forEach((v, idx) => {
+                    vertices.push(v[0], v[1], v[2]);
+
+                    // Use per-vertex color if available, otherwise use face color
+                    if (useVertexColors) {
+                        const vertColor = face.colors[idx];
+                        colors.push(vertColor[0] / 255, vertColor[1] / 255, vertColor[2] / 255);
+                    } else {
+                        colors.push(fallbackColor.r, fallbackColor.g, fallbackColor.b);
+                    }
+
+                    normals.push(normal.x, normal.y, normal.z);
+                    vertexIndex++;
+                });
+
+                // Create triangles (fan triangulation)
+                for (let i = 1; i < faceVertices.length - 1; i++) {
+                    indices.push(startIndex);
+                    indices.push(startIndex + i);
+                    indices.push(startIndex + i + 1);
+                }
+            });
+
+            // Set geometry attributes
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setIndex(indices);
+
+            // Create material - use Basic material since vertex colors already have lighting baked in
+            const material = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,  // Render both sides to handle varying normal directions
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+
+            // Create mesh
+            mapMesh = new THREE.Mesh(geometry, material);
+            scene.add(mapMesh);
+
+            // Center camera on map
+            const box = new THREE.Box3().setFromObject(mapMesh);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            cameraZ *= 1.5; // Zoom out a bit
+
+            camera.position.set(center.x + cameraZ, center.y + cameraZ * 0.5, center.z + cameraZ);
+            camera.lookAt(center);
+            controls.target.copy(center);
+            controls.update();
+
+            console.log('Map loaded:', mapData.faces.length, 'faces');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function resetCamera() {
+            if (mapMesh) {
+                const box = new THREE.Box3().setFromObject(mapMesh);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5;
+
+                camera.position.set(center.x + cameraZ, center.y + cameraZ * 0.5, center.z + cameraZ);
+                camera.lookAt(center);
+                controls.target.copy(center);
+                controls.update();
+            }
+        }
+
+        function toggleWireframe() {
+            if (mapMesh) {
+                wireframeEnabled = !wireframeEnabled;
+                mapMesh.material.wireframe = wireframeEnabled;
+            }
+        }
+
+        function toggleTextures() {
+            if (mapMesh) {
+                texturesEnabled = !texturesEnabled;
+                if (texturesEnabled) {
+                    mapMesh.material.vertexColors = true;
+                } else {
+                    mapMesh.material.vertexColors = false;
+                    mapMesh.material.color = new THREE.Color(0x888888);
+                }
+                mapMesh.material.needsUpdate = true;
+            }
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>

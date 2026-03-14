@@ -21,7 +21,12 @@ class Q3DFRecordsApi {
             return [];
         }
 
-        return $this->mapRecords(json_decode($response, true));
+        $data = json_decode($response, true);
+        if (!$data || !isset($data['data'])) {
+            return [];
+        }
+
+        return $this->mapRecords($data);
     }
 
     private function mapRecords($records) {

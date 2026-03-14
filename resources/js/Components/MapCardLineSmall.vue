@@ -74,7 +74,7 @@
             <!-- Mapname -->
             <div class="ml-2">
                 <div class="flex items-center">
-                    <Link class="text-lg text-blue-400 hover:text-blue-300 font-bold" :href="route('maps.map', getRouteData)"> {{ mapName }} </Link>
+                    <Link class="text-lg text-blue-400 hover:text-blue-300 font-bold" :href="getGametype === 'run' ? `/maps/${encodeURIComponent(mapName)}` : `/maps/${encodeURIComponent(mapName)}?gametype=ctf2`"> {{ mapName }} </Link>
                 
                     <Popper :closeDelay="300" hover style="z-index: 100;" >
                         <div class="transition-all duration-500 ease-in-out opacity-0 group-hover:opacity-100 cursor-pointer text-gray-400 hover:text-green-500 ml-2" @click="copy(map?.name)">

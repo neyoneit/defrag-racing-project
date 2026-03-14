@@ -1,25 +1,28 @@
 <script setup>
     import { Link } from '@inertiajs/vue3';
-    import NavLink from '@/Components/Laravel/NavLink.vue';
 
-    const props = defineProps({
+    defineProps({
         tabs: Array,
         activeTab: String,
         onClick: Function
     });
-
-    const toggleTab = (tab) => {
-        props.onClick(tab.name);
-    };
 </script>
 
 <template>
-    <div class="mb-5 text-sm font-medium text-center">
-        <ul class="mr-5 w-full flex flex-wrap justify-center">
-            <li v-for="tab in tabs">
-                <NavLink class="mr-5 mb-3" v-if="tab.link && tab.condition" :href="route(tab.route, tab.params)" :active="activeTab == tab.name">
+    <div class="border-b border-white/10">
+        <ul class="flex flex-wrap -mb-px overflow-x-auto">
+            <li v-for="tab in tabs" :key="tab.name">
+                <Link
+                    v-if="tab.link && tab.condition"
+                    :href="route(tab.route, tab.params)"
+                    :class="{
+                        'text-blue-400 border-blue-400': activeTab === tab.name,
+                        'text-gray-400 border-transparent hover:text-gray-300 hover:border-gray-300': activeTab !== tab.name
+                    }"
+                    class="inline-block px-4 py-3 border-b-2 font-medium transition-colors whitespace-nowrap"
+                >
                     {{ tab.label }}
-                </NavLink>
+                </Link>
             </li>
         </ul>
     </div>

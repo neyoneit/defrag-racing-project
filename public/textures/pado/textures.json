@@ -1,0 +1,48 @@
+{
+  "map": "pado",
+  "textures": [
+    {
+      "index": 0,
+      "name": "textures/egyptsoc_floor/block10c",
+      "file": "texture_0.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 1,
+      "name": "textures/egyptsoc_floor/block08b",
+      "file": "texture_1.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 2,
+      "name": "textures/egyptsoc_trim/128-02b",
+      "file": "texture_2.png",
+      "width": 256,
+      "height": 128,
+      "type": "texture"
+    },
+    {
+      "index": 3,
+      "name": "textures/common/caulk",
+      "file": null,
+      "type": "invisible"
+    },
+    {
+      "index": 4,
+      "name": "textures/skies/ame_iceflats",
+      "file": null,
+      "type": "sky"
+    },
+    {
+      "index": 5,
+      "name": "textures/common/trigger",
+      "file": null,
+      "type": "invisible"
+    }
+  ],
+  "output_dir": "pado"
+}

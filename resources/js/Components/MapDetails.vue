@@ -84,7 +84,7 @@
         <div class="flex-1">
             <!-- Mapname -->
             <div class="flex items-center">
-                <Link :class="(mapName.length > 30) ? 'text-sm hover:text-blue-300 font-bold mh-50' : 'normal-map-name-text hover:text-blue-300 font-bold mh-50'" :href="route('maps.map', getRouteData)"> {{ mapName }} </Link>
+                <Link :class="(mapName.length > 30) ? 'text-sm hover:text-blue-300 font-bold mh-50' : 'normal-map-name-text hover:text-blue-300 font-bold mh-50'" :href="getGametype === 'run' ? `/maps/${encodeURIComponent(mapName)}` : `/maps/${encodeURIComponent(mapName)}?gametype=ctf2`"> {{ mapName }} </Link>
             
                 <Popper :closeDelay="300" hover style="z-index: 3;" >
                     <div class="transition-all duration-500 ease-in-out opacity-0 group-hover:opacity-100 cursor-pointer text-gray-400 hover:text-green-500 ml-2" @click="copy(map?.name ?? mapname)">

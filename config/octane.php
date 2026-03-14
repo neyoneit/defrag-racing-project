@@ -53,6 +53,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Swoole Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may specify Swoole-specific server options that should be used
+    | when running your server. These options will only be used by Swoole.
+    |
+    */
+
+    'swoole' => [
+        'options' => [
+            'package_max_length' => 10 * 1024 * 1024 * 1024, // 10GB
+            'max_request' => 500, // Recycle workers after 500 requests to prevent memory leaks
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Octane Listeners
     |--------------------------------------------------------------------------
     |
@@ -216,6 +233,6 @@ return [
     |
     */
 
-    'max_execution_time' => 30,
+    'max_execution_time' => 600,
 
 ];

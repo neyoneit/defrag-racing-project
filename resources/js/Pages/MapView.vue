@@ -1,13 +1,169 @@
 <script setup>
-    import { Head, router, usePage } from '@inertiajs/vue3';
+    import { Head, Link, router, usePage } from '@inertiajs/vue3';
     import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
-    import MapRecordSmall from '@/Components/MapRecordSmall.vue';
+    // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
     import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
-    import { watchEffect, ref, onMounted, onUnmounted, computed } from 'vue';
+    import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
+    import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
+    import axios from 'axios';
+
+    const showAddToMaplistModal = ref(false);
+
+    // Assign demo to online record
+    const showAssignModal = ref(false);
+    const assigningRecord = ref(null);
+    const assignPhysics = ref('VQ3');
+    const availableRecords = ref([]);
+    const selectedRecordId = ref(null);
+    const loadingRecords = ref(false);
+
+    const openAssignModal = async (record, physics) => {
+        assigningRecord.value = record;
+        assignPhysics.value = physics;
+        showAssignModal.value = true;
+        selectedRecordId.value = null;
+
+        // Load online records for this map + physics
+        loadingRecords.value = true;
+        try {
+            const response = await axios.get(`/demos/maps/${encodeURIComponent(props.map.name)}/records`, {
+                params: { physics: physics }
+            });
+            availableRecords.value = response.data;
+        } catch (error) {
+            console.error('Error loading records:', error);
+        } finally {
+            loadingRecords.value = false;
+        }
+    };
+
+    // Suggested matches — records sorted by time distance to demo's time
+    const suggestedRecords = computed(() => {
+        if (!assigningRecord.value || availableRecords.value.length === 0) return [];
+        const demoTime = assigningRecord.value.time_ms || assigningRecord.value.time;
+        if (!demoTime) return [];
+        return [...availableRecords.value]
+            .map(r => ({ ...r, timeDiff: Math.abs(r.time - demoTime) }))
+            .sort((a, b) => a.timeDiff - b.timeDiff)
+            .slice(0, 5);
+    });
+
+    const closeAssignModal = () => {
+        showAssignModal.value = false;
+        assigningRecord.value = null;
+        availableRecords.value = [];
+        selectedRecordId.value = null;
+    };
+
+    const assignDemoToRecord = async () => {
+        if (!selectedRecordId.value || !assigningRecord.value?.demo) return;
+
+        try {
+            const response = await axios.post(`/demos/${assigningRecord.value.demo.id}/assign`, {
+                record_id: selectedRecordId.value
+            });
+
+            if (response.data.success) {
+                closeAssignModal();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error assigning demo:', error);
+            alert('Failed to assign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
+    // Reverse assign: record → demo matches
+    const demoMatchesMap = ref({});
+    const showReverseAssignModal = ref(false);
+    const reverseAssignRecord = ref(null);
+    const reverseAssignDemos = ref([]);
+    const selectedDemoId = ref(null);
+
+    const loadDemoMatches = async () => {
+        try {
+            const response = await axios.get(`/maps/${encodeURIComponent(props.map.name)}/demo-matches`);
+            demoMatchesMap.value = response.data;
+        } catch (error) {
+            console.error('Error loading demo matches:', error);
+        }
+    };
+
+    const openReverseAssignModal = (record, demos) => {
+        reverseAssignRecord.value = record;
+        reverseAssignDemos.value = demos;
+        selectedDemoId.value = demos.length > 0 ? demos[0].demo_id : null;
+        showReverseAssignModal.value = true;
+    };
+
+    const closeReverseAssignModal = () => {
+        showReverseAssignModal.value = false;
+        reverseAssignRecord.value = null;
+        reverseAssignDemos.value = [];
+        selectedDemoId.value = null;
+    };
+
+    const assignDemoFromRecord = async () => {
+        if (!selectedDemoId.value || !reverseAssignRecord.value) return;
+        try {
+            const response = await axios.post(`/demos/${selectedDemoId.value}/assign`, {
+                record_id: reverseAssignRecord.value.id
+            });
+            if (response.data.success) {
+                closeReverseAssignModal();
+                loadDemoMatches();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error assigning demo:', error);
+            alert('Failed to assign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
+    // Reassign: record already has a demo, allow changing or removing
+    const showReassignModal = ref(false);
+    const reassignRecord = ref(null);
+    const reassignCurrentDemo = ref(null);
+
+    const openReassignModal = (record) => {
+        reassignRecord.value = record;
+        reassignCurrentDemo.value = record.uploaded_demos?.[0] || null;
+        showReassignModal.value = true;
+    };
+
+    const closeReassignModal = () => {
+        showReassignModal.value = false;
+        reassignRecord.value = null;
+        reassignCurrentDemo.value = null;
+    };
+
+    const unassignDemo = async () => {
+        if (!reassignCurrentDemo.value) return;
+        try {
+            const response = await axios.post(`/demos/${reassignCurrentDemo.value.id}/unassign`);
+            if (response.data.success) {
+                closeReassignModal();
+                loadDemoMatches();
+                router.reload();
+            }
+        } catch (error) {
+            console.error('Error unassigning demo:', error);
+            alert('Failed to unassign demo. ' + (error.response?.data?.message || 'Please try again.'));
+        }
+    };
+
+    const tags = ref([]);
+    const availableTags = ref([]);
+    const suggestedTags = ref([]);
+    const newTagInput = ref('');
+    const showTagSuggestions = ref(false);
+    const showAllTags = ref(false);
+    const addingTag = ref(false);
+    const adoptingTag = ref(false);
 
     const props = defineProps({
         map: Object,
@@ -15,9 +171,21 @@
         vq3Records: Object,
         cpmOldRecords: Object,
         vq3OldRecords: Object,
+        cpmOfflineRecords: Object,
+        vq3OfflineRecords: Object,
         my_cpm_record: Object,
         my_vq3_record: Object,
+        gametypeStats: Object,
+        servers: Array,
+        publicMaplists: {
+            type: Array,
+            default: () => []
+        },
         showOldtop: {
+            type: Boolean,
+            default: false
+        },
+        showOffline: {
             type: Boolean,
             default: false
         }
@@ -42,6 +210,15 @@
 
     const screenWidth = ref(window.innerWidth);
 
+    // Initialize oldtop state from props (server/URL state is source of truth)
+    const showOldtopLocal = ref(props.showOldtop);
+
+    // Initialize offline demos state from props
+    const showOfflineLocal = ref(props.showOffline);
+
+    // Mobile physics toggle - 'both', 'VQ3', or 'CPM'
+    const mobilePhysics = ref('both');
+
     const sortByDate = () => {
         if (column.value === 'date_set') {
             order.value = (order.value == 'ASC') ? 'DESC' : 'ASC';
@@ -58,13 +235,16 @@
     }
 
     const sortByTime = () => {
+        // Toggle between sorting by time (fastest) and date (when set)
         if (column.value === 'time') {
-            order.value = (order.value == 'ASC') ? 'DESC' : 'ASC';
+            // Switch to date sorting
+            column.value = 'date_set';
+            order.value = 'DESC'; // Newest first by default
         } else {
-            order.value = 'ASC';
+            // Switch to time sorting
+            column.value = 'time';
+            order.value = 'ASC'; // Fastest first by default
         }
-
-        column.value = 'time';
 
         router.reload({
             data: {
@@ -92,11 +272,26 @@
         gametype.value = route().params['gametype'] ?? 'run';
     });
 
+    // Watch for changes to showOldtop prop and sync with local state
+    watch(() => props.showOldtop, (newValue) => {
+        showOldtopLocal.value = newValue;
+        localStorage.setItem('mapview_show_oldtop', newValue ? '1' : '0');
+    }, { immediate: true });
+
+    // Watch for changes to showOffline prop and sync with local state
+    watch(() => props.showOffline, (newValue) => {
+        showOfflineLocal.value = newValue;
+        localStorage.setItem('mapview_show_offline', newValue ? '1' : '0');
+    }, { immediate: true });
+
+
     const resizeScreen = () => {
         screenWidth.value = window.innerWidth
     };
 
     const onChangeOldtop = (value) => {
+        showOldtopLocal.value = value;
+        localStorage.setItem('mapview_show_oldtop', value ? '1' : '0');
         router.reload({
             data: {
                 showOldtop: value
@@ -104,58 +299,360 @@
         })
     }
 
+    const onChangeOffline = (value) => {
+        // If turning on offline, turn off oldtop
+        if (value) {
+            showOldtopLocal.value = false;
+        }
+        showOfflineLocal.value = value;
+        localStorage.setItem('mapview_show_offline', value ? '1' : '0');
+        router.reload({
+            data: {
+                showOffline: value,
+                showOldtop: false
+            }
+        })
+    }
+
+    // Initialize tags from map data
+    onMounted(async () => {
+        if (props.map.tags) {
+            tags.value = props.map.tags;
+        }
+        // Fetch all tags and sort alphabetically
+        try {
+            const response = await axios.get('/api/tags');
+            availableTags.value = response.data.tags.sort((a, b) =>
+                a.display_name.localeCompare(b.display_name)
+            );
+        } catch (error) {
+            console.error('Error fetching tags:', error);
+        }
+
+        // Fetch suggested tags from maplists
+        try {
+            const response = await axios.get(`/api/maps/${props.map.id}/suggested-tags`);
+            suggestedTags.value = response.data.suggested_tags;
+        } catch (error) {
+            console.error('Error fetching suggested tags:', error);
+        }
+
+        // Load demo matches for assign icons on records
+        loadDemoMatches();
+    });
+
+    const filteredTags = computed(() => {
+        if (!newTagInput.value) return availableTags.value.slice(0, 20);
+        const search = newTagInput.value.toLowerCase();
+        return availableTags.value.filter(tag =>
+            tag.name.includes(search) || tag.display_name.toLowerCase().includes(search)
+        ).slice(0, 20);
+    });
+
+    const addTag = async (tagName) => {
+        if (!page.props.auth.user) {
+            alert('Please login to add tags');
+            return;
+        }
+
+        if (addingTag.value) return;
+
+        try {
+            addingTag.value = true;
+            const response = await axios.post(`/api/maps/${props.map.id}/tags`, {
+                tag_name: tagName
+            });
+            tags.value.push(response.data.tag);
+            newTagInput.value = '';
+            showTagSuggestions.value = false;
+        } catch (error) {
+            if (error.response?.data?.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Failed to add tag');
+            }
+        } finally {
+            addingTag.value = false;
+        }
+    };
+
+    const removeTag = async (tagId) => {
+        if (!page.props.auth.user) return;
+
+        try {
+            await axios.delete(`/api/maps/${props.map.id}/tags/${tagId}`);
+            tags.value = tags.value.filter(tag => tag.id !== tagId);
+
+            // Update suggested tags to reflect this tag is no longer adopted
+            const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
+            if (suggestedIndex !== -1) {
+                suggestedTags.value[suggestedIndex].already_adopted = false;
+            }
+        } catch (error) {
+            console.error('Error removing tag:', error);
+            alert('Failed to remove tag');
+        }
+    };
+
+    const adoptTag = async (tagId, tagDisplayName) => {
+        if (!page.props.auth.user) {
+            alert('Please login to adopt tags');
+            return;
+        }
+
+        if (adoptingTag.value) return;
+
+        try {
+            adoptingTag.value = true;
+            const response = await axios.post(`/api/maps/${props.map.id}/tags`, {
+                tag_name: tagDisplayName
+            });
+            tags.value.push(response.data.tag);
+
+            // Update suggested tags to mark as adopted
+            const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
+            if (suggestedIndex !== -1) {
+                suggestedTags.value[suggestedIndex].already_adopted = true;
+            }
+        } catch (error) {
+            if (error.response?.data?.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Failed to adopt tag');
+            }
+        } finally {
+            adoptingTag.value = false;
+        }
+    };
+
+    const handleTagInput = () => {
+        showTagSuggestions.value = newTagInput.value.length > 0;
+    };
+
+    const addCustomTag = () => {
+        if (newTagInput.value.trim()) {
+            addTag(newTagInput.value.trim());
+        }
+    };
+
+    const handleTagInputBlur = () => {
+        setTimeout(() => {
+            showAllTags.value = false;
+        }, 200);
+    };
+
     const getVq3Records = computed(() => {
-        if (! props.showOldtop ) {
-            return props.vq3Records
+        // Show offline records if toggle is on
+        if (props.showOffline && props.vq3OfflineRecords) {
+            return props.vq3OfflineRecords
         }
 
-        let oldtop_data = props.vq3OldRecords.data.map((item) => {
-            item['oldtop'] = true
+        // Show oldtop records if toggle is on
+        if (props.showOldtop) {
+            let oldtop_data = props.vq3OldRecords.data.map((item) => {
+                item['oldtop'] = true
+                return item
+            });
 
-            return item
-        });
+            let result = {
+                total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
+                data: [...props.vq3Records.data, ...oldtop_data],
+                first_page_url: props.vq3Records.first_page_url,
+                current_page: props.vq3Records.current_page,
+                last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
+                per_page: props.vq3Records.per_page
+            }
 
-        let result = {
-            total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
-            data: [...props.vq3Records.data, ...oldtop_data],
-            first_page_url: props.vq3Records.first_page_url,
-            current_page: props.vq3Records.current_page,
-            last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
-            per_page: props.vq3Records.per_page
+            result.data.sort((a, b) => a.time - b.time)
+            return result
         }
 
-        result.data.sort((a, b) => a.time - b.time)
-
-        return result
+        // Default: show online records
+        return props.vq3Records
     })
 
     const getCpmRecords = computed(() => {
-        if (! props.showOldtop ) {
-            return props.cpmRecords
+        // Show offline records if toggle is on
+        if (props.showOffline && props.cpmOfflineRecords) {
+            return props.cpmOfflineRecords
         }
 
-        let oldtop_data = props.cpmOldRecords.data.map((item) => {
-            item['oldtop'] = true
+        // Show oldtop records if toggle is on
+        if (props.showOldtop) {
+            let oldtop_data = props.cpmOldRecords.data.map((item) => {
+                item['oldtop'] = true
+                return item
+            });
 
-            return item
-        });
+            let result = {
+                total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
+                data: [...props.cpmRecords.data, ...oldtop_data],
+                first_page_url: props.cpmRecords.first_page_url,
+                current_page: props.cpmRecords.current_page,
+                last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
+                per_page: props.cpmRecords.per_page
+            }
 
-        let result = {
-            total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
-            data: [...props.cpmRecords.data, ...oldtop_data],
-            first_page_url: props.cpmRecords.first_page_url,
-            current_page: props.cpmRecords.current_page,
-            last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
-            per_page: props.cpmRecords.per_page
+            result.data.sort((a, b) => a.time - b.time)
+            return result
         }
 
-        result.data.sort((a, b) => a.time - b.time)
-
-        return result
+        // Default: show online records
+        return props.cpmRecords
     })
+
+    // Helper functions for weapon/item/function icons and names
+    const getWeaponIcon = (abbr) => {
+        const icons = {
+            'gauntlet': '/images/weapons/iconw_gauntlet.svg',
+            'gt': '/images/weapons/iconw_gauntlet.svg',
+            'mg': '/images/weapons/iconw_machinegun.svg',
+            'sg': '/images/weapons/iconw_shotgun.svg',
+            'gl': '/images/weapons/iconw_grenade.svg',
+            'rl': '/images/weapons/iconw_rocket.svg',
+            'lg': '/images/weapons/iconw_lightning.svg',
+            'rg': '/images/weapons/iconw_railgun.svg',
+            'pg': '/images/weapons/iconw_plasma.svg',
+            'bfg': '/images/weapons/iconw_bfg.svg',
+            'grapple': '/images/weapons/iconw_grapple.svg',
+            'hook': '/images/weapons/iconw_grapple.svg',
+            'gh': '/images/weapons/iconw_grapple.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/weapons/iconw_gauntlet.svg';
+    };
+
+    const getWeaponName = (abbr) => {
+        const weapons = {
+            'gauntlet': 'Gauntlet',
+            'gt': 'Gauntlet',
+            'mg': 'Machine Gun',
+            'sg': 'Shotgun',
+            'gl': 'Grenade Launcher',
+            'rl': 'Rocket Launcher',
+            'lg': 'Lightning Gun',
+            'rg': 'Rail Gun',
+            'pg': 'Plasma Gun',
+            'bfg': 'BFG',
+            'grapple': 'Grappling Hook',
+            'hook': 'Grappling Hook',
+            'gh': 'Grappling Hook'
+        };
+        return weapons[abbr.toLowerCase().trim()] || abbr.toUpperCase();
+    };
+
+    const getItemIcon = (abbr) => {
+        const icons = {
+            // Powerups
+            'enviro': '/images/powerups/envirosuit.svg',
+            'haste': '/images/powerups/haste.svg',
+            'quad': '/images/powerups/quad.svg',
+            'regen': '/images/powerups/regen.svg',
+            'invis': '/images/powerups/invis.svg',
+            'flight': '/images/powerups/flight.svg',
+            // Health
+            'health': '/images/items/iconh_yellow.svg',
+            'smallhealth': '/images/items/iconh_green.svg',
+            'bighealth': '/images/items/iconh_red.svg',
+            'mega': '/images/items/iconh_mega.svg',
+            'medkit': '/images/items/medkit.svg',
+            // Armor
+            'shard': '/images/items/iconr_shard.svg',
+            'ya': '/images/items/iconr_yellow.svg',
+            'ra': '/images/items/iconr_red.svg',
+            // CTF
+            'flag': '/images/items/iconf_blu2.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/items/iconh_yellow.svg';
+    };
+
+    const getItemName = (abbr) => {
+        const items = {
+            // Powerups
+            'enviro': 'Battle Suit',
+            'haste': 'Haste',
+            'quad': 'Quad Damage',
+            'regen': 'Regeneration',
+            'invis': 'Invisibility',
+            'flight': 'Flight',
+            // Health
+            'health': 'Health (+25)',
+            'smallhealth': 'Small Health (+5)',
+            'bighealth': 'Large Health (+50)',
+            'mega': 'Mega Health (+100)',
+            'medkit': 'Medkit',
+            // Armor
+            'shard': 'Armor Shard (+5)',
+            'ya': 'Yellow Armor (+50)',
+            'ra': 'Red Armor (+100)',
+            // CTF
+            'flag': 'Flag'
+        };
+        return items[abbr.toLowerCase().trim()] || abbr;
+    };
+
+    const getFunctionIcon = (abbr) => {
+        const icons = {
+            'tele': '/images/functions/tele.svg',
+            'teleporter': '/images/functions/teleporter.svg',
+            'slick': '/images/functions/slick.svg',
+            'timer': '/images/functions/timer.svg',
+            'fog': '/images/functions/fog.svg',
+            'water': '/images/functions/water.svg',
+            'lava': '/images/functions/lava.svg',
+            'moving': '/images/functions/moving.svg',
+            'door': '/images/functions/door.svg',
+            'button': '/images/functions/button.svg',
+            'push': '/images/functions/push.svg',
+            'break': '/images/functions/break.svg',
+            'slime': '/images/functions/slime.svg',
+            'shootergl': '/images/functions/shootergl.svg',
+            'shooterpg': '/images/functions/shooterpg.svg',
+            'shooterrl': '/images/functions/shooterrl.svg'
+        };
+        return icons[abbr.toLowerCase().trim()] || '/images/functions/timer.svg';
+    };
+
+    const getFunctionName = (abbr) => {
+        const functions = {
+            'tele': 'Teleporter',
+            'teleporter': 'Teleporter',
+            'slick': 'Slick Surface',
+            'timer': 'Timer',
+            'fog': 'Fog',
+            'water': 'Water',
+            'lava': 'Lava',
+            'moving': 'Moving Platforms',
+            'door': 'Doors',
+            'button': 'Buttons',
+            'push': 'Push Trigger',
+            'break': 'Breakable',
+            'slime': 'Slime',
+            'shootergl': 'Grenade Shooter',
+            'shooterpg': 'Plasma Shooter',
+            'shooterrl': 'Rocket Shooter'
+        };
+        return functions[abbr.toLowerCase().trim()] || abbr;
+    };
+
+    const formatTime = (milliseconds) => {
+        const minutes = Math.floor(milliseconds / 60000);
+        const seconds = Math.floor((milliseconds % 60000) / 1000);
+        const ms = milliseconds % 1000;
+
+        if (minutes > 0) {
+            return `${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
+        }
+        return `${seconds}:${ms.toString().padStart(3, '0')}`;
+    };
 
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);
+
+        // Initialize toggle state - always trust the server/URL state
+        showOldtopLocal.value = props.showOldtop;
+
+        // Sync localStorage with the current state from URL/server
+        localStorage.setItem('mapview_show_oldtop', props.showOldtop ? '1' : '0');
     });
 
     onUnmounted(() => {
@@ -167,227 +664,696 @@
     <div>
         <Head :title="map.name" />
 
-        <div class="max-w-8xl mx-auto pt-6 px-4 md:px-6 lg:px-8">
-            <div class="flex justify-between items-center flex-wrap">
-                <h2 class="font-semibold text-xl text-gray-200 leading-tight">
-                    Map details
-                </h2>
+        <!-- Cleaner page with card background -->
+        <div class="relative pb-10">
+            <!-- Fade shadow at top -->
+            <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 400px; z-index: 0;"></div>
 
+            <!-- Hero Content (compact) -->
+            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative overflow-hidden border border-white/10">
+                    <!-- Map thumbnail as card background -->
+                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                        <!-- Dark overlay for readability -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95"></div>
+                    </div>
+                    <!-- Fallback solid background if no thumbnail -->
+                    <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
 
-                <div class="flex flex-wrap">
-                    <Dropdown align="right" width="48" class="mt-2 sm:mt-0">
-                        <template #trigger>
-                            <button class="flex items-center text-white bg-grayop-700 py-2 px-4 rounded-md font-bold cursor-pointer bg-grayop-700 hover:bg-gray-600 mr-3">
-                                <div class="w-8 h-8 mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+                    <!-- Content layer (on top of background) -->
+                    <div class="relative z-10">
+                    <!-- Map Title -->
+                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">{{ map.name }}</h1>
+                    <p class="text-gray-300 text-center mb-4">
+                        <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
+                        <span v-if="map.date_added" class="text-gray-400"> • {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                    </p>
+
+                    <!-- Download & Servers -->
+                    <div class="flex flex-wrap gap-2 justify-center mb-4">
+                        <!-- Download Button -->
+                        <a
+                            :href="`/maps/${map.name}/download`"
+                            class="flex items-center gap-1.5 bg-gray-600/80 hover:bg-gray-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                        >
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
+                            </svg>
+                            Download Map
+                        </a>
+
+                        <!-- Add to Maplist Button (only for authenticated users) -->
+                        <button
+                            v-if="$page.props.auth.user"
+                            @click="showAddToMaplistModal = true"
+                            class="flex items-center gap-1.5 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            Add to Maplist
+                        </button>
+
+                        <!-- Active Servers -->
+                        <div v-if="servers && servers.length > 0" class="flex flex-wrap gap-2">
+                            <a
+                                v-for="server in servers"
+                                :key="server.id"
+                                v-show="server.online_players && server.online_players.length > 0"
+                                :href="`defrag://${server.ip}:${server.port}`"
+                                class="flex items-center gap-1.5 bg-orange-500/80 hover:bg-orange-500 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                                :title="`Connect to ${server.plain_name || server.name}`"
+                            >
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
+                                </svg>
+                                <span class="whitespace-nowrap">Join</span>
+                                <span class="truncate max-w-[100px]">{{ server.plain_name || server.name }}</span>
+                                <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ server.online_players.length }} playing</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Tags Section -->
+                    <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
+                        </div>
+
+                        <!-- Display existing tags -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span
+                                v-for="tag in tags"
+                                :key="tag.id"
+                                class="group flex items-center gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 px-2.5 py-1 rounded-full text-xs font-medium hover:bg-purple-600/30 transition-colors"
+                            >
+                                {{ tag.display_name }}
+                                <button
+                                    v-if="$page.props.auth.user"
+                                    @click="removeTag(tag.id)"
+                                    class="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
+                                    title="Remove tag"
+                                >
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
-                                </div>
+                                </button>
+                            </span>
+                            <span v-if="tags.length === 0" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
+                        </div>
 
-                                <div>
-                                    <div class="text-left">
-                                        Filters
-                                    </div>
-
-                                    <div class="text-xs text-gray-500 text-center flex">
-                                        <span>Currently:</span>
-                                        <span class="text-gray-400 capitalize ml-1"> {{ column.split('_')[0] }} </span>
-
-                                        <span class="ml-0.5">
-                                            <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
-
-                                            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                            </svg>
-                                        </span>
-                                    </div>
-                                </div>
-                            </button>
-                        </template>
-
-                        <template #content>
-                            <div @click="sortByDate" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span>Date Set</span>
-                                <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>
-                            </div>
-
-                            <div @click="sortByTime" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span>Time</span>
-                                <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>
-                            </div>
-                        </template>
-                    </Dropdown>
-
-                    <Dropdown align="right" width="48" class="mt-2 sm:mt-0">
-                        <template #trigger>
-                            <button class="flex items-center text-white bg-grayop-700 py-2 px-4 rounded-md font-bold cursor-pointer bg-grayop-700 hover:bg-gray-600 mr-3">
-                                <div class="w-8 h-8 mr-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                        <!-- Suggested tags from maplists -->
+                        <div v-if="suggestedTags.length > 0" class="mb-4 pb-4 border-b border-white/10">
+                            <div class="text-xs text-gray-400 uppercase mb-2 font-bold">Suggested tags from maplists</div>
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    v-for="suggestedTag in suggestedTags"
+                                    :key="suggestedTag.id"
+                                    :class="[
+                                        'group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
+                                        suggestedTag.already_adopted
+                                            ? 'bg-green-600/20 border border-green-500/30 text-green-300'
+                                            : 'bg-blue-600/20 border border-blue-500/30 text-blue-300 cursor-pointer hover:bg-blue-600/30'
+                                    ]"
+                                    :title="suggestedTag.already_adopted ? 'Already adopted' : 'From: ' + suggestedTag.maplist_names.join(', ')"
+                                >
+                                    {{ suggestedTag.display_name }}
+                                    <button
+                                        v-if="$page.props.auth.user && !suggestedTag.already_adopted"
+                                        @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
+                                        class="ml-0.5 hover:text-green-400 transition-colors"
+                                        title="Adopt this tag"
+                                        :disabled="adoptingTag"
+                                    >
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </button>
+                                    <svg v-else-if="suggestedTag.already_adopted" class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                                     </svg>
-                                </div>
-
-                                <div>
-                                    <div class="text-left">
-                                        Gametype
-                                    </div>
-
-                                    <div class="text-xs text-gray-500 text-center flex">
-                                        <span>Currently:</span>
-                                        <span class="text-gray-400 capitalize ml-1"> {{ gametype }} </span>
-                                    </div>
-                                </div>
-                            </button>
-                        </template>
-
-                        <template #content>
-                            <div v-for="gt in gametypes" @click="sortByGametype(gt)" class="flex justify-between cursor-pointer block px-4 py-2 text-sm leading-5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-grayop-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-grayop-800 transition duration-150 ease-in-out">
-                                <span class="uppercase"> {{ gt }} </span>
+                                </span>
                             </div>
-                        </template>
-                    </Dropdown>
+                        </div>
+
+                        <!-- Add tag input (for logged in users) -->
+                        <div v-if="$page.props.auth.user" class="relative z-[70]">
+                            <div class="flex gap-2">
+                                <input
+                                    v-model="newTagInput"
+                                    @input="handleTagInput"
+                                    @keyup.enter="addCustomTag"
+                                    @focus="showAllTags = true"
+                                    @blur="handleTagInputBlur"
+                                    type="text"
+                                    placeholder="Add a tag..."
+                                    class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10"
+                                />
+                                <button
+                                    @click="addCustomTag"
+                                    :disabled="!newTagInput.trim() || addingTag"
+                                    class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    {{ addingTag ? 'Adding...' : 'Add' }}
+                                </button>
+                            </div>
+
+                            <!-- Available tags dropdown (shown below when focused) -->
+                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-2xl p-3 z-[200]">
+                                <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
+                                <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
+                                    <button
+                                        v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
+                                        :key="availableTag.id"
+                                        @click="addTag(availableTag.display_name)"
+                                        class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
+                                    >
+                                        {{ availableTag.display_name }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Features: Weapons, Items, Functions -->
+                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="mb-4 pt-3 border-t border-white/10">
+                        <div class="grid grid-cols-3 gap-4">
+                            <!-- Weapons Column (Left) -->
+                            <div v-if="map.weapons && map.weapons.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Weapons</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="weapon in map.weapons.split(',')" :key="weapon"
+                                         :src="getWeaponIcon(weapon)"
+                                         :alt="getWeaponName(weapon)"
+                                         :title="getWeaponName(weapon)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
+                            </div>
+
+                            <!-- Items Column (Middle) -->
+                            <div v-if="map.items && map.items.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Items</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="item in map.items.split(',')" :key="item"
+                                         :src="getItemIcon(item)"
+                                         :alt="getItemName(item)"
+                                         :title="getItemName(item)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
+                            </div>
+
+                            <!-- Functions Column (Right) -->
+                            <div v-if="map.functions && map.functions.length > 0" class="flex flex-col gap-2">
+                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Functions</span>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <img v-for="func in map.functions.split(',')" :key="func"
+                                         :src="getFunctionIcon(func)"
+                                         :alt="getFunctionName(func)"
+                                         :title="getFunctionName(func)"
+                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Public Maplists featuring this map -->
+                    <div v-if="publicMaplists && publicMaplists.length > 0" class="mb-4 pt-3 border-t border-white/10">
+                        <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+                            </svg>
+                            Featured in {{ publicMaplists.length }} Public Maplist{{ publicMaplists.length !== 1 ? 's' : '' }}
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <Link
+                                v-for="maplist in publicMaplists"
+                                :key="maplist.id"
+                                :href="`/maplists/${maplist.id}`"
+                                class="bg-white/5 hover:bg-white/10 rounded-lg p-3 border border-white/10 hover:border-blue-500/50 transition group"
+                            >
+                                <div class="flex items-start justify-between mb-1">
+                                    <h4 class="text-white font-semibold text-sm group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
+                                    <div class="text-xs text-green-400 px-2 py-0.5 bg-green-400/10 rounded shrink-0">Public</div>
+                                </div>
+                                <div class="flex items-center gap-3 text-xs text-gray-400">
+                                    <div class="flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                        </svg>
+                                        <span>{{ maplist.maps_count || 0 }} maps</span>
+                                    </div>
+                                    <div v-if="maplist.user" class="flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        <span>by {{ maplist.user.name }}</span>
+                                    </div>
+                                    <div v-if="maplist.favorites_count > 0" class="flex items-center gap-1 text-yellow-400">
+                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                        <span>{{ maplist.favorites_count }}</span>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <!-- Gametype Tabs (only show if more than one gametype has records) -->
+                    <div v-if="Object.values(gametypeStats).filter(count => count > 0).length > 1" class="flex gap-2 flex-wrap justify-center mb-4">
+                        <button
+                            v-for="gt in gametypes"
+                            :key="gt"
+                            v-show="gametypeStats[gt] && gametypeStats[gt] > 0"
+                            @click="sortByGametype(gt)"
+                            :class="[
+                                'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm',
+                                gametype === gt
+                                    ? 'bg-blue-500/80 text-white shadow-lg ring-2 ring-blue-400'
+                                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                            ]"
+                        >
+                            <span class="uppercase">{{ gt }}</span>
+                            <span class="ml-2 text-xs opacity-75">({{ gametypeStats[gt] }})</span>
+                        </button>
+                    </div>
+
+                    <!-- Physics & Controls -->
+                    <div class="flex flex-wrap gap-4 justify-center items-center text-sm">
+                        <button
+                            @click="sortByTime"
+                            class="flex items-center gap-2 bg-white/10 backdrop-blur-sm hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
+                            :title="column === 'time' ? 'Currently sorting by fastest time' : 'Currently sorting by date set'"
+                        >
+                            <img v-if="column === 'time'" src="/images/powerups/haste.svg" class="w-5 h-5" alt="Fastest" />
+                            <span v-if="column === 'time'">Fastest</span>
+                            <span v-else>📅 Newest</span>
+                            <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                            </svg>
+                        </button>
+                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                            <span class="text-gray-300">Old Top:</span>
+                            <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
+                        </div>
+                        <div class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                            <span class="text-gray-300">Demos Top:</span>
+                            <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
+                        </div>
+                    </div>
+
+</div> <!-- Close content layer -->
                 </div>
             </div>
 
-
-            <div class="flex mt-3">
-                <div class="text-sm text-blue-400 flex items-center mr-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                    </svg>
-
-                    <div class="ml-2 mr-5">{{ vq3Records.total }} VQ3 Records</div>
+            <!-- Leaderboards Section (on top of background) -->
+            <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 z-10">
+                <!-- Mobile Physics Toggle (only on small screens) -->
+                <div class="md:hidden flex gap-2 justify-center mb-4">
+                    <button
+                        @click="mobilePhysics = mobilePhysics === 'VQ3' ? 'both' : 'VQ3'"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            mobilePhysics === 'VQ3'
+                                ? 'bg-blue-500/80 text-white shadow-lg ring-2 ring-blue-400'
+                                : 'bg-white/10 text-gray-300'
+                        ]"
+                    >
+                        <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
+                        <span>VQ3</span>
+                    </button>
+                    <button
+                        @click="mobilePhysics = mobilePhysics === 'CPM' ? 'both' : 'CPM'"
+                        :class="[
+                            'px-4 py-2 rounded-lg font-bold text-sm transition-all backdrop-blur-sm flex items-center gap-2',
+                            mobilePhysics === 'CPM'
+                                ? 'bg-purple-500/80 text-white shadow-lg ring-2 ring-purple-400'
+                                : 'bg-white/10 text-gray-300'
+                        ]"
+                    >
+                        <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
+                        <span>CPM</span>
+                    </button>
                 </div>
 
-                <div class="text-sm text-blue-400 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-                    </svg>
+                <div class="md:flex gap-4 justify-center">
+                    <!-- VQ3 Leaderboard -->
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <!-- VQ3 Header -->
+                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
+                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                            </div>
+                            <div class="text-right min-w-[80px]">
+                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div v-if="my_vq3_record" class="text-sm font-bold text-blue-300 tabular-nums">
+                                    {{ formatTime(my_vq3_record.time) }}
+                                    <span class="text-xs text-blue-400">#{{ my_vq3_record.rank }}</span>
+                                </div>
+                                <div v-else class="text-sm text-gray-500">-</div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="ml-2 mr-5">{{ cpmRecords.total }} CPM Records</div>
+                    <!-- VQ3 Records List -->
+                    <div class="p-3">
+                        <div v-if="getVq3Records.total > 0">
+                            <div class="flex-grow">
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                            </div>
+
+                            <!-- <div class="flex-grow" v-else>
+                                <MapRecordSmall v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
+                            </div> -->
+                        </div>
+
+                        <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
+                            <div>
+                                <div class="flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                </div>
+                                <div>There are no VQ3 Records</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VQ3 Pagination -->
+                    <div class="border-t border-white/5 bg-transparent p-3" v-if="getVq3Records.total > getVq3Records.per_page">
+                        <Pagination pageName="vq3Page" :last_page="getVq3Records.last_page" :current_page="getVq3Records.current_page" :link="getVq3Records.first_page_url" :only="['vq3Records', 'vq3OldRecords', 'vq3OfflineRecords']" />
+                    </div>
+                </div>
+
+                <!-- CPM Leaderboard -->
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
+                    <!-- CPM Header -->
+                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
+                                <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                            </div>
+                            <div class="text-right min-w-[80px]">
+                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div v-if="my_cpm_record" class="text-sm font-bold text-purple-300 tabular-nums">
+                                    {{ formatTime(my_cpm_record.time) }}
+                                    <span class="text-xs text-purple-400">#{{ my_cpm_record.rank }}</span>
+                                </div>
+                                <div v-else class="text-sm text-gray-500">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CPM Records List -->
+                    <div class="p-3">
+                        <div v-if="getCpmRecords.total > 0">
+                            <div class="flex-grow">
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                            </div>
+
+                            <!-- <div class="flex-grow" v-else>
+                                <MapRecordSmall v-for="record in getCpmRecords.data" physics="CPM" :oldtop="record.oldtop" :key="record.id" :record="record" />
+                            </div> -->
+                        </div>
+
+                        <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
+                            <div>
+                                <div class="flex items-center justify-center mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z" />
+                                    </svg>
+                                </div>
+                                <div>There are no CPM Records</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CPM Pagination -->
+                    <div class="border-t border-white/5 bg-transparent p-3" v-if="getCpmRecords.total > getCpmRecords.per_page">
+                        <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" :only="['cpmRecords', 'cpmOldRecords', 'cpmOfflineRecords']" />
+                    </div>
+                </div> <!-- Close CPM Leaderboard -->
+                </div> <!-- Close md:flex container -->
+            </div> <!-- Close Leaderboards Section -->
+        </div> <!-- Close page wrapper -->
+
+        <!-- Add to Maplist Modal -->
+        <AddToMaplistModal
+            :show="showAddToMaplistModal"
+            :map-id="map.id"
+            @close="showAddToMaplistModal = false"
+            @added="showAddToMaplistModal = false"
+        />
+
+        <!-- Assign Demo to Online Record Modal -->
+        <div v-if="showAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeAssignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-white/10 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
+                    <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Demo info -->
+                <div v-if="assigningRecord" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-white/5">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="text-sm"><span class="text-gray-500">Map:</span> <span class="text-gray-200 font-medium">{{ map.name }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Physics:</span> <span class="font-medium" :class="assignPhysics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assignPhysics }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(assigningRecord.player_name || assigningRecord.name)"></span></div>
+                        <div v-if="assigningRecord.time" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningRecord.time) }}</span></div>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div v-if="loadingRecords" class="text-center py-8">
+                    <div class="text-gray-400 text-lg">Loading records...</div>
+                </div>
+
+                <!-- Suggested matches -->
+                <div v-if="!loadingRecords && suggestedRecords.length > 0" class="mb-5">
+                    <label class="block text-sm font-medium text-green-400 mb-2">
+                        Closest time matches
+                    </label>
+                    <div class="border border-green-700/30 rounded-lg bg-green-900/10 overflow-hidden">
+                        <button
+                            v-for="record in suggestedRecords"
+                            :key="'suggested-' + record.id"
+                            @click="selectedRecordId = record.id"
+                            :class="[
+                                'w-full text-left px-4 py-3 hover:bg-green-800/20 border-b border-green-800/20 last:border-b-0 transition-all',
+                                selectedRecordId === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
+                            ]"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs text-gray-500" :class="record.timeDiff === 0 ? 'text-green-400 font-bold' : ''">
+                                        {{ record.timeDiff === 0 ? 'EXACT' : (record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff)) + ' diff' }}
+                                    </span>
+                                    <span class="text-sm font-mono" :class="selectedRecordId === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Records list -->
+                <div v-if="!loadingRecords && availableRecords.length > 0" class="mb-6">
+                    <label class="block text-sm font-medium text-gray-400 mb-3">
+                        All records ({{ availableRecords.length }})
+                    </label>
+                    <div class="max-h-[400px] overflow-y-auto border border-gray-700/50 rounded-lg">
+                        <button
+                            v-for="record in availableRecords"
+                            :key="record.id"
+                            @click="selectedRecordId = record.id"
+                            :class="[
+                                'w-full text-left px-4 py-3 hover:bg-white/5 border-b border-gray-800/50 last:border-b-0 transition-all',
+                                selectedRecordId === record.id ? 'bg-green-600/20 ring-1 ring-green-500/50' : ''
+                            ]"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-gray-500 font-bold text-sm w-8 text-right">#{{ record.rank }}</span>
+                                    <span class="text-base" v-html="q3tohtml(record.player_name)"></span>
+                                </div>
+                                <span class="text-sm font-mono" :class="selectedRecordId === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- No records -->
+                <div v-else class="mb-6 text-center text-gray-400 py-8">
+                    No online records found for {{ map.name }} ({{ assignPhysics }})
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="assignDemoToRecord"
+                        :disabled="!selectedRecordId"
+                        :class="[
+                            'px-5 py-2.5 rounded-lg text-white font-medium transition-colors',
+                            selectedRecordId ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 cursor-not-allowed'
+                        ]"
+                    >
+                        Assign Demo
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="max-w-8xl mx-auto py-10 sm:px-6 lg:px-8">
-            <div v-if="screenWidth > 640">
-                <MapCardLine :map="map">
-                    <div class="text-white mr-3">Old Top: </div>
-                    <ToggleButton :isActive="showOldtop"  @setIsActive="onChangeOldtop" />
-                    <div class="mr-5"></div>
-                </MapCardLine>
-            </div>
+        <!-- Reverse Assign: Record → Demo Modal -->
+        <div v-if="showReverseAssignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReverseAssignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-purple-500/20 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-purple-300">Assign Demo to Record</h3>
+                    <button @click="closeReverseAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
 
-            <div v-else>
-                <MapCardLineSmall :map="map" />
-            </div>
-
-
-            <div class="md:flex justify-center mb-5">
-                <div class="rounded-md p-3 flex-1 bg-grayop-700 flex flex-col mr-1 justify-center">
-                    <div v-if="my_vq3_record">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord physics="VQ3" :record="my_vq3_record" />
-                        </div>
-
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall :record="my_vq3_record" />
-                        </div>
-                    </div>
-
-                    <div v-else class="flex items-center justify-center text-gray-500">
-                        <div v-if="page.props?.auth?.user">You have no VQ3 Record In this map</div>
-                        <div v-else>You need to be logged in to see your records</div>
+                <!-- Record info -->
+                <div v-if="reverseAssignRecord" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-purple-500/10">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="text-sm"><span class="text-gray-500">Record:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(reverseAssignRecord.user?.name || reverseAssignRecord.name)"></span></div>
+                        <div class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(reverseAssignRecord.time) }}</span></div>
                     </div>
                 </div>
 
-                <div class="rounded-md p-3 flex-1 bg-grayop-700 flex flex-col ml-1 mt-5 md:mt-0 justify-center">
-                    <div v-if="my_cpm_record">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord physics="CPM" :record="my_cpm_record" />
-                        </div>
-
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall :record="my_cpm_record" />
-                        </div>
-                    </div>
-
-                    <div v-else class="flex items-center justify-center text-gray-500 items-center">
-                        <div v-if="page.props?.auth?.user">You have no CPM Record In this map</div>
-                        <div v-else>You need to be logged in to see your records</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="md:flex justify-center">
-                <div class="rounded-md p-3 flex-1 bg-grayop-700 flex flex-col mr-1">
-                    <div v-if="getVq3Records.total > 0">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.id" :record="record" />
-                        </div>
-
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getVq3Records.data" :key="record.id" :record="record" />
-                        </div>
-                    </div>
-
-                    <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
-                        <div>
-                            <div class="flex items-center justify-center mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
+                <!-- Matching demos -->
+                <div v-if="reverseAssignDemos.length > 0" class="mb-6">
+                    <label class="block text-sm font-medium text-purple-400 mb-2">
+                        Matching demos ({{ reverseAssignDemos.length }})
+                    </label>
+                    <div class="border border-purple-700/30 rounded-lg bg-purple-900/10 overflow-hidden">
+                        <button
+                            v-for="demo in reverseAssignDemos"
+                            :key="demo.demo_id"
+                            @click="selectedDemoId = demo.demo_id"
+                            :class="[
+                                'w-full text-left px-5 py-4 hover:bg-purple-800/20 border-b border-purple-800/20 last:border-b-0 transition-all',
+                                selectedDemoId === demo.demo_id ? 'bg-purple-600/20 ring-1 ring-purple-500/50' : ''
+                            ]"
+                        >
+                            <!-- Player name + confidence -->
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-lg font-bold" :class="{
+                                    'text-green-400': demo.confidence >= 80,
+                                    'text-yellow-400': demo.confidence >= 50 && demo.confidence < 80,
+                                    'text-orange-400': demo.confidence < 50
+                                }">{{ demo.confidence }}%</span>
+                                <span class="text-lg font-semibold text-gray-100" v-html="q3tohtml(demo.player_name)"></span>
+                                <span v-if="demo.time_ms" class="text-base font-mono text-gray-300 ml-auto">{{ formatTime(demo.time_ms) }}</span>
                             </div>
-                            <div>There are no VQ3 Records</div>
-                        </div>
-                    </div>
 
-                    <div class="flex justify-center" v-if="getVq3Records.total > getVq3Records.per_page">
-                        <Pagination pageName="vq3Page" :last_page="getVq3Records.last_page" :current_page="getVq3Records.current_page" :link="getVq3Records.first_page_url" />
+                            <!-- Filename -->
+                            <div class="mb-2 text-sm text-gray-300 break-all">
+                                {{ demo.filename }}
+                            </div>
+
+                            <!-- Match reasoning -->
+                            <div class="text-sm text-gray-300 leading-relaxed bg-gray-800/50 rounded-md px-3 py-2 border-l-2" :class="{
+                                'border-green-500': demo.confidence >= 80,
+                                'border-yellow-500': demo.confidence >= 50 && demo.confidence < 80,
+                                'border-orange-500': demo.confidence < 50
+                            }">
+                                <span v-if="demo.confidence === 100">
+                                    Exact name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is identical to record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>".
+                                </span>
+                                <span v-else-if="demo.confidence >= 80">
+                                    Very similar name — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" closely matches record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span v-else-if="demo.confidence >= 50">
+                                    Partial name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is somewhat similar to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span v-else>
+                                    Weak name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" has low similarity to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                </span>
+                                <span class="text-green-400 font-medium"> Time matches exactly.</span>
+                            </div>
+                        </button>
                     </div>
                 </div>
 
-                <div class="rounded-md p-3 flex-1 bg-grayop-700 flex flex-col ml-1 mt-5 md:mt-0">
-                    <div v-if="getCpmRecords.total > 0">
-                        <div class="flex-grow" v-if="screenWidth > 640">
-                            <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.id" :record="record" />
-                        </div>
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeReverseAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="assignDemoFromRecord"
+                        :disabled="!selectedDemoId"
+                        :class="[
+                            'px-5 py-2.5 rounded-lg text-white font-medium transition-colors',
+                            selectedDemoId ? 'bg-purple-600 hover:bg-purple-500' : 'bg-gray-600 cursor-not-allowed'
+                        ]"
+                    >
+                        Assign Demo
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Reassign Modal -->
+        <div v-if="showReassignModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" @click="closeReassignModal">
+            <div class="backdrop-blur-xl bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl border border-yellow-500/20 shadow-2xl" @click.stop>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-yellow-300">Reassign Demo</h3>
+                    <button @click="closeReassignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
 
-                        <div class="flex-grow" v-else>
-                            <MapRecordSmall v-for="record in getCpmRecords.data" :key="record.id" :record="record" />
-                        </div>
+                <!-- Current assignment info -->
+                <div v-if="reassignCurrentDemo" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-yellow-500/10">
+                    <div class="text-sm text-gray-400 mb-2">Currently assigned demo:</div>
+                    <div class="grid grid-cols-1 gap-2">
+                        <div class="text-sm"><span class="text-gray-500">File:</span> <span class="text-gray-200 break-all">{{ reassignCurrentDemo.original_filename }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200" v-html="q3tohtml(reassignCurrentDemo.player_name || 'Unknown')"></span></div>
+                        <div v-if="reassignCurrentDemo.time_ms" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono">{{ formatTime(reassignCurrentDemo.time_ms) }}</span></div>
                     </div>
+                </div>
 
-                    <div v-else class="flex items-center justify-center mt-20 text-gray-500 text-lg">
-                        <div>
-                            <div class="flex items-center justify-center mb-4">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                </svg>
-                            </div>
-                            <div>There are no CPM Records</div>
-                        </div>
-                    </div>
+                <p class="text-sm text-gray-400 mb-6">
+                    Unassigning the demo will remove it from this record. It will become available for reassignment to a different record.
+                </p>
 
-                    <div class="flex justify-center" v-if="getCpmRecords.total > getCpmRecords.per_page">
-                        <Pagination pageName="cpmPage" :last_page="getCpmRecords.last_page" :current_page="getCpmRecords.current_page" :link="getCpmRecords.first_page_url" />
-                    </div>
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button @click="closeReassignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button
+                        @click="unassignDemo"
+                        class="px-5 py-2.5 rounded-lg text-white font-medium transition-colors bg-yellow-600 hover:bg-yellow-500"
+                    >
+                        Unassign Demo
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+</style>

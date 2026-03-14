@@ -168,4 +168,14 @@ class Map extends Model
     public function isStrafe() {
         return !$this->weapons || trim($this->weapons) === '';
     }
+
+    /**
+     * Tags associated with this map
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'map_tag')
+            ->withPivot('user_id')
+            ->withTimestamps();
+    }
 }

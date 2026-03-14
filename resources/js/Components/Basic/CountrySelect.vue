@@ -12,7 +12,7 @@
   </template>
   
 <script setup>
-    import { ref, watch } from 'vue';
+    import { ref, watch, onMounted } from 'vue';
     import countries from '@/Components/stubs/countries'
 
     const isOpen = ref(false);
@@ -23,6 +23,14 @@
 
     const props = defineProps({
         setCountry: Function,
+        selectedCountry: String,
+    });
+
+    onMounted(() => {
+        if (props.selectedCountry && countries[props.selectedCountry]) {
+            country.value = countries[props.selectedCountry];
+            selectedOption.value = props.selectedCountry;
+        }
     });
 
     const filterOptions = () => {

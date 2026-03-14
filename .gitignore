@@ -26,3 +26,57 @@ rr
 
 local_devel/*.zip
 local_devel/dummy_data/
+
+docker-compose.yml
+
+# Production credentials (local only - template version is for GitHub)
+PRODUCTION_DEPLOYMENT.md
+
+# Production credentials (keep local only)
+PRODUCTION_CREDENTIALS.md
+
+# Unused icon libraries (development resources only)
+/resources/icon-libraries/
+
+# Rust build artifacts (build on server)
+/rust-rating-service/target/
+
+# Don't commit model files
+/public/models/
+
+# Don't commit base Q3 game files (pak0.pk3 & pak2.pk3 extractions)
+/public/baseq3/
+
+# Don't commit pk3 files (Quake 3 archives)
+*.pk3
+
+# Don't commit extracted model files from storage
+/storage/models/
+
+# Don't commit pak files in storage (upload manually on production)
+/storage/app/pak*.pk3
+
+# Don't commit test files (zip, pk3, txt from extractions)
+/public/test/
+
+# Don't commit one-off player rename commands
+/app/Console/Commands/RenamePlayer.php
+*.sql
+
+# Documentation/instruction files (local only)
+ODFE_GETDFSTATUS.md
+GETDFSTATUS_WEB_RECAP.md
+VPS_ACCESS.md
+
+# Local docker config
+/docker/
+
+# MediaWiki - Don't commit LocalSettings.php (contains secrets)
+/wiki/LocalSettings.php
+/wiki/extensions/*
+!/wiki/extensions/.gitkeep
+/public/baseq3-hd/
+
+# Python bytecode
+__pycache__/
+*.pyc

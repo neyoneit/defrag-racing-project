@@ -47,6 +47,9 @@ class RouteServiceProvider extends ServiceProvider
                 ->namespace('App\Http\Controllers\Clans')
                 ->prefix('clans')
                 ->group(base_path('routes/clans.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/headhunter.php'));
         });
     }
 }

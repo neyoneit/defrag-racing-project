@@ -84,15 +84,27 @@ class DefragServer
             }
         }
     
+        // Extract defrag_gametype - rcon score doesn't include it, so we need to get it via getstatus
+        $defrag_gametype = '5'; // default
+
+        // Send getstatus to get server CVARs including defrag_gametype
+        socket_sendto($this->socket, "\xff\xff\xff\xffgetstatus\x00", strlen("\xff\xff\xff\xffgetstatus\x00"), 0, $this->ip, $this->port);
+        $statusData = socket_read($this->socket, 4096);
+
+        if ($statusData && preg_match('/defrag_gametype\\\\(\d+)/', $statusData, $matches)) {
+            $defrag_gametype = $matches[1];
+        }
+
         $result = [
             'players' => $players,
             'map' => explode(':', $data[0])[1],
             'hostname' => explode(':', $data[1])[1],
             'defrag' => explode(':', $data[2])[1],
+            'defrag_gametype' => $defrag_gametype,
             'scores' => $scores,
             'rcon'   => true
         ];
-    
+
         return $result;
     }    
 
@@ -117,6 +129,7 @@ class DefragServer
             'map' => $serverData['mapname'],
             'hostname' => $serverData['sv_hostname'],
             'defrag' => $this->getGameMode($serverData),
+            'defrag_gametype' => $serverData['defrag_gametype'] ?? '5',
             'scores' => [
                 'num_players' => count($serverData['players']),
                 'speed' => 0,
@@ -128,6 +141,120 @@ class DefragServer
         ];
 
         return $result;
+    }
+
+    public function getDfStatusData() {
+        socket_sendto($this->socket, "\xff\xff\xff\xffgetdfstatus\x00", strlen("\xff\xff\xff\xffgetdfstatus\x00"), 0, $this->ip, $this->port);
+        $data = socket_read($this->socket, 8192);
+
+        if (empty($data)) {
+            return null;
+        }
+
+        // Find end of response header line
+        $headerEnd = strpos($data, "\n");
+        if ($headerEnd === false) {
+            return null;
+        }
+
+        list($serverData, $playerLines) = $this->parseResponseBody(substr($data, $headerEnd + 1));
+
+        // Parse player lines - two formats:
+        // Extended (oDFe): clientId dfscore ping "name" "spectating_name" "tld" "model" "headmodel" uid "color1"
+        // Legacy (GTK):    dfscore ping "name" "spectating_name"
+        $extendedRegex = '/^(\d+)\s+(-?\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+(\d+)\s+"([^"]*)"$/';
+        $legacyRegex = '/^(-?\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"$/';
+
+        $parsedPlayers = [];
+
+        foreach ($playerLines as $line) {
+            if (empty(trim($line))) {
+                continue;
+            }
+
+            if (preg_match($extendedRegex, $line, $m)) {
+                $clientId = (int) $m[1];
+                $parsedPlayers[$clientId] = [
+                    'clientId' => $clientId,
+                    'dfscore' => (int) $m[2],
+                    'ping' => (int) $m[3],
+                    'name' => $m[4],
+                    'spectating' => $m[5],
+                    'country' => strtolower($m[6]),
+                    'model' => $m[7],
+                    'headmodel' => $m[8],
+                    'mddId' => (int) $m[9],
+                    'color1' => $m[10],
+                    'nospec' => ($m[10] == 'nospec' || $m[10] == 'nospecpm'),
+                ];
+            } elseif (preg_match($legacyRegex, $line, $m)) {
+                $idx = count($parsedPlayers);
+                $parsedPlayers[$idx] = [
+                    'clientId' => $idx,
+                    'dfscore' => (int) $m[1],
+                    'ping' => (int) $m[2],
+                    'name' => $m[3],
+                    'spectating' => $m[4],
+                    'country' => '_404',
+                    'model' => 'sarge',
+                    'headmodel' => 'sarge',
+                    'mddId' => 0,
+                    'color1' => '',
+                    'nospec' => false,
+                ];
+            }
+        }
+
+        // Build name -> clientId lookup for spectating resolution
+        $nameToClientId = [];
+        foreach ($parsedPlayers as $p) {
+            $nameToClientId[$p['name']] = $p['clientId'];
+        }
+
+        // Players array keyed by clientId with all info for updateServer()
+        $players = [];
+        foreach ($parsedPlayers as $clientId => $p) {
+            $players[$clientId] = [
+                'name' => $p['name'],
+                'mddId' => $p['mddId'],
+                'country' => $p['country'],
+                'model' => $p['model'],
+                'headmodel' => $p['headmodel'],
+                'nospec' => $p['nospec'],
+            ];
+        }
+
+        // scores.players with player_num, time, follow_num for getPlayerScore()
+        $scorePlayers = [];
+        foreach ($parsedPlayers as $clientId => $p) {
+            $followNum = -1;
+            if (!empty($p['spectating']) && isset($nameToClientId[$p['spectating']])) {
+                $followNum = $nameToClientId[$p['spectating']];
+            }
+
+            $scorePlayers[] = [
+                'player_num' => $clientId,
+                'time' => $p['dfscore'],
+                'ping' => $p['ping'],
+                'follow_num' => $followNum,
+            ];
+        }
+
+        return [
+            'players' => $players,
+            'map' => $serverData['mapname'] ?? '',
+            'hostname' => $serverData['sv_hostname'] ?? '',
+            'defrag' => $this->getGameMode($serverData),
+            'defrag_gametype' => $serverData['defrag_gametype'] ?? '5',
+            'scores' => [
+                'num_players' => count($players),
+                'speed' => 0,
+                'speed_player_num' => 0,
+                'speed_player_name' => "",
+                'players' => $scorePlayers,
+            ],
+            'rcon' => true,
+        ];
     }
 
     public function getGameMode ($serverData) {

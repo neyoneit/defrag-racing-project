@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\PlayerRating;
+use Illuminate\Support\Facades\DB;
 
 class RankingController extends Controller
 {
@@ -18,13 +19,14 @@ class RankingController extends Controller
         // get VQ3 and CPM ratings
         $gametype = $request->input('gametype', 'run');
         $rankingtype = $request->input('rankingtype', 'active_players');
+        $category = $request->input('category', 'overall');
 
-        $vq3Ratings = $this->getRatings('vq3', $gametype, $rankingtype);
-        $cpmRatings = $this->getRatings('cpm', $gametype, $rankingtype);
+        $vq3Ratings = $this->getRatings('vq3', $gametype, $rankingtype, $category);
+        $cpmRatings = $this->getRatings('cpm', $gametype, $rankingtype, $category);
 
         // get VQ3 and CPM ratings for the current user
-        $myVq3Rating = $this->getMyRating($request, 'vq3', $gametype, $rankingtype);
-        $myCpmRating = $this->getMyRating($request, 'cpm', $gametype, $rankingtype);
+        $myVq3Rating = $this->getMyRating($request, 'vq3', $gametype, $rankingtype, $category);
+        $myCpmRating = $this->getMyRating($request, 'cpm', $gametype, $rankingtype, $category);
 
         // handle pagination
         $vq3Page = ($request->has('vq3Page')) ? min($request->vq3Page, $vq3Ratings->lastPage()) : 1;
@@ -38,34 +40,39 @@ class RankingController extends Controller
             return redirect()->route('ranking', ['cpmPage' => $cpmRatings->lastPage()]);
         }
 
+        // Get last recalculation time from player_ratings table
+        $lastRecalculation = DB::table('player_ratings')->max('updated_at');
+
         // render the view
         return Inertia::render('RankingView')
             ->with('vq3Ratings', $vq3Ratings)
             ->with('cpmRatings', $cpmRatings)
             ->with('myVq3Rating', $myVq3Rating)
-            ->with('myCpmRating', $myCpmRating);
+            ->with('myCpmRating', $myCpmRating)
+            ->with('lastRecalculation', $lastRecalculation);
     }
 
-    private function getRatings(string $physics, string $gametype, string $rankingtype): LengthAwarePaginator
+    private function getRatings(string $physics, string $gametype, string $rankingtype, string $category = 'overall'): LengthAwarePaginator
     {
         $query = PlayerRating::query();
         $columnToChange = '';
 
         if ($rankingtype === 'active_players') {
-            $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS));
+            $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS))
+                  ->where('active_players_rank', '>', 0);  // Exclude inactive players with rank 0
             $columnToChange = 'active_players_rank';
 
         } elseif ($rankingtype === 'all_players') {
             $columnToChange = 'all_players_rank';
         }
 
-        // TODO:
-        // remove not used columns
+        // Use pre-calculated ranks from Rust - no need to sort by player_rating
         $query = $query
             ->with('user')
             ->where('physics', $physics)
             ->where('mode', $gametype)
-            ->orderBy('player_rating', 'DESC')
+            ->where('category', $category)
+            ->orderBy($columnToChange, 'ASC')  // Order by pre-calculated rank
             ->paginate(self::PAGINATION_LIMIT, ['*'], $physics . 'Page')
             ->withQueryString();
 
@@ -78,13 +85,14 @@ class RankingController extends Controller
         return $query;
     }
 
-    private function getMyRating(Request $request, string $physics, string $gametype, string $rankingtype)
+    private function getMyRating(Request $request, string $physics, string $gametype, string $rankingtype, string $category = 'overall')
     {
         $query = PlayerRating::query();
         $columnToChange = '';
 
         if ($rankingtype === 'active_players') {
-            $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS));
+            $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS))
+                  ->where('active_players_rank', '>', 0);  // Exclude inactive players with rank 0
             $columnToChange = 'active_players_rank';
 
         } elseif ($rankingtype === 'all_players') {
@@ -96,6 +104,7 @@ class RankingController extends Controller
                 ->where('mdd_id', $request->user()->mdd_id)
                 ->where('physics', $physics)
                 ->where('mode', $gametype)
+                ->where('category', $category)
                 ->with('user')
                 ->first();
 

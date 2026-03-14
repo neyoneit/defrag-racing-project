@@ -29,6 +29,16 @@ The goal of [defrag.racing](https://defrag.racing) is to refresh the game by add
 
 ## :hammer_and_wrench: Getting Started
 
+> :information_source: **For Developers**: See [LOCAL_SETUP.md](LOCAL_SETUP.md) for detailed local development setup instructions.
+
+> :information_source: **For Production**:
+> - **Quick Start**: Copy `.env.example` to `.env` and fill in credentials from `PRODUCTION_CREDENTIALS.md`
+> - **Deployment Guide**: See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for complete setup
+> - **Credentials**: See `PRODUCTION_CREDENTIALS.md` (local file, not in git) for Backblaze B2 keys, DB passwords
+> - **Storage Options**: [PRODUCTION_STORAGE.md](PRODUCTION_STORAGE.md) | [PRODUCTION_STORAGE_CONTABO.md](PRODUCTION_STORAGE_CONTABO.md)
+
+> :warning: **SECURITY**: `.env` and `PRODUCTION_CREDENTIALS.md` contain secrets and are in `.gitignore`. Never commit them to GitHub!
+
 > :warning: **Important Notice**: The installation steps provided in this guide have only been tested on a Linux machine. They are not thoroughly tested and are primarily intended as a kickstart for development. If you encounter any issues or if you have a better solution, we warmly invite you to contribute to this repository. Your contributions are highly appreciated!
 
 > :warning: **Important Notice**: The following steps are designed to work with Docker, utilizing a Laravel tool called Sail. However, it's important to be aware that the production server operates on a **non-containerized** approach at the moment.
@@ -97,6 +107,28 @@ To clone and run this application, you'll need:
     ```bash
     ./vendor/bin/sail stop
     ```
+
+### Database Migrations
+
+When working with database schema changes, **always use Laravel migrations** instead of manual SQL:
+
+1. **Creating a new migration**:
+    ```bash
+    docker compose exec laravel.test php artisan make:migration migration_name
+    ```
+
+2. **Running migrations**:
+    ```bash
+    docker compose exec laravel.test php artisan migrate
+    ```
+
+3. **After pulling new migrations from git**:
+    ```bash
+    docker compose exec laravel.test php artisan migrate
+    ./rebuild-frontend.sh
+    ```
+
+> :warning: **IMPORTANT**: Never alter database tables directly using SQL commands. Always create proper migration files using `php artisan make:migration` to ensure consistency between development and production environments.
 
 ## :heart: Support Us
 

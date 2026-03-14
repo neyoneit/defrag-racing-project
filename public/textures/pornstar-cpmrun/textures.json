@@ -1,0 +1,62 @@
+{
+  "map": "pornstar-cpmrun",
+  "textures": [
+    {
+      "index": 0,
+      "name": "textures/csu1/oldstone2",
+      "file": "texture_0.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 1,
+      "name": "textures/csu1/oldstone7",
+      "file": "texture_1.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 2,
+      "name": "noshader",
+      "file": null,
+      "type": "missing"
+    },
+    {
+      "index": 3,
+      "name": "textures/csu1/oldstone5old_3",
+      "file": "texture_3.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 4,
+      "name": "textures/skies/toxicskytim_dm7",
+      "file": null,
+      "type": "sky"
+    },
+    {
+      "index": 5,
+      "name": "textures/csu1/oldstone2_2",
+      "file": "texture_5.png",
+      "width": 256,
+      "height": 256,
+      "type": "texture"
+    },
+    {
+      "index": 6,
+      "name": "textures/common/clip",
+      "file": null,
+      "type": "invisible"
+    },
+    {
+      "index": 7,
+      "name": "textures/common/trigger",
+      "file": null,
+      "type": "invisible"
+    }
+  ],
+  "output_dir": "pornstar-cpmrun"
+}

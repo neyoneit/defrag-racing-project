@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Map Viewer - Real Textures</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: Arial, sans-serif;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .control-btn {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: #2563eb;
+        }
+
+        #error {
+            color: #ff4444;
+            padding: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="loading">Loading map...</div>
+    <div id="info">
+        <strong>3D Map Viewer</strong><br>
+        <span id="mapName">Loading...</span><br><br>
+        <small>
+            Click to enter fly mode<br>
+            WASD: Move<br>
+            Space/Shift: Up/Down<br>
+            Mouse Wheel: Speed<br>
+            ESC: Exit fly mode<br>
+        </small>
+    </div>
+    <div id="controls">
+        <button class="control-btn" onclick="resetCamera()">Reset View</button>
+        <button class="control-btn" onclick="toggleWireframe()">Toggle Wireframe</button>
+    </div>
+    <div id="error"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let mapMeshes = [];
+        let skyMeshes = [];
+        let wireframeEnabled = false;
+        let skyboxVisible = false;  // Hidden by default
+        let textures = {};
+
+        // Movement variables
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let moveUp = false;
+        let moveDown = false;
+        let moveSpeed = 10;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a0a);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
+            camera.position.set(2000, 1000, 2000);
+            camera.rotation.set(0, 0, 0); // Fix initial tilt
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+
+            // Click to activate pointer lock (fly mode)
+            document.addEventListener('click', () => {
+                controls.lock();
+            });
+
+            controls.addEventListener('lock', () => {
+                console.log('Pointer locked - use WASD to move, Space/Shift for up/down');
+            });
+
+            controls.addEventListener('unlock', () => {
+                console.log('Pointer unlocked');
+            });
+
+            scene.add(controls.getObject());
+
+            // Keyboard controls
+            const onKeyDown = (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space': moveUp = true; break;
+                    case 'ShiftLeft':
+                    case 'ShiftRight': moveDown = true; break;
+                }
+            };
+
+            const onKeyUp = (event) => {
+                switch (event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                    case 'Space': moveUp = false; break;
+                    case 'ShiftLeft':
+                    case 'ShiftRight': moveDown = false; break;
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+
+            // Mouse wheel for speed control
+            document.addEventListener('wheel', (event) => {
+                event.preventDefault();
+                moveSpeed += event.deltaY > 0 ? -2 : 2;
+                moveSpeed = Math.max(1, Math.min(100, moveSpeed)); // Clamp between 1 and 100
+                console.log('Move speed:', moveSpeed);
+            }, { passive: false });
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            scene.add(ambientLight);
+
+            // Removed grid helper - not needed with skybox
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            loadBSPMap();
+            animate();
+        }
+
+        async function loadBSPMap() {
+            try {
+                document.getElementById('loading').textContent = 'Loading BSP data...';
+
+                // Get map name from URL parameter, default to 'pado'
+                const urlParams = new URLSearchParams(window.location.search);
+                const mapName = urlParams.get('map') || 'pado';
+
+                const response = await fetch(window.location.origin + '/api/test-map-data?map=' + mapName);
+                if (!response.ok) throw new Error('Failed to load map data');
+
+                const mapData = await response.json();
+                document.getElementById('mapName').textContent = mapData.name || 'Unknown Map';
+
+                document.getElementById('loading').textContent = 'Loading textures...';
+                await loadTextures(mapData.name);
+
+                document.getElementById('loading').textContent = 'Building 3D geometry...';
+                createMapGeometry(mapData);
+
+                document.getElementById('loading').style.display = 'none';
+
+            } catch (error) {
+                console.error('Error loading map:', error);
+                document.getElementById('loading').textContent = 'Error loading map!';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function loadTextures(mapName) {
+            const textureLoader = new THREE.TextureLoader();
+
+            // Load texture metadata
+            let textureMetadata = null;
+            try {
+                const metadataResponse = await fetch(`/textures/${mapName}/textures.json`);
+                if (metadataResponse.ok) {
+                    textureMetadata = await metadataResponse.json();
+                    console.log('Loaded texture metadata:', textureMetadata.textures.length, 'textures');
+                }
+            } catch (error) {
+                console.warn('Failed to load texture metadata:', error);
+            }
+
+            // If we have metadata, load only the textures that exist
+            if (textureMetadata && textureMetadata.textures) {
+                for (const texInfo of textureMetadata.textures) {
+                    if (texInfo.file && texInfo.type === 'texture') {
+                        try {
+                            const texture = await new Promise((resolve, reject) => {
+                                textureLoader.load(
+                                    `/textures/${mapName}/${texInfo.file}`,
+                                    resolve,
+                                    undefined,
+                                    reject
+                                );
+                            });
+
+                            texture.wrapS = THREE.RepeatWrapping;
+                            texture.wrapT = THREE.RepeatWrapping;
+                            texture.minFilter = THREE.LinearFilter;
+                            texture.magFilter = THREE.LinearFilter;
+
+                            textures[texInfo.index] = texture;
+                            console.log(`Loaded texture ${texInfo.index}: ${texInfo.name}`);
+                        } catch (error) {
+                            console.warn(`Failed to load texture ${texInfo.index}:`, error);
+                        }
+                    }
+                }
+            } else {
+                // Fallback: try loading textures 0-2 for backwards compatibility
+                for (let i = 0; i <= 2; i++) {
+                    try {
+                        const texture = await new Promise((resolve, reject) => {
+                            textureLoader.load(
+                                `/textures/${mapName}/texture_${i}.png`,
+                                resolve,
+                                undefined,
+                                reject
+                            );
+                        });
+
+                        texture.wrapS = THREE.RepeatWrapping;
+                        texture.wrapT = THREE.RepeatWrapping;
+                        texture.minFilter = THREE.LinearFilter;
+                        texture.magFilter = THREE.LinearFilter;
+
+                        textures[i] = texture;
+                        console.log(`Loaded texture ${i}`);
+                    } catch (error) {
+                        console.warn(`Failed to load texture ${i}:`, error);
+                    }
+                }
+            }
+
+            // Load skybox cube map
+            try {
+                const cubeLoader = new THREE.CubeTextureLoader();
+                cubeLoader.setPath(`/textures/${mapName}/`);
+
+                const skyboxTexture = await new Promise((resolve, reject) => {
+                    cubeLoader.load(
+                        [
+                            'skybox_rt.png', // right (positive X)
+                            'skybox_lf.png', // left (negative X)
+                            'skybox_up.png', // top (positive Y) - rotated 180°
+                            'skybox_dn.png', // bottom (negative Y) - rotated 180°
+                            'skybox_bk.png', // front (positive Z)
+                            'skybox_ft.png'  // back (negative Z)
+                        ],
+                        resolve,
+                        undefined,
+                        reject
+                    );
+                });
+
+                scene.background = skyboxTexture;
+                console.log('Loaded skybox');
+            } catch (error) {
+                console.warn('Failed to load skybox:', error);
+            }
+        }
+
+        function createMapGeometry(mapData) {
+            const facesByTexture = {};
+
+            mapData.faces.forEach(face => {
+                const texIdx = face.texture !== undefined ? face.texture : -1;
+                if (!facesByTexture[texIdx]) facesByTexture[texIdx] = [];
+                facesByTexture[texIdx].push(face);
+            });
+
+            for (const [texIdx, faces] of Object.entries(facesByTexture)) {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const uvs = [];
+                const indices = [];
+                const normals = [];
+
+                let vertexIndex = 0;
+
+                faces.forEach(face => {
+                    const faceVertices = face.vertices;
+                    const faceUVs = face.uvs || [];
+
+                    if (faceVertices.length < 3) return;
+
+                    const v0 = new THREE.Vector3(faceVertices[0][0], faceVertices[0][1], faceVertices[0][2]);
+                    const v1 = new THREE.Vector3(faceVertices[1][0], faceVertices[1][1], faceVertices[1][2]);
+                    const v2 = new THREE.Vector3(faceVertices[2][0], faceVertices[2][1], faceVertices[2][2]);
+
+                    const edge1 = new THREE.Vector3().subVectors(v1, v0);
+                    const edge2 = new THREE.Vector3().subVectors(v2, v0);
+                    const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+
+                    const startIndex = vertexIndex;
+
+                    faceVertices.forEach((v, idx) => {
+                        vertices.push(v[0], v[1], v[2]);
+                        normals.push(normal.x, normal.y, normal.z);
+
+                        if (faceUVs[idx]) {
+                            // Use raw world-space UVs from Quake 3 directly for proper tiling
+                            uvs.push(faceUVs[idx][0], faceUVs[idx][1]);
+                        } else {
+                            uvs.push(0, 0);
+                        }
+
+                        vertexIndex++;
+                    });
+
+                    for (let i = 1; i < faceVertices.length - 1; i++) {
+                        indices.push(startIndex);
+                        indices.push(startIndex + i);
+                        indices.push(startIndex + i + 1);
+                    }
+                });
+
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                geometry.setIndex(indices);
+
+                let material;
+                const isSky = faces[0].type === 'sky';
+
+                if (isSky) {
+                    material = new THREE.MeshBasicMaterial({
+                        color: 0x87CEEB,
+                        side: THREE.DoubleSide
+                    });
+                } else if (textures[texIdx]) {
+                    material = new THREE.MeshBasicMaterial({
+                        map: textures[texIdx],
+                        side: THREE.DoubleSide
+                    });
+                } else {
+                    const fallbackColor = faces[0].color || [128, 128, 128];
+                    material = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color(
+                            fallbackColor[0] / 255,
+                            fallbackColor[1] / 255,
+                            fallbackColor[2] / 255
+                        ),
+                        side: THREE.DoubleSide
+                    });
+                }
+
+                const mesh = new THREE.Mesh(geometry, material);
+
+                // Rotate to convert Quake 3 coordinate system (Z-up) to Three.js (Y-up)
+                mesh.rotation.x = -Math.PI / 2;  // Rotate -90 degrees around X axis
+
+                // Hide sky meshes by default
+                if (isSky) {
+                    mesh.visible = false;
+                    skyMeshes.push(mesh);
+                } else {
+                    mapMeshes.push(mesh);
+                }
+
+                scene.add(mesh);
+            }
+
+            if (mapMeshes.length > 0) {
+                const box = new THREE.Box3();
+                mapMeshes.forEach(mesh => box.expandByObject(mesh));
+
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5;
+
+                // Position camera above and to the side of the map
+                camera.position.set(center.x, center.y + size.y * 0.5, center.z);
+
+                // Reset rotation to level (no tilt)
+                camera.rotation.set(0, 0, 0);
+            }
+
+            console.log('Map loaded:', mapData.faces.length, 'faces,', mapMeshes.length, 'meshes');
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Handle movement
+            if (controls.isLocked) {
+                const direction = new THREE.Vector3();
+                const right = new THREE.Vector3();
+
+                camera.getWorldDirection(direction);
+                right.crossVectors(camera.up, direction).normalize();
+
+                if (moveForward) {
+                    camera.position.addScaledVector(direction, moveSpeed);
+                }
+                if (moveBackward) {
+                    camera.position.addScaledVector(direction, -moveSpeed);
+                }
+                if (moveLeft) {
+                    camera.position.addScaledVector(right, moveSpeed);
+                }
+                if (moveRight) {
+                    camera.position.addScaledVector(right, -moveSpeed);
+                }
+                if (moveUp) {
+                    camera.position.y += moveSpeed;
+                }
+                if (moveDown) {
+                    camera.position.y -= moveSpeed;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function resetCamera() {
+            if (mapMeshes.length > 0) {
+                const box = new THREE.Box3();
+                mapMeshes.forEach(mesh => box.expandByObject(mesh));
+
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5;
+
+                // Position camera above and to the side of the map
+                camera.position.set(center.x, center.y + size.y * 0.5, center.z);
+
+                // Reset rotation to level (no tilt)
+                camera.rotation.set(0, 0, 0);
+            }
+        }
+
+        function toggleWireframe() {
+            wireframeEnabled = !wireframeEnabled;
+            mapMeshes.forEach(mesh => {
+                mesh.material.wireframe = wireframeEnabled;
+            });
+            skyMeshes.forEach(mesh => {
+                mesh.material.wireframe = wireframeEnabled;
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>

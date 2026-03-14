@@ -7,15 +7,24 @@ use Inertia\Inertia;
 
 use App\Models\Record;
 use App\Models\OldtopRecord;
+use App\Models\OfflineRecord;
+use App\Models\UploadedDemo;
 use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
 
 use App\Filters\MapFilters;
+use App\Services\NameMatcher;
 
 class MapsController extends Controller
 {
     public function index(Request $request) {
+        // If there are any filter parameters (except page), redirect to filters route
+        $filterParams = $request->except(['page']);
+        if (!empty($filterParams)) {
+            return redirect()->route('maps.filters', $request->all());
+        }
+
         $mddProfiles = MddProfile::orderBy('id', 'DESC')
             ->with('user:id,name,plain_name,country')
             ->get(['id', 'user_id', 'name', 'country', 'plain_name']);
@@ -23,7 +32,7 @@ class MapsController extends Controller
         $maps = Map::query()
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(21)
+            ->paginate(30)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
@@ -43,7 +52,7 @@ class MapsController extends Controller
 
         $maps = $mapFilters['query'];
 
-        $maps = $maps->paginate(21)->withQueryString();
+        $maps = $maps->paginate(30)->withQueryString();
 
         $queries = $mapFilters['data'];
 
@@ -62,7 +71,22 @@ class MapsController extends Controller
     public function map(Request $request, $mapname) {
         $column = $request->input('sort', 'time');
         $order = $request->input('order', 'ASC');
-        $gametype = $request->input('gametype', 'run');
+
+        $map = Map::where('name', $mapname)->with('tags')->firstOrFail();
+
+        // Auto-detect most populated gametype if not specified
+        $gametype = $request->input('gametype');
+        if (!$gametype) {
+            // Get record counts per gametype
+            $gametypeCounts = Record::where('mapname', $map->name)
+                ->selectRaw('SUBSTRING_INDEX(gametype, "_", 1) as base_gametype, COUNT(*) as count')
+                ->groupBy('base_gametype')
+                ->orderBy('count', 'DESC')
+                ->first();
+
+            $gametype = $gametypeCounts ? $gametypeCounts->base_gametype : 'run';
+        }
+
         $cpmGametype = $gametype . '_cpm';
         $vq3Gametype = $gametype . '_vq3';
 
@@ -83,19 +107,54 @@ class MapsController extends Controller
             $order = 'DESC';
         }
 
-        $map = Map::where('name', $mapname)->firstOrFail();
+        // Get record counts per gametype for UI display
+        $gametypeStats = Record::where('mapname', $map->name)
+            ->selectRaw('SUBSTRING_INDEX(gametype, "_", 1) as base_gametype, COUNT(*) as total')
+            ->groupBy('base_gametype')
+            ->get()
+            ->keyBy('base_gametype')
+            ->map(fn($item) => $item->total)
+            ->toArray();
 
         $cpmRecords = Record::where('mapname', $map->name);
 
         $cpmRecords = $cpmRecords->where('gametype', $cpmGametype);
 
-        $cpmRecords = $cpmRecords->with('user')->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
+        // Get all CPM records sorted by time to calculate proper time-based ranks
+        $allCpmRecordsByTime = Record::where('mapname', $map->name)
+            ->where('gametype', $cpmGametype)
+            ->orderBy('time', 'ASC')
+            ->orderBy('date_set', 'ASC')
+            ->pluck('id')
+            ->toArray();
+
+        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
+
+        // Assign time-based ranks (always based on fastest time, not current sort)
+        $cpmRecords->getCollection()->transform(function ($record) use ($allCpmRecordsByTime) {
+            $record->rank = array_search($record->id, $allCpmRecordsByTime) + 1;
+            return $record;
+        });
 
         $vq3Records = Record::where('mapname', $map->name);
 
         $vq3Records = $vq3Records->where('gametype', $vq3Gametype);
 
-        $vq3Records = $vq3Records->with('user')->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+        // Get all VQ3 records sorted by time to calculate proper time-based ranks
+        $allVq3RecordsByTime = Record::where('mapname', $map->name)
+            ->where('gametype', $vq3Gametype)
+            ->orderBy('time', 'ASC')
+            ->orderBy('date_set', 'ASC')
+            ->pluck('id')
+            ->toArray();
+
+        $vq3Records = $vq3Records->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+
+        // Assign time-based ranks (always based on fastest time, not current sort)
+        $vq3Records->getCollection()->transform(function ($record) use ($allVq3RecordsByTime) {
+            $record->rank = array_search($record->id, $allVq3RecordsByTime) + 1;
+            return $record;
+        });
 
 
         $showOldtop = $request->input('showOldtop', false);
@@ -119,6 +178,103 @@ class MapsController extends Controller
             $vq3OldRecords = null;
         }
 
+        // Offline demos
+        $showOffline = $request->input('showOffline', false);
+
+        if ($showOffline === 'true') {
+            // Determine offline gametype based on map name (same logic as online records)
+            // fc (fast caps) maps start with "actf" or "ctf", otherwise df (defrag)
+            $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
+
+            // For fast caps with CTF modes, filter by physics field containing the CTF mode
+            // Physics format: "CPM.2.TR" or "VQ3.1" where the number is the CTF mode
+            // $gametype from URL contains: run, ctf1, ctf2, etc.
+            if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
+                // Specific CTF mode selected - filter by physics LIKE pattern
+                // Extract CTF number from gametype (e.g., "ctf2" -> "2")
+                $ctfNumber = substr($gametype, 3, 1);
+
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', "CPM.{$ctfNumber}%")
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order
+                );
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', "VQ3.{$ctfNumber}%")
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order
+                );
+            } elseif ($offlineGametype === 'fc') {
+                // Fast caps map but no specific CTF mode selected (on "run" gametype)
+                // Show all offline fast caps records regardless of CTF mode
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'CPM%')
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                );
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'VQ3%')
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                );
+            } else {
+                // For df (defrag), physics can be "CPM" or "CPM.TR" (with timer reset)
+                // Use LIKE to match both
+                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'CPM%')
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'cpmPage')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                );
+
+                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
+                    ->where('physics', 'LIKE', 'VQ3%')
+                    ->with(['demo.suggestedUser', 'user'])
+                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
+                    ->paginate(50, ['*'], 'vq3Page')
+                    ->withQueryString();
+
+                // Combine with assigned online demos
+                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                );
+            }
+        } else {
+            $cpmOfflineRecords = null;
+            $vq3OfflineRecords = null;
+        }
+
         $cpmPage = ($request->has('cpmPage')) ? min($request->cpmPage, $cpmRecords->lastPage()) : 1;
 
         $vq3Page = ($request->has('vq3Page')) ? min($request->vq3Page, $vq3Records->lastPage()) : 1;
@@ -131,6 +287,25 @@ class MapsController extends Controller
             return redirect()->route('maps.map', ['cpmPage' => $cpmRecords->lastPage(), 'mapname' => $mapname, 'vq3Page' => $vq3Page]);
         }
 
+        // Get servers currently playing this map
+        $servers = \App\Models\Server::where('map', $map->name)
+            ->where('online', true)
+            ->where('visible', true)
+            ->with('onlinePlayers')
+            ->get();
+
+        // Get public maplists that include this map
+        $publicMaplists = \App\Models\Maplist::whereHas('maps', function($query) use ($map) {
+                $query->where('map_id', $map->id);
+            })
+            ->where('is_public', true)
+            ->where('is_play_later', false)
+            ->withCount('maps')
+            ->with('user:id,name')
+            ->orderBy('favorites_count', 'desc')
+            ->limit(10)
+            ->get();
+
         return Inertia::render('MapView')
             ->with('map', $map)
             ->with('cpmRecords', $cpmRecords)
@@ -139,7 +314,224 @@ class MapsController extends Controller
             ->with('my_vq3_record', $my_vq3_record)
             ->with('cpmOldRecords', $cpmOldRecords)
             ->with('vq3OldRecords', $vq3OldRecords)
-            ->with('showOldtop', ($showOldtop === 'true'));
+            ->with('cpmOfflineRecords', $cpmOfflineRecords)
+            ->with('vq3OfflineRecords', $vq3OfflineRecords)
+            ->with('gametypeStats', $gametypeStats)
+            ->with('showOldtop', ($showOldtop === 'true'))
+            ->with('showOffline', ($showOffline === 'true'))
+            ->with('servers', $servers)
+            ->with('publicMaplists', $publicMaplists);
 
+    }
+
+    /**
+     * Combine offline records with assigned online demos for "Demos Top" section
+     */
+    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order)
+    {
+        if (!$offlineRecords) {
+            return null;
+        }
+
+        // Get offline records collection
+        $offlineItems = $offlineRecords->getCollection()->map(function ($record) {
+            // Determine flag type based on gametype and validity
+            // If validity_flag is set, use that as the flag
+            // Otherwise: mdf/mfs/mfc = ONLINE, df/fs/fc = OFFLINE
+            $flagType = 'OFFLINE'; // Default
+            if ($record->validity_flag) {
+                // Validity flag takes priority (e.g., "client_finish=false")
+                $flagType = $record->validity_flag;
+            } elseif ($record->gametype && str_starts_with($record->gametype, 'm')) {
+                // Online demo (mdf, mfs, mfc)
+                $flagType = 'ONLINE';
+            }
+
+            return (object) [
+                'id' => $record->id,
+                'time_ms' => $record->time_ms,
+                'time' => $record->time,
+                'player_name' => $record->player_name,
+                'date_set' => $record->date_set,
+                'demo' => $record->demo,
+                'demo_id' => $record->demo_id,
+                'record_id' => null,
+                'user' => null,
+                'country' => $record->demo->country,
+                'rank' => $record->rank,
+                'is_online' => str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
+                'verification_type' => $flagType, // ONLINE/OFFLINE or validity flag
+            ];
+        });
+
+        // Get assigned online demos for this map/physics
+        $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)
+            ->where('status', 'assigned')
+            ->whereNotNull('record_id')
+            ->with(['record.user', 'user']);
+
+        // Apply physics filter
+        if ($physicsPattern) {
+            $onlineDemosQuery->where('physics', 'LIKE', $physicsPattern);
+        } else {
+            $onlineDemosQuery->where('physics', $physics);
+        }
+
+        $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
+            // Determine which user to use: record owner takes priority
+            // If record has a registered user, use that for avatar/effects
+            // If record has no user (unregistered player), pass NULL for user so no avatar/effects show
+            $user = null;
+            $nameToDisplay = $demo->player_name;
+
+            if ($demo->record && $demo->record->user) {
+                // Record has a registered user - use their info for name, avatar, effects
+                $user = $demo->record->user;
+                $nameToDisplay = $demo->record->user->name;
+            } elseif ($demo->record && $demo->record->name) {
+                // Record has no registered user - use record's name, but NO avatar/effects
+                $user = null;
+                $nameToDisplay = $demo->record->name;
+            }
+
+            return (object) [
+                'id' => $demo->id,
+                'time_ms' => $demo->time_ms,
+                'time' => $demo->time_ms,
+                'player_name' => $demo->player_name,
+                'name' => $nameToDisplay, // Override name for unregistered record owners
+                'date_set' => $demo->record_date ?? $demo->created_at,
+                'demo' => $demo,
+                'demo_id' => null, // Online demos don't use demo_id
+                'record_id' => $demo->record_id, // Has record_id since they're assigned
+                'user' => $user, // Use record owner (assigned user) for avatar/effects/country
+                'country' => $demo->record->country ?? $demo->country, // Use record's country
+                'rank' => null, // Will be calculated after merge
+                'is_online' => true, // Flag for online demos
+                'verification_type' => 'verified', // Online demos assigned to records are verified
+            ];
+        });
+
+        // Merge collections
+        $combined = $offlineItems->merge($onlineDemos);
+
+        // Sort by time_ms or date_set
+        $sortField = $column === 'date_set' ? 'date_set' : 'time_ms';
+        $combined = $order === 'ASC'
+            ? $combined->sortBy($sortField)->values()
+            : $combined->sortByDesc($sortField)->values();
+
+        // Recalculate ranks based on time_ms
+        $combined = $combined->sortBy('time_ms')->values()->map(function ($item, $index) {
+            $item->rank = $index + 1;
+            return $item;
+        });
+
+        // Apply original sort order again if needed
+        if ($column === 'date_set') {
+            $combined = $order === 'ASC'
+                ? $combined->sortBy('date_set')->values()
+                : $combined->sortByDesc('date_set')->values();
+        }
+
+        // Update paginator with combined data
+        $offlineRecords->setCollection($combined);
+
+        return $offlineRecords;
+    }
+
+    /**
+     * Get unassigned demos that potentially match online records for a map.
+     * Returns record_id => [matching demos] for matches above 30% confidence.
+     */
+    public function getDemoMatches(Request $request, $mapname)
+    {
+        $nameMatcher = app(NameMatcher::class);
+
+        // Get all unassigned demos for this map
+        $demos = UploadedDemo::where('map_name', $mapname)
+            ->whereNull('record_id')
+            ->whereIn('status', ['processed', 'fallback-assigned'])
+            ->whereNotNull('player_name')
+            ->get(['id', 'player_name', 'time_ms', 'physics', 'gametype', 'original_filename', 'created_at']);
+
+        if ($demos->isEmpty()) {
+            return response()->json([]);
+        }
+
+        // Get all online records for this map with user info
+        $records = Record::where('mapname', $mapname)
+            ->with('user:id,name,plain_name,mdd_id')
+            ->get(['id', 'name', 'mdd_id', 'gametype', 'time']);
+
+        if ($records->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $matches = [];
+
+        // Helper to extract physics base (CPM/VQ3) and CTF number
+        $parsePhysics = function ($physics, $gametype) {
+            $base = 'VQ3';
+            $ctfNum = null;
+
+            // Record gametype: "ctf1_vq3", "ctf2_cpm", "run_vq3", etc.
+            if ($gametype && preg_match('/ctf(\d+)_(cpm|vq3)/i', $gametype, $m)) {
+                $base = strtoupper($m[2]);
+                $ctfNum = $m[1];
+            } elseif ($gametype && preg_match('/run_(cpm|vq3)/i', $gametype, $m)) {
+                $base = strtoupper($m[1]);
+            }
+
+            // Demo physics: "CPM", "CPM.1", "VQ3.2", etc. — takes priority
+            if ($physics) {
+                $parts = explode('.', strtoupper($physics));
+                $base = $parts[0] ?: $base;
+                if (isset($parts[1])) {
+                    $ctfNum = $parts[1];
+                }
+            }
+
+            return [$base, $ctfNum];
+        };
+
+        foreach ($records as $record) {
+            $recordName = $record->user ? $record->user->plain_name ?? $record->user->name : $record->name;
+            if (empty($recordName)) continue;
+
+            [$recordBase, $recordCtf] = $parsePhysics(null, $record->gametype);
+
+            foreach ($demos as $demo) {
+                [$demoBase, $demoCtf] = $parsePhysics($demo->physics, $demo->gametype);
+
+                // Physics base must match (CPM vs VQ3)
+                if ($demoBase !== $recordBase) continue;
+
+                // If both have CTF numbers, they must match
+                if ($recordCtf !== null && $demoCtf !== null && $recordCtf !== $demoCtf) continue;
+
+                // Time must match exactly — without exact time match, assignment makes no sense
+                if (!$demo->time_ms || $demo->time_ms !== $record->time) continue;
+
+                $confidence = $nameMatcher->calculateConfidence($demo->player_name, $recordName);
+                if ($confidence >= 30) {
+                    $matches[$record->id][] = [
+                        'demo_id' => $demo->id,
+                        'player_name' => $demo->player_name,
+                        'record_player_name' => $recordName,
+                        'confidence' => $confidence,
+                        'time_ms' => $demo->time_ms,
+                        'filename' => $demo->original_filename,
+                    ];
+                }
+            }
+
+            // Sort matches by confidence descending
+            if (isset($matches[$record->id])) {
+                usort($matches[$record->id], fn($a, $b) => $b['confidence'] - $a['confidence']);
+            }
+        }
+
+        return response()->json($matches);
     }
 }

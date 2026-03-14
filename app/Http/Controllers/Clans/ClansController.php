@@ -15,12 +15,49 @@ use Carbon\Carbon;
 
 class ClansController extends Controller {
     public function index (Request $request) {
-        $clans = Clan::with('admin:id,name')
-            ->with(['players.user' => function ($query) {
-                $query->select('id', 'name', 'profile_photo_path');
+        $sortBy = $request->get('sort', 'wrs');
+        $sortDir = $request->get('dir', 'desc');
+
+        $query = Clan::with('admin:id,name')
+            ->with(['players.user' => function ($q) {
+                $q->select('id', 'name', 'profile_photo_path', 'cached_wr_count', 'cached_top3_count');
             }])
-            ->withCount('players')
-            ->paginate(20);
+            ->withCount('players');
+
+        // Add calculated stats using subqueries (exclude soft-deleted members)
+        $query->selectRaw('clans.*,
+            (SELECT COUNT(DISTINCT records.id)
+             FROM clan_players
+             JOIN records ON clan_players.user_id = records.user_id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_records,
+            (SELECT COALESCE(SUM(users.cached_wr_count), 0)
+             FROM clan_players
+             JOIN users ON clan_players.user_id = users.id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_wrs,
+            (SELECT COALESCE(SUM(users.cached_top3_count), 0)
+             FROM clan_players
+             JOIN users ON clan_players.user_id = users.id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_top3
+        ');
+
+        // Sorting
+        switch ($sortBy) {
+            case 'members':
+                $query->orderBy('players_count', $sortDir);
+                break;
+            case 'wrs':
+                $query->orderByRaw("total_wrs {$sortDir}");
+                break;
+            case 'top3':
+                $query->orderByRaw("total_top3 {$sortDir}");
+                break;
+            case 'name':
+            default:
+                $query->orderBy('name', $sortDir);
+                break;
+        }
+
+        $clans = $query->paginate(20)->appends(['sort' => $sortBy, 'dir' => $sortDir]);
 
         if ($request->user()) {
             $myClan = $request->user()
@@ -52,17 +89,35 @@ class ClansController extends Controller {
             ->with('clans', $clans)
             ->with('myClan', $myClan)
             ->with('users', $users)
-            ->with('invitations', $invitations);
+            ->with('invitations', $invitations)
+            ->with('currentSort', $sortBy)
+            ->with('currentDir', $sortDir);
     }
 
     public function show(Clan $clan, Request $request) {
-        $players = User::whereHas('clan', function ($query) use ($clan) {
-            $query->where('clan_id', $clan->id);
-        })->get(['id', 'name', 'profile_photo_path', 'country', 'plain_name']);
+        $clan->load(['players.user' => function ($query) {
+            $query->select('id', 'name', 'profile_photo_path', 'country', 'plain_name');
+        }]);
+
+        // Transform the data to match the expected structure
+        $players = $clan->players->map(function ($clanPlayer) {
+            $user = $clanPlayer->user;
+            $user->pivot = (object)[
+                'note' => $clanPlayer->note,
+                'position' => $clanPlayer->position,
+                'config_file' => $clanPlayer->config_file
+            ];
+            return $user;
+        });
+
+        // Get clan statistics
+        $statisticsController = new \App\Http\Controllers\Clans\ClanStatisticsController();
+        $statistics = $statisticsController->getStatistics($clan);
 
         return Inertia::render('Clans/Show')
             ->with('clan', $clan)
-            ->with('players', $players);
+            ->with('players', $players)
+            ->with('statistics', $statistics);
     }
 
     public function accept(ClanInvitation $invitation, Request $request) {

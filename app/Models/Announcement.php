@@ -17,7 +17,7 @@ class Announcement extends Model
 
     protected static function booted(): void {
         static::created(function (Announcement $announcement) {
-            User::all()->each->systemNotifyAnnouncement('announcement', 'A new Announcement has been created', $announcement->title, '', '/announcements');
+            User::all()->each->systemNotifyAnnouncement('announcement', 'Announcement', $announcement->title, '', '/announcements');
         });
     }
 }

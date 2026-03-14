@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
-import ActionSection from '@/Components/Laravel/ActionSection.vue';
 import ConfirmsPassword from '@/Components/Laravel/ConfirmsPassword.vue';
 import DangerButton from '@/Components/Laravel/DangerButton.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
@@ -105,29 +104,32 @@ const disableTwoFactorAuthentication = () => {
 </script>
 
 <template>
-    <ActionSection>
-        <template #title>
-            Two Factor Authentication
-        </template>
+    <div class="p-4">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                    </svg>
+                </div>
+                <h2 class="text-sm font-bold text-white">Two Factor Auth</h2>
+            </div>
+        </div>
 
-        <template #description>
-            Add additional security to your account using two factor authentication.
-        </template>
-
-        <template #content>
-            <h3 v-if="twoFactorEnabled && ! confirming" class="text-lg font-medium text-gray-100">
+        <div class="space-y-3">
+            <h3 v-if="twoFactorEnabled && ! confirming" class="text-sm font-medium text-gray-100">
                 You have enabled two factor authentication.
             </h3>
 
-            <h3 v-else-if="twoFactorEnabled && confirming" class="text-lg font-medium text-gray-100">
+            <h3 v-else-if="twoFactorEnabled && confirming" class="text-sm font-medium text-gray-100">
                 Finish enabling two factor authentication.
             </h3>
 
-            <h3 v-else class="text-lg font-medium text-gray-100">
+            <h3 v-else class="text-sm font-medium text-gray-100">
                 You have not enabled two factor authentication.
             </h3>
 
-            <div class="mt-3 max-w-xl text-sm text-gray-400">
+            <div class="text-sm text-gray-400">
                 <p>
                     When two factor authentication is enabled, you will be prompted for a secure, random token during authentication. You may retrieve this token from your phone's Google Authenticator application.
                 </p>
@@ -135,7 +137,7 @@ const disableTwoFactorAuthentication = () => {
 
             <div v-if="twoFactorEnabled">
                 <div v-if="qrCode">
-                    <div class="mt-4 max-w-xl text-sm text-gray-400">
+                    <div class="text-sm text-gray-400">
                         <p v-if="confirming" class="font-semibold">
                             To finish enabling two factor authentication, scan the following QR code using your phone's authenticator application or enter the setup key and provide the generated OTP code.
                         </p>
@@ -145,15 +147,15 @@ const disableTwoFactorAuthentication = () => {
                         </p>
                     </div>
 
-                    <div class="mt-4 p-2 inline-block bg-white" v-html="qrCode" />
+                    <div class="mt-3 p-2 inline-block bg-white" v-html="qrCode" />
 
-                    <div v-if="setupKey" class="mt-4 max-w-xl text-sm text-gray-400">
+                    <div v-if="setupKey" class="mt-3 text-sm text-gray-400">
                         <p class="font-semibold">
                             Setup Key: <span v-html="setupKey"></span>
                         </p>
                     </div>
 
-                    <div v-if="confirming" class="mt-4">
+                    <div v-if="confirming" class="mt-3">
                         <InputLabel for="code" value="Code" />
 
                         <TextInput
@@ -161,25 +163,25 @@ const disableTwoFactorAuthentication = () => {
                             v-model="confirmationForm.code"
                             type="text"
                             name="code"
-                            class="block mt-1 w-1/2"
+                            class="block mt-1 w-full"
                             inputmode="numeric"
                             autofocus
                             autocomplete="one-time-code"
                             @keyup.enter="confirmTwoFactorAuthentication"
                         />
 
-                        <InputError :message="confirmationForm.errors.code" class="mt-2" />
+                        <InputError :message="confirmationForm.errors.code" class="mt-1" />
                     </div>
                 </div>
 
                 <div v-if="recoveryCodes.length > 0 && ! confirming">
-                    <div class="mt-4 max-w-xl text-sm text-gray-400">
+                    <div class="mt-3 text-xs text-gray-400">
                         <p class="font-semibold">
                             Store these recovery codes in a secure password manager. They can be used to recover access to your account if your two factor authentication device is lost.
                         </p>
                     </div>
 
-                    <div class="grid gap-1 max-w-xl mt-4 px-4 py-4 font-mono text-sm bg-grayop-900 text-gray-100 rounded-lg">
+                    <div class="grid gap-1 mt-3 px-4 py-4 font-mono text-sm bg-grayop-900 text-gray-100 rounded-lg">
                         <div v-for="code in recoveryCodes" :key="code">
                             {{ code }}
                         </div>
@@ -187,7 +189,7 @@ const disableTwoFactorAuthentication = () => {
                 </div>
             </div>
 
-            <div class="mt-5">
+            <div class="flex flex-wrap gap-2 pt-1">
                 <div v-if="! twoFactorEnabled">
                     <ConfirmsPassword @confirmed="enableTwoFactorAuthentication">
                         <PrimaryButton type="button" :class="{ 'opacity-25': enabling }" :disabled="enabling">
@@ -196,12 +198,11 @@ const disableTwoFactorAuthentication = () => {
                     </ConfirmsPassword>
                 </div>
 
-                <div v-else>
+                <div v-else class="flex flex-wrap gap-2">
                     <ConfirmsPassword @confirmed="confirmTwoFactorAuthentication">
                         <PrimaryButton
                             v-if="confirming"
                             type="button"
-                            class="me-3"
                             :class="{ 'opacity-25': enabling }"
                             :disabled="enabling"
                         >
@@ -212,7 +213,6 @@ const disableTwoFactorAuthentication = () => {
                     <ConfirmsPassword @confirmed="regenerateRecoveryCodes">
                         <SecondaryButton
                             v-if="recoveryCodes.length > 0 && ! confirming"
-                            class="me-3"
                         >
                             Regenerate Recovery Codes
                         </SecondaryButton>
@@ -221,7 +221,6 @@ const disableTwoFactorAuthentication = () => {
                     <ConfirmsPassword @confirmed="showRecoveryCodes">
                         <SecondaryButton
                             v-if="recoveryCodes.length === 0 && ! confirming"
-                            class="me-3"
                         >
                             Show Recovery Codes
                         </SecondaryButton>
@@ -248,6 +247,6 @@ const disableTwoFactorAuthentication = () => {
                     </ConfirmsPassword>
                 </div>
             </div>
-        </template>
-    </ActionSection>
+        </div>
+    </div>
 </template>
