@@ -2,7 +2,7 @@
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Rating from '@/Components/Rating.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
-    import { watchEffect, ref, onMounted, onUnmounted } from 'vue';
+    import { watchEffect, ref, computed, onMounted, onUnmounted } from 'vue';
 
     const props = defineProps({
         vq3Ratings: Object,
@@ -73,7 +73,15 @@
         reloadRankings();
     }
 
+    const isLoggedIn = computed(() => !!usePage().props.auth?.user);
+    const showLoginPopup = ref(false);
+    const guestLockedCategories = ['strafe', 'slick', 'rocket', 'plasma', 'grenade', 'lg', 'bfg', 'tele'];
+
     const selectCategory = (cat) => {
+        if (!isLoggedIn.value && guestLockedCategories.includes(cat)) {
+            showLoginPopup.value = true;
+            return;
+        }
         category.value = cat;
         reloadRankings();
     }
@@ -212,6 +220,7 @@
                                         category === cat.value && cat.color === 'green' ? 'bg-green-500/30 border-green-400/50 text-white' : '',
                                         category === cat.value && cat.color === 'white' ? 'bg-white/30 border-white/50 text-white' : '',
                                         category !== cat.value ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' : '',
+                                        !isLoggedIn && guestLockedCategories.includes(cat.value) ? 'opacity-40' : '',
                                         'px-2 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1.5'
                                     ]"
                                     :title="cat.label">
@@ -349,4 +358,31 @@
 
         <div class="h-20"></div>
     </div>
+
+    <!-- Login Required Popup -->
+    <Teleport to="body">
+        <div v-if="showLoginPopup" class="fixed inset-0 z-[9999] flex items-center justify-center" @click.self="showLoginPopup = false">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+                <button @click="showLoginPopup = false" class="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Login Required</h3>
+                </div>
+                <p class="text-gray-300 text-sm mb-5">Category filters are available only for logged-in users. Please login or register to access detailed rankings.</p>
+                <div class="flex gap-3">
+                    <a href="/login" class="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">Login</a>
+                    <a href="/register" class="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-colors">Register</a>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>

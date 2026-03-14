@@ -25,29 +25,9 @@
     const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record']);
 
     const page = usePage();
-    const showTooltip = ref(false);
     const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
-    const unclaimedDismissed = ref(localStorage.getItem('hide_unclaimed_tooltip') === '1');
-    let hideTimeout = null;
-
-    const showTooltipDelayed = () => {
-        clearTimeout(hideTimeout);
-        showTooltip.value = true;
-    };
-
-    const hideTooltipDelayed = () => {
-        hideTimeout = setTimeout(() => {
-            showTooltip.value = false;
-        }, 300);
-    };
-
-    const dismissUnclaimed = () => {
-        localStorage.setItem('hide_unclaimed_tooltip', '1');
-        unclaimedDismissed.value = true;
-        showTooltip.value = false;
-    };
 
     const canReportDemo = computed(() => {
         return isLoggedIn.value && page.props.canReportDemos;
@@ -122,13 +102,16 @@
             return null;
         }
 
-        // Only link to registered users with full profiles
+        // Linked users with full profiles
         if (props.record.user) {
             return route('profile.index', props.record.user.id);
         }
 
-        // Players with only mdd_id have no proper profile page
-        // Show tooltip to encourage registration
+        // Fallback to mdd profile for unlinked accounts
+        if (props.record.mdd_id) {
+            return route('profile.mdd', props.record.mdd_id);
+        }
+
         return null;
     })
 
@@ -174,8 +157,8 @@
                 'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200 group-hover:ml-1',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
-            @mouseenter="!getRoute && !isOfflineRecord && showTooltipDelayed(); isOfflineRecord && (showUploaderTooltip = true)"
-            @mouseleave="!getRoute && !isOfflineRecord && hideTooltipDelayed(); isOfflineRecord && (showUploaderTooltip = false)"
+            @mouseenter="isOfflineRecord && (showUploaderTooltip = true)"
+            @mouseleave="isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects -->
@@ -258,37 +241,6 @@
                 </span>
             </template>
         </component>
-
-        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in and not dismissed -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn && !unclaimedDismissed">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999]" @mouseenter="showTooltipDelayed()" @mouseleave="hideTooltipDelayed()">
-                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
-                    <div class="flex items-center gap-4 mb-3">
-                        <span class="text-5xl animate-bounce">🔓</span>
-                        <div class="text-left flex-1">
-                            <div class="text-2xl font-black leading-tight">Unclaimed Profile</div>
-                            <div class="text-xl font-bold text-orange-100">Is it yours?</div>
-                        </div>
-                    </div>
-                    <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
-                        Register now and link your q3df.org account to see detailed profile page and much more!
-                    </div>
-                    <div class="flex items-center gap-2 mt-3 cursor-pointer pointer-events-auto" @click.stop="dismissUnclaimed">
-                        <input type="checkbox" class="w-4 h-4 rounded border-orange-300 bg-orange-400/30 text-orange-800 focus:ring-orange-300 focus:ring-offset-0 cursor-pointer pointer-events-none" />
-                        <span class="text-sm font-semibold text-orange-100">Don't show this again</span>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
-
-        <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn && !isOfflineRecord">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
-                    Not linked account
-                </div>
-            </div>
-        </Teleport>
 
         <!-- Offline record uploader tooltip - TELEPORTED -->
         <Teleport to="body" v-if="isOfflineRecord && showUploaderTooltip && record.user">
@@ -384,7 +336,7 @@
                 class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :title="record.date_set"
             >
-                {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}
+                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
             </div>
         </div>
 

@@ -264,7 +264,7 @@
                                             <button @click="activeSearchTab = 'maps'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'maps' ? 'text-green-400 border-b-2 border-green-400' : 'text-gray-500 hover:text-gray-300']">
                                                 MAPS<span v-if="maps.data?.length > 0" class="ml-1 opacity-60">({{ maps.data.length }})</span>
                                             </button>
-                                            <button @click="activeSearchTab = 'players'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'players' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-500 hover:text-gray-300']">
+                                            <button v-if="$page.props.auth.user" @click="activeSearchTab = 'players'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'players' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-500 hover:text-gray-300']">
                                                 PLAYERS<span v-if="players?.length > 0" class="ml-1 opacity-60">({{ players.length }})</span>
                                             </button>
                                             <button @click="activeSearchTab = 'demos'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'demos' ? 'text-orange-400 border-b-2 border-orange-400' : 'text-gray-500 hover:text-gray-300']">
@@ -284,8 +284,8 @@
                                                 </div>
                                                 <div v-else class="text-xs text-gray-600 text-center py-8">No maps found</div>
                                             </div>
-                                            <!-- Players -->
-                                            <div v-if="activeSearchTab === 'players'">
+                                            <!-- Players (logged in only) -->
+                                            <div v-if="activeSearchTab === 'players' && $page.props.auth.user">
                                                 <div v-if="players?.length > 0" class="space-y-2" @click="closeSearch">
                                                     <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                                 </div>
@@ -340,7 +340,7 @@
                                         </div>
 
                                         <!-- Desktop Grid Layout (>= lg) -->
-                                        <div ref="resultsSection" class="hidden lg:grid grid-cols-4 auto-rows-fr gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[70vh]">
+                                        <div ref="resultsSection" class="hidden lg:grid gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[70vh]" :class="$page.props.auth.user ? 'grid-cols-4' : 'grid-cols-3'">
                                             <!-- Maps Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-green-400 mb-3 pb-2 border-b border-green-500/30 flex items-center justify-between">
@@ -353,8 +353,8 @@
                                                 <div v-else class="text-xs text-gray-600 text-center py-8">No maps found</div>
                                             </div>
 
-                                            <!-- Players Column -->
-                                            <div class="flex flex-col">
+                                            <!-- Players Column (logged in only) -->
+                                            <div v-if="$page.props.auth.user" class="flex flex-col">
                                                 <div class="text-xs font-bold text-purple-400 mb-3 pb-2 border-b border-purple-500/30 flex items-center justify-between">
                                                     <span>PLAYERS</span>
                                                     <span v-if="players?.length > 0" class="text-[10px] opacity-60">({{ players.length }})</span>

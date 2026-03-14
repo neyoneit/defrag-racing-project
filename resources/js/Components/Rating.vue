@@ -1,5 +1,5 @@
 <script setup>
-    import { Link, usePage } from '@inertiajs/vue3';
+    import { Link } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
 
     const props = defineProps({
@@ -12,10 +12,6 @@
             default: () => ranking.rank
         }
     });
-
-    const page = usePage();
-    const showTooltip = ref(false);
-    const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const showDateTooltip = ref(false);
     const dateTooltipPos = ref({ x: 0, y: 0 });
@@ -30,13 +26,16 @@
     });
 
     const getRoute = computed(() => {
-        // Only link if user exists and has valid ID
+        // Linked users with full profiles
         if (props.rating.user?.id) {
             return route('profile.index', props.rating.user.id);
         }
 
-        // Rankings typically don't have MDD profiles, only registered users
-        // If there's no user, don't create a link
+        // Fallback to mdd profile for unlinked accounts
+        if (props.rating.mdd_id) {
+            return route('profile.mdd', props.rating.mdd_id);
+        }
+
         return null;
     });
 
@@ -48,37 +47,9 @@
         :href="getRoute"
         :class="[
             'group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px] hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]',
-            !getRoute && isLoggedIn ? 'cursor-default opacity-60' : !getRoute ? 'cursor-help opacity-60' : 'cursor-pointer'
+            !getRoute ? 'cursor-default opacity-60' : 'cursor-pointer'
         ]"
-        @mouseenter="!getRoute && (showTooltip = true)"
-        @mouseleave="!getRoute && (showTooltip = false)"
     >
-        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
-                    <div class="flex items-center gap-4 mb-3">
-                        <span class="text-5xl animate-bounce">🔓</span>
-                        <div class="text-left flex-1">
-                            <div class="text-2xl font-black leading-tight">Unclaimed Profile</div>
-                            <div class="text-xl font-bold text-orange-100">Is it yours?</div>
-                        </div>
-                    </div>
-                    <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
-                        Register now and link your q3df.org account to see detailed profile page and much more!
-                    </div>
-                </div>
-            </div>
-        </Teleport>
-
-        <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
-                    Not linked account
-                </div>
-            </div>
-        </Teleport>
         <!-- Background Profile Photo (always visible, blurred) -->
         <div class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img

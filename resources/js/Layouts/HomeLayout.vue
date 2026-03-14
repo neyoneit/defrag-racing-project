@@ -243,6 +243,7 @@
                                             Maps<span v-if="maps.data?.length > 0" class="ml-1.5 text-[10px] opacity-60">({{ maps.data.length }})</span>
                                         </button>
                                         <button
+                                            v-if="$page.props.auth.user"
                                             @click.stop="searchCategory = 'players'"
                                             class="px-3 py-3 text-xs font-bold transition-all border-l-2 text-left whitespace-nowrap"
                                             :class="searchCategory == 'players' ? 'border-purple-500 text-purple-400 bg-purple-500/10' : 'border-transparent text-gray-400 hover:text-white hover:bg-white/5'"
@@ -284,8 +285,8 @@
                                                 <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
                                             </div>
 
-                                            <!-- Players -->
-                                            <div v-if="players?.length > 0 && searchCategory == 'players'" @click="closeSearch">
+                                            <!-- Players (logged in only) -->
+                                            <div v-if="$page.props.auth.user && players?.length > 0 && searchCategory == 'players'" @click="closeSearch">
                                                 <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                             </div>
 

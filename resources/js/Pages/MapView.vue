@@ -740,7 +740,7 @@
 
                     <!-- Tags Section -->
                     <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
-                        <div class="flex items-center justify-between mb-3">
+                        <div v-if="$page.props.auth.user || tags.length > 0" class="flex items-center justify-between mb-3">
                             <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
                         </div>
 
@@ -763,7 +763,7 @@
                                     </svg>
                                 </button>
                             </span>
-                            <span v-if="tags.length === 0" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
                         </div>
 
                         <!-- Suggested tags from maplists -->
@@ -798,6 +798,12 @@
                                     </svg>
                                 </span>
                             </div>
+                        </div>
+
+                        <!-- Not logged in hint -->
+                        <div v-if="!$page.props.auth.user && tags.length === 0" class="bg-gradient-to-r from-purple-500/10 via-purple-500/15 to-purple-500/10 border border-purple-500/20 rounded-lg px-4 py-3 text-center">
+                            <div class="text-sm font-semibold text-purple-300">No tags on this map</div>
+                            <div class="text-xs text-purple-200/60 mt-1"><a href="/login" class="underline hover:text-white transition-colors">Login</a> or <a href="/register" class="underline hover:text-white transition-colors">register</a> to add them!</div>
                         </div>
 
                         <!-- Add tag input (for logged in users) -->

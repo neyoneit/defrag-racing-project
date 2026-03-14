@@ -571,6 +571,19 @@
 
         <!-- EPIC REDESIGN - Main Content -->
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+
+            <!-- Not Linked Account Overlay -->
+            <div v-if="!user?.id" class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
+                    <div class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
+                    <div class="flex justify-center gap-4 mt-4">
+                        <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
+                        <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Stats Grid - Clean Text Layout -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
@@ -1017,9 +1030,9 @@
                                         </div>
 
                                         <!-- Date -->
-                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
+                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
                                             <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>
                                     </div>
@@ -1083,9 +1096,9 @@
                                         </div>
 
                                         <!-- Date -->
-                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
+                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
                                             <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>
                                     </div>
