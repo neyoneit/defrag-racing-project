@@ -104,7 +104,7 @@ class HeadhunterController extends Controller
             'mode' => 'required|in:run,strafe,freestyle,fastcaps,any',
             'target_time' => 'required|integer|min:1',
             'reward_amount' => 'nullable|numeric|min:0',
-            'reward_currency' => 'nullable|string|size:3',
+            'reward_currency' => 'nullable|string|max:5',
             'reward_description' => 'nullable|string',
             'expires_at' => 'nullable|date|after:now',
         ]);

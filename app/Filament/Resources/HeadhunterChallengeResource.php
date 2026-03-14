@@ -56,7 +56,7 @@ class HeadhunterChallengeResource extends Resource
                     ->numeric()
                     ->nullable(),
                 Forms\Components\TextInput::make('reward_currency')
-                    ->maxLength(3)
+                    ->maxLength(5)
                     ->default('USD')
                     ->nullable(),
                 Forms\Components\Textarea::make('reward_description')

@@ -100,6 +100,39 @@ class WebController extends Controller
     }
 
     public function roadmap() {
-        return Inertia::render('Roadmap');
+        $commits = cache()->remember('roadmap_commits', 3600, function () {
+            $format = '%H' . chr(30) . '%s' . chr(30) . '%b' . chr(30) . '%ai' . chr(30) . '%an' . chr(31);
+            $output = shell_exec("git log --format=\"$format\" --reverse --since='2025-01-01' 2>/dev/null");
+            if (!$output) return [];
+
+            $entries = explode(chr(31), $output);
+            $commits = [];
+            foreach ($entries as $entry) {
+                $entry = trim($entry);
+                if (!$entry) continue;
+                $parts = explode(chr(30), $entry, 5);
+                if (count($parts) < 2) continue;
+
+                $body = trim($parts[2] ?? '');
+                $body = preg_replace('/\n*Co-Authored-By:.*$/s', '', $body);
+                $body = trim($body);
+
+                $date = isset($parts[3]) ? date('Y-m-d', strtotime(trim($parts[3]))) : null;
+                $author = trim($parts[4] ?? '');
+
+                $commits[] = [
+                    'hash' => substr(trim($parts[0]), 0, 7),
+                    'title' => trim($parts[1]),
+                    'description' => $body,
+                    'date' => $date,
+                    'author' => $author,
+                ];
+            }
+            return array_reverse($commits);
+        });
+
+        return Inertia::render('Roadmap', [
+            'commits' => $commits,
+        ]);
     }
 }

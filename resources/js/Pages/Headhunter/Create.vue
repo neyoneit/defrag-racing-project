@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const physicsOpen = ref(false);
 const modeOpen = ref(false);
@@ -19,13 +19,32 @@ const modeOptions = [
     { value: 'any', label: 'Any' },
 ];
 
-const currencyOptions = [
-    { value: 'USD', label: 'USD' },
-    { value: 'EUR', label: 'EUR' },
-    { value: 'GBP', label: 'GBP' },
-    { value: 'CAD', label: 'CAD' },
-    { value: 'AUD', label: 'AUD' },
+const rewardType = ref('fiat');
+
+const fiatOptions = [
+    { value: 'USD', label: 'USD — US Dollar' },
+    { value: 'EUR', label: 'EUR — Euro' },
+    { value: 'GBP', label: 'GBP — British Pound' },
+    { value: 'RUB', label: 'RUB — Russian Ruble' },
+    { value: 'CAD', label: 'CAD — Canadian Dollar' },
+    { value: 'AUD', label: 'AUD — Australian Dollar' },
 ];
+
+const cryptoOptions = [
+    { value: 'BTC', label: 'BTC — Bitcoin' },
+    { value: 'ETH', label: 'ETH — Ethereum' },
+    { value: 'USDT', label: 'USDT — Tether' },
+    { value: 'USDC', label: 'USDC — USD Coin' },
+    { value: 'LTC', label: 'LTC — Litecoin' },
+    { value: 'SOL', label: 'SOL — Solana' },
+    { value: 'XMR', label: 'XMR — Monero' },
+];
+
+const currencyOptions = computed(() => rewardType.value === 'crypto' ? cryptoOptions : fiatOptions);
+
+watch(rewardType, (type) => {
+    form.reward_currency = type === 'crypto' ? 'BTC' : 'USD';
+});
 
 const form = useForm({
     title: '',
@@ -178,9 +197,19 @@ const submit = () => {
                             <h3 class="text-xl font-bold text-white mb-4">Reward (Optional)</h3>
 
                             <div class="space-y-4">
+                                <!-- Fiat / Crypto Toggle -->
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" @click="rewardType = 'fiat'" :class="rewardType === 'fiat' ? 'bg-blue-600 text-white' : 'bg-black/40 text-gray-400 hover:bg-white/10'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-white/10">
+                                        Fiat
+                                    </button>
+                                    <button type="button" @click="rewardType = 'crypto'" :class="rewardType === 'crypto' ? 'bg-orange-600 text-white' : 'bg-black/40 text-gray-400 hover:bg-white/10'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors border border-white/10">
+                                        Crypto
+                                    </button>
+                                </div>
+
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="md:col-span-2">
-                                        <label class="block text-sm font-semibold text-gray-300 mb-2">Monetary Reward</label>
+                                        <label class="block text-sm font-semibold text-gray-300 mb-2">{{ rewardType === 'crypto' ? 'Crypto Reward' : 'Monetary Reward' }}</label>
                                         <input
                                             v-model="form.reward_amount"
                                             type="number"
@@ -195,7 +224,7 @@ const submit = () => {
                                         <label class="block text-sm font-semibold text-gray-300 mb-2">Currency</label>
                                         <div class="relative">
                                             <button type="button" @click="currencyOpen = !currencyOpen" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors">
-                                                <span>{{ form.reward_currency }}</span>
+                                                <span>{{ currencyOptions.find(o => o.value === form.reward_currency)?.label || form.reward_currency }}</span>
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="currencyOpen ? 'rotate-180' : ''"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
                                             </button>
                                             <div v-if="currencyOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
