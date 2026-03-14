@@ -75,9 +75,11 @@ class Map extends Model
 
     public function processRanks () {
         DB::beginTransaction();
-        $records = Record::where('mapname', $this->name)->orderBy('time')->get()->groupBy('physics');
+        $records = Record::where('mapname', $this->name)->orderBy('time')->get()->groupBy(function ($record) {
+            return $record->physics . '_' . $record->mode;
+        });
 
-        foreach($records as $physics => $data) {
+        foreach($records as $group => $data) {
             $i = 1;
             $last_time = -1;
             $besttime = -1;
