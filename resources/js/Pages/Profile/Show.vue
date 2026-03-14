@@ -646,15 +646,15 @@ const updateNotifications = () => {
                                         <p class="text-xs font-bold text-blue-400 mb-2">System Preview</p>
                                         <div class="space-y-1.5">
                                             <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
-                                                <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded" />
+                                                <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">Announcements <span class="text-yellow-400">(Required)</span></span>
                                             </label>
                                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded" />
+                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">Clan Notifications</span>
                                             </label>
                                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded" />
+                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">Tournament Notifications</span>
                                             </label>
                                         </div>
@@ -665,15 +665,15 @@ const updateNotifications = () => {
                                         <p class="text-xs font-bold text-orange-400 mb-2">Record Preview</p>
                                         <div class="space-y-1.5">
                                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5" />
+                                                <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">Show All Records</span>
                                             </label>
                                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5" />
+                                                <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">World Records Only</span>
                                             </label>
                                             <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5" />
+                                                <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
                                                 <span class="text-xs text-gray-300">Don't Show Preview</span>
                                             </label>
                                         </div>
@@ -686,11 +686,11 @@ const updateNotifications = () => {
                                     <p class="text-sm font-bold text-blue-400 mb-2">VQ3 Records</p>
                                     <div class="space-y-1.5">
                                         <label class="flex items-center gap-1.5 cursor-pointer">
-                                            <input v-model="notifsForm.records_vq3" type="radio" value="all" class="w-4 h-4 text-blue-600" />
+                                            <input v-model="notifsForm.records_vq3" type="radio" value="all" class="w-4 h-4 text-blue-600 focus:ring-0 focus:ring-offset-0" />
                                             <span class="text-sm text-gray-300">All</span>
                                         </label>
                                         <label class="flex items-center gap-1.5 cursor-pointer">
-                                            <input v-model="notifsForm.records_vq3" type="radio" value="wr" class="w-4 h-4 text-blue-600" />
+                                            <input v-model="notifsForm.records_vq3" type="radio" value="wr" class="w-4 h-4 text-blue-600 focus:ring-0 focus:ring-offset-0" />
                                             <span class="text-sm text-gray-300">WR Only</span>
                                         </label>
                                     </div>
@@ -700,11 +700,11 @@ const updateNotifications = () => {
                                     <p class="text-sm font-bold text-green-400 mb-2">CPM Records</p>
                                     <div class="space-y-1.5">
                                         <label class="flex items-center gap-1.5 cursor-pointer">
-                                            <input v-model="notifsForm.records_cpm" type="radio" value="all" class="w-4 h-4 text-green-600" />
+                                            <input v-model="notifsForm.records_cpm" type="radio" value="all" class="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0" />
                                             <span class="text-sm text-gray-300">All</span>
                                         </label>
                                         <label class="flex items-center gap-1.5 cursor-pointer">
-                                            <input v-model="notifsForm.records_cpm" type="radio" value="wr" class="w-4 h-4 text-green-600" />
+                                            <input v-model="notifsForm.records_cpm" type="radio" value="wr" class="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0" />
                                             <span class="text-sm text-gray-300">WR Only</span>
                                         </label>
                                     </div>
