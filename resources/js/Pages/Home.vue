@@ -9,7 +9,7 @@
 
 <script setup>
     import { Head, usePage } from '@inertiajs/vue3';
-    import { computed } from 'vue';
+    import { computed, ref } from 'vue';
 
     const props = defineProps({
         maps: Array,
@@ -24,6 +24,23 @@
 
     const page = usePage();
     const isAuthenticated = computed(() => page.props.auth?.user);
+
+    // Auto-completed steps
+    const hasRecords = computed(() => (page.props.recordsCount || 0) > 0);
+    const hasColoredNick = computed(() => !!page.props.auth?.user?.color);
+
+    // Manual checkboxes (steps 2, 3) — persist in localStorage
+    const downloadChecked = ref(localStorage.getItem('gettingStarted_download') === '1');
+    const discordChecked = ref(localStorage.getItem('gettingStarted_discord') === '1');
+
+    const toggleDownload = () => {
+        downloadChecked.value = !downloadChecked.value;
+        localStorage.setItem('gettingStarted_download', downloadChecked.value ? '1' : '0');
+    };
+    const toggleDiscord = () => {
+        discordChecked.value = !discordChecked.value;
+        localStorage.setItem('gettingStarted_discord', discordChecked.value ? '1' : '0');
+    };
 </script>
 
 <template>
@@ -46,11 +63,11 @@
                     <!-- Stats Row -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-5xl mx-auto mb-8">
                         <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
-                            <div class="text-2xl md:text-3xl font-black text-blue-400 mb-1">{{ totalMaps }}</div>
+                            <div class="text-2xl md:text-3xl font-black text-blue-400 mb-1">{{ totalMaps >= 1000 ? (totalMaps / 1000).toFixed(1) + 'K' : totalMaps }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Total Maps</div>
                         </div>
                         <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-yellow-500/50 transition-all">
-                            <div class="text-2xl md:text-3xl font-black text-yellow-400 mb-1">{{ totalDemos }}</div>
+                            <div class="text-2xl md:text-3xl font-black text-yellow-400 mb-1">{{ totalDemos >= 1000 ? (totalDemos / 1000).toFixed(1) + 'K' : totalDemos }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Total Demos</div>
                         </div>
                         <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-green-500/50 transition-all">
@@ -106,8 +123,9 @@
                 <!-- Step 1: Register -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            1
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', isAuthenticated ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="isAuthenticated" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>1</span>
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
@@ -142,89 +160,103 @@
                 <!-- Step 2: Download -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            2
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', downloadChecked ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="downloadChecked" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>2</span>
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link :href="route('bundles')" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
-                        <div class="flex items-start gap-6">
-                            <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                </svg>
+                    <div class="flex-1 flex gap-4 items-center">
+                        <Link :href="route('bundles')" :class="['flex-1 rounded-xl border p-8 transition-all group', downloadChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                            <div class="flex items-start gap-6">
+                                <div :class="['p-4 rounded-xl transition-colors', downloadChecked ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', downloadChecked ? 'text-green-400' : 'text-blue-400']">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 :class="['text-2xl font-black mb-2 transition-colors', downloadChecked ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Download the Game</h3>
+                                    <p class="text-gray-400">Get the complete Defrag bundle with Quake 3, maps, configs, and everything ready to play. One-click install.</p>
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">Download the Game</h3>
-                                <p class="text-gray-400">Get the complete Defrag bundle with Quake 3, maps, configs, and everything ready to play. One-click install.</p>
-                            </div>
-                        </div>
-                    </Link>
+                        </Link>
+                        <button v-if="isAuthenticated" @click="toggleDownload" :class="['flex-shrink-0 w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all', downloadChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Step 3: Join Discord -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            3
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', discordChecked ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="discordChecked" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>3</span>
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <a href="https://discord.gg/defrag" target="_blank" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
-                        <div class="flex items-start gap-6">
-                            <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-                                </svg>
+                    <div class="flex-1 flex gap-4 items-center">
+                        <a href="https://discord.defrag.racing" target="_blank" :class="['flex-1 rounded-xl border p-8 transition-all group', discordChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                            <div class="flex items-start gap-6">
+                                <div :class="['p-4 rounded-xl transition-colors', discordChecked ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', discordChecked ? 'text-green-400' : 'text-blue-400']">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 :class="['text-2xl font-black mb-2 transition-colors', discordChecked ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Join Our Discord</h3>
+                                    <p class="text-gray-400">Connect with the community, get help, find teammates, and stay updated on events and tournaments.</p>
+                                </div>
                             </div>
-                            <div class="flex-1">
-                                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">Join Our Discord</h3>
-                                <p class="text-gray-400">Connect with the community, get help, find teammates, and stay updated on events and tournaments.</p>
-                            </div>
-                        </div>
-                    </a>
+                        </a>
+                        <button v-if="isAuthenticated" @click="toggleDiscord" :class="['flex-shrink-0 w-10 h-10 rounded-lg border-2 flex items-center justify-center transition-all', discordChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Step 4: Explore Maps -->
+                <!-- Step 4: Explore Maps (auto-check if user has records) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            4
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', hasRecords ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="hasRecords" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>4</span>
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link :href="route('maps')" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
+                    <Link :href="route('maps')" :class="['flex-1 rounded-xl border p-8 transition-all group', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
                         <div class="flex items-start gap-6">
-                            <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
+                            <div :class="['p-4 rounded-xl transition-colors', hasRecords ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasRecords ? 'text-green-400' : 'text-blue-400']">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">Explore Maps & Records</h3>
+                                <h3 :class="['text-2xl font-black mb-2 transition-colors', hasRecords ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Explore Maps & Records</h3>
                                 <p class="text-gray-400">Browse hundreds of maps with filters by physics (CPM/VQ3), difficulty, and style. Study world records to improve.</p>
                             </div>
                         </div>
                     </Link>
                 </div>
 
-                <!-- Step 5: Customize Profile -->
+                <!-- Step 5: Customize Profile (auto-check if has colored nick) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            5
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', (isAuthenticated && hasColoredNick) ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="isAuthenticated && hasColoredNick" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>5</span>
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link v-if="isAuthenticated" :href="route('profile.index', { userId: page.props.auth.user.mdd_id })" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
+                    <Link v-if="isAuthenticated" :href="route('profile.index', { userId: page.props.auth.user.mdd_id })" :class="['flex-1 rounded-xl border p-8 transition-all group', hasColoredNick ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
                         <div class="flex items-start gap-6">
-                            <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
+                            <div :class="['p-4 rounded-xl transition-colors', hasColoredNick ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasColoredNick ? 'text-green-400' : 'text-blue-400']">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">Customize Your Profile</h3>
+                                <h3 :class="['text-2xl font-black mb-2 transition-colors', hasColoredNick ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Customize Your Profile</h3>
                                 <p class="text-gray-400">Create a colorful Quake 3 nickname with color codes (^1Red ^2Green ^4Blue), upload background, and showcase your style.</p>
                                 <div class="mt-3 inline-block px-4 py-2 bg-black/40 rounded font-mono text-sm">
                                     <span class="text-red-500">^1Pro</span><span class="text-white">^7</span><span class="text-blue-500">^4Player</span>
@@ -247,23 +279,24 @@
                     </div>
                 </div>
 
-                <!-- Step 6: Join Servers -->
+                <!-- Step 6: Join Servers (auto-check if has records) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
                     <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
-                        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-blue-600 text-white font-black text-2xl">
-                            6
+                        <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', hasRecords ? 'bg-green-600' : 'bg-blue-600']">
+                            <svg v-if="hasRecords" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                            <span v-else>6</span>
                         </div>
                     </div>
-                    <Link :href="route('servers')" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
+                    <Link :href="route('servers')" :class="['flex-1 rounded-xl border p-8 transition-all group', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
                         <div class="flex items-start gap-6">
-                            <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
+                            <div :class="['p-4 rounded-xl transition-colors', hasRecords ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasRecords ? 'text-green-400' : 'text-blue-400']">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
                                 </svg>
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">Connect to Servers & Play</h3>
-                                <p class="text-gray-400">Find live servers with active players. Practice, compete, and automatically submit your records to the database.</p>
+                                <h3 :class="['text-2xl font-black mb-2 transition-colors', hasRecords ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Connect to Servers & Play</h3>
+                                <p class="text-gray-400">Find live servers with active players. Practice, compete, and your records are automatically submitted after logging in on the server.</p>
                             </div>
                         </div>
                     </Link>
