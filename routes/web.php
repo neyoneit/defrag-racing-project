@@ -177,6 +177,8 @@ Route::post('/demos/upload', [DemosController::class, 'upload'])->name('demos.up
         });
 
 
+Route::get('/link-account', [SettingsController::class, 'linkAccount'])->name('link-account')->middleware('auth');
+
 Route::post('/settings/socialmedia', [SettingsController::class, 'socialmedia'])->name('settings.socialmedia');
 Route::post('/settings/preferences', [SettingsController::class, 'preferences'])->name('settings.preferences');
 Route::post('/settings/mdd/generate', [SettingsController::class, 'generate'])->name('settings.mdd.generate');

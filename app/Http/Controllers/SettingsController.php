@@ -17,6 +17,18 @@ use GuzzleHttp\Exception\RequestException;
 
 class SettingsController extends Controller
 {
+    public function linkAccount(Request $request) {
+        $user = $request->user();
+
+        if ($user->mdd_id && ctype_digit($user->mdd_id)) {
+            return redirect()->route('profile.index', ['userId' => $user->id]);
+        }
+
+        return Inertia::render('LinkAccount', [
+            'user' => $user,
+        ]);
+    }
+
     public function socialmedia(Request $request) {
         $user = $request->user();
 
