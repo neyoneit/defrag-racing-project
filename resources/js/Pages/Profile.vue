@@ -55,11 +55,51 @@
             type: Array,
             default: () => []
         },
+        demoStats: {
+            type: Object,
+            default: () => ({})
+        },
         hasProfile: Boolean,
         load_times: Object
     });
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
+
+    // Profile layout customization
+    const defaultStatBoxes = ['performance', 'activity', 'record_types', 'map_features'];
+    const defaultSections = [
+        { id: 'records', visible: true },
+        { id: 'similar_skill_rivals', visible: true },
+        { id: 'competitor_comparison', visible: true },
+        { id: 'known_aliases', visible: true },
+        { id: 'featured_maplists', visible: true },
+        { id: 'map_completionist', visible: true },
+    ];
+
+    const layout = computed(() => props.user?.profile_layout || {});
+    const activeStatBoxes = computed(() => layout.value.stat_boxes || defaultStatBoxes);
+    const orderedSections = computed(() => {
+        const saved = layout.value.sections;
+        if (!saved || !saved.length) return defaultSections;
+        // Ensure all sections exist
+        const result = [...saved];
+        for (const def of defaultSections) {
+            if (!result.find(s => s.id === def.id)) {
+                result.push({ ...def });
+            }
+        }
+        return result;
+    });
+
+    const showStatBox = (id) => activeStatBoxes.value.includes(id);
+    const showSection = (id) => {
+        const section = orderedSections.value.find(s => s.id === id);
+        return section ? section.visible : true;
+    };
+    const sectionOrder = (id) => {
+        const idx = orderedSections.value.findIndex(s => s.id === id);
+        return idx >= 0 ? idx : 99;
+    };
 
     const profileRoute = (params = {}) => {
         if (props.user?.id) {
@@ -601,7 +641,7 @@
             <!-- Stats Grid - Clean Text Layout -->
             <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
-                <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('performance')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
                         <div class="flex items-center gap-0">
@@ -680,7 +720,7 @@
                 </div>
 
                 <!-- Map Features -->
-                <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('map_features')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
                         <div class="flex items-center gap-0">
@@ -737,7 +777,7 @@
                 </div>
 
                 <!-- Record Types -->
-                <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('record_types') && stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
                         <div class="flex items-center gap-0">
@@ -761,7 +801,7 @@
                 </div>
 
                 <!-- Activity & Misc -->
-                <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('activity')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Activity</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between items-center group relative">
@@ -794,40 +834,82 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Top Downloaded Demos & Known Aliases Grid -->
-            <div v-if="(topDownloadedDemos && topDownloadedDemos.length > 0) || (aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- Top Downloaded Demos Section -->
-                <div v-if="topDownloadedDemos && topDownloadedDemos.length > 0">
-                    <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
-                        <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                            </svg>
-                            Top Downloaded Demos
-                        </h3>
-                        <p class="text-xs text-gray-400 mb-4">Most popular demos uploaded by this player</p>
-                        <div class="space-y-2">
-                            <Link
-                                v-for="demo in topDownloadedDemos"
-                                :key="demo.id"
-                                :href="`/maps/${encodeURIComponent(demo.map_name)}`"
-                                class="flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-colors group"
-                            >
-                                <div class="text-white text-sm truncate mr-3">{{ demo.processed_filename || demo.original_filename }}</div>
-                                <div class="flex items-center gap-1.5 text-blue-400 font-bold text-sm whitespace-nowrap">
-                                    <span>{{ demo.download_count }}</span>
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                                    </svg>
-                                </div>
-                            </Link>
+
+                <!-- Demos Statistics -->
+                <div v-if="showStatBox('demos_statistics')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Demos</h3>
+                        <div class="flex items-center gap-0">
+                            <span class="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded border text-pink-400 bg-pink-400/20 border-pink-400/30">Stats</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Uploaded Demos</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Total number of demos uploaded by this player
+                            </div>
+                            <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.total_demos || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Total Downloads</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                How many times this player's demos have been downloaded
+                            </div>
+                            <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.total_downloads || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Downloaded Demos</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Number of demos that have at least one download
+                            </div>
+                            <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.demos_with_downloads || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Unique Maps</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Number of different maps this player has demos on
+                            </div>
+                            <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.unique_maps || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Most Downloaded</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Highest download count on a single demo
+                            </div>
+                            <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.most_downloaded || 0 }}</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Player Aliases Section - Show if aliases exist, can suggest, or has pending suggestions -->
-                <div v-if="(aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0)">
+                <!-- Top Downloaded Demos -->
+                <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Top Demos</h3>
+                        <div class="flex items-center gap-0">
+                            <span class="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded border text-cyan-400 bg-cyan-400/20 border-cyan-400/30">Downloads</span>
+                        </div>
+                    </div>
+                    <div v-if="topDownloadedDemos && topDownloadedDemos.length > 0" class="space-y-1.5">
+                        <Link
+                            v-for="demo in topDownloadedDemos"
+                            :key="demo.id"
+                            :href="`/maps/${encodeURIComponent(demo.map_name)}`"
+                            class="flex items-center justify-between rounded-lg px-2 py-1 hover:bg-white/5 transition-colors group"
+                        >
+                            <span class="text-xs text-gray-400 group-hover:text-white truncate mr-2">{{ demo.processed_filename || demo.original_filename }}</span>
+                            <span class="text-xs font-bold text-cyan-400 tabular-nums whitespace-nowrap">{{ demo.download_count }}</span>
+                        </Link>
+                    </div>
+                    <div v-else class="text-xs text-gray-600 text-center py-2">No downloaded demos</div>
+                </div>
+            </div>
+            <!-- Reorderable Sections Container -->
+            <div class="flex flex-col">
+
+            <!-- Known Aliases -->
+            <div v-if="showSection('known_aliases') && ((aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0))" class="mb-6" :style="{ order: sectionOrder('known_aliases') }">
+                <div>
                     <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -932,7 +1014,7 @@
             </div>
 
             <!-- Records Container with Sidebar Tabs -->
-            <div v-if="hasProfile" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
+            <div v-if="hasProfile && showSection('records')" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6" :style="{ order: sectionOrder('records') }">
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
                     <div class="bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
@@ -1001,7 +1083,7 @@
                                         <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
                                         <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
                                     </div>
-                                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
@@ -1072,7 +1154,7 @@
                                         <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
                                         <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
                                     </div>
-                                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
@@ -1149,7 +1231,7 @@
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->
-            <div v-if="cpm_competitors || cpm_rivals" class="mb-6">
+            <div v-if="showSection('similar_skill_rivals') && (cpm_competitors || cpm_rivals)" class="mb-6" :style="{ order: sectionOrder('similar_skill_rivals') }">
                 <!-- Section Headers -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
                     <div>
@@ -1254,7 +1336,7 @@
             </div>
 
             <!-- Direct Competitor Comparison -->
-            <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+            <div v-if="showSection('competitor_comparison')" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('competitor_comparison') }">
                 <h2 class="text-xl font-bold text-white mb-4">
                     Direct Competitor Comparison
                 </h2>
@@ -1438,7 +1520,7 @@
             </div>
 
             <!-- User's Featured Maplists -->
-            <div v-if="user_maplists && user_maplists.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+            <div v-if="showSection('featured_maplists') && user_maplists && user_maplists.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('featured_maplists') }">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">
                         <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1487,7 +1569,7 @@
             </div>
 
             <!-- Map Completionist List -->
-            <div v-if="unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+            <div v-if="showSection('map_completionist') && unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -1589,6 +1671,8 @@
                     </Link>
                 </div>
             </div>
+
+            </div> <!-- Close Reorderable Sections Container -->
         </div>
 
         <!-- Performance Metrics Panel (only visible to admin neyoneit) -->

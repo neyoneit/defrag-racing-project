@@ -260,6 +260,25 @@ class SettingsController extends Controller
         $user->save();
     }
 
+    public function profileLayout(Request $request) {
+        $request->validate([
+            'stat_boxes' => ['required', 'array', 'size:4'],
+            'stat_boxes.*' => ['string', 'in:performance,activity,record_types,map_features,demos_statistics,top_downloaded_demos'],
+            'sections' => ['required', 'array'],
+            'sections.*.id' => ['required', 'string', 'in:records,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
+            'sections.*.visible' => ['required', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $user->profile_layout = [
+            'stat_boxes' => $request->stat_boxes,
+            'sections' => $request->sections,
+        ];
+        $user->save();
+
+        return back();
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 
