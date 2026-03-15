@@ -230,6 +230,9 @@
     // Mobile physics toggle - 'both', 'VQ3', or 'CPM'
     const mobilePhysics = ref('both');
 
+    // Physics column order preference
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
+
     const sortByDate = () => {
         if (column.value === 'date_set') {
             order.value = (order.value == 'ASC') ? 'DESC' : 'ASC';
@@ -675,11 +678,11 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
-                        <!-- Dark overlay for readability -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95"></div>
+                        <!-- Dark overlay for readability, lightens on hover -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95 transition-opacity duration-300 group-hover:opacity-70"></div>
                     </div>
                     <!-- Fallback solid background if no thumbnail -->
                     <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
@@ -1021,7 +1024,7 @@
 
                 <div class="md:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1029,7 +1032,7 @@
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
                             </div>
-                            <div class="text-right min-w-[80px]">
+                            <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
                                 <div v-if="my_vq3_record" class="text-sm font-bold text-blue-300 tabular-nums">
                                     {{ formatTime(my_vq3_record.time) }}
@@ -1071,7 +1074,7 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" :style="{ order: cpmFirst ? 1 : 2 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1079,7 +1082,7 @@
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
                             </div>
-                            <div class="text-right min-w-[80px]">
+                            <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
                                 <div v-if="my_cpm_record" class="text-sm font-bold text-purple-300 tabular-nums">
                                     {{ formatTime(my_cpm_record.time) }}
@@ -1120,6 +1123,14 @@
                     </div>
                 </div> <!-- Close CPM Leaderboard -->
                 </div> <!-- Close md:flex container -->
+                <div class="text-xs text-gray-500 text-right mt-2">
+                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                        Change VQ3/CPM column order
+                    </Link>
+                    <span v-else>
+                        <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                    </span>
+                </div>
             </div> <!-- Close Leaderboards Section -->
         </div> <!-- Close page wrapper -->
 

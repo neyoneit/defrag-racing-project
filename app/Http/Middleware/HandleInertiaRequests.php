@@ -109,6 +109,7 @@ class HandleInertiaRequests extends Middleware
             'canReportDemos'            =>      $request->user() ? (\App\Models\Record::where('user_id', $request->user()->id)->count() >= 30) : false,
             'canUploadDemos'            =>      $request->user() ? $request->user()->canUploadDemos() : false,
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
+            'physicsOrder'              =>      $request->user()?->default_physics_order ?? 'vq3_first',
         ]);
     }
 }

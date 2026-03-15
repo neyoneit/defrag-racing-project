@@ -240,6 +240,14 @@ class SettingsController extends Controller
         $user->save();
     }
 
+    public function physicsOrderPreferences(Request $request) {
+        $user = $request->user();
+
+        $order = $request->input('default_physics_order', 'vq3_first');
+        $user->default_physics_order = in_array($order, ['vq3_first', 'cpm_first']) ? $order : 'vq3_first';
+        $user->save();
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 

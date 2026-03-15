@@ -79,6 +79,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'nsfw_confirmed',
         'default_show_oldtop',
         'default_show_offline',
+        'default_physics_order',
     ];
 
     /**
@@ -105,6 +106,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'nsfw_confirmed' => 'boolean',
         'default_show_oldtop' => 'boolean',
         'default_show_offline' => 'boolean',
+        'default_physics_order' => 'string',
     ];
 
     /**

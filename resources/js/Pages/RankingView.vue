@@ -97,6 +97,7 @@
     const isRotating = ref(false);
     const interval = ref(null);
     const page = usePage();
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const startInterval = () => {
         if (interval.value == null) {
@@ -254,7 +255,7 @@
             <!-- My Ratings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- My VQ3 Rating -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400">
@@ -275,7 +276,7 @@
                 </div>
 
                 <!-- My CPM Rating -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-purple-400">
@@ -299,7 +300,7 @@
             <!-- All Rankings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Rankings -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
@@ -327,7 +328,7 @@
                 </div>
 
                 <!-- CPM Rankings -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
@@ -353,6 +354,14 @@
                         <Pagination pageName="cpmPage" :last_page="cpmRatings.last_page" :current_page="cpmRatings.current_page" :link="cpmRatings.first_page_url" :only="['vq3Ratings', 'cpmRatings']" />
                     </div>
                 </div>
+            </div>
+            <div class="text-xs text-gray-500 text-right mt-2">
+                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                    Change VQ3/CPM column order
+                </Link>
+                <span v-else>
+                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                </span>
             </div>
         </div>
 

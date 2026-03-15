@@ -1,10 +1,12 @@
 <script setup>
     import { ref, watch, computed } from 'vue';
-    import { Head, router, Link } from '@inertiajs/vue3';
+    import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import { useClipboard } from '@/Composables/useClipboard';
-    
+
     const { copy, copyState } = useClipboard();
+    const page = usePage();
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const props = defineProps({
         user: Object,
@@ -590,10 +592,9 @@
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -602,10 +603,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Total number of records you have set across all maps
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_records || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_records || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_records || 0) : (profile.vq3_records || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_records || 0) : (profile.cpm_records || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -613,10 +614,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Number of #1 ranked records you currently hold
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ cpm_world_records }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ vq3_world_records }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? cpm_world_records : vq3_world_records }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? vq3_world_records : cpm_world_records }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -624,10 +625,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records ranked between 1st and 3rd place
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_top3 || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_top3 || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_top3 || 0) : (profile.vq3_top3 || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_top3 || 0) : (profile.cpm_top3 || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -635,10 +636,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records ranked between 1st and 10th place
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_top10 || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_top10 || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_top10 || 0) : (profile.vq3_top10 || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_top10 || 0) : (profile.cpm_top10 || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -646,10 +647,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Your average ranking position across all records (lower is better)
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_avg_rank || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_avg_rank || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_avg_rank || 0) : (profile.vq3_avg_rank || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_avg_rank || 0) : (profile.cpm_avg_rank || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -657,10 +658,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Percentage of your records that are in top 10 positions
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_dominance || 0 }}%</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_dominance || 0 }}%</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_dominance || 0) : (profile.vq3_dominance || 0) }}%</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_dominance || 0) : (profile.cpm_dominance || 0) }}%</span>
                             </div>
                         </div>
                     </div>
@@ -670,10 +671,9 @@
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -682,10 +682,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Number of different maps you have set records on
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_unique_maps || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_unique_maps || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_unique_maps || 0) : (profile.vq3_unique_maps || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_unique_maps || 0) : (profile.cpm_unique_maps || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -693,10 +693,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps with slick (low friction) surfaces
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_slick || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_slick || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_slick || 0) : (profile.vq3_slick || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_slick || 0) : (profile.cpm_slick || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -704,10 +704,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps featuring jump pads
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_jumppad || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_jumppad || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_jumppad || 0) : (profile.vq3_jumppad || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_jumppad || 0) : (profile.cpm_jumppad || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -715,10 +715,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps featuring teleporters
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_teleporter || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_teleporter || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_teleporter || 0) : (profile.vq3_teleporter || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_teleporter || 0) : (profile.cpm_teleporter || 0) }}</span>
                             </div>
                         </div>
                     </div>
@@ -728,10 +728,9 @@
                 <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -740,10 +739,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records set on {{ stat.label.toLowerCase() }} maps or with specific game modes
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ profile?.hasOwnProperty((cpmFirst ? 'cpm_' : 'vq3_') + stat.value) ? profile[(cpmFirst ? 'cpm_' : 'vq3_') + stat.value] : 0 }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ profile?.hasOwnProperty((cpmFirst ? 'vq3_' : 'cpm_') + stat.value) ? profile[(cpmFirst ? 'vq3_' : 'cpm_') + stat.value] : 0 }}</span>
                             </div>
                         </div>
                     </div>
@@ -783,6 +782,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="text-xs text-gray-500 text-right -mt-4 mb-4">
+                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                    Change VQ3/CPM column order
+                </Link>
+                <span v-else>
+                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                </span>
             </div>
 
             <!-- Top Downloaded Demos & Known Aliases Grid -->
@@ -984,7 +991,7 @@
                 <div class="lg:col-span-8">
                     <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <!-- VQ3 Records -->
-                        <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
+                        <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
@@ -1050,7 +1057,7 @@
                         </div>
 
                         <!-- CPM Records -->
-                        <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
+                        <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
