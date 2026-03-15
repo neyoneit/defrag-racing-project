@@ -84,12 +84,20 @@
     <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block">
         <div class="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-blue-500/50 transition-all group hover:transform hover:scale-105">
             <!-- Map Thumbnail -->
-            <div class="relative h-40 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`" onerror="this.style.backgroundImage='url(\'/images/unknown.jpg\')'">
+            <div class="relative h-40 overflow-hidden">
+                <div :class="['absolute inset-0 bg-cover bg-center', map.is_nsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" :style="`background-image: url('/storage/${map.thumbnail}')`"></div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+                <!-- NSFW overlay -->
+                <div v-if="map.is_nsfw && !$page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+                    <span class="px-3 py-1 bg-red-600/80 rounded-lg text-xs font-black text-white border border-red-500/50">NSFW</span>
+                </div>
 
                 <!-- Physics Badge -->
-                <div class="absolute top-2 right-2 px-3 py-1 rounded-full text-xs font-bold uppercase" :class="background">
-                    {{ map.physics }}
+                <div class="absolute top-2 right-2 flex flex-col gap-1 items-end z-20">
+                    <div v-if="map.is_nsfw" class="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase text-white bg-red-600/80">NSFW</div>
+                    <div class="px-3 py-1 rounded-full text-xs font-bold uppercase" :class="background">
+                        {{ map.physics }}
+                    </div>
                 </div>
 
                 <!-- Gametype Badge -->

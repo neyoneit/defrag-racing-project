@@ -13,6 +13,10 @@
 
     const showAddToMaplistModal = ref(false);
 
+    // NSFW flagging
+    const flaggingNsfw = ref(false);
+    const localIsNsfw = ref(false);
+
     // Assign demo to online record
     const showAssignModal = ref(false);
     const assigningRecord = ref(null);
@@ -203,6 +207,33 @@
     });
 
     const page = usePage();
+    localIsNsfw.value = props.map.is_nsfw;
+
+    const flagAsNsfw = async () => {
+        if (flaggingNsfw.value) return;
+        flaggingNsfw.value = true;
+        try {
+            await axios.post(`/maps/${props.map.id}/flag-nsfw`);
+            localIsNsfw.value = true;
+        } catch (e) {
+            alert('Failed to flag: ' + (e.response?.data?.message || e.message));
+        } finally {
+            flaggingNsfw.value = false;
+        }
+    };
+
+    const unflagNsfw = async () => {
+        if (flaggingNsfw.value) return;
+        flaggingNsfw.value = true;
+        try {
+            await axios.post(`/maps/${props.map.id}/unflag-nsfw`);
+            localIsNsfw.value = false;
+        } catch (e) {
+            alert('Failed to unflag: ' + (e.response?.data?.message || e.message));
+        } finally {
+            flaggingNsfw.value = false;
+        }
+    };
 
     const order = ref('ASC');
     const column = ref('time');
@@ -680,9 +711,15 @@
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
                 <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
-                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                    <div v-if="map.thumbnail" :class="['absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden', localIsNsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
                         <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95 transition-opacity duration-300 group-hover:opacity-70"></div>
+                    </div>
+                    <!-- NSFW overlay -->
+                    <div v-if="localIsNsfw && !$page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl z-[5]">
+                        <span class="px-4 py-2 bg-red-600/80 rounded-lg text-sm font-black text-white border border-red-500/50">
+                            NSFW
+                        </span>
                     </div>
                     <!-- Fallback solid background if no thumbnail -->
                     <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
@@ -719,6 +756,32 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
                             Add to Maplist
+                        </button>
+
+                        <!-- Flag NSFW -->
+                        <button
+                            v-if="$page.props.auth.user && !localIsNsfw"
+                            @click="flagAsNsfw"
+                            :disabled="flaggingNsfw"
+                            class="flex items-center gap-1.5 bg-red-600/60 hover:bg-red-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md disabled:opacity-50"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            Flag NSFW
+                        </button>
+
+                        <!-- Unflag NSFW -->
+                        <button
+                            v-if="$page.props.auth.user && localIsNsfw"
+                            @click="unflagNsfw"
+                            :disabled="flaggingNsfw"
+                            class="flex items-center gap-1.5 bg-green-600/60 hover:bg-green-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md disabled:opacity-50"
+                        >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            Remove NSFW Flag
                         </button>
 
                         <!-- Active Servers -->

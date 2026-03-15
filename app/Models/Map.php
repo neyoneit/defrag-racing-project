@@ -36,7 +36,12 @@ class Map extends Model
         'visible',
         'date_added',
         'cpm_average',
-        'vq3_average'
+        'vq3_average',
+        'is_nsfw'
+    ];
+
+    protected $casts = [
+        'is_nsfw' => 'boolean',
     ];
 
     public function generateSubstrings($name) {

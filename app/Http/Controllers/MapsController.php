@@ -536,4 +536,35 @@ class MapsController extends Controller
 
         return response()->json($matches);
     }
+
+    public function flagNsfw($id)
+    {
+        if (!auth()->check()) {
+            abort(403);
+        }
+
+        $map = Map::findOrFail($id);
+
+        if ($map->is_nsfw) {
+            return response()->json(['success' => false, 'message' => 'Already flagged as NSFW.']);
+        }
+
+        $map->is_nsfw = true;
+        $map->save();
+
+        return response()->json(['success' => true, 'message' => "Map \"{$map->name}\" flagged as NSFW."]);
+    }
+
+    public function unflagNsfw($id)
+    {
+        if (!auth()->check()) {
+            abort(403);
+        }
+
+        $map = Map::findOrFail($id);
+        $map->is_nsfw = false;
+        $map->save();
+
+        return response()->json(['success' => true, 'message' => "Map \"{$map->name}\" NSFW flag removed."]);
+    }
 }
