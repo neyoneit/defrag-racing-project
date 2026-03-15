@@ -160,22 +160,48 @@
                             </div>
 
                             <!-- Step 2: Verify with Image -->
-                            <div v-if="stage === 2">
-                                <label class="block text-sm font-medium text-white mb-2">Step 2 - Confirm Account</label>
+                            <div v-if="stage === 2" class="space-y-4">
+                                <div class="p-2 bg-white/5 rounded-lg text-sm" v-html="q3tohtml(name)"></div>
 
-                                <div class="p-2 bg-white/5 rounded-lg text-sm mb-3" v-html="q3tohtml(name)"></div>
-
-                                <p class="text-xs text-gray-300 mb-3">
-                                    Update your <a href="https://q3df.org/profil/edit" target="_blank" class="text-blue-400 hover:text-blue-300">q3df.org</a> profile image to this:
-                                </p>
-
-                                <div class="flex flex-col items-center my-3">
-                                    <img :src="image" class="max-w-[180px] rounded-lg border border-white/10" />
-                                    <button type="button" @click="downloadImage" class="mt-2 text-sm font-medium text-blue-400 hover:text-blue-300">Download Image</button>
+                                <!-- Step A: Download -->
+                                <div class="flex items-start gap-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <div class="w-7 h-7 rounded-full bg-yellow-500 text-black font-black text-sm flex items-center justify-center shrink-0">1</div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-white mb-2">Download this image</p>
+                                        <div class="flex flex-col items-center">
+                                            <img :src="image" class="max-w-[150px] rounded-lg border border-white/10" />
+                                            <button type="button" @click="downloadImage" class="mt-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold rounded-lg transition-colors">
+                                                Download Image
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <p v-if="error" class="text-red-400 text-xs mt-1">{{ error }}</p>
-                                <p class="text-gray-500 text-xs">Don't modify the image before uploading.</p>
+                                <!-- Step B: Upload to Q3DF -->
+                                <div class="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                    <div class="w-7 h-7 rounded-full bg-blue-500 text-white font-black text-sm flex items-center justify-center shrink-0">2</div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-white mb-1">Upload it as your Q3DF profile image</p>
+                                        <p class="text-xs text-gray-400 mb-2">Don't modify the image. Upload it exactly as downloaded.</p>
+                                        <a href="https://q3df.org/profil/edit" target="_blank" class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-colors">
+                                            Open Q3DF Profile Editor
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Step C: Come back and finalize -->
+                                <div class="flex items-start gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                    <div class="w-7 h-7 rounded-full bg-green-500 text-white font-black text-sm flex items-center justify-center shrink-0">3</div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-bold text-white">Come back here and click Finalize</p>
+                                        <p class="text-xs text-gray-400">We'll verify the image matches and link your account.</p>
+                                    </div>
+                                </div>
+
+                                <p v-if="error" class="text-red-400 text-sm font-medium">{{ error }}</p>
                             </div>
 
                             <!-- Buttons -->
