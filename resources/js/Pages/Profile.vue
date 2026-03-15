@@ -92,6 +92,10 @@
     });
 
     const showStatBox = (id) => activeStatBoxes.value.includes(id);
+    const statBoxOrder = (id) => {
+        const idx = activeStatBoxes.value.indexOf(id);
+        return idx >= 0 ? idx : 99;
+    };
     const showSection = (id) => {
         const section = orderedSections.value.find(s => s.id === id);
         return section ? section.visible : true;
@@ -639,9 +643,9 @@
             </div>
 
             <!-- Stats Grid - Clean Text Layout -->
-            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
                 <!-- Performance Stats -->
-                <div v-if="showStatBox('performance')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('performance')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('performance') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
                         <div class="flex items-center gap-0">
@@ -720,7 +724,7 @@
                 </div>
 
                 <!-- Map Features -->
-                <div v-if="showStatBox('map_features')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('map_features')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('map_features') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
                         <div class="flex items-center gap-0">
@@ -777,7 +781,7 @@
                 </div>
 
                 <!-- Record Types -->
-                <div v-if="showStatBox('record_types') && stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('record_types') && stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('record_types') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
                         <div class="flex items-center gap-0">
@@ -801,7 +805,7 @@
                 </div>
 
                 <!-- Activity & Misc -->
-                <div v-if="showStatBox('activity')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('activity')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('activity') }">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Activity</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between items-center group relative">
@@ -836,7 +840,7 @@
                 </div>
 
                 <!-- Demos Statistics -->
-                <div v-if="showStatBox('demos_statistics')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('demos_statistics')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('demos_statistics') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Demos</h3>
                         <div class="flex items-center gap-0">
@@ -883,7 +887,7 @@
                 </div>
 
                 <!-- Top Downloaded Demos -->
-                <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('top_downloaded_demos') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Top Demos</h3>
                         <div class="flex items-center gap-0">
