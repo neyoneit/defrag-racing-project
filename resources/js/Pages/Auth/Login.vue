@@ -50,7 +50,7 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <!-- Username Field -->
                     <div>
-                        <label for="username" class="block text-sm font-bold text-gray-300 mb-2">Username</label>
+                        <label for="username" class="block text-sm font-bold text-gray-300 mb-2">Username or Email</label>
                         <input
                             id="username"
                             v-model="form.username"
@@ -59,7 +59,7 @@ const submit = () => {
                             autofocus
                             autocomplete="username"
                             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-white/10 transition-all"
-                            placeholder="Enter your username"
+                            placeholder="Enter your username or email"
                         />
                         <p v-if="form.errors.username" class="mt-2 text-sm text-red-400">{{ form.errors.username }}</p>
                     </div>
