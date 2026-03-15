@@ -209,6 +209,22 @@
     const page = usePage();
     localIsNsfw.value = props.map.is_nsfw;
 
+    const needsNsfwGate = computed(() => {
+        return localIsNsfw.value && !page.props.auth.user?.nsfw_confirmed;
+    });
+
+    const confirmingNsfw = ref(false);
+
+    const confirmNsfw = () => {
+        confirmingNsfw.value = true;
+        router.post(route('user.confirm-nsfw'), {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                confirmingNsfw.value = false;
+            },
+        });
+    };
+
     const flagAsNsfw = async () => {
         if (flaggingNsfw.value) return;
         flaggingNsfw.value = true;
@@ -702,6 +718,26 @@
     <div>
         <Head :title="map.name" />
 
+        <!-- NSFW Age Gate Modal -->
+        <div v-if="needsNsfwGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
+            <div class="max-w-md mx-auto p-8 bg-gray-900/90 border border-red-500/30 rounded-2xl text-center shadow-2xl">
+                <div class="text-5xl mb-4">🔞</div>
+                <h2 class="text-2xl font-black text-white mb-3">Age-Restricted Content</h2>
+                <p class="text-gray-400 mb-6">This map contains NSFW content. You must confirm that you are at least 18 years old to view it.</p>
+                <div class="flex gap-3 justify-center">
+                    <Link href="/maps" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">
+                        Go Back
+                    </Link>
+                    <button v-if="$page.props.auth.user" @click="confirmNsfw" :disabled="confirmingNsfw" class="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors">
+                        {{ confirmingNsfw ? 'Confirming...' : 'I am 18+' }}
+                    </button>
+                    <Link v-else :href="route('login')" class="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors">
+                        Login to continue
+                    </Link>
+                </div>
+            </div>
+        </div>
+
         <!-- Cleaner page with card background -->
         <div class="relative pb-10">
             <!-- Fade shadow at top -->
@@ -711,15 +747,9 @@
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
                 <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
-                    <div v-if="map.thumbnail" :class="['absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden', localIsNsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
                         <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95 transition-opacity duration-300 group-hover:opacity-70"></div>
-                    </div>
-                    <!-- NSFW overlay -->
-                    <div v-if="localIsNsfw && !$page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl z-[5]">
-                        <span class="px-4 py-2 bg-red-600/80 rounded-lg text-sm font-black text-white border border-red-500/50">
-                            NSFW
-                        </span>
                     </div>
                     <!-- Fallback solid background if no thumbnail -->
                     <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
@@ -727,7 +757,10 @@
                     <!-- Content layer (on top of background) -->
                     <div class="relative z-10">
                     <!-- Map Title -->
-                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">{{ map.name }}</h1>
+                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">
+                        {{ map.name }}
+                        <span v-if="localIsNsfw" class="inline-block align-middle ml-2 px-2 py-0.5 bg-red-600/80 rounded text-sm font-black text-white border border-red-500/50">NSFW</span>
+                    </h1>
                     <p class="text-gray-300 text-center mb-4">
                         <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
                         <span v-if="map.date_added" class="text-gray-400"> • {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
