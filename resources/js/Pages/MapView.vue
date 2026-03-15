@@ -1031,6 +1031,9 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    Swap VQ3/CPM sides
+                                </Link>
                             </div>
                             <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
@@ -1081,6 +1084,9 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    Swap VQ3/CPM sides
+                                </Link>
                             </div>
                             <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
@@ -1123,14 +1129,6 @@
                     </div>
                 </div> <!-- Close CPM Leaderboard -->
                 </div> <!-- Close md:flex container -->
-                <div class="text-xs text-gray-500 text-right mt-2">
-                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
-                        Change VQ3/CPM column order
-                    </Link>
-                    <span v-else>
-                        <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
-                    </span>
-                </div>
             </div> <!-- Close Leaderboards Section -->
         </div> <!-- Close page wrapper -->
 

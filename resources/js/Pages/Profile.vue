@@ -783,15 +783,6 @@
                     </div>
                 </div>
             </div>
-            <div class="text-xs text-gray-500 text-right -mt-4 mb-4">
-                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
-                    Change VQ3/CPM column order
-                </Link>
-                <span v-else>
-                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
-                </span>
-            </div>
-
             <!-- Top Downloaded Demos & Known Aliases Grid -->
             <div v-if="(topDownloadedDemos && topDownloadedDemos.length > 0) || (aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0)" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <!-- Top Downloaded Demos Section -->
@@ -858,7 +849,7 @@
                                 </button>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4">Alternative nicknames used by this player</p>
+                        <p class="text-xs text-gray-400 mb-4">Aliases are used to match uploaded demos to this player's account. Demos are automatically paired with records based on these names.</p>
 
                         <!-- Pending Suggestions (only visible on own profile) -->
                         <div v-if="alias_suggestions && alias_suggestions.length > 0" class="mb-4">
@@ -993,9 +984,14 @@
                         <!-- VQ3 Records -->
                         <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                                    <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                        <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                    </div>
+                                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                        Swap VQ3/CPM sides
+                                    </Link>
                                 </div>
                             </div>
 
@@ -1059,9 +1055,14 @@
                         <!-- CPM Records -->
                         <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                                    <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                        <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                    </div>
+                                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                        Swap VQ3/CPM sides
+                                    </Link>
                                 </div>
                             </div>
 
@@ -1135,7 +1136,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Competitors & Rivals Section -->
             <div v-if="cpm_competitors || cpm_rivals" class="mb-6">
                 <!-- Section Headers -->
