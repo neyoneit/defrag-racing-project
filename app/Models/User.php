@@ -77,6 +77,9 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'twitter_refresh_token',
         'twitter_token_expires_at',
         'nsfw_confirmed',
+        'default_show_oldtop',
+        'default_show_offline',
+        'default_physics_order',
     ];
 
     /**
@@ -101,6 +104,9 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'email_verified_at' => 'datetime',
         'preview_system' => 'array',
         'nsfw_confirmed' => 'boolean',
+        'default_show_oldtop' => 'boolean',
+        'default_show_offline' => 'boolean',
+        'default_physics_order' => 'string',
     ];
 
     /**

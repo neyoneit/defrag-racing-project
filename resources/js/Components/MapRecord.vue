@@ -15,13 +15,16 @@
         demoMatches: {
             type: Array,
             default: () => []
+        },
+        showSourceChips: {
+            type: Boolean,
+            default: false
         }
     });
 
     const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record']);
 
     const page = usePage();
-    const showTooltip = ref(false);
     const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
     const isLoggedIn = computed(() => !!page.props.auth?.user);
@@ -99,34 +102,31 @@
             return null;
         }
 
-        // Only link to registered users with full profiles
+        // Linked users with full profiles
         if (props.record.user) {
             return route('profile.index', props.record.user.id);
         }
 
-        // Players with only mdd_id have no proper profile page
-        // Show tooltip to encourage registration
+        // Fallback to mdd profile for unlinked accounts
+        if (props.record.mdd_id) {
+            return route('profile.mdd', props.record.mdd_id);
+        }
+
         return null;
     })
 
     const rankColorClass = computed(() => {
-        if (props.record.oldtop) {
-            return 'text-amber-400 group-hover:text-amber-300';
-        }
-        if (isMyRecord.value && !props.record.oldtop) {
+        if (isMyRecord.value) {
             return 'text-emerald-400 group-hover:text-emerald-300';
         }
-        if (!isMyRecord.value && !props.record.oldtop) {
-            if (props.record.rank === 1) {
-                return 'text-yellow-400 group-hover:text-yellow-300';
-            }
-            if (props.record.rank === 2) {
-                return 'text-gray-200 group-hover:text-gray-100';
-            }
-            if (props.record.rank === 3) {
-                return 'text-orange-400 group-hover:text-orange-300';
-            }
-            return 'text-gray-300 group-hover:text-white';
+        if (props.record.rank === 1) {
+            return 'text-yellow-400 group-hover:text-yellow-300';
+        }
+        if (props.record.rank === 2) {
+            return 'text-gray-200 group-hover:text-gray-100';
+        }
+        if (props.record.rank === 3) {
+            return 'text-orange-400 group-hover:text-orange-300';
         }
         return 'text-gray-300 group-hover:text-white';
     });
@@ -137,9 +137,8 @@
     <div
         class="group relative flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg"
         :class="{
-            'bg-gradient-to-r from-amber-500/15 to-transparent border-l-2 border-amber-400 hover:from-amber-500/25 hover:border-amber-300': record.oldtop,
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
-            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !record.oldtop
+            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord
         }"
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
@@ -155,11 +154,11 @@
             :is="getRoute ? Link : 'div'"
             :href="getRoute"
             :class="[
-                'flex items-center gap-2 min-w-0 flex-1 group/player transition-all duration-200 group-hover:ml-1',
+                'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200 group-hover:ml-1',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
-            @mouseenter="!getRoute && !isOfflineRecord && (showTooltip = true); isOfflineRecord && (showUploaderTooltip = true)"
-            @mouseleave="!getRoute && !isOfflineRecord && (showTooltip = false); isOfflineRecord && (showUploaderTooltip = false)"
+            @mouseenter="isOfflineRecord && (showUploaderTooltip = true)"
+            @mouseleave="isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects -->
@@ -183,65 +182,65 @@
             <span
                 :class="[
                     'name-effect-' + (record.user?.name_effect || 'none'),
-                    'text-sm font-semibold truncate group-hover/player:text-blue-400 transition-colors', {
-                        'text-amber-200': record.oldtop,
-                        'text-emerald-200': isMyRecord && !record.oldtop,
-                        'text-gray-200': !isMyRecord && !record.oldtop
+                    'text-sm font-semibold whitespace-nowrap overflow-visible group-hover/player:text-blue-400 transition-colors', {
+                        'text-emerald-200': isMyRecord,
+                        'text-gray-200': !isMyRecord
                     }
                 ]"
                 :style="`--effect-color: ${record.user?.color || '#ffffff'}`"
                 v-html="q3tohtml(displayName)"
             ></span>
 
-            <!-- Verified badge - record has an assigned demo -->
-            <span
-                v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
-                class="ml-1 flex-shrink-0 text-green-400"
-                title="Verified — demo attached"
-            >
-                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                </svg>
-            </span>
+            <!-- Source type chips (shown in mixed views) -->
+            <template v-if="showSourceChips">
+                <!-- Primary chip: what type of entry is this -->
+                <span v-if="record.oldtop" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50">
+                    OLD RECORD
+                </span>
+                <span v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
+                    ONLINE DEMO
+                </span>
+                <span v-else-if="isOfflineRecord" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
+                    OFFLINE DEMO
+                </span>
+                <span v-else class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50">
+                    RECORD
+                </span>
 
-            <!-- Badge for demos in Demos Top - shows verification type or validity flag -->
-            <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
-                OFFLINE
-            </span>
-            <span v-else-if="record.verification_type === 'ONLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                ONLINE
-            </span>
-            <span v-else-if="record.verification_type" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
-                {{ record.verification_type }}
-            </span>
+                <!-- Secondary chip: demo attached to a record -->
+                <span v-if="!record.oldtop && !isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30">
+                    ONLINE DEMO
+                </span>
+
+                <!-- Secondary chip: validity flags (sv_cheats etc.) -->
+                <span v-if="record.verification_type && record.verification_type !== 'OFFLINE' && record.verification_type !== 'ONLINE' && record.verification_type !== 'verified'" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
+                    {{ record.verification_type }}
+                </span>
+            </template>
+
+            <!-- Default view (no mixed mode): just show verified badge -->
+            <template v-else>
+                <span
+                    v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                    class="ml-1 flex-shrink-0 text-green-400"
+                    title="Verified — demo attached"
+                >
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </span>
+                <!-- Validity flags in demos top without mixed mode -->
+                <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
+                    OFFLINE
+                </span>
+                <span v-else-if="record.verification_type === 'ONLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
+                    ONLINE
+                </span>
+                <span v-else-if="record.verification_type && record.verification_type !== 'verified'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
+                    {{ record.verification_type }}
+                </span>
+            </template>
         </component>
-
-        <!-- Unclaimed Profile Tooltip (Teleported to body) - Only show if not logged in -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && !isLoggedIn">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white px-8 py-5 rounded-2xl shadow-[0_20px_60px_rgb(249,115,22,0.9)] border-4 border-orange-300 w-[500px] animate-pulse">
-                    <div class="flex items-center gap-4 mb-3">
-                        <span class="text-5xl animate-bounce">🔓</span>
-                        <div class="text-left flex-1">
-                            <div class="text-2xl font-black leading-tight">Unclaimed Profile</div>
-                            <div class="text-xl font-bold text-orange-100">Is it yours?</div>
-                        </div>
-                    </div>
-                    <div class="text-orange-50 font-bold text-base leading-relaxed text-left">
-                        Register now and link your q3df.org account to see detailed profile page and much more!
-                    </div>
-                </div>
-            </div>
-        </Teleport>
-
-        <!-- Subtle "Not linked account" tooltip for logged-in users - TELEPORTED -->
-        <Teleport to="body" v-if="!getRoute && showTooltip && isLoggedIn && !isOfflineRecord">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gray-900 border-2 border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
-                    Not linked account
-                </div>
-            </div>
-        </Teleport>
 
         <!-- Offline record uploader tooltip - TELEPORTED -->
         <Teleport to="body" v-if="isOfflineRecord && showUploaderTooltip && record.user">
@@ -259,9 +258,8 @@
                 :href="(isOfflineRecord || isOnlineDemo) ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
                 class="p-1 rounded transition-all hover:scale-110"
                 :class="{
-                    'bg-amber-500/20 text-amber-400': record.oldtop,
-                    'bg-emerald-500/20 text-emerald-400': isMyRecord && !record.oldtop,
-                    'bg-gray-700/50 text-gray-400': !isMyRecord && !record.oldtop
+                    'bg-emerald-500/20 text-emerald-400': isMyRecord,
+                    'bg-gray-700/50 text-gray-400': !isMyRecord
                 }"
                 title="Download demo"
                 @click.stop
@@ -321,9 +319,8 @@
             <div
                 class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
-                    'text-amber-300': record.oldtop,
-                    'text-emerald-300': isMyRecord && !record.oldtop,
-                    'text-white': !isMyRecord && !record.oldtop
+                    'text-emerald-300': isMyRecord,
+                    'text-white': !isMyRecord
                 }"
             >
                 {{ formatTime(record.time) }}
@@ -339,18 +336,15 @@
                 class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :title="record.date_set"
             >
-                {{ new Date(record.date_set).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) }}
+                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
             </div>
         </div>
 
         <!-- Left side badges -->
         <div class="absolute -left-1 top-1/2 -translate-y-1/2 text-lg transition-all duration-200 group-hover:scale-110 group-hover:translate-x-0.5">
-            <!-- Old Top Crown (only for top 3) -->
-            <span v-if="record.oldtop && record.rank <= 3">👑</span>
-            <!-- Top 3 Medals (for all top 3, including your records) -->
-            <span v-else-if="record.rank === 1 && !record.oldtop">🥇</span>
-            <span v-else-if="record.rank === 2 && !record.oldtop">🥈</span>
-            <span v-else-if="record.rank === 3 && !record.oldtop">🥉</span>
+            <span v-if="record.rank === 1">🥇</span>
+            <span v-else-if="record.rank === 2">🥈</span>
+            <span v-else-if="record.rank === 3">🥉</span>
         </div>
     </div>
 

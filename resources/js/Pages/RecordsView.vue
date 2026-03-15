@@ -1,9 +1,12 @@
 <script setup>
-    import { Head, router } from '@inertiajs/vue3';
+    import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Record from '@/Components/Record.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
-    import { watchEffect, ref } from 'vue';
+    import { watchEffect, ref, computed } from 'vue';
+
+    const page = usePage();
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const props = defineProps({
         vq3Records: Object,
@@ -47,7 +50,7 @@
         <Head title="Records" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-52">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
@@ -122,14 +125,13 @@
         </div>
 
         <!-- Records List - Two Tables -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -10rem;">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Records -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                            <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                            <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span class="text-sm font-normal text-gray-400">({{ vq3Records.total }})</span></h2>
                         </div>
                     </div>
                     <div class="px-4 py-2">
@@ -142,11 +144,10 @@
                 </div>
 
                 <!-- CPM Records -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
-                            <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                            <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                            <h2 class="text-lg font-bold text-purple-400">CPM Records <span class="text-sm font-normal text-gray-400">({{ cpmRecords.total }})</span></h2>
                         </div>
                     </div>
                     <div class="px-4 py-2">
@@ -157,6 +158,14 @@
                         <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" pageName="cpm_page" :only="['vq3Records', 'cpmRecords']" />
                     </div>
                 </div>
+            </div>
+            <div class="text-xs text-gray-500 text-right mt-2">
+                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                    Change VQ3/CPM column order
+                </Link>
+                <span v-else>
+                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                </span>
             </div>
         </div>
 

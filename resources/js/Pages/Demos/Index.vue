@@ -65,6 +65,50 @@ const showUploadInfoModal = (title, message, type = 'info') => {
     showUploadInfo.value = true;
 };
 
+const showDownloadLimitPopup = ref(false);
+const downloadLimitPopupMessage = ref('');
+const downloadLimitPopupIsGuest = ref(false);
+const localDownloadLimitInfo = ref(props.downloadLimitInfo ? { ...props.downloadLimitInfo } : null);
+
+const downloadDemo = async (demoId) => {
+    try {
+        const response = await axios.get(route('demos.download', demoId), { responseType: 'blob' });
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'demo.dm_68';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+            if (match) filename = match[1];
+        }
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        // Update remaining count locally
+        if (localDownloadLimitInfo.value) {
+            localDownloadLimitInfo.value = {
+                ...localDownloadLimitInfo.value,
+                used: localDownloadLimitInfo.value.used + 1,
+                remaining: Math.max(0, localDownloadLimitInfo.value.remaining - 1),
+            };
+        }
+    } catch (error) {
+        if (error.response?.status === 429) {
+            const data = JSON.parse(await error.response.data.text());
+            downloadLimitPopupMessage.value = data.message;
+            downloadLimitPopupIsGuest.value = data.isGuest;
+            showDownloadLimitPopup.value = true;
+        } else {
+            // Fallback to direct navigation for non-rate-limit errors
+            window.location.href = route('demos.download', demoId);
+        }
+    }
+};
+
 const processingDemos = ref([]);
 const queueStats = ref({});
 const statusPolling = ref(null);
@@ -1166,28 +1210,29 @@ watch(selectedPhysics, () => {
                     </div>
 
                     <!-- Download Limit Info (Compact, Right Side) -->
-                    <div v-if="downloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="downloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : downloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                    <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
                         <div class="flex items-center gap-2">
-                            <svg v-if="downloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <svg v-else-if="downloadLimitInfo.remaining === 0" class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg v-else-if="localDownloadLimitInfo.remaining === 0" class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                             </svg>
                             <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <div v-if="downloadLimitInfo.isGuest" class="text-xs">
-                                <span class="text-blue-200 font-semibold">{{ downloadLimitInfo.remaining }}/{{ downloadLimitInfo.limit }}</span>
+                            <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
+                                <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
                                 <span class="text-blue-300/80 ml-1">downloads left</span>
+                                <div class="text-sm text-blue-200 font-semibold mt-1">Unlock more downloads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>.</div>
                             </div>
-                            <div v-else-if="downloadLimitInfo.remaining === 0" class="text-xs">
+                            <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
                                 <span class="text-red-200 font-semibold">Limit reached</span>
                             </div>
                             <div v-else class="text-xs">
-                                <span class="text-green-400 font-semibold">{{ downloadLimitInfo.remaining }}</span>
+                                <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
                                 <span class="text-gray-300 mx-1">/</span>
-                                <span class="text-gray-300">{{ downloadLimitInfo.limit }}</span>
+                                <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
                                 <span class="text-gray-400 ml-1">downloads left</span>
                             </div>
                         </div>
@@ -1614,8 +1659,8 @@ watch(selectedPhysics, () => {
                     </div>
                 </div>
 
-                <!-- Global Processing Status (always visible) -->
-                <div class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
+                <!-- Global Processing Status (logged in only) -->
+                <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
                     <button @click="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between mb-3">
                         <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
                         <div class="flex items-center gap-2">
@@ -2050,8 +2095,8 @@ watch(selectedPhysics, () => {
                                     </td>
                                     <td class="px-3 py-3 text-sm">
                                         <div class="flex flex-wrap gap-1">
-                                            <a
-                                                :href="route('demos.download', demo.id)"
+                                            <button
+                                                @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
                                                 title="Download"
                                             >
@@ -2059,7 +2104,7 @@ watch(selectedPhysics, () => {
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                                 </svg>
                                                 DL
-                                            </a>
+                                            </button>
                                             <button
                                                 v-if="$page.props.auth.user && (demo.user_id === $page.props.auth.user.id || $page.props.auth.user.is_admin || $page.props.auth.user.admin)"
                                                 @click="reprocessDemo(demo.id)"
@@ -2354,8 +2399,8 @@ watch(selectedPhysics, () => {
                                     </td>
                                     <td class="px-3 py-3 text-sm">
                                         <div class="flex items-center space-x-1">
-                                            <a
-                                                :href="route('demos.download', demo.id)"
+                                            <button
+                                                @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
                                                 title="Download"
                                             >
@@ -2363,7 +2408,7 @@ watch(selectedPhysics, () => {
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                                 </svg>
                                                 DL
-                                            </a>
+                                            </button>
                                             <button
                                                 v-if="$page.props.auth.user && !demo.record_id && ['processed', 'fallback-assigned', 'failed'].includes(demo.status)"
                                                 @click="openAssignModal(demo)"
@@ -2780,6 +2825,36 @@ watch(selectedPhysics, () => {
                     >
                         OK
                     </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Download Limit Popup -->
+    <Teleport to="body">
+        <div v-if="showDownloadLimitPopup" class="fixed inset-0 z-[9999] flex items-center justify-center" @click.self="showDownloadLimitPopup = false">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+                <button @click="showDownloadLimitPopup = false" class="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Download Limit Reached</h3>
+                </div>
+                <p class="text-gray-300 text-sm mb-5">{{ downloadLimitPopupMessage }}</p>
+                <div v-if="downloadLimitPopupIsGuest" class="flex gap-3">
+                    <a href="/login" class="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">Login</a>
+                    <a href="/register" class="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-colors">Register</a>
+                </div>
+                <div v-else>
+                    <button @click="showDownloadLimitPopup = false" class="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors">OK</button>
                 </div>
             </div>
         </div>

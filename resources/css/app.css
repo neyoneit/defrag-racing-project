@@ -10,7 +10,7 @@
 
 /* Make black Q3 text (^0 color code) visible on dark backgrounds */
 .q3c-0 {
-    color: #555 !important;
+    color: #888 !important;
 }
 
 .rotate-animation {

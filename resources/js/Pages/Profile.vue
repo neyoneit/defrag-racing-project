@@ -1,10 +1,12 @@
 <script setup>
     import { ref, watch, computed } from 'vue';
-    import { Head, router, Link } from '@inertiajs/vue3';
+    import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import { useClipboard } from '@/Composables/useClipboard';
-    
+
     const { copy, copyState } = useClipboard();
+    const page = usePage();
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const props = defineProps({
         user: Object,
@@ -571,16 +573,28 @@
 
         <!-- EPIC REDESIGN - Main Content -->
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+
+            <!-- Not Linked Account Overlay -->
+            <div v-if="!user?.id" class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
+                    <div class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
+                    <div class="flex justify-center gap-4 mt-4">
+                        <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
+                        <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Stats Grid - Clean Text Layout -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -589,10 +603,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Total number of records you have set across all maps
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_records || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_records || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_records || 0) : (profile.vq3_records || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_records || 0) : (profile.cpm_records || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -600,10 +614,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Number of #1 ranked records you currently hold
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ cpm_world_records }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ vq3_world_records }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? cpm_world_records : vq3_world_records }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? vq3_world_records : cpm_world_records }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -611,10 +625,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records ranked between 1st and 3rd place
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_top3 || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_top3 || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_top3 || 0) : (profile.vq3_top3 || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_top3 || 0) : (profile.cpm_top3 || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -622,10 +636,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records ranked between 1st and 10th place
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_top10 || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_top10 || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_top10 || 0) : (profile.vq3_top10 || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_top10 || 0) : (profile.cpm_top10 || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -633,10 +647,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Your average ranking position across all records (lower is better)
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_avg_rank || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_avg_rank || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_avg_rank || 0) : (profile.vq3_avg_rank || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_avg_rank || 0) : (profile.cpm_avg_rank || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -644,10 +658,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Percentage of your records that are in top 10 positions
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_dominance || 0 }}%</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_dominance || 0 }}%</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_dominance || 0) : (profile.vq3_dominance || 0) }}%</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_dominance || 0) : (profile.cpm_dominance || 0) }}%</span>
                             </div>
                         </div>
                     </div>
@@ -657,10 +671,9 @@
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -669,10 +682,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Number of different maps you have set records on
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_unique_maps || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_unique_maps || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_unique_maps || 0) : (profile.vq3_unique_maps || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_unique_maps || 0) : (profile.cpm_unique_maps || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -680,10 +693,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps with slick (low friction) surfaces
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_slick || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_slick || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_slick || 0) : (profile.vq3_slick || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_slick || 0) : (profile.cpm_slick || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -691,10 +704,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps featuring jump pads
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_jumppad || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_jumppad || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_jumppad || 0) : (profile.vq3_jumppad || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_jumppad || 0) : (profile.cpm_jumppad || 0) }}</span>
                             </div>
                         </div>
                         <div class="flex justify-between items-center group relative">
@@ -702,10 +715,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records on maps featuring teleporters
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile.cpm_teleporter || 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile.vq3_teleporter || 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ cpmFirst ? (profile.cpm_teleporter || 0) : (profile.vq3_teleporter || 0) }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ cpmFirst ? (profile.vq3_teleporter || 0) : (profile.cpm_teleporter || 0) }}</span>
                             </div>
                         </div>
                     </div>
@@ -715,10 +728,9 @@
                 <div v-if="stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">CPM</span>
-                            <span class="text-xs text-gray-600">/</span>
-                            <span class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">VQ3</span>
+                        <div class="flex items-center gap-0">
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-l border', cpmFirst ? 'text-purple-400 bg-purple-400/20 border-purple-400/30' : 'text-blue-400 bg-blue-400/20 border-blue-400/30']">{{ cpmFirst ? 'CPM' : 'VQ3' }}</span>
+                            <span :class="['text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-r border border-l-0', cpmFirst ? 'text-blue-400 bg-blue-400/20 border-blue-400/30' : 'text-purple-400 bg-purple-400/20 border-purple-400/30']">{{ cpmFirst ? 'VQ3' : 'CPM' }}</span>
                         </div>
                     </div>
                     <div class="space-y-2">
@@ -727,10 +739,10 @@
                             <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
                                 Records set on {{ stat.label.toLowerCase() }} maps or with specific game modes
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-purple-400">{{ profile?.hasOwnProperty('cpm_' + stat.value) ? profile['cpm_' + stat.value] : 0 }}</span>
-                                <span class="text-xs text-gray-600">/</span>
-                                <span class="text-sm font-bold text-blue-400">{{ profile?.hasOwnProperty('vq3_' + stat.value) ? profile['vq3_' + stat.value] : 0 }}</span>
+                            <div class="flex items-center">
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-purple-400' : 'text-blue-400']">{{ profile?.hasOwnProperty((cpmFirst ? 'cpm_' : 'vq3_') + stat.value) ? profile[(cpmFirst ? 'cpm_' : 'vq3_') + stat.value] : 0 }}</span>
+                                <span class="text-xs text-gray-600 w-4 text-center">/</span>
+                                <span :class="['text-sm font-bold tabular-nums w-10 text-right', cpmFirst ? 'text-blue-400' : 'text-purple-400']">{{ profile?.hasOwnProperty((cpmFirst ? 'vq3_' : 'cpm_') + stat.value) ? profile[(cpmFirst ? 'vq3_' : 'cpm_') + stat.value] : 0 }}</span>
                             </div>
                         </div>
                     </div>
@@ -770,6 +782,14 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div class="text-xs text-gray-500 text-right -mt-4 mb-4">
+                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                    Change VQ3/CPM column order
+                </Link>
+                <span v-else>
+                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                </span>
             </div>
 
             <!-- Top Downloaded Demos & Known Aliases Grid -->
@@ -908,6 +928,214 @@
                 </div>
             </div>
 
+            <!-- Records Container with Sidebar Tabs -->
+            <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
+                <!-- Sidebar Tabs -->
+                <div class="lg:col-span-2 flex">
+                    <div class="bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
+                        <!-- Gamemode Filter (MOVED TO TOP) -->
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>
+                            <div class="space-y-2">
+                                <!-- All Modes -->
+                                <button @click="sortByMode('all')" :class="mode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    ALL
+                                </button>
+
+                                <!-- Run Mode -->
+                                <button @click="sortByMode('run')" :class="mode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    RUN
+                                </button>
+
+                                <!-- All CTF -->
+                                <button @click="sortByMode('ctf')" :class="mode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
+                                    CTF
+                                </button>
+
+                                <!-- CTF 1-7 -->
+                                <div class="grid grid-cols-7 gap-1">
+                                    <button v-for="i in 7" :key="'ctf' + i" @click="sortByMode('ctf' + i)" :class="mode === 'ctf' + i ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-2 py-2 rounded transition-all text-xs font-bold">
+                                        {{ i }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Buttons (MOVED BELOW MODES) -->
+                        <div class="pt-4 border-t border-white/10">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Filters</h3>
+                            <div class="space-y-2">
+                                <button v-for="(data, option) in options" :key="option" @click="selectOption(option)"
+                                     :class="selectedOption === option
+                                        ? 'bg-white/10 text-white shadow-lg border border-white/20'
+                                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'"
+                                     class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-bold">
+                                    <svg v-if="loading !== option" :class="selectedOption === option ? 'text-white' : data.color"
+                                         class="w-6 h-6 fill-current stroke-current transition-transform">
+                                        <use :xlink:href="`/images/svg/icons.svg#icon-` + data.icon"></use>
+                                    </svg>
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                         class="w-6 h-6 animate-spin">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                    </svg>
+                                    <span class="text-left flex-1 leading-normal">{{ data.label }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Spacer to match table height -->
+                        <div class="flex-1"></div>
+                    </div>
+                </div>
+
+                <!-- Records Tables - Two Side by Side -->
+                <div class="lg:col-span-8">
+                    <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- VQ3 Records -->
+                        <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
+                            <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
+                                    <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                </div>
+                            </div>
+
+                            <div v-if="vq3Records.total > 0" class="px-4 py-2 flex-1">
+                                <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                    <!-- Background Map Thumbnail -->
+                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+                                        <img
+                                            :src="`/storage/${record.map.thumbnail}`"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            :alt="record.mapname"
+                                            onerror="this.src='/images/unknown.jpg'"
+                                        />
+                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
+                                        <!-- Rank -->
+                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
+                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
+                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
+                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
+                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                        </div>
+
+                                        <!-- Map Name -->
+                                        <div class="flex-1">
+                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Time -->
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                                        </div>
+
+                                        <!-- Date -->
+                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
+                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+
+                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
+                                <div class="text-sm font-bold text-gray-600">No VQ3 Records</div>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div v-if="vq3Records.total > vq3Records.per_page" class="border-t border-blue-500/20 bg-transparent p-4 mt-auto">
+                                <Pagination :last_page="vq3Records.last_page" :current_page="vq3Records.current_page" :link="vq3Records.first_page_url" pageName="vq3_page" :only="['vq3Records', 'cpmRecords']" />
+                            </div>
+                        </div>
+
+                        <!-- CPM Records -->
+                        <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
+                            <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
+                                    <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                </div>
+                            </div>
+
+                            <div v-if="cpmRecords.total > 0" class="px-4 py-2 flex-1">
+                                <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
+                                    <!-- Background Map Thumbnail -->
+                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
+                                        <img
+                                            :src="`/storage/${record.map.thumbnail}`"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            :alt="record.mapname"
+                                            onerror="this.src='/images/unknown.jpg'"
+                                        />
+                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
+                                        <!-- Rank -->
+                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
+                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
+                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
+                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
+                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                        </div>
+
+                                        <!-- Map Name -->
+                                        <div class="flex-1">
+                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Time -->
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
+                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                                        </div>
+
+                                        <!-- Date -->
+                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
+                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            </div>
+
+                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
+                                <div class="text-sm font-bold text-gray-600">No CPM Records</div>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div v-if="cpmRecords.total > cpmRecords.per_page" class="border-t border-purple-500/20 bg-transparent p-4 mt-auto">
+                                <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" pageName="cpm_page" :only="['vq3Records', 'cpmRecords']" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Records State -->
+                    <div v-else class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                        <div class="text-center py-20">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
+                                <use xlink:href="/images/svg/icons.svg#icon-trophy"></use>
+                            </svg>
+                            <div class="text-xl font-bold text-gray-600">No Records Yet</div>
+                            <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Competitors & Rivals Section -->
             <div v-if="cpm_competitors || cpm_rivals" class="mb-6">
                 <!-- Section Headers -->
@@ -984,7 +1212,7 @@
                                      class="w-8 h-8 rounded-full"
                                      :alt="rival.plain_name" />
                                 <div class="flex-1">
-                                    <div class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors" v-html="q3tohtml(rival.user?.name || rival.name || rival.plain_name)"></div>
                                     <div class="text-xs text-gray-400">Beaten on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-blue-400">{{ rival.times_beaten }}×</div>
@@ -1003,117 +1231,13 @@
                                      class="w-8 h-8 rounded-full"
                                      :alt="rival.plain_name" />
                                 <div class="flex-1">
-                                    <div class="text-sm font-bold text-white group-hover:text-red-300 transition-colors" v-html="q3tohtml(rival.name || rival.plain_name)"></div>
+                                    <div class="text-sm font-bold text-white group-hover:text-red-300 transition-colors" v-html="q3tohtml(rival.user?.name || rival.name || rival.plain_name)"></div>
                                     <div class="text-xs text-gray-400">Beat you on {{ rival.maps_beaten }} maps</div>
                                 </div>
                                 <div class="text-xs font-bold text-red-400">{{ rival.times_beaten }}×</div>
                             </Link>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Map Completionist List -->
-            <div v-if="unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
-                <div class="mb-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                            </svg>
-                            Map Completionist
-                        </h2>
-                        <div class="text-right">
-                            <div class="text-3xl font-black text-white">
-                                {{ completionPercentage }}%
-                            </div>
-                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ total_maps }} maps</div>
-                        </div>
-                    </div>
-
-                    <!-- Epic Progress Bar -->
-                    <div class="relative">
-                        <!-- Background track -->
-                        <div class="h-8 bg-gray-800 rounded-full overflow-hidden border border-gray-600 shadow-inner">
-                            <!-- Animated progress fill -->
-                            <div
-                                class="h-full relative overflow-hidden transition-all duration-1000 ease-out bg-blue-600"
-                                :style="`width: ${completionPercentage}%`">
-
-                                <!-- Animated moving stripes -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]"></div>
-
-                                <!-- Pulse effect -->
-                                <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
-
-                                <!-- Sliding highlight -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:50%_100%] animate-[shimmer_2s_linear_infinite]"></div>
-                            </div>
-
-                            <!-- Particles/dots animation -->
-                            <div class="absolute inset-y-0 left-0 right-0 pointer-events-none">
-                                <div class="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full blur-sm animate-[shimmer_3s_linear_infinite] opacity-50"></div>
-                                <div class="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-300 rounded-full blur-sm animate-[shimmer_2.5s_linear_infinite] opacity-40" style="animation-delay: 0.5s"></div>
-                            </div>
-                        </div>
-
-                        <!-- Percentage label overlay -->
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span class="text-xs font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                {{ unplayed_maps.total }} maps remaining
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Maps Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-                    <Link v-for="map in unplayed_maps.data" :key="map.name"
-                          :href="`/maps/${encodeURIComponent(map.name)}`"
-                          class="group relative bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
-                        <div class="relative overflow-hidden rounded-md mb-2">
-                            <img :src="`/storage/${map.thumbnail}`"
-                                 onerror="this.src='/images/unknown.jpg'"
-                                 class="w-full h-24 object-cover group-hover:scale-110 transition-transform duration-300"
-                                 :alt="map.name" />
-                        </div>
-                        <div class="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors truncate">{{ map.name }}</div>
-                        <div class="text-xs text-gray-500 truncate">by {{ map.author || 'Unknown' }}</div>
-                    </Link>
-                </div>
-
-                <!-- Pagination -->
-                <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
-                    <!-- Previous Button -->
-                    <Link v-if="unplayed_maps.current_page > 1"
-                          :href="profileRoute({unplayed_page: unplayed_maps.current_page - 1})"
-                          preserve-scroll
-                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
-                        ‹ Prev
-                    </Link>
-
-                    <!-- Page Numbers -->
-                    <template v-for="page in unplayed_maps.last_page" :key="page">
-                        <Link v-if="page === 1 || page === unplayed_maps.last_page || (page >= unplayed_maps.current_page - 2 && page <= unplayed_maps.current_page + 2)"
-                              :href="profileRoute({unplayed_page: page})"
-                              preserve-scroll
-                              class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
-                              :class="unplayed_maps.current_page === page
-                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'">
-                            {{ page }}
-                        </Link>
-                        <span v-else-if="page === unplayed_maps.current_page - 3 || page === unplayed_maps.current_page + 3"
-                              class="px-2 text-gray-600">...</span>
-                    </template>
-
-                    <!-- Next Button -->
-                    <Link v-if="unplayed_maps.current_page < unplayed_maps.last_page"
-                          :href="profileRoute({unplayed_page: unplayed_maps.current_page + 1})"
-                          preserve-scroll
-                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
-                        Next ›
-                    </Link>
                 </div>
             </div>
 
@@ -1301,218 +1425,8 @@
                 </div>
             </div>
 
-            <!-- Records Container with Sidebar Tabs -->
-            <div class="grid grid-cols-1 lg:grid-cols-10 gap-6">
-                <!-- Sidebar Tabs -->
-                <div class="lg:col-span-2 flex">
-                    <div class="bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
-                        <!-- Gamemode Filter (MOVED TO TOP) -->
-                        <div class="mb-4">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>
-                            <div class="space-y-2">
-                                <!-- All Modes -->
-                                <button @click="sortByMode('all')" :class="mode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    ALL
-                                </button>
-
-                                <!-- Run Mode -->
-                                <button @click="sortByMode('run')" :class="mode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    RUN
-                                </button>
-
-                                <!-- All CTF -->
-                                <button @click="sortByMode('ctf')" :class="mode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    CTF
-                                </button>
-
-                                <!-- CTF 1-7 -->
-                                <div class="grid grid-cols-7 gap-1">
-                                    <button v-for="i in 7" :key="'ctf' + i" @click="sortByMode('ctf' + i)" :class="mode === 'ctf' + i ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-2 py-2 rounded transition-all text-xs font-bold">
-                                        {{ i }}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Filter Buttons (MOVED BELOW MODES) -->
-                        <div class="pt-4 border-t border-white/10">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Filters</h3>
-                            <div class="space-y-2">
-                                <button v-for="(data, option) in options" :key="option" @click="selectOption(option)"
-                                     :class="selectedOption === option
-                                        ? 'bg-white/10 text-white shadow-lg border border-white/20'
-                                        : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'"
-                                     class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-bold">
-                                    <svg v-if="loading !== option" :class="selectedOption === option ? 'text-white' : data.color"
-                                         class="w-6 h-6 fill-current stroke-current transition-transform">
-                                        <use :xlink:href="`/images/svg/icons.svg#icon-` + data.icon"></use>
-                                    </svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-                                         class="w-6 h-6 animate-spin">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                                    </svg>
-                                    <span class="text-left flex-1 leading-normal">{{ data.label }}</span>
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Spacer to match table height -->
-                        <div class="flex-1"></div>
-                    </div>
-                </div>
-
-                <!-- Records Tables - Two Side by Side -->
-                <div class="lg:col-span-8">
-                    <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <!-- VQ3 Records -->
-                        <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
-                            <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                                    <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
-                                </div>
-                            </div>
-
-                            <div v-if="vq3Records.total > 0" class="px-4 py-2 flex-1">
-                                <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
-                                    <!-- Background Map Thumbnail -->
-                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
-                                        <img
-                                            :src="`/storage/${record.map.thumbnail}`"
-                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
-                                            :alt="record.mapname"
-                                            onerror="this.src='/images/unknown.jpg'"
-                                        />
-                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
-                                    </div>
-
-                                    <!-- Content -->
-                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
-                                        <!-- Rank -->
-                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
-                                        </div>
-
-                                        <!-- Map Name -->
-                                        <div class="flex-1">
-                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
-                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Time -->
-                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
-                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
-                                        </div>
-
-                                        <!-- Date -->
-                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
-                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </div>
-
-                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
-                                <div class="text-sm font-bold text-gray-600">No VQ3 Records</div>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div v-if="vq3Records.total > vq3Records.per_page" class="border-t border-blue-500/20 bg-transparent p-4 mt-auto">
-                                <Pagination :last_page="vq3Records.last_page" :current_page="vq3Records.current_page" :link="vq3Records.first_page_url" pageName="vq3_page" :only="['vq3Records', 'cpmRecords']" />
-                            </div>
-                        </div>
-
-                        <!-- CPM Records -->
-                        <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
-                            <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                                    <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
-                                </div>
-                            </div>
-
-                            <div v-if="cpmRecords.total > 0" class="px-4 py-2 flex-1">
-                                <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
-                                    <!-- Background Map Thumbnail -->
-                                    <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
-                                        <img
-                                            :src="`/storage/${record.map.thumbnail}`"
-                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
-                                            :alt="record.mapname"
-                                            onerror="this.src='/images/unknown.jpg'"
-                                        />
-                                        <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
-                                    </div>
-
-                                    <!-- Content -->
-                                    <div class="relative flex items-center gap-2 sm:gap-3 w-full">
-                                        <!-- Rank -->
-                                        <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
-                                        </div>
-
-                                        <!-- Map Name -->
-                                        <div class="flex-1">
-                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
-                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Time -->
-                                        <div class="w-12 sm:w-20 flex-shrink-0 text-right">
-                                            <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
-                                        </div>
-
-                                        <!-- Date -->
-                                        <div class="w-14 sm:w-20 flex-shrink-0 text-right">
-                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </div>
-
-                            <div v-else class="text-center py-10 flex-1 flex items-center justify-center">
-                                <div class="text-sm font-bold text-gray-600">No CPM Records</div>
-                            </div>
-
-                            <!-- Pagination -->
-                            <div v-if="cpmRecords.total > cpmRecords.per_page" class="border-t border-purple-500/20 bg-transparent p-4 mt-auto">
-                                <Pagination :last_page="cpmRecords.last_page" :current_page="cpmRecords.current_page" :link="cpmRecords.first_page_url" pageName="cpm_page" :only="['vq3Records', 'cpmRecords']" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- No Records State -->
-                    <div v-else class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
-                        <div class="text-center py-20">
-                            <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
-                                <use xlink:href="/images/svg/icons.svg#icon-trophy"></use>
-                            </svg>
-                            <div class="text-xl font-bold text-gray-600">No Records Yet</div>
-                            <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User's Featured Maplists -->
-        <div v-if="user_maplists && user_maplists.length > 0" class="max-w-screen-2xl mx-auto px-4 mt-8 mb-8">
-            <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+            <!-- User's Featured Maplists -->
+            <div v-if="user_maplists && user_maplists.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">
                         <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1556,6 +1470,110 @@
                                 </div>
                             </div>
                         </div>
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Map Completionist List -->
+            <div v-if="unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6">
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                            </svg>
+                            Map Completionist
+                        </h2>
+                        <div class="text-right">
+                            <div class="text-3xl font-black text-white">
+                                {{ completionPercentage }}%
+                            </div>
+                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ total_maps }} maps</div>
+                        </div>
+                    </div>
+
+                    <!-- Epic Progress Bar -->
+                    <div class="relative">
+                        <!-- Background track -->
+                        <div class="h-8 bg-gray-800 rounded-full overflow-hidden border border-gray-600 shadow-inner">
+                            <!-- Animated progress fill -->
+                            <div
+                                class="h-full relative overflow-hidden transition-all duration-1000 ease-out bg-blue-600"
+                                :style="`width: ${completionPercentage}%`">
+
+                                <!-- Animated moving stripes -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/40 to-transparent bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]"></div>
+
+                                <!-- Pulse effect -->
+                                <div class="absolute inset-0 bg-white/10 animate-pulse"></div>
+
+                                <!-- Sliding highlight -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:50%_100%] animate-[shimmer_2s_linear_infinite]"></div>
+                            </div>
+
+                            <!-- Particles/dots animation -->
+                            <div class="absolute inset-y-0 left-0 right-0 pointer-events-none">
+                                <div class="absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-400 rounded-full blur-sm animate-[shimmer_3s_linear_infinite] opacity-50"></div>
+                                <div class="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-300 rounded-full blur-sm animate-[shimmer_2.5s_linear_infinite] opacity-40" style="animation-delay: 0.5s"></div>
+                            </div>
+                        </div>
+
+                        <!-- Percentage label overlay -->
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xs font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                {{ unplayed_maps.total }} maps remaining
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maps Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+                    <Link v-for="map in unplayed_maps.data" :key="map.name"
+                          :href="`/maps/${encodeURIComponent(map.name)}`"
+                          class="group relative bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
+                        <div class="relative overflow-hidden rounded-md mb-2">
+                            <img :src="`/storage/${map.thumbnail}`"
+                                 onerror="this.src='/images/unknown.jpg'"
+                                 class="w-full h-24 object-cover group-hover:scale-110 transition-transform duration-300"
+                                 :alt="map.name" />
+                        </div>
+                        <div class="text-sm font-bold text-white group-hover:text-yellow-400 transition-colors truncate">{{ map.name }}</div>
+                        <div class="text-xs text-gray-500 truncate">by {{ map.author || 'Unknown' }}</div>
+                    </Link>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
+                    <!-- Previous Button -->
+                    <Link v-if="unplayed_maps.current_page > 1"
+                          :href="profileRoute({unplayed_page: unplayed_maps.current_page - 1})"
+                          preserve-scroll
+                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
+                        ‹ Prev
+                    </Link>
+
+                    <!-- Page Numbers -->
+                    <template v-for="page in unplayed_maps.last_page" :key="page">
+                        <Link v-if="page === 1 || page === unplayed_maps.last_page || (page >= unplayed_maps.current_page - 2 && page <= unplayed_maps.current_page + 2)"
+                              :href="profileRoute({unplayed_page: page})"
+                              preserve-scroll
+                              class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
+                              :class="unplayed_maps.current_page === page
+                                ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'">
+                            {{ page }}
+                        </Link>
+                        <span v-else-if="page === unplayed_maps.current_page - 3 || page === unplayed_maps.current_page + 3"
+                              class="px-2 text-gray-600">...</span>
+                    </template>
+
+                    <!-- Next Button -->
+                    <Link v-if="unplayed_maps.current_page < unplayed_maps.last_page"
+                          :href="profileRoute({unplayed_page: unplayed_maps.current_page + 1})"
+                          preserve-scroll
+                          class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
+                        Next ›
                     </Link>
                 </div>
             </div>

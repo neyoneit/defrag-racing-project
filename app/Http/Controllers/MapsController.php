@@ -157,7 +157,8 @@ class MapsController extends Controller
         });
 
 
-        $showOldtop = $request->input('showOldtop', false);
+        $userDefaultOldtop = $request->user()?->default_show_oldtop ? 'true' : 'false';
+        $showOldtop = $request->has('showOldtop') ? $request->input('showOldtop') : $userDefaultOldtop;
 
         if ($showOldtop === 'true') {
              // old top
@@ -179,7 +180,8 @@ class MapsController extends Controller
         }
 
         // Offline demos
-        $showOffline = $request->input('showOffline', false);
+        $userDefaultOffline = $request->user()?->default_show_offline ? 'true' : 'false';
+        $showOffline = $request->has('showOffline') ? $request->input('showOffline') : $userDefaultOffline;
 
         if ($showOffline === 'true') {
             // Determine offline gametype based on map name (same logic as online records)

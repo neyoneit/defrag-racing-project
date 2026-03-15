@@ -162,6 +162,17 @@
     const newTagInput = ref('');
     const showTagSuggestions = ref(false);
     const showAllTags = ref(false);
+    const tagInputContainer = ref(null);
+    const tagDropdownStyle = computed(() => {
+        if (!tagInputContainer.value) return {};
+        const rect = tagInputContainer.value.getBoundingClientRect();
+        return {
+            position: 'fixed',
+            top: rect.bottom + 8 + 'px',
+            left: rect.left + 'px',
+            width: rect.width + 'px',
+        };
+    });
     const addingTag = ref(false);
     const adoptingTag = ref(false);
 
@@ -218,6 +229,9 @@
 
     // Mobile physics toggle - 'both', 'VQ3', or 'CPM'
     const mobilePhysics = ref('both');
+
+    // Physics column order preference
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const sortByDate = () => {
         if (column.value === 'date_set') {
@@ -294,22 +308,19 @@
         localStorage.setItem('mapview_show_oldtop', value ? '1' : '0');
         router.reload({
             data: {
-                showOldtop: value
+                showOldtop: value,
+                showOffline: showOfflineLocal.value
             }
         })
     }
 
     const onChangeOffline = (value) => {
-        // If turning on offline, turn off oldtop
-        if (value) {
-            showOldtopLocal.value = false;
-        }
         showOfflineLocal.value = value;
         localStorage.setItem('mapview_show_offline', value ? '1' : '0');
         router.reload({
             data: {
                 showOffline: value,
-                showOldtop: false
+                showOldtop: showOldtopLocal.value
             }
         })
     }
@@ -441,64 +452,60 @@
         }, 200);
     };
 
-    const getVq3Records = computed(() => {
-        // Show offline records if toggle is on
-        if (props.showOffline && props.vq3OfflineRecords) {
-            return props.vq3OfflineRecords
-        }
+    const mergeRecordSources = (onlineRecords, oldRecords, offlineRecords) => {
+        let combined = [...onlineRecords.data];
 
-        // Show oldtop records if toggle is on
-        if (props.showOldtop) {
-            let oldtop_data = props.vq3OldRecords.data.map((item) => {
-                item['oldtop'] = true
-                return item
+        // Merge oldtop records
+        if (props.showOldtop && oldRecords) {
+            let oldtop_data = oldRecords.data.map((item) => {
+                item['oldtop'] = true;
+                return item;
             });
-
-            let result = {
-                total: Math.max(props.vq3Records.total, props.vq3OldRecords.total),
-                data: [...props.vq3Records.data, ...oldtop_data],
-                first_page_url: props.vq3Records.first_page_url,
-                current_page: props.vq3Records.current_page,
-                last_page: (props.vq3Records.total > props.vq3OldRecords.total) ? props.vq3Records.last_page : props.vq3OldRecords.last_page,
-                per_page: props.vq3Records.per_page
-            }
-
-            result.data.sort((a, b) => a.time - b.time)
-            return result
+            combined = [...combined, ...oldtop_data];
         }
 
-        // Default: show online records
-        return props.vq3Records
+        // Merge offline/demo records
+        if (props.showOffline && offlineRecords) {
+            combined = [...combined, ...offlineRecords.data];
+        }
+
+        // Sort by time and recalculate ranks
+        combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
+        combined = combined.map((item, index) => ({ ...item, rank: index + 1 }));
+
+        let maxTotal = onlineRecords.total;
+        let maxLastPage = onlineRecords.last_page;
+        if (props.showOldtop && oldRecords) {
+            maxTotal = Math.max(maxTotal, oldRecords.total);
+            maxLastPage = Math.max(maxLastPage, oldRecords.last_page);
+        }
+        if (props.showOffline && offlineRecords) {
+            maxTotal = Math.max(maxTotal, offlineRecords.total);
+            maxLastPage = Math.max(maxLastPage, offlineRecords.last_page);
+        }
+
+        return {
+            total: maxTotal,
+            data: combined,
+            first_page_url: onlineRecords.first_page_url,
+            current_page: onlineRecords.current_page,
+            last_page: maxLastPage,
+            per_page: onlineRecords.per_page
+        };
+    };
+
+    const getVq3Records = computed(() => {
+        if (props.showOldtop || props.showOffline) {
+            return mergeRecordSources(props.vq3Records, props.vq3OldRecords, props.vq3OfflineRecords);
+        }
+        return props.vq3Records;
     })
 
     const getCpmRecords = computed(() => {
-        // Show offline records if toggle is on
-        if (props.showOffline && props.cpmOfflineRecords) {
-            return props.cpmOfflineRecords
+        if (props.showOldtop || props.showOffline) {
+            return mergeRecordSources(props.cpmRecords, props.cpmOldRecords, props.cpmOfflineRecords);
         }
-
-        // Show oldtop records if toggle is on
-        if (props.showOldtop) {
-            let oldtop_data = props.cpmOldRecords.data.map((item) => {
-                item['oldtop'] = true
-                return item
-            });
-
-            let result = {
-                total: Math.max(props.cpmRecords.total, props.cpmOldRecords.total),
-                data: [...props.cpmRecords.data, ...oldtop_data],
-                first_page_url: props.cpmRecords.first_page_url,
-                current_page: props.cpmRecords.current_page,
-                last_page: (props.cpmRecords.total > props.cpmOldRecords.total) ? props.cpmRecords.last_page : props.cpmOldRecords.last_page,
-                per_page: props.cpmRecords.per_page
-            }
-
-            result.data.sort((a, b) => a.time - b.time)
-            return result
-        }
-
-        // Default: show online records
-        return props.cpmRecords
+        return props.cpmRecords;
     })
 
     // Helper functions for weapon/item/function icons and names
@@ -671,11 +678,11 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative overflow-hidden border border-white/10">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
-                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}');`">
-                        <!-- Dark overlay for readability -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95"></div>
+                    <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
+                        <!-- Dark overlay for readability, lightens on hover -->
+                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95 transition-opacity duration-300 group-hover:opacity-70"></div>
                     </div>
                     <!-- Fallback solid background if no thumbnail -->
                     <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>
@@ -736,7 +743,7 @@
 
                     <!-- Tags Section -->
                     <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
-                        <div class="flex items-center justify-between mb-3">
+                        <div v-if="$page.props.auth.user || tags.length > 0" class="flex items-center justify-between mb-3">
                             <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
                         </div>
 
@@ -759,7 +766,7 @@
                                     </svg>
                                 </button>
                             </span>
-                            <span v-if="tags.length === 0" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
                         </div>
 
                         <!-- Suggested tags from maplists -->
@@ -796,8 +803,14 @@
                             </div>
                         </div>
 
+                        <!-- Not logged in hint -->
+                        <div v-if="!$page.props.auth.user && tags.length === 0" class="bg-gradient-to-r from-purple-500/10 via-purple-500/15 to-purple-500/10 border border-purple-500/20 rounded-lg px-4 py-3 text-center">
+                            <div class="text-sm font-semibold text-purple-300">No tags on this map</div>
+                            <div class="text-xs text-purple-200/60 mt-1"><a href="/login" class="underline hover:text-white transition-colors">Login</a> or <a href="/register" class="underline hover:text-white transition-colors">register</a> to add them!</div>
+                        </div>
+
                         <!-- Add tag input (for logged in users) -->
-                        <div v-if="$page.props.auth.user" class="relative z-[70]">
+                        <div v-if="$page.props.auth.user" ref="tagInputContainer" class="relative z-[70]">
                             <div class="flex gap-2">
                                 <input
                                     v-model="newTagInput"
@@ -818,20 +831,22 @@
                                 </button>
                             </div>
 
-                            <!-- Available tags dropdown (shown below when focused) -->
-                            <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" class="absolute top-full left-0 right-0 mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-2xl p-3 z-[200]">
-                                <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
-                                <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
-                                    <button
-                                        v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
-                                        :key="availableTag.id"
-                                        @click="addTag(availableTag.display_name)"
-                                        class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
-                                    >
-                                        {{ availableTag.display_name }}
-                                    </button>
+                            <!-- Available tags dropdown (teleported to body to avoid overflow clipping) -->
+                            <Teleport to="body">
+                                <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" :style="tagDropdownStyle" class="bg-[#111827] border border-white/20 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-3 z-[9999]">
+                                    <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
+                                    <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
+                                        <button
+                                            v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
+                                            :key="availableTag.id"
+                                            @mousedown.prevent="addTag(availableTag.display_name)"
+                                            class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
+                                        >
+                                            {{ availableTag.display_name }}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            </Teleport>
                         </div>
                     </div>
 
@@ -963,6 +978,14 @@
                             <span class="text-gray-300">Demos Top:</span>
                             <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
                         </div>
+                        <div class="text-xs text-gray-500">
+                            <Link v-if="page.props.auth?.user" href="/user/profile#map-view-defaults" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
+                                Set your defaults
+                            </Link>
+                            <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
+                                <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to save defaults
+                            </span>
+                        </div>
                     </div>
 
 </div> <!-- Close content layer -->
@@ -1001,7 +1024,7 @@
 
                 <div class="md:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1009,7 +1032,7 @@
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
                             </div>
-                            <div class="text-right min-w-[80px]">
+                            <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
                                 <div v-if="my_vq3_record" class="text-sm font-bold text-blue-300 tabular-nums">
                                     {{ formatTime(my_vq3_record.time) }}
@@ -1024,7 +1047,7 @@
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1051,7 +1074,7 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" :style="{ order: cpmFirst ? 1 : 2 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
@@ -1059,7 +1082,7 @@
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
                             </div>
-                            <div class="text-right min-w-[80px]">
+                            <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
                                 <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
                                 <div v-if="my_cpm_record" class="text-sm font-bold text-purple-300 tabular-nums">
                                     {{ formatTime(my_cpm_record.time) }}
@@ -1074,7 +1097,7 @@
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1100,6 +1123,14 @@
                     </div>
                 </div> <!-- Close CPM Leaderboard -->
                 </div> <!-- Close md:flex container -->
+                <div class="text-xs text-gray-500 text-right mt-2">
+                    <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                        Change VQ3/CPM column order
+                    </Link>
+                    <span v-else>
+                        <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                    </span>
+                </div>
             </div> <!-- Close Leaderboards Section -->
         </div> <!-- Close page wrapper -->
 

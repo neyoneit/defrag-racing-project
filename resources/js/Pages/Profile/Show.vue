@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import CountrySelect from '@/Components/Basic/CountrySelect.vue';
 import countries from '@/Components/stubs/countries';
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue';
@@ -170,6 +170,25 @@ const updatePreferences = () => {
     prefsForm.post(route('settings.preferences'), { preserveScroll: true });
 };
 
+// Map View Preferences Form
+const mapViewForm = useForm({
+    default_show_oldtop: user.value.default_show_oldtop || false,
+    default_show_offline: user.value.default_show_offline || false,
+});
+
+const updateMapViewPreferences = () => {
+    mapViewForm.post(route('settings.map-view-preferences'), { preserveScroll: true });
+};
+
+// Physics Order Preference Form
+const physicsOrderForm = useForm({
+    default_physics_order: user.value.default_physics_order || 'vq3_first',
+});
+
+const updatePhysicsOrder = () => {
+    physicsOrderForm.post(route('settings.physics-order'), { preserveScroll: true });
+};
+
 const avatarEffects = [
     { id: 'none', name: 'None', icon: '⭕' },
     { id: 'glow', name: 'Glow', icon: '✨' },
@@ -253,6 +272,19 @@ const togglePreviewSystem = (type) => {
 const updateNotifications = () => {
     notifsForm.post(route('settings.notifications'), { preserveScroll: true });
 };
+
+onMounted(() => {
+    if (window.location.hash) {
+        nextTick(() => {
+            const el = document.querySelector(window.location.hash);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+                el.classList.add('ring-2', 'ring-purple-500/50');
+                setTimeout(() => el.classList.remove('ring-2', 'ring-purple-500/50'), 3000);
+            }
+        });
+    }
+});
 </script>
 
 <template>
@@ -573,6 +605,110 @@ const updateNotifications = () => {
                     </form>
                 </div>
             </div>
+
+            <!-- View Preferences Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Map View Defaults Card -->
+            <div id="map-view-defaults" class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500/20 to-teal-600/20 border border-teal-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-teal-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-sm font-bold text-white">Map Records Default View</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div v-if="mapViewForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="updateMapViewPreferences" :disabled="mapViewForm.processing">
+                                <span class="text-xs">Save</span>
+                            </PrimaryButton>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-3">Choose which record sources are shown by default on map detail pages. Online records are always visible.</p>
+
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 cursor-not-allowed opacity-60">
+                            <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                            <div>
+                                <p class="text-sm font-medium text-gray-300">Online Records</p>
+                                <p class="text-xs text-gray-500">Always shown</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
+                            <input v-model="mapViewForm.default_show_oldtop" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-teal-600" />
+                            <div>
+                                <p class="text-sm font-medium text-gray-300">Oldtop Records</p>
+                                <p class="text-xs text-gray-500">Historical records from q3df.org archive</p>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
+                            <input v-model="mapViewForm.default_show_offline" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-teal-600" />
+                            <div>
+                                <p class="text-sm font-medium text-gray-300">Demos Top</p>
+                                <p class="text-xs text-gray-500">Records from uploaded demo files</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Physics Column Order Card -->
+            <div id="physics-order" class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                </svg>
+                            </div>
+                            <h2 class="text-sm font-bold text-white">Physics Column Order</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div v-if="physicsOrderForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="updatePhysicsOrder" :disabled="physicsOrderForm.processing">
+                                <span class="text-xs">Save</span>
+                            </PrimaryButton>
+                        </div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mb-3">Choose which physics mode appears on the left side across all pages (records, rankings, profile stats).</p>
+
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" :class="physicsOrderForm.default_physics_order === 'vq3_first' ? 'border-blue-500/30 bg-blue-500/10' : ''">
+                            <input v-model="physicsOrderForm.default_physics_order" type="radio" value="vq3_first" class="w-4 h-4 bg-white/10 border-white/20 text-blue-600" />
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black text-blue-400 uppercase bg-blue-400/20 border border-blue-400/30 px-2 py-0.5 rounded">VQ3</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-black text-purple-400 uppercase bg-purple-400/20 border border-purple-400/30 px-2 py-0.5 rounded">CPM</span>
+                                <span class="text-xs text-gray-500 ml-1">(default)</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer" :class="physicsOrderForm.default_physics_order === 'cpm_first' ? 'border-purple-500/30 bg-purple-500/10' : ''">
+                            <input v-model="physicsOrderForm.default_physics_order" type="radio" value="cpm_first" class="w-4 h-4 bg-white/10 border-white/20 text-purple-600" />
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black text-purple-400 uppercase bg-purple-400/20 border border-purple-400/30 px-2 py-0.5 rounded">CPM</span>
+                                <span class="text-xs text-gray-500">/</span>
+                                <span class="text-xs font-black text-blue-400 uppercase bg-blue-400/20 border border-blue-400/30 px-2 py-0.5 rounded">VQ3</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            </div> <!-- Close View Preferences Grid -->
 
             <!-- Notifications & Security Grid -->
             <div class="grid grid-cols-2 gap-4">

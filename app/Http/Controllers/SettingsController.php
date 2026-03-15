@@ -232,6 +232,22 @@ class SettingsController extends Controller
         $user->save();
     }
 
+    public function mapViewPreferences(Request $request) {
+        $user = $request->user();
+
+        $user->default_show_oldtop = $request->boolean('default_show_oldtop');
+        $user->default_show_offline = $request->boolean('default_show_offline');
+        $user->save();
+    }
+
+    public function physicsOrderPreferences(Request $request) {
+        $user = $request->user();
+
+        $order = $request->input('default_physics_order', 'vq3_first');
+        $user->default_physics_order = in_array($order, ['vq3_first', 'cpm_first']) ? $order : 'vq3_first';
+        $user->save();
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 

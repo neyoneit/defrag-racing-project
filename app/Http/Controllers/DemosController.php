@@ -349,7 +349,7 @@ class DemosController extends Controller
             : "demo_download_ip_" . request()->ip();
 
         $downloadsToday = Cache::get($rateLimitKey, 0);
-        $maxDownloads = $currentUser ? 20 : 1;
+        $maxDownloads = $currentUser ? 50 : 1;
         $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
 
         // Debug log
@@ -654,7 +654,7 @@ class DemosController extends Controller
                 : "demo_download_ip_" . request()->ip();
 
             $downloadsToday = Cache::get($rateLimitKey, 0);
-            $maxDownloads = $currentUser ? 20 : 1; // Authenticated: 20/day, Guest: 1/day
+            $maxDownloads = $currentUser ? 50 : 1; // Authenticated: 50/day, Guest: 1/day
 
             if ($downloadsToday >= $maxDownloads) {
                 // Return a JSON response for AJAX requests, or redirect with error for direct links
@@ -663,7 +663,7 @@ class DemosController extends Controller
                         'error' => 'Download limit reached',
                         'message' => $currentUser
                             ? "You've reached your download limit of {$maxDownloads} demos per day. Limit resets at midnight."
-                            : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 20 demos per day!",
+                            : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 50 demos per day!",
                         'isGuest' => !$currentUser,
                         'limit' => $maxDownloads,
                     ], 429);
@@ -671,7 +671,7 @@ class DemosController extends Controller
                     // For direct download links, redirect back with error message
                     return back()->with('danger', $currentUser
                         ? "Download limit reached. You can download maximum {$maxDownloads} demo" . ($maxDownloads > 1 ? 's' : '') . " per day."
-                        : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 20 demos per day!");
+                        : "You've reached the guest download limit (1 demo per day). Please create an account to download up to 50 demos per day!");
                 }
             }
 

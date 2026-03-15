@@ -1380,10 +1380,38 @@ const getBoxClass = (type) => {
 };
 
 const needsNsfwGate = computed(() => {
-    return props.model.is_nsfw && !page.props.auth.user?.nsfw_confirmed;
+    return localIsNsfw.value && !page.props.auth.user?.nsfw_confirmed;
 });
 
 const confirmingNsfw = ref(false);
+const flaggingNsfw = ref(false);
+const localIsNsfw = ref(props.model.is_nsfw);
+
+const flagAsNsfw = async () => {
+    if (flaggingNsfw.value) return;
+    flaggingNsfw.value = true;
+    try {
+        await axios.post(`/models/${props.model.id}/flag-nsfw`);
+        localIsNsfw.value = true;
+    } catch (e) {
+        alert('Failed to flag: ' + (e.response?.data?.message || e.message));
+    } finally {
+        flaggingNsfw.value = false;
+    }
+};
+
+const unflagNsfw = async () => {
+    if (flaggingNsfw.value) return;
+    flaggingNsfw.value = true;
+    try {
+        await axios.post(`/models/${props.model.id}/unflag-nsfw`);
+        localIsNsfw.value = false;
+    } catch (e) {
+        alert('Failed to unflag: ' + (e.response?.data?.message || e.message));
+    } finally {
+        flaggingNsfw.value = false;
+    }
+};
 
 const confirmNsfw = () => {
     confirmingNsfw.value = true;
@@ -1473,7 +1501,7 @@ const confirmNsfw = () => {
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
-                                        <span v-if="model.is_nsfw" class="px-2 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">NSFW</span>
+                                        <span v-if="localIsNsfw" class="px-2 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">NSFW</span>
                                         <span class="px-2 py-0.5 bg-blue-500/15 border border-blue-500/20 rounded text-[10px] font-semibold text-blue-400 capitalize">{{ model.category }}</span>
                                         <span v-if="model.model_type" :class="getModelTypeBadgeClass(model.model_type)" class="text-[10px] px-2 py-0.5 rounded font-semibold">
                                             {{ getModelTypeLabel(model.model_type) }}
@@ -1924,17 +1952,32 @@ const confirmNsfw = () => {
                             </div>
                         </div>
 
+                        <!-- Flag as NSFW (community moderation) -->
+                        <button
+                            v-if="!localIsNsfw && $page.props.auth?.user && !isThumbnailMode"
+                            @click="flagAsNsfw"
+                            :disabled="flaggingNsfw"
+                            class="w-full mb-6 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-sm font-semibold text-red-400/70 hover:text-red-400 hover:bg-red-500/20 hover:border-red-500/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            {{ flaggingNsfw ? 'Flagging...' : 'Flag this model as NSFW content' }}
+                        </button>
+
+                        <!-- Unflag NSFW (admin only) -->
+                        <button
+                            v-if="localIsNsfw && $page.props.auth?.user && !isThumbnailMode"
+                            @click="unflagNsfw"
+                            :disabled="flaggingNsfw"
+                            class="w-full mb-6 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl text-sm font-semibold text-green-400/70 hover:text-green-400 hover:bg-green-500/20 hover:border-green-500/30 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
+                            </svg>
+                            {{ flaggingNsfw ? 'Removing...' : 'Remove NSFW flag from this model' }}
+                        </button>
+
                         <!-- ANIMATION BUTTONS -->
                         <div v-if="animationsReady && !isWeaponModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-4 border border-white/10 mb-6">
-                            <!-- Login overlay for non-authenticated users -->
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl flex items-center justify-center">
-                                <a href="/login" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg text-sm transition-colors shadow-lg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                                    </svg>
-                                    Log in to unlock controls
-                                </a>
-                            </div>
                             <h3 class="text-sm font-bold text-white mb-3">Animations</h3>
 
                             <!-- LEGS ANIMATIONS -->
@@ -1991,11 +2034,25 @@ const confirmNsfw = () => {
                                     One-shot animations hold 2s, then return to idle
                                 </div>
                             </div>
+
+                            <!-- Animation Speed -->
+                            <div class="flex items-center gap-3 mt-4 pt-3 border-t border-white/10">
+                                <span class="text-xs text-gray-400 w-16">Speed:</span>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="3.0"
+                                    step="0.1"
+                                    :value="animationSpeed"
+                                    @input="updateAnimationSpeed"
+                                    class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <span class="text-xs text-gray-400 w-12 text-right">{{ animationSpeed.toFixed(1) }}x</span>
+                            </div>
                         </div>
 
                         <!-- Light Controls Card (not for shadow models) -->
                         <div v-if="viewerLoaded && !isThumbnailMode && !isShadowModel" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl"></div>
                             <div class="flex items-center justify-between mb-4">
                                 <h4 class="text-sm font-bold text-gray-300">Lighting</h4>
                                 <button @click="showLightControls = !showLightControls" class="px-3 py-1 rounded text-xs font-semibold transition-all bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30">
@@ -2174,42 +2231,10 @@ const confirmNsfw = () => {
                             </div>
                         </div>
 
-                        <!-- Animation Controls Card -->
-                        <div v-if="animationsReady && !isThumbnailMode" class="bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-6 mb-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-bold text-gray-300">Controls</h4>
-
-                                <!-- Current Animation State -->
-                                <div class="flex gap-2">
-                                    <span v-if="currentLegsAnim" class="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-semibold border border-blue-500/30">
-                                        {{ currentLegsAnim.replace('LEGS_', '') }}
-                                    </span>
-                                    <span v-if="currentTorsoAnim" class="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-semibold border border-green-500/30">
-                                        {{ currentTorsoAnim.replace('TORSO_', '') }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Animation Speed -->
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs text-gray-400 w-16">Speed:</span>
-                                <input
-                                    type="range"
-                                    min="0.1"
-                                    max="3.0"
-                                    step="0.1"
-                                    :value="animationSpeed"
-                                    @input="updateAnimationSpeed"
-                                    class="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                                />
-                                <span class="text-xs text-gray-400 w-12 text-right">{{ animationSpeed.toFixed(1) }}x</span>
-                            </div>
-                        </div>
 
                         <!-- Sound Controls Card -->
                         <!-- Sounds -->
                         <div v-if="soundsReady && !isThumbnailMode" class="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl border border-white/10 p-4 mb-6">
-                            <div v-if="!$page.props.auth?.user" class="absolute inset-0 z-10 bg-black/60 rounded-xl"></div>
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-sm font-bold text-gray-300">Sounds</h4>
                                 <button @click="toggleSounds" :class="[

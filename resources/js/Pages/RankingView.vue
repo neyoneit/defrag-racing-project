@@ -2,7 +2,7 @@
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Rating from '@/Components/Rating.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
-    import { watchEffect, ref, onMounted, onUnmounted } from 'vue';
+    import { watchEffect, ref, computed, onMounted, onUnmounted } from 'vue';
 
     const props = defineProps({
         vq3Ratings: Object,
@@ -73,7 +73,15 @@
         reloadRankings();
     }
 
+    const isLoggedIn = computed(() => !!usePage().props.auth?.user);
+    const showLoginPopup = ref(false);
+    const guestLockedCategories = ['strafe', 'slick', 'rocket', 'plasma', 'grenade', 'lg', 'bfg', 'tele'];
+
     const selectCategory = (cat) => {
+        if (!isLoggedIn.value && guestLockedCategories.includes(cat)) {
+            showLoginPopup.value = true;
+            return;
+        }
         category.value = cat;
         reloadRankings();
     }
@@ -89,6 +97,7 @@
     const isRotating = ref(false);
     const interval = ref(null);
     const page = usePage();
+    const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const startInterval = () => {
         if (interval.value == null) {
@@ -147,12 +156,12 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                                     </svg>
-                                    <span class="text-[11px] font-semibold">How it works</span>
+                                    <span class="text-[11px] font-semibold underline decoration-dotted decoration-gray-500 underline-offset-2">How it works</span>
                                 </button>
                                 <div class="absolute left-0 top-full mt-2 w-80 bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
                                     <p class="text-xs text-gray-400 leading-relaxed">
                                         Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record.
-                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> — your best maps count the most, weaker ones are diminished.
+                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> -your best maps count the most, weaker ones are diminished.
                                         The final rating is a weighted average of all your map scores. Players with fewer than <span class="text-gray-300 font-semibold">10 records</span> receive a proportional penalty.
                                         Maps with fewer than <span class="text-gray-300 font-semibold">5 players</span> or very short top times are excluded.
                                     </p>
@@ -178,12 +187,18 @@
                                     @click="selectRankingType(rt)"
                                     :class="rankingtype === rt ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
                                     class="px-4 py-2 rounded-lg border text-sm font-semibold uppercase transition-all whitespace-nowrap flex-1 sm:flex-none"
-                                    :title="rt === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record'">
+                                    :title="rt === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record'">
                                     {{ rt.replace('_', ' ') }}
                                 </button>
                             </div>
-                            <div class="text-xs mt-2 text-center" :class="rankingtype === 'active_players' ? 'text-blue-400' : 'text-gray-300'">
-                                {{ rankingtype === 'active_players' ? 'Players who set a record in the last 3 months' : 'All players who have ever set a record' }}
+                            <div class="text-xs mt-2 text-gray-400 relative group/hint cursor-help flex items-center justify-center gap-1">
+                                <svg class="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="underline decoration-dotted decoration-gray-500 underline-offset-2">{{ rankingtype === 'active_players' ? 'Recently active players only' : 'All time rankings' }}</span>
+                                <div class="absolute top-full mt-1 left-1/2 -translate-x-1/2 hidden group-hover/hint:block z-20 w-56 p-2 bg-black/95 border border-white/20 rounded-lg text-xs text-gray-300 text-center shadow-lg">
+                                    {{ rankingtype === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record in this physics' }}
+                                </div>
                             </div>
                         </div>
 
@@ -206,6 +221,7 @@
                                         category === cat.value && cat.color === 'green' ? 'bg-green-500/30 border-green-400/50 text-white' : '',
                                         category === cat.value && cat.color === 'white' ? 'bg-white/30 border-white/50 text-white' : '',
                                         category !== cat.value ? 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10' : '',
+                                        !isLoggedIn && guestLockedCategories.includes(cat.value) ? 'opacity-40' : '',
                                         'px-2 py-1.5 rounded-lg border text-xs font-medium transition-all flex items-center gap-1.5'
                                     ]"
                                     :title="cat.label">
@@ -239,7 +255,7 @@
             <!-- My Ratings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- My VQ3 Rating -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400">
@@ -260,7 +276,7 @@
                 </div>
 
                 <!-- My CPM Rating -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-purple-400">
@@ -284,7 +300,7 @@
             <!-- All Rankings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Rankings -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
@@ -312,7 +328,7 @@
                 </div>
 
                 <!-- CPM Rankings -->
-                <div class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
@@ -339,8 +355,43 @@
                     </div>
                 </div>
             </div>
+            <div class="text-xs text-gray-500 text-right mt-2">
+                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                    Change VQ3/CPM column order
+                </Link>
+                <span v-else>
+                    <Link href="/login" class="hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to change column order
+                </span>
+            </div>
         </div>
 
         <div class="h-20"></div>
     </div>
+
+    <!-- Login Required Popup -->
+    <Teleport to="body">
+        <div v-if="showLoginPopup" class="fixed inset-0 z-[9999] flex items-center justify-center" @click.self="showLoginPopup = false">
+            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm"></div>
+            <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
+                <button @click="showLoginPopup = false" class="absolute top-3 right-3 text-gray-500 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-white">Login Required</h3>
+                </div>
+                <p class="text-gray-300 text-sm mb-5">Category filters are available only for logged-in users. Please login or register to access detailed rankings.</p>
+                <div class="flex gap-3">
+                    <a href="/login" class="flex-1 text-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors">Login</a>
+                    <a href="/register" class="flex-1 text-center px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition-colors">Register</a>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
