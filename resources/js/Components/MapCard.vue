@@ -91,9 +91,15 @@
     <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block group">
         <div class="bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
             <!-- Map Thumbnail -->
-            <div class="relative w-full aspect-video bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
+            <div class="relative w-full aspect-video overflow-hidden">
+                <div :class="['absolute inset-0 bg-cover bg-center', map.is_nsfw && !page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" :style="`background-image: url('/storage/${map.thumbnail}')`"></div>
+                <!-- NSFW overlay -->
+                <div v-if="map.is_nsfw && !page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <span class="px-3 py-1 bg-red-600/80 rounded-lg text-xs font-black text-white border border-red-500/50">NSFW</span>
+                </div>
                 <!-- Physics Badge -->
-                <div class="absolute top-2 right-2">
+                <div class="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                    <div v-if="map.is_nsfw" class="px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white bg-red-600/80">NSFW</div>
                     <div :class="`px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white ${background}`">
                         {{ map.physics }}
                     </div>

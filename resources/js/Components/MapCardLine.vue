@@ -78,7 +78,7 @@
         <div>
             <Popper placement="right" arrow hover style="z-index: 200;">
                 <div class="bg-grayop-600 p-0.5 rounded-md relative cursor-zoom-in">
-                    <img onerror="this.src='/images/unknown.jpg'" :src="`/storage/${map?.thumbnail}`" class="rounded-md" style="width: 120px; height: 80px;">
+                    <img onerror="this.src='/images/unknown.jpg'" :src="`/storage/${map?.thumbnail}`" :class="['rounded-md', map?.is_nsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" style="width: 120px; height: 80px;">
                     <div class="flex" style="position: absolute; top: 60%; left: 70%;">
                         <div class="text-white bg-blackop-30 rounded-md p-1">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">

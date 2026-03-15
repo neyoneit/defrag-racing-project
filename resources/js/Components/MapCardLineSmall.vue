@@ -68,7 +68,7 @@
     <div class="sm:flex rounded p-2 mb-4 group" :class="{'bg-gray-700': !transparent, 'bg-grayop-700': transparent}">
         <div class="flex">
             <div class="bg-grayop-600 p-0.5 rounded-md relative cursor-zoom-in">
-                <img onerror="this.src='/images/unknown.jpg'" :src="`/storage/${map?.thumbnail}`" class="rounded-md" style="width: 120px; height: 80px;">
+                <img onerror="this.src='/images/unknown.jpg'" :src="`/storage/${map?.thumbnail}`" :class="['rounded-md', map?.is_nsfw && !$page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" style="width: 120px; height: 80px;">
             </div>
 
             <!-- Mapname -->
