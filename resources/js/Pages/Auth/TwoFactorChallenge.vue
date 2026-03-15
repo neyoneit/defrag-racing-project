@@ -1,3 +1,8 @@
+<script>
+import MainLayout from '@/Layouts/MainLayout.vue'
+export default { layout: MainLayout }
+</script>
+
 <script setup>
 import { nextTick, ref } from 'vue';
 import { Head, useForm } from '@inertiajs/vue3';
@@ -40,7 +45,7 @@ const submit = () => {
 <template>
     <Head title="Two-factor Confirmation" />
 
-    <AuthenticationCard>
+    <AuthenticationCard class="min-h-[60vh] pt-12">
         <div class="mb-4 text-sm text-gray-600 dark:text-gray-400">
             <template v-if="! recovery">
                 Please confirm access to your account by entering the authentication code provided by your authenticator application.

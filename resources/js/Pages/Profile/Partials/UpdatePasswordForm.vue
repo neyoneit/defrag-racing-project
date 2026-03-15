@@ -60,6 +60,7 @@ const updatePassword = () => {
         </div>
 
         <form @submit.prevent="updatePassword" class="space-y-3">
+            <input type="text" name="username" autocomplete="username" class="hidden" aria-hidden="true" tabindex="-1" />
             <div>
                 <InputLabel for="current_password" value="Current Password" />
                 <TextInput

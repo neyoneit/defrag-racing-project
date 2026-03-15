@@ -22,7 +22,7 @@ class ProfileController extends Controller {
         $user = User::query()
             ->where('id', $userId)
             ->with('clan')
-            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name']);
+            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout']);
         $timings['user_query'] = round((microtime(true) - $start) * 1000, 2);
 
         if (! $user) {
@@ -351,6 +351,15 @@ class ProfileController extends Controller {
             ->limit(5)
             ->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
 
+        // Demo statistics for stat box
+        $demoStats = [
+            'total_demos' => \App\Models\UploadedDemo::where('user_id', $user->id)->count(),
+            'total_downloads' => (int) \App\Models\UploadedDemo::where('user_id', $user->id)->sum('download_count'),
+            'demos_with_downloads' => \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->count(),
+            'unique_maps' => \App\Models\UploadedDemo::where('user_id', $user->id)->distinct('map_name')->count('map_name'),
+            'most_downloaded' => $topDownloadedDemos->first()?->download_count ?? 0,
+        ];
+
         return Inertia::render('Profile')
             ->with('vq3Records', $vq3Records)
             ->with('cpmRecords', $cpmRecords)
@@ -371,6 +380,7 @@ class ProfileController extends Controller {
             ->with('alias_suggestions', $aliasSuggestions)
             ->with('can_suggest_alias', $canSuggestAlias)
             ->with('topDownloadedDemos', $topDownloadedDemos)
+            ->with('demoStats', $demoStats)
             ->with('load_times', $timings)
             ->with('hasProfile', true);
     }

@@ -68,15 +68,48 @@ class DonationController extends Controller
         $totalEUR = $donationsEUR + $selfRaisedEUR;
         $yearlyGoal = $goal ? $goal->yearly_goal : 1200;
         $monthlyGoal = round($yearlyGoal / 12, 2);
-        $percentage = min(($totalEUR / $monthlyGoal) * 100, 100);
+        $monthlyPercentage = $monthlyGoal > 0 ? ($totalEUR / $monthlyGoal) * 100 : 0;
+
+        // If monthly goal is met, switch to yearly view
+        if ($monthlyPercentage >= 100) {
+            $yearlyDonations = SiteDonation::approved()
+                ->whereYear('donation_date', $currentYear)
+                ->get();
+            $yearlySelfRaised = SelfRaisedMoney::whereYear('earned_date', $currentYear)
+                ->get();
+
+            $yearlyDonationsEUR = 0;
+            $yearlySelfRaisedEUR = 0;
+
+            foreach ($yearlyDonations as $donation) {
+                $yearlyDonationsEUR += $this->convertToEUR($donation->amount, $donation->currency, $rates);
+            }
+            foreach ($yearlySelfRaised as $money) {
+                $yearlySelfRaisedEUR += $this->convertToEUR($money->amount, $money->currency, $rates);
+            }
+
+            $yearlyTotalEUR = $yearlyDonationsEUR + $yearlySelfRaisedEUR;
+            $yearlyPercentage = min(($yearlyTotalEUR / $yearlyGoal) * 100, 100);
+
+            return response()->json([
+                'total' => round($yearlyTotalEUR, 2),
+                'donations' => round($yearlyDonationsEUR, 2),
+                'selfRaised' => round($yearlySelfRaisedEUR, 2),
+                'goal' => $yearlyGoal,
+                'percentage' => round($yearlyPercentage, 1),
+                'currency' => 'EUR',
+                'mode' => 'yearly',
+            ]);
+        }
 
         return response()->json([
             'total' => round($totalEUR, 2),
             'donations' => round($donationsEUR, 2),
             'selfRaised' => round($selfRaisedEUR, 2),
             'goal' => $monthlyGoal,
-            'percentage' => round($percentage, 1),
+            'percentage' => round(min($monthlyPercentage, 100), 1),
             'currency' => 'EUR',
+            'mode' => 'monthly',
         ]);
     }
 
