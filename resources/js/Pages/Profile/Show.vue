@@ -10,6 +10,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
 
 import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
+import ProfileLayoutForm from '@/Pages/Profile/Partials/ProfileLayoutForm.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
@@ -273,18 +274,18 @@ const updateNotifications = () => {
     notifsForm.post(route('settings.notifications'), { preserveScroll: true });
 };
 
-onMounted(() => {
-    if (window.location.hash) {
-        nextTick(() => {
-            const el = document.querySelector(window.location.hash);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth' });
-                el.classList.add('ring-2', 'ring-purple-500/50');
-                setTimeout(() => el.classList.remove('ring-2', 'ring-purple-500/50'), 3000);
-            }
-        });
-    }
-});
+// Resolve initial tab from URL query param ?tab=
+const urlParams = new URLSearchParams(window.location.search);
+const validTabs = ['profile', 'customize', 'notifications', 'security'];
+const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
+const activeTab = ref(initialTab);
+
+const tabs = [
+    { id: 'profile', label: 'Profile', icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
+    { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
+    { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
+    { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
+];
 </script>
 
 <template>
@@ -304,8 +305,35 @@ onMounted(() => {
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 pb-6 relative" style="z-index: 10;">
-            <!-- Profile, MDD & Social Media Grid -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 relative" style="z-index: 10;">
+            <div class="flex gap-6">
+                <!-- Left Sidebar Navigation -->
+                <div class="w-48 shrink-0 sticky top-6 self-start">
+                    <nav class="space-y-1">
+                        <button
+                            v-for="tab in tabs"
+                            :key="tab.id"
+                            @click="activeTab = tab.id"
+                            :class="[
+                                'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                activeTab === tab.id
+                                    ? 'bg-white/10 text-white border border-white/10'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            ]"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                            </svg>
+                            {{ tab.label }}
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Right Content Area -->
+                <div class="flex-1 space-y-4">
+
+                <!-- ==================== PROFILE TAB ==================== -->
+                <template v-if="activeTab === 'profile'">
             <div class="grid grid-cols-3 gap-4">
                 <!-- Profile Card -->
                 <div class="rounded-xl bg-black/60 border border-white/10">
@@ -332,7 +360,7 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <form @submit.prevent="updateProfile" class="space-y-3">
+                        <form @submit.prevent="updateProfile" class="space-y-3" data-lpignore="true" data-1p-ignore data-bwignore>
                             <div>
                                 <InputLabel for="username" value="Username" />
                                 <TextInput
@@ -494,6 +522,10 @@ onMounted(() => {
                 </div>
             </div>
 
+                </template>
+
+                <!-- ==================== CUSTOMIZE TAB ==================== -->
+                <template v-if="activeTab === 'customize'">
             <!-- Preferences Card -->
             <div class="rounded-xl bg-black/60 border border-white/10">
                 <div class="p-4">
@@ -705,9 +737,15 @@ onMounted(() => {
             </div>
             </div> <!-- Close View Preferences Grid -->
 
-            <!-- Notifications & Security Grid -->
+            <!-- Profile Layout Customization -->
+            <ProfileLayoutForm />
+
+                </template>
+
+                <!-- ==================== NOTIFICATIONS TAB ==================== -->
+                <template v-if="activeTab === 'notifications'">
             <div class="grid grid-cols-2 gap-4">
-                <!-- Notifications Card -->
+                <!-- Email & Site Notifications -->
                 <div class="rounded-xl bg-black/60 border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
@@ -732,87 +770,37 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <form @submit.prevent="updateNotifications" class="space-y-3">
-                            <div class="space-y-1.5">
-                                <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
-                                    <input v-model="notifsForm.defrag_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-300">Defrag News</p>
-                                        <p class="text-xs text-gray-400">Announcements & updates</p>
-                                    </div>
-                                </label>
-
-                                <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
-                                    <input v-model="notifsForm.tournament_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-300">Tournament News</p>
-                                        <p class="text-xs text-gray-400">Round starts & results</p>
-                                    </div>
-                                </label>
-
-                                <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
-                                    <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
-                                        <p class="text-xs text-gray-400">Invites, kicks, transfers</p>
-                                    </div>
-                                </label>
-
-                                <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 opacity-50 cursor-not-allowed">
-                                    <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20" />
-                                    <div class="flex-1">
-                                        <p class="text-sm font-medium text-gray-300">Team Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
-                                        <p class="text-xs text-gray-400">Team invites</p>
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div class="pt-3 border-t border-white/10">
-                                <p class="text-sm font-bold text-white mb-2">Header Preview Settings</p>
-                                <p class="text-xs text-gray-400 mb-3">Control what appears in notification previews</p>
-
-                                <div class="space-y-3">
-                                    <!-- System Preview -->
-                                    <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                        <p class="text-xs font-bold text-blue-400 mb-2">System Preview</p>
-                                        <div class="space-y-1.5">
-                                            <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
-                                                <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">Announcements <span class="text-yellow-400">(Required)</span></span>
-                                            </label>
-                                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">Clan Notifications</span>
-                                            </label>
-                                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">Tournament Notifications</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Record Preview -->
-                                    <div class="p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                                        <p class="text-xs font-bold text-orange-400 mb-2">Record Preview</p>
-                                        <div class="space-y-1.5">
-                                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">Show All Records</span>
-                                            </label>
-                                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">World Records Only</span>
-                                            </label>
-                                            <label class="flex items-center gap-1.5 cursor-pointer">
-                                                <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
-                                                <span class="text-xs text-gray-300">Don't Show Preview</span>
-                                            </label>
-                                        </div>
-                                    </div>
+                        <form @submit.prevent="updateNotifications" class="space-y-1.5">
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
+                                <input v-model="notifsForm.defrag_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-300">Defrag News</p>
+                                    <p class="text-xs text-gray-400">Announcements & updates</p>
                                 </div>
-                            </div>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
+                                <input v-model="notifsForm.tournament_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-300">Tournament News</p>
+                                    <p class="text-xs text-gray-400">Round starts & results</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
+                                <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
+                                    <p class="text-xs text-gray-400">Invites, kicks, transfers</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 opacity-50 cursor-not-allowed">
+                                <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20" />
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-300">Team Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
+                                    <p class="text-xs text-gray-400">Team invites</p>
+                                </div>
+                            </label>
 
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-2 gap-2 pt-2">
                                 <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
                                     <p class="text-sm font-bold text-blue-400 mb-2">VQ3 Records</p>
                                     <div class="space-y-1.5">
@@ -826,7 +814,6 @@ onMounted(() => {
                                         </label>
                                     </div>
                                 </div>
-
                                 <div class="p-2.5 rounded-lg bg-green-500/5 border border-green-500/20">
                                     <p class="text-sm font-bold text-green-400 mb-2">CPM Records</p>
                                     <div class="space-y-1.5">
@@ -845,26 +832,83 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Security Cards Stacked -->
-                <div class="space-y-4">
-                    <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
-                        <UpdatePasswordForm />
-                    </div>
-                    <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
-                        <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
+                <!-- Header Preview Settings -->
+                <div class="rounded-xl bg-black/60 border border-white/10">
+                    <div class="p-4">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-sm font-bold text-white">Header Preview</h2>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3">Control what appears in notification previews in the header</p>
+
+                        <div class="space-y-3">
+                            <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                                <p class="text-xs font-bold text-blue-400 mb-2">System Preview</p>
+                                <div class="space-y-1.5">
+                                    <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
+                                        <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Announcements <span class="text-yellow-400">(Required)</span></span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Clan Notifications</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Tournament Notifications</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
+                                <p class="text-xs font-bold text-orange-400 mb-2">Record Preview</p>
+                                <div class="space-y-1.5">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Show All Records</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input v-model="notifsForm.preview_records" type="radio" value="wr" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">World Records Only</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input v-model="notifsForm.preview_records" type="radio" value="none" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Don't Show Preview</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+                </template>
 
-            <!-- Sessions -->
+                <!-- ==================== SECURITY TAB ==================== -->
+                <template v-if="activeTab === 'security'">
+            <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+                <UpdatePasswordForm />
+            </div>
+
+            <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+                <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
+            </div>
+
             <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                 <LogoutOtherBrowserSessionsForm :sessions="sessions" />
             </div>
 
-            <!-- Danger Zone -->
             <div v-if="$page.props.jetstream.hasAccountDeletionFeatures" class="rounded-xl bg-gradient-to-br from-red-500/5 to-red-600/5 border border-red-500/30 overflow-hidden">
                 <DeleteUserForm />
             </div>
+                </template>
+
+                </div> <!-- Close Right Content Area -->
+            </div> <!-- Close Flex Container -->
         </div>
     </div>
 </template>

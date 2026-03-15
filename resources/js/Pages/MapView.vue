@@ -1075,7 +1075,7 @@
                             <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
                         </div>
                         <div class="text-xs text-gray-500">
-                            <Link v-if="page.props.auth?.user" href="/user/profile#map-view-defaults" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
+                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Set your defaults
                             </Link>
                             <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
@@ -1127,7 +1127,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
-                                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1180,7 +1180,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
-                                <Link v-if="page.props.auth?.user" href="/user/profile#physics-order" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>

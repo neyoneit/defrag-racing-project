@@ -485,29 +485,26 @@
                                     </template>
 
                                     <template #content>
-                                        <div class="px-4 py-2 text-xs text-gray-400 border-b border-white/5">
-                                            Manage Account
-                                        </div>
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
                                             My Profile
                                         </DropdownLink>
                                         <DropdownLink :href="route('profile.show')">
                                             Settings
                                         </DropdownLink>
-                                        <div class="border-t border-white/5" />
-                                        <div class="px-4 py-2 text-xs text-gray-400">
-                                            My Maplists
+                                        <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
+                                            <Link :href="route('profile.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
+                                            <Link :href="route('profile.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
+                                            <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications</Link>
+                                            <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
+                                        <div class="mx-3 border-t border-white/10 mb-1" />
                                         <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
                                             Play Later
                                         </DropdownLink>
-                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
-                                            All My Maplists
-                                        </DropdownLink>
-                                        <div class="border-t border-white/5" />
+                                        <div class="mx-3 border-t border-white/10 my-1" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
-                                                Log Out
+                                                <span class="text-red-400">Log Out</span>
                                             </DropdownLink>
                                         </form>
                                     </template>
