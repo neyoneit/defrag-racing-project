@@ -746,15 +746,18 @@ const getYearProgress = (year, yearTotal) => {
                                 <div
                                     v-for="donation in yearData.donations"
                                     :key="donation.id"
-                                    class="flex items-center justify-between p-2 bg-black/20 rounded-lg border border-green-500/20"
+                                    class="p-2 bg-black/20 rounded-lg border border-green-500/20"
                                 >
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-sm font-medium text-white">{{ donation.donor_name || 'Anonymous Donor' }}</span>
-                                        <span class="text-xs text-gray-500">{{ formatDate(donation.donation_date) }}</span>
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-sm font-medium text-white">{{ donation.donor_name || 'Anonymous Donor' }}</span>
+                                            <span class="text-xs text-gray-500">{{ formatDate(donation.donation_date) }}</span>
+                                        </div>
+                                        <div class="text-sm font-bold text-green-400">
+                                            {{ currencySymbol }}{{ convertCurrency(donation.amount, donation.currency).toFixed(2) }}
+                                        </div>
                                     </div>
-                                    <div class="text-sm font-bold text-green-400">
-                                        {{ currencySymbol }}{{ convertCurrency(donation.amount, donation.currency).toFixed(2) }}
-                                    </div>
+                                    <div v-if="donation.note" class="mt-1.5 pl-3 border-l-2 border-green-500/30 text-xs text-gray-400 italic">{{ donation.note }}</div>
                                 </div>
                             </div>
                         </div>
