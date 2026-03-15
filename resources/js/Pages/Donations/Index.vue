@@ -784,7 +784,7 @@ const getYearProgress = (year, yearTotal) => {
 
             <!-- All-Time Total -->
             <div class="mt-12 bg-black/60 border border-white/10 rounded-xl p-8 text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">All-Time Total</h2>
+                <h2 class="text-2xl font-bold text-white mb-4">All-Time Total (since 2020)</h2>
 
                 <!-- Progress Bar showing split -->
                 <div class="max-w-2xl mx-auto mb-6">
