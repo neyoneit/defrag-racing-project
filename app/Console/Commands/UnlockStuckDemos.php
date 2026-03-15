@@ -9,37 +9,42 @@ use Illuminate\Support\Facades\Log;
 
 class UnlockStuckDemos extends Command
 {
-    protected $signature = 'demos:unlock-stuck {--minutes=15 : Minutes after which a processing demo is considered stuck}';
-    protected $description = 'Reset demos stuck in processing status and re-queue them';
+    protected $signature = 'demos:unlock-stuck {--minutes=15 : Minutes after which a stuck demo is re-queued}';
+    protected $description = 'Re-queue demos stuck in processing or uploaded status';
 
     public function handle()
     {
         $minutes = (int) $this->option('minutes');
+        $threshold = now()->subMinutes($minutes);
+        $count = 0;
 
-        $stuckDemos = UploadedDemo::where('status', 'processing')
-            ->where('updated_at', '<', now()->subMinutes($minutes))
+        // Demos stuck in 'processing' - worker crashed mid-job
+        $stuckProcessing = UploadedDemo::where('status', 'processing')
+            ->where('updated_at', '<', $threshold)
             ->get();
 
-        if ($stuckDemos->isEmpty()) {
-            $this->info('No stuck demos found.');
-            return 0;
-        }
-
-        $count = $stuckDemos->count();
-        $this->info("Found {$count} stuck demo(s). Resetting and re-queuing...");
-
-        foreach ($stuckDemos as $demo) {
-            $demo->update([
-                'status' => 'uploaded',
-                'processing_output' => null,
-            ]);
-
+        foreach ($stuckProcessing as $demo) {
+            $demo->update(['status' => 'uploaded', 'processing_output' => null]);
             ProcessDemoJob::dispatch($demo)->onQueue('demos');
-
             Log::info("Unlocked stuck demo #{$demo->id} (was processing since {$demo->updated_at})");
+            $count++;
         }
 
-        $this->info("Reset {$count} demo(s) back to queue.");
+        // Demos stuck in 'uploaded'/'pending' - job lost from Redis queue (e.g. restart/deploy)
+        $stuckUploaded = UploadedDemo::whereIn('status', ['uploaded', 'pending'])
+            ->where('updated_at', '<', $threshold)
+            ->get();
+
+        foreach ($stuckUploaded as $demo) {
+            ProcessDemoJob::dispatch($demo)->onQueue('demos');
+            Log::info("Re-queued orphaned demo #{$demo->id} (uploaded since {$demo->updated_at})");
+            $count++;
+        }
+
+        $this->info($count > 0
+            ? "Re-queued {$count} stuck demo(s) ({$stuckProcessing->count()} processing, {$stuckUploaded->count()} uploaded/pending)."
+            : 'No stuck demos found.'
+        );
 
         return 0;
     }
