@@ -646,6 +646,24 @@
                 </div>
             </nav>
 
+            <!-- Link Account Banner (unlinked users) -->
+            <div v-if="$page.props.auth?.user && !$page.props.auth.user.mdd_id" class="bg-gradient-to-r from-yellow-500/10 via-amber-500/15 to-yellow-500/10 border-b border-yellow-500/20">
+                <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+                    <Link href="/link-account" class="flex items-center justify-between gap-4 py-2.5 group">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400 shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                            </svg>
+                            <span class="text-sm font-bold text-yellow-400">Link your Q3DF profile</span>
+                            <span class="text-xs text-gray-400 hidden sm:inline">to unlock records, rankings, demo uploads, map tagging, and more</span>
+                        </div>
+                        <svg class="w-4 h-4 text-yellow-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </Link>
+                </div>
+            </div>
+
             <!-- Page Heading -->
             <header v-if="$slots.header" class="shadow">
                 <div class="max-w-8xl mx-auto pt-6 px-4 md:px-6 lg:px-8">

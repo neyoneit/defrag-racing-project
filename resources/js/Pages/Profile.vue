@@ -574,7 +574,7 @@
         <!-- EPIC REDESIGN - Main Content -->
         <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
 
-            <!-- Not Linked Account Overlay -->
+            <!-- Not Linked Account Overlay (viewing MDD-only profile) -->
             <div v-if="!user?.id" class="relative z-20 mb-6">
                 <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
                     <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
@@ -586,8 +586,20 @@
                 </div>
             </div>
 
+            <!-- Own profile but not linked to MDD -->
+            <div v-if="user?.id && !hasProfile && $page.props.auth?.user?.id === user.id" class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-yellow-500/10 via-yellow-500/20 to-yellow-500/10 border border-yellow-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-yellow-400 mb-2">Link Your Q3DF Profile</div>
+                    <div class="text-lg font-semibold text-yellow-200/80 mb-2">Your account is not linked to a Q3DF/MDD profile yet.</div>
+                    <div class="text-sm text-gray-400 mb-4">Link your profile to unlock records, rankings, stats, demo matching, and more.</div>
+                    <Link href="/link-account" class="inline-block px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">
+                        Link Account Now
+                    </Link>
+                </div>
+            </div>
+
             <!-- Stats Grid - Clean Text Layout -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <!-- Performance Stats -->
                 <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
                     <div class="flex justify-between items-center mb-3">
@@ -920,7 +932,7 @@
             </div>
 
             <!-- Records Container with Sidebar Tabs -->
-            <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
+            <div v-if="hasProfile" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
                     <div class="bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">

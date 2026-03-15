@@ -8,7 +8,7 @@ import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOther
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
-import VerifyMddProfile from '@/Pages/Profile/Partials/VerifyMddProfile.vue';
+
 import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
@@ -375,20 +375,15 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- MDD Verification -->
-                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
-                    <VerifyMddProfile :user="user" />
+                <!-- Player Aliases -->
+                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
+                    <ManageAliasesForm :user="user" />
                 </div>
 
-                <!-- Social Media -->
+                <!-- Connections -->
                 <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
-            </div>
-
-            <!-- Player Aliases Card -->
-            <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
-                <ManageAliasesForm :user="user" />
             </div>
 
             <!-- Profile Images Card -->
