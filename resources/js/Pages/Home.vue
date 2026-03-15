@@ -123,12 +123,12 @@
             <div class="space-y-8">
                 <!-- Step 1: Register -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', isAuthenticated ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="isAuthenticated" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>1</span>
                         </div>
-                        <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
+                        <div class="w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
                     <Link v-if="!isAuthenticated" :href="route('register')" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
                         <div class="flex items-start gap-6">
@@ -161,12 +161,12 @@
 
                 <!-- Step 2: Link Q3DF Profile (only for authenticated users) -->
                 <div v-if="isAuthenticated" class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', isLinked ? 'bg-green-600' : 'bg-yellow-600 animate-pulse']">
                             <svg v-if="isLinked" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>2</span>
                         </div>
-                        <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
+                        <div class="w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
                     <Link v-if="!isLinked" href="/link-account" :class="['flex-1 rounded-xl border p-8 transition-all group', 'bg-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/50 hover:bg-yellow-500/10']">
                         <div class="flex items-start gap-6">
@@ -199,7 +199,7 @@
 
                 <!-- Step 3: Download -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', downloadChecked ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="downloadChecked" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>{{ isAuthenticated ? '3' : '2' }}</span>
@@ -229,7 +229,7 @@
 
                 <!-- Step 3: Join Discord -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', discordChecked ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="discordChecked" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>{{ isAuthenticated ? '4' : '3' }}</span>
@@ -259,7 +259,7 @@
 
                 <!-- Step 5/4: Explore Maps (auto-check if user has records) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', hasRecords ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="hasRecords" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>{{ isAuthenticated ? '5' : '4' }}</span>
@@ -284,7 +284,7 @@
 
                 <!-- Step 5: Customize Profile (auto-check if has colored nick) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', (isAuthenticated && hasColoredNick) ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="isAuthenticated && hasColoredNick" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>{{ isAuthenticated ? '6' : '5' }}</span>
@@ -325,7 +325,7 @@
 
                 <!-- Step 6: Join Servers (auto-check if has records) -->
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="flex-shrink-0 w-full md:w-20 flex md:flex-col items-center">
+                    <div class="flex-shrink-0 hidden md:flex md:w-20 md:flex-col items-center">
                         <div :class="['flex items-center justify-center w-16 h-16 rounded-full text-white font-black text-2xl', hasRecords ? 'bg-green-600' : 'bg-blue-600']">
                             <svg v-if="hasRecords" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                             <span v-else>{{ isAuthenticated ? '7' : '6' }}</span>
