@@ -48,6 +48,9 @@ class Kernel extends ConsoleKernel
 
         // Recalculate all player profile stats (WRs, totals, avg rank, etc.) daily at 3am
         $schedule->command('process-all-player-stats')->withoutOverlapping()->dailyAt('03:00');
+
+        // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
+        $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
     }
 
     /**

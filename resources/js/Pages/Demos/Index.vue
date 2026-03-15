@@ -758,7 +758,7 @@ const uploadDemos = async () => {
         }
 
         // Immediately reload the demos list
-        router.reload({ only: ['userDemos', 'publicDemos'] });
+        router.reload({ only: ['userDemos', 'publicDemos'], preserveState: true });
 
         // Results stay visible until user dismisses them
     } catch (error) {
@@ -926,7 +926,7 @@ const deleteDemo = async (demoId) => {
 
     try {
         await axios.delete(route('demos.destroy', demoId));
-        router.reload({ only: ['userDemos', 'publicDemos'] });
+        router.reload({ only: ['userDemos', 'publicDemos'], preserveState: true });
     } catch (error) {
         alert('Failed to delete demo: ' + (error.response?.data?.message || error.message));
     }
@@ -1151,7 +1151,7 @@ const assignDemo = async () => {
 
         if (response.data.success) {
             closeAssignModal();
-            router.reload({ only: ['userDemos', 'publicDemos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'], preserveState: true });
         }
     } catch (error) {
         console.error('Error assigning demo:', error);
@@ -1168,7 +1168,7 @@ const unassignDemo = async (demo) => {
         const response = await axios.post(route('demos.unassign', demo.id));
 
         if (response.data.success) {
-            router.reload({ only: ['userDemos', 'publicDemos'] });
+            router.reload({ only: ['userDemos', 'publicDemos'], preserveState: true });
         }
     } catch (error) {
         console.error('Error unassigning demo:', error);
@@ -1196,8 +1196,8 @@ watch(selectedPhysics, () => {
         <Head title="Demo Upload" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Demos</h1>
@@ -1661,7 +1661,7 @@ watch(selectedPhysics, () => {
 
                 <!-- Global Processing Status (logged in only) -->
                 <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
-                    <button @click="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between mb-3">
+                    <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between" :class="{ 'mb-3': globalQueueExpanded }">
                         <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
                         <div class="flex items-center gap-2">
                             <span class="text-gray-500 text-xs">updates every 2s</span>

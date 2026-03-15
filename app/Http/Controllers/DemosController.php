@@ -53,6 +53,73 @@ class DemosController extends Controller
     }
 
     /**
+     * Compute all demo count badges from a single GROUP BY query instead of 20+ individual COUNTs.
+     */
+    private function computeDemoCounts($baseQuery): array
+    {
+        $rows = (clone $baseQuery)
+            ->selectRaw('gametype, status, COUNT(*) as cnt')
+            ->groupBy('gametype', 'status')
+            ->get();
+
+        $counts = [
+            'all' => 0, 'online' => 0, 'offline' => 0,
+            'uploaded' => 0, 'assigned' => 0, 'fallback_assigned' => 0,
+            'processed' => 0, 'failed_validity' => 0, 'failed' => 0, 'unsupported_version' => 0,
+            'online_assigned' => 0, 'online_fallback_assigned' => 0, 'online_processed' => 0,
+            'online_failed_validity' => 0, 'online_failed' => 0,
+            'offline_assigned' => 0, 'offline_fallback_assigned' => 0, 'offline_processed' => 0,
+            'offline_failed_validity' => 0, 'offline_failed' => 0,
+        ];
+
+        $statusMap = [
+            'assigned' => 'assigned',
+            'fallback-assigned' => 'fallback_assigned',
+            'processed' => 'processed',
+            'failed-validity' => 'failed_validity',
+            'failed' => 'failed',
+            'unsupported-version' => 'unsupported_version',
+            'uploaded' => 'uploaded',
+            'pending' => 'uploaded',
+            'processing' => 'uploaded',
+        ];
+
+        foreach ($rows as $row) {
+            $cnt = (int) $row->cnt;
+            $gt = $row->gametype;
+            $isOnline = $gt !== null && str_starts_with($gt, 'm');
+            $isOffline = $gt !== null && !str_starts_with($gt, 'm');
+
+            $counts['all'] += $cnt;
+
+            if ($isOnline) {
+                $counts['online'] += $cnt;
+            } elseif ($isOffline) {
+                $counts['offline'] += $cnt;
+            }
+
+            $key = $statusMap[$row->status] ?? null;
+            if ($key) {
+                $counts[$key] = ($counts[$key] ?? 0) + $cnt;
+
+                if ($isOnline) {
+                    $onlineKey = "online_{$key}";
+                    if (isset($counts[$onlineKey])) {
+                        $counts[$onlineKey] += $cnt;
+                    }
+                } elseif ($isOffline) {
+                    $offlineKey = "offline_{$key}";
+                    if (isset($counts[$offlineKey])) {
+                        $counts[$offlineKey] += $cnt;
+                    }
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * Display demo upload page
      */
     public function index(Request $request)
@@ -173,33 +240,8 @@ class DemosController extends Controller
 
                 $userDemos = $query->paginate(20, ['*'], 'userPage');
 
-                // Calculate total counts for filters (all demos for admin)
-                $baseQuery = UploadedDemo::query();
-                $demoCounts = [
-                    'all' => (clone $baseQuery)->count(),
-                    'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
-                    'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-                    // Status counts for ALL tab
-                    'uploaded' => (clone $baseQuery)->whereIn('status', ['uploaded', 'pending', 'processing'])->count(),
-                    'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
-                    'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
-                    'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
-                    'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
-                    'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
-                    'unsupported_version' => (clone $baseQuery)->where('status', 'unsupported-version')->count(),
-                    // Status counts for ONLINE tab
-                    'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
-                    'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
-                    'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
-                    'online_failed_validity' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
-                    'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
-                    // Status counts for OFFLINE tab
-                    'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
-                    'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
-                    'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
-                    'offline_failed_validity' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
-                    'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
-                ];
+                // Calculate total counts for filters (all demos for admin) - single GROUP BY query
+                $demoCounts = $this->computeDemoCounts(UploadedDemo::query());
             } else {
                 // Regular users see only their own uploads
                 $query = UploadedDemo::where('user_id', $currentUser->id)
@@ -245,33 +287,8 @@ class DemosController extends Controller
 
                 $userDemos = $query->paginate(20, ['*'], 'userPage');
 
-                // Calculate total counts for filters (only user's demos)
-                $baseQuery = UploadedDemo::where('user_id', $currentUser->id);
-                $demoCounts = [
-                    'all' => (clone $baseQuery)->count(),
-                    'online' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->count(),
-                    'offline' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-                    // Status counts for ALL tab
-                    'uploaded' => (clone $baseQuery)->whereIn('status', ['uploaded', 'pending', 'processing'])->count(),
-                    'assigned' => (clone $baseQuery)->where('status', 'assigned')->count(),
-                    'fallback_assigned' => (clone $baseQuery)->where('status', 'fallback-assigned')->count(),
-                    'processed' => (clone $baseQuery)->where('status', 'processed')->count(),
-                    'failed_validity' => (clone $baseQuery)->where('status', 'failed-validity')->count(),
-                    'failed' => (clone $baseQuery)->where('status', 'failed')->count(),
-                    'unsupported_version' => (clone $baseQuery)->where('status', 'unsupported-version')->count(),
-                    // Status counts for ONLINE tab
-                    'online_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
-                    'online_fallback_assigned' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
-                    'online_processed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
-                    'online_failed_validity' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
-                    'online_failed' => (clone $baseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
-                    // Status counts for OFFLINE tab
-                    'offline_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
-                    'offline_fallback_assigned' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
-                    'offline_processed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
-                    'offline_failed_validity' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
-                    'offline_failed' => (clone $baseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
-                ];
+                // Calculate total counts for filters (only user's demos) - single GROUP BY query
+                $demoCounts = $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id));
             }
         }
 
@@ -317,31 +334,10 @@ class DemosController extends Controller
         $publicDemos = $query->orderBy('created_at', 'desc')
             ->paginate(20, ['*'], 'browsePage');
 
-        // Calculate counts for browse section filters
-        $browseBaseQuery = UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
-        $browseCounts = [
-            'all' => (clone $browseBaseQuery)->count(),
-            'online' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->count(),
-            'offline' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->count(),
-            // Status counts for ALL tab
-            'assigned' => (clone $browseBaseQuery)->where('status', 'assigned')->count(),
-            'fallback_assigned' => (clone $browseBaseQuery)->where('status', 'fallback-assigned')->count(),
-            'processed' => (clone $browseBaseQuery)->where('status', 'processed')->count(),
-            'failed_validity' => (clone $browseBaseQuery)->where('status', 'failed-validity')->count(),
-            'failed' => (clone $browseBaseQuery)->where('status', 'failed')->count(),
-            // Status counts for ONLINE tab
-            'online_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'assigned')->count(),
-            'online_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'fallback-assigned')->count(),
-            'online_processed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'processed')->count(),
-            'online_failed_validity' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed-validity')->count(),
-            'online_failed' => (clone $browseBaseQuery)->where('gametype', 'LIKE', 'm%')->where('status', 'failed')->count(),
-            // Status counts for OFFLINE tab
-            'offline_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'assigned')->count(),
-            'offline_fallback_assigned' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'fallback-assigned')->count(),
-            'offline_processed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'processed')->count(),
-            'offline_failed_validity' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed-validity')->count(),
-            'offline_failed' => (clone $browseBaseQuery)->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype')->where('status', 'failed')->count(),
-        ];
+        // Calculate counts for browse section filters - single GROUP BY query
+        $browseCounts = $this->computeDemoCounts(
+            UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
+        );
 
         // Get download limit info for current user/IP
         $rateLimitKey = $currentUser
@@ -351,16 +347,6 @@ class DemosController extends Controller
         $downloadsToday = Cache::get($rateLimitKey, 0);
         $maxDownloads = $currentUser ? 50 : 1;
         $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
-
-        // Debug log
-        \Log::info('Demos index page - download limit info', [
-            'user_id' => optional($currentUser)->id,
-            'is_guest' => !$currentUser,
-            'downloads_today' => $downloadsToday,
-            'max_downloads' => $maxDownloads,
-            'remaining' => $remainingDownloads,
-            'rate_limit_key' => $rateLimitKey,
-        ]);
 
         return Inertia::render('Demos/Index', [
             'userDemos' => $userDemos,
