@@ -22,6 +22,7 @@ class ListBotVisits extends ListRecords
     {
         return [
             BotVisitResource\Widgets\BotStatsOverview::class,
+            BotVisitResource\Widgets\BotHitsChart::class,
         ];
     }
 
