@@ -136,6 +136,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/flags', [\App\Http\Controllers\RecordFlagController::class, 'store'])->name('flags.store');
 });
 
+// Frontend error logging (works for both authenticated and anonymous users)
+Route::post('/api/frontend-errors', [\App\Http\Controllers\FrontendErrorController::class, 'store']);
+
 // Make the main upload endpoint publicly reachable so the demos page can accept
 // anonymous uploads directly. The front-end posts to route('demos.upload') so
 // keeping the same route name preserves UI behavior.

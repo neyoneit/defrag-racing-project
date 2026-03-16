@@ -18,5 +18,6 @@ class VerifyCsrfToken extends Middleware
         'demos/debug/upload',
         // Allow the demos upload endpoint to be posted to by anonymous users.
         'demos/upload',
+        'api/frontend-errors',
     ];
 }

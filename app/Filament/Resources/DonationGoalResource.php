@@ -19,9 +19,16 @@ class DonationGoalResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-flag';
 
+    protected static ?string $navigationGroup = 'Finance';
+
     protected static ?string $navigationLabel = 'Donation Goals';
 
     protected static ?int $navigationSort = 17;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -54,6 +61,7 @@ class DonationGoalResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('year')
                     ->label('Year')

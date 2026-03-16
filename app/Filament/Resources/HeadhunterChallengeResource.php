@@ -19,9 +19,14 @@ class HeadhunterChallengeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-trophy';
 
+    protected static ?string $navigationGroup = 'Community';
+
     protected static ?string $navigationLabel = 'Headhunter Challenges';
 
-    protected static ?string $navigationGroup = 'Community';
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -81,6 +86,7 @@ class HeadhunterChallengeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('title')->searchable()->sortable(),

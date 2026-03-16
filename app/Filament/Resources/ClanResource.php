@@ -22,6 +22,11 @@ class ClanResource extends Resource
 
     protected static ?string $navigationGroup = 'Community';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -109,6 +114,7 @@ class ClanResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Logo')

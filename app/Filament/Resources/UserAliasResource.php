@@ -18,11 +18,16 @@ class UserAliasResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
+    protected static ?string $navigationGroup = 'Community';
+
     protected static ?string $navigationLabel = 'User Aliases';
 
-    protected static ?string $navigationGroup = null;
-
     protected static ?int $navigationSort = 3;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -65,6 +70,7 @@ class UserAliasResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')

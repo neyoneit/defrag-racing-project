@@ -511,14 +511,6 @@ class MapsController extends Controller
             $hasFlagIssue = !empty($item->approved_flags) ||
                 ($item->verification_type && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
 
-            \Log::info('RANK_DEBUG', [
-                'player' => $item->player_name,
-                'time' => $item->time_ms,
-                'vtype' => $item->verification_type ?? null,
-                'flags' => count($item->approved_flags ?? []),
-                'hasFlagIssue' => $hasFlagIssue,
-            ]);
-
             if ($hasFlagIssue) {
                 $item->rank = null;
             } else {

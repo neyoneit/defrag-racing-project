@@ -153,7 +153,15 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     public function canAccessPanel(Panel $panel): bool {
-        return $this->admin;
+        return $this->admin || $this->is_moderator;
+    }
+
+    public function isAdmin(): bool {
+        return (bool) $this->admin;
+    }
+
+    public function isModerator(): bool {
+        return (bool) $this->is_moderator;
     }
 
     public function getFilamentAvatarUrl(): ?string {

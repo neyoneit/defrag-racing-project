@@ -52,6 +52,8 @@ class DemoAssignmentReportResource extends Resource
                                 'wrong_assignment' => 'Wrong Assignment',
                                 'bad_demo' => 'Bad Demo',
                                 'false_flag' => 'False Flag',
+                                'manual_assign' => 'Manual Assign',
+                                'manual_unassign' => 'Manual Unassign',
                             ])
                             ->required()
                             ->disabled(),
@@ -199,6 +201,7 @@ class DemoAssignmentReportResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -211,12 +214,16 @@ class DemoAssignmentReportResource extends Resource
                         'warning' => 'wrong_assignment',
                         'danger' => 'bad_demo',
                         'info' => 'false_flag',
+                        'success' => 'manual_assign',
+                        'gray' => 'manual_unassign',
                     ])
                     ->formatStateUsing(fn (string $state): string => match($state) {
                         'reassignment_request' => 'Reassign',
                         'wrong_assignment' => 'Wrong',
                         'bad_demo' => 'Bad Demo',
                         'false_flag' => 'False Flag',
+                        'manual_assign' => 'Assign',
+                        'manual_unassign' => 'Unassign',
                         default => $state,
                     }),
 
@@ -285,6 +292,8 @@ class DemoAssignmentReportResource extends Resource
                         'wrong_assignment' => 'Wrong Assignment',
                         'bad_demo' => 'Bad Demo',
                         'false_flag' => 'False Flag',
+                        'manual_assign' => 'Manual Assign',
+                        'manual_unassign' => 'Manual Unassign',
                     ]),
             ])
             ->actions([
@@ -393,11 +402,13 @@ class DemoAssignmentReportResource extends Resource
                 Tables\Actions\DeleteAction::make()
                     ->requiresConfirmation()
                     ->modalHeading('Delete Report')
-                    ->modalDescription('Are you sure you want to delete this report? This action cannot be undone.'),
+                    ->modalDescription('Are you sure you want to delete this report? This action cannot be undone.')
+                    ->visible(fn () => auth()->user()?->isAdmin()),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(fn () => auth()->user()?->isAdmin()),
                 ]),
             ]);
     }

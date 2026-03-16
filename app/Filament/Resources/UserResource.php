@@ -19,6 +19,20 @@ class UserResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationGroup = 'Community';
+
+    public const OWNER_USER_ID = 8;
+
+    public static function isOwner(): bool
+    {
+        return auth()->id() === self::OWNER_USER_ID;
+    }
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -51,8 +65,16 @@ class UserResource extends Resource
                     ->default('_404'),
                 Forms\Components\TextInput::make('mdd_id')
                     ->maxLength(255),
-                Forms\Components\Toggle::make('admin')
-                    ->required(),
+                Forms\Components\Section::make('Roles')
+                    ->schema([
+                        Forms\Components\Toggle::make('admin')
+                            ->label('Admin')
+                            ->helperText('Full access: all admin panel sections, can delete, can manage moderators. Cannot grant admin role (only owner can).')
+                            ->disabled(fn () => !self::isOwner()),
+                        Forms\Components\Toggle::make('is_moderator')
+                            ->label('Moderator')
+                            ->helperText('Limited access: Demo Reports, Record Flags, Alias Reports. Can approve/reject but cannot delete.'),
+                    ])->columns(2),
                 Forms\Components\TextInput::make('twitter_name')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('twitch_name')
@@ -94,6 +116,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('username')
                     ->searchable(),

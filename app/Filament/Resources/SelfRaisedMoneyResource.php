@@ -19,9 +19,16 @@ class SelfRaisedMoneyResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
+    protected static ?string $navigationGroup = 'Finance';
+
     protected static ?string $navigationLabel = 'Self-Raised Money';
 
     protected static ?int $navigationSort = 16;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -57,6 +64,7 @@ class SelfRaisedMoneyResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('source')
                     ->label('Source')

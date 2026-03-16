@@ -28,7 +28,14 @@ class ServerResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationGroup = 'Content';
+
     protected static bool $shouldSkipAuthorization = true;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -98,6 +105,7 @@ class ServerResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('name')->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html()
                     ->searchable()

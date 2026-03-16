@@ -121,6 +121,47 @@ const vuetify = createVuetify({
     directives,
 })
 
+// Frontend error logger - sends errors to backend for admin review
+const logFrontendError = (data) => {
+    try {
+        fetch('/api/frontend-errors', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                ...data,
+                url: window.location.href,
+            }),
+            keepalive: true,
+        }).catch(() => {});
+    } catch (e) {
+        // Silently fail - don't cause more errors
+    }
+};
+
+// Catch unhandled JS errors
+window.addEventListener('error', (event) => {
+    logFrontendError({
+        type: 'js_error',
+        message: event.message || 'Unknown error',
+        stack: event.error?.stack || null,
+        component: event.filename || null,
+    });
+});
+
+// Catch unhandled promise rejections (skip axios errors - already logged by interceptor)
+window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason?.isAxiosError) return;
+    const message = event.reason?.message || event.reason?.toString() || 'Unhandled promise rejection';
+    logFrontendError({
+        type: 'js_error',
+        message: message,
+        stack: event.reason?.stack || null,
+    });
+});
+
 createInertiaApp({
     title: (title) => `${title} - Defrag Racing`,
     resolve: async (name) => {
@@ -151,6 +192,17 @@ createInertiaApp({
         app.config.globalProperties.$state = reactive({
             globalBackgroundImage: '/images/bg-image.png'
         })
+
+        // Vue error handler
+        app.config.errorHandler = (err, instance, info) => {
+            console.error('Vue error:', err);
+            logFrontendError({
+                type: 'vue_error',
+                message: err?.message || 'Vue error',
+                stack: err?.stack || null,
+                component: instance?.$options?.name || instance?.$options?.__name || info || null,
+            });
+        };
 
         app.mount(el);
 

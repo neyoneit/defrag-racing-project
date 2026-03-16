@@ -9,6 +9,41 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+// Log API errors to backend for admin review
+window.axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        // Don't log errors from the error logging endpoint itself
+        const url = error.config?.url || '';
+        if (!url.includes('/api/frontend-errors') && error.response?.status >= 400) {
+            try {
+                fetch('/api/frontend-errors', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        type: 'api_error',
+                        message: error.response?.data?.message || error.message || 'API request failed',
+                        url: window.location.href,
+                        endpoint: error.config?.method?.toUpperCase() + ' ' + url,
+                        status_code: error.response?.status,
+                        request_data: JSON.stringify(error.config?.data || null)?.substring(0, 2000),
+                        response_data: typeof error.response?.data === 'string' && error.response.data.includes('<!DOCTYPE')
+                        ? '[HTML error page]'
+                        : JSON.stringify(error.response?.data || null)?.substring(0, 2000),
+                    }),
+                    keepalive: true,
+                }).catch(() => {});
+            } catch (e) {
+                // Silently fail
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 /**
  * Echo exposes an expressive API for subscribing to channels and listening
  * for events that are broadcast by Laravel. Echo and event broadcasting

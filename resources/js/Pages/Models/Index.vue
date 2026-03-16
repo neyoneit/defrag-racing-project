@@ -13,9 +13,11 @@ const props = defineProps({
     search: String,
     myUploads: Boolean,
     approvalStatus: String,
+    perPage: { type: Number, default: 12 },
     load_times: Object,
     availableBaseModels: Object,
     availableAuthors: Object,
+    hasUploads: { type: Boolean, default: false },
 });
 
 // Save current page URL to sessionStorage so "Back to models" returns here
@@ -77,6 +79,7 @@ const sortOptions = [
     { value: 'oldest', label: 'Oldest First' },
 ];
 
+const gridCols = ref(4);
 const searchQuery = ref(props.search || '');
 let searchDebounce = null;
 const onSearchInput = () => {
@@ -88,6 +91,7 @@ const onSearchInput = () => {
 
 // Base model dropdown
 const baseModelDropdownOpen = ref(false);
+const baseModelSearchInput = ref(null);
 const baseModelSearch = ref('');
 const selectedBaseModels = ref(props.baseModel ? props.baseModel.split(',') : []);
 
@@ -116,6 +120,7 @@ const clearBaseModels = () => {
 
 // Author dropdown
 const authorDropdownOpen = ref(false);
+const authorSearchInput = ref(null);
 const authorSearch = ref('');
 const selectedAuthors = ref(props.authors ? props.authors.split(',') : []);
 
@@ -173,6 +178,7 @@ const applyFilters = (updates) => {
         search: updates.search !== undefined ? updates.search : searchQuery.value,
         my_uploads: updates.my_uploads !== undefined ? updates.my_uploads : props.myUploads,
         approval_status: updates.approval_status !== undefined ? updates.approval_status : props.approvalStatus,
+        per_page: updates.per_page !== undefined ? updates.per_page : props.perPage,
     }), {
         preserveState: true,
         preserveScroll: true,
@@ -214,6 +220,17 @@ const getApprovalStatusBadgeClass = (status) => {
     return classes[status] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
 };
 
+const getSkinName = (model) => {
+    let skins = model.available_skins;
+    if (typeof skins === 'string') {
+        try { skins = JSON.parse(skins); } catch (e) { return ''; }
+    }
+    if (Array.isArray(skins) && skins[0] && skins[0] !== 'default') {
+        return '/' + skins[0];
+    }
+    return '';
+};
+
 const getModelTypeLabel = (type) => {
     const labels = {
         'complete': 'Complete Model',
@@ -248,19 +265,6 @@ const getModelTypeBadgeClass = (type) => {
                         <p class="text-gray-400">Browse and download custom player and weapon models</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <button v-if="$page.props.auth.user"
-                                @click="toggleMyUploads()"
-                                :class="[
-                                    'px-5 py-3 font-bold rounded-xl transition-all shadow-lg inline-flex items-center gap-2',
-                                    myUploads
-                                        ? 'bg-purple-500 text-white shadow-purple-500/30'
-                                        : 'bg-white/10 text-gray-300 hover:bg-white/15 hover:text-white'
-                                ]">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                            </svg>
-                            My Uploads
-                        </button>
                     <div class="relative group">
                         <Link v-if="$page.props.auth.user"
                               :href="route('models.create')"
@@ -298,7 +302,50 @@ const getModelTypeBadgeClass = (type) => {
             <div class="flex gap-6">
                 <!-- Left Sidebar - Filters -->
                 <aside class="w-64 flex-shrink-0">
-                    <div class="sticky top-6 space-y-4">
+                    <div class="sticky top-6 space-y-2">
+                        <!-- My Uploads Filter -->
+                        <div v-if="$page.props.auth.user && hasUploads" class="bg-black/40 rounded-xl p-3 border border-white/5">
+                            <h3 class="text-sm font-bold mb-3 flex items-center gap-2" :class="myUploads ? 'text-purple-400' : 'text-white'">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                </svg>
+                                My Uploads
+                                <span v-if="myUploads" class="font-normal text-xs text-gray-500">(click to deselect)</span>
+                            </h3>
+                            <div class="flex gap-1">
+                                <button
+                                    @click="applyFilters({ my_uploads: !(myUploads && approvalStatus === 'pending'), approval_status: myUploads && approvalStatus === 'pending' ? null : 'pending' })"
+                                    :class="[
+                                        'flex-1 px-2 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                        myUploads && approvalStatus === 'pending'
+                                            ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                            : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                                    ]">
+                                    Pending
+                                </button>
+                                <button
+                                    @click="applyFilters({ my_uploads: !(myUploads && approvalStatus === 'approved'), approval_status: myUploads && approvalStatus === 'approved' ? null : 'approved' })"
+                                    :class="[
+                                        'flex-1 px-2 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                        myUploads && approvalStatus === 'approved'
+                                            ? 'bg-green-500/30 text-green-300 border border-green-500/50'
+                                            : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                                    ]">
+                                    Approved
+                                </button>
+                                <button
+                                    @click="applyFilters({ my_uploads: !(myUploads && approvalStatus === 'rejected'), approval_status: myUploads && approvalStatus === 'rejected' ? null : 'rejected' })"
+                                    :class="[
+                                        'flex-1 px-2 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                        myUploads && approvalStatus === 'rejected'
+                                            ? 'bg-red-500/30 text-red-300 border border-red-500/50'
+                                            : 'text-gray-500 hover:bg-white/5 hover:text-white'
+                                    ]">
+                                    Rejected
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Search Filter -->
                         <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
@@ -317,7 +364,7 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
 
                         <!-- Category Filter -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
+                        <div class="bg-black/40 rounded-xl p-3 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -328,61 +375,12 @@ const getModelTypeBadgeClass = (type) => {
                                 <button v-for="cat in categories" :key="cat.value"
                                         @click="switchCategory(cat.value)"
                                         :class="[
-                                            'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                            'w-full text-left px-3 py-1.5 rounded-lg font-medium transition-all text-sm',
                                             category === cat.value
                                                 ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                                                 : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                         ]">
                                     {{ cat.label }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Sort Options -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
-                                </svg>
-                                Sort By
-                            </h3>
-                            <div class="space-y-1">
-                                <button
-                                    v-for="option in sortOptions"
-                                    :key="option.value"
-                                    @click="changeSort(option.value)"
-                                    :class="[
-                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
-                                        (sort || 'newest') === option.value
-                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                    ]">
-                                    {{ option.label }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Preview Mode -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Preview
-                            </h3>
-                            <div class="space-y-1">
-                                <button
-                                    v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category === 'player' || category === 'all' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumbnail' }]"
-                                    :key="mode.value"
-                                    @click="setPreviewMode(mode.value)"
-                                    :class="[
-                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
-                                        previewMode === mode.value
-                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                    ]">
-                                    {{ mode.label }}
                                 </button>
                             </div>
                         </div>
@@ -396,25 +394,18 @@ const getModelTypeBadgeClass = (type) => {
                                 Base Model
                                 <span v-if="selectedBaseModels.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedBaseModels.length }}</span>
                             </h3>
-                            <button
-                                @click.stop="baseModelDropdownOpen = !baseModelDropdownOpen"
-                                class="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition-colors"
-                            >
-                                <span v-if="selectedBaseModels.length" class="text-white truncate">{{ selectedBaseModels.join(', ') }}</span>
-                                <span v-else>Select base models...</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 flex-shrink-0 transition-transform" :class="{ 'rotate-180': baseModelDropdownOpen }">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                </svg>
-                            </button>
+                            <input
+                                ref="baseModelSearchInput"
+                                v-model="baseModelSearch"
+                                type="text"
+                                :placeholder="selectedBaseModels.length ? selectedBaseModels.join(', ') : 'Search base models...'"
+                                class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+                                :class="{ 'placeholder-white': selectedBaseModels.length }"
+                                @focus="baseModelDropdownOpen = true"
+                                @click.stop
+                            />
                             <!-- Dropdown panel -->
-                            <div v-if="baseModelDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
-                                <input
-                                    v-model="baseModelSearch"
-                                    type="text"
-                                    placeholder="Filter..."
-                                    class="w-full bg-transparent border-b border-white/10 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none"
-                                    @click.stop
-                                />
+                            <div v-if="baseModelDropdownOpen" class="mt-1 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <div class="overflow-y-auto flex-1">
                                     <label
                                         v-for="[name, count] in filteredBaseModels"
@@ -448,25 +439,18 @@ const getModelTypeBadgeClass = (type) => {
                                 Author
                                 <span v-if="selectedAuthors.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedAuthors.length }}</span>
                             </h3>
-                            <button
-                                @click.stop="authorDropdownOpen = !authorDropdownOpen"
-                                class="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition-colors"
-                            >
-                                <span v-if="selectedAuthors.length" class="text-white truncate">{{ selectedAuthors.join(', ') }}</span>
-                                <span v-else>Select authors...</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 flex-shrink-0 transition-transform" :class="{ 'rotate-180': authorDropdownOpen }">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                </svg>
-                            </button>
+                            <input
+                                ref="authorSearchInput"
+                                v-model="authorSearch"
+                                type="text"
+                                :placeholder="selectedAuthors.length ? selectedAuthors.join(', ') : 'Search authors...'"
+                                class="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+                                :class="{ 'placeholder-white': selectedAuthors.length }"
+                                @focus="authorDropdownOpen = true"
+                                @click.stop
+                            />
                             <!-- Dropdown panel -->
-                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
-                                <input
-                                    v-model="authorSearch"
-                                    type="text"
-                                    placeholder="Filter..."
-                                    class="w-full bg-transparent border-b border-white/10 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none"
-                                    @click.stop
-                                />
+                            <div v-if="authorDropdownOpen" class="mt-1 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col resize-y" style="min-height: 120px; height: 240px;">
                                 <div class="overflow-y-auto flex-1">
                                     <label
                                         v-for="[name, count] in filteredAuthors"
@@ -491,62 +475,101 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
                         </div>
 
-                        <!-- My Uploads Filter -->
-                        <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                </svg>
-                                My Uploads
-                            </h3>
-                            <button
-                                @click="toggleMyUploads()"
-                                :class="[
-                                    'w-full px-3 py-2 rounded-lg font-medium transition-all text-sm',
-                                    myUploads
-                                        ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/30'
-                                        : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-                                ]">
-                                {{ myUploads ? 'Viewing My Uploads' : 'Show My Uploads' }}
-                            </button>
-
-                            <!-- Approval Status Sub-Filter -->
-                            <div v-if="myUploads" class="mt-3 pt-3 border-t border-white/10">
-                                <h4 class="text-xs font-semibold text-gray-400 mb-2">Status Filter</h4>
-                                <div class="space-y-1">
+                        <!-- Sort, Preview & Display -->
+                        <div class="bg-black/40 rounded-xl p-3 border border-white/5 space-y-2.5">
+                            <div>
+                                <div class="text-xs font-bold text-gray-400 mb-1.5 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Preview
+                                </div>
+                                <div class="flex gap-1">
                                     <button
-                                        @click="changeApprovalStatus('pending')"
+                                        v-for="mode in [{ value: 'idle', label: 'Idle' }, { value: 'rotate', label: 'Rotate' }, ...(category === 'player' || category === 'all' ? [{ value: 'gesture', label: 'Gesture' }] : []), { value: 'preview', label: 'Thumb' }]"
+                                        :key="mode.value"
+                                        @click="setPreviewMode(mode.value)"
                                         :class="[
-                                            'w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-all',
-                                            approvalStatus === 'pending'
-                                                ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
+                                            'flex-1 px-1 py-1.5 rounded-lg font-medium transition-all text-xs text-center',
+                                            previewMode === mode.value
+                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                                                 : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                         ]">
-                                        Pending
-                                    </button>
-                                    <button
-                                        @click="changeApprovalStatus('approved')"
-                                        :class="[
-                                            'w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-all',
-                                            approvalStatus === 'approved'
-                                                ? 'bg-green-500/30 text-green-300 border border-green-500/50'
-                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                        ]">
-                                        Approved
-                                    </button>
-                                    <button
-                                        @click="changeApprovalStatus('rejected')"
-                                        :class="[
-                                            'w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-all',
-                                            approvalStatus === 'rejected'
-                                                ? 'bg-red-500/30 text-red-300 border border-red-500/50'
-                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                                        ]">
-                                        Rejected
+                                        {{ mode.label }}
                                     </button>
                                 </div>
                             </div>
+                            <div>
+                                <div class="text-xs font-bold text-gray-400 mb-1 flex items-center gap-1.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                                    </svg>
+                                    Sort
+                                </div>
+                                <div class="flex gap-1">
+                                    <button
+                                        v-for="option in sortOptions"
+                                        :key="option.value"
+                                        @click="changeSort(option.value)"
+                                        :class="[
+                                            'flex-1 px-2 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                            (sort || 'newest') === option.value
+                                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        ]">
+                                        {{ option.label }}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <div class="text-xs font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                        </svg>
+                                        Per Page
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button
+                                            v-for="n in [12, 24, 48]"
+                                            :key="n"
+                                            @click="applyFilters({ per_page: n })"
+                                            :class="[
+                                                'flex-1 px-1 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                                (perPage || 12) === n
+                                                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                            ]">
+                                            {{ n }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-xs font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 018.25 20.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z" />
+                                        </svg>
+                                        Grid
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button
+                                            v-for="n in [3, 4, 6]"
+                                            :key="n"
+                                            @click="gridCols = n"
+                                            :class="[
+                                                'flex-1 px-1 py-1 rounded-lg font-medium transition-all text-xs text-center',
+                                                gridCols === n
+                                                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                            ]">
+                                            {{ n }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                 </aside>
 
@@ -569,7 +592,11 @@ const getModelTypeBadgeClass = (type) => {
                     </div>
 
                     <!-- Models Grid -->
-                    <div v-if="models.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div v-if="models.data.length > 0" class="grid" :class="{
+                        'grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6': gridCols === 3,
+                        'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4': gridCols === 4,
+                        'grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3': gridCols === 6,
+                    }">
                         <Link v-for="(model, index) in models.data" :key="model.id"
                               :href="model.is_nsfw && !$page.props.auth.user ? route('login') : route('models.show', model.id)"
                               @click="saveBackUrl()"
@@ -606,8 +633,8 @@ const getModelTypeBadgeClass = (type) => {
                                         NSFW
                                     </div>
 
-                                    <!-- Category Badge -->
-                                    <div class="px-3 py-1 bg-black/60 rounded-full text-xs font-bold text-white border border-white/20">
+                                    <!-- Category Badge (only in All Models view) -->
+                                    <div v-if="!category || category === 'all'" class="px-3 py-1 bg-black/60 rounded-full text-xs font-bold text-white border border-white/20">
                                         {{ model.category }}
                                     </div>
 
@@ -619,37 +646,14 @@ const getModelTypeBadgeClass = (type) => {
                             </div>
 
                             <!-- Info -->
-                            <div class="p-4">
-                                <h3 class="text-lg font-black text-white mb-1 group-hover:text-blue-400 transition-colors truncate">
+                            <div :class="gridCols >= 6 ? 'p-2' : 'p-4'">
+                                <h3 :class="[gridCols >= 6 ? 'text-sm' : 'text-lg', 'font-black text-white mb-1 group-hover:text-blue-400 transition-colors truncate']">
                                     {{ model.name }}
                                 </h3>
 
-                                <div class="text-sm text-gray-400 mb-3">
-                                    <p v-if="model.author">by <span v-html="q3tohtml(model.author)"></span></p>
-                                    <p v-if="model.base_model" class="text-xs text-gray-500 font-mono">/model {{ model.base_model }}{{ model.available_skins && model.available_skins[0] && model.available_skins[0] !== 'default' ? '/' + model.available_skins[0] : '' }}</p>
-                                    <div v-if="model.model_type" class="mt-2">
-                                        <span :class="getModelTypeBadgeClass(model.model_type)" class="text-xs px-2 py-1 rounded font-semibold">
-                                            {{ getModelTypeLabel(model.model_type) }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Stats -->
-                                <div class="flex items-center gap-4 text-xs text-gray-500">
-                                    <span v-if="model.poly_count" class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
-                                        </svg>
-                                        {{ model.poly_count }} poly
-                                    </span>
-                                    <span class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                        </svg>
-                                        {{ model.downloads }}
-                                    </span>
-                                    <span v-if="model.has_sounds" title="Has custom sounds">🔊</span>
-                                    <span v-if="model.has_ctf_skins" title="Has CTF skins">🏁</span>
+                                <div class="text-sm text-gray-400" :class="gridCols < 6 ? 'mb-3' : 'mb-1'">
+                                    <p v-if="model.author" :class="[gridCols >= 6 ? 'text-xs' : '', 'truncate']" :title="model.author">by <span v-html="q3tohtml(model.author)"></span></p>
+                                    <p v-if="model.base_model && gridCols <= 3" class="text-xs text-gray-500 font-mono">/model {{ model.base_model }}{{ getSkinName(model) }}</p>
                                 </div>
                             </div>
                         </Link>
