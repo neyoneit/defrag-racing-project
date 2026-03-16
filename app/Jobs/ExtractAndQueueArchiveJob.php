@@ -92,6 +92,9 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                 $destPath = "{$directory}/{$demoFile['name']}";
                 rename($demoFile['path'], $destPath);
 
+                // Update file_path
+                $demo->update(['file_path' => "demos/temp/{$demo->id}/{$demoFile['name']}"]);
+
                 // Queue for processing
                 ProcessDemoJob::dispatch($demo);
             }

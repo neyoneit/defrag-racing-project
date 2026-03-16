@@ -260,7 +260,7 @@ class MaplistController extends Controller
     /**
      * Show a single maplist
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         $maplist = Maplist::with(['user', 'maps', 'tags'])->findOrFail($id);
 
@@ -274,15 +274,21 @@ class MaplistController extends Controller
             return redirect()->route('maplists.playLater');
         }
 
-        // Increment views count
-        $maplist->increment('views_count');
+        // Check if partial reload
+        $only = $request->header('X-Inertia-Partial-Data') ?? '';
+        $isPartial = !empty($only);
+
+        // Only increment views on full page load
+        if (!$isPartial) {
+            $maplist->increment('views_count');
+        }
 
         $isLiked = Auth::check() ? $maplist->isLikedBy(Auth::id()) : false;
         $isFavorited = Auth::check() ? $maplist->isFavoritedBy(Auth::id()) : false;
 
-        // Fetch servers for Play Later functionality
+        // Fetch servers for Play Later functionality (only on full load)
         $servers = [];
-        if ($maplist->is_play_later && Auth::check() && Auth::id() === $maplist->user_id) {
+        if (!$isPartial && $maplist->is_play_later && Auth::check() && Auth::id() === $maplist->user_id) {
             $servers = \App\Models\Server::where('online', true)
                 ->where('visible', true)
                 ->with('onlinePlayers')
@@ -295,7 +301,7 @@ class MaplistController extends Controller
                         'address' => $server->ip,
                         'port' => $server->port,
                         'players_current' => $server->onlinePlayers->count(),
-                        'players_max' => 64, // Default max players
+                        'players_max' => 64,
                         'location' => $server->location,
                     ];
                 });

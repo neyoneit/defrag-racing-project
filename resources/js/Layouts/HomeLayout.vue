@@ -394,6 +394,7 @@
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
                                             My Profile
                                         </DropdownLink>
+                                        <div class="mx-3 border-t border-white/10 my-1" />
                                         <DropdownLink :href="route('profile.show')">
                                             Settings
                                         </DropdownLink>

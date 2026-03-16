@@ -15,15 +15,10 @@ use Illuminate\Support\Facades\Cache;
 
 class ProfileController extends Controller {
     public function index(Request $request, $userId) {
-        $totalStart = microtime(true);
-        $timings = [];
-
-        $start = microtime(true);
         $user = User::query()
             ->where('id', $userId)
             ->with('clan')
             ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout']);
-        $timings['user_query'] = round((microtime(true) - $start) * 1000, 2);
 
         if (! $user) {
             return redirect()->route('profile.mdd', $userId);
@@ -37,352 +32,221 @@ class ProfileController extends Controller {
                 ->with('hasProfile', false);
         }
 
-        $start = microtime(true);
-        $worldRecordsCpm = Record::where('mdd_id', $user->mdd_id)->where('rank', 1)->where('physics', 'cpm')->count();
-        $worldRecordsVq3 = Record::where('mdd_id', $user->mdd_id)->where('rank', 1)->where('physics', 'vq3')->count();
+        // Check which props Inertia is requesting (partial reload)
+        $only = $request->header('X-Inertia-Partial-Data');
+        $partialProps = $only ? explode(',', $only) : [];
+        $isPartial = !empty($partialProps);
 
-        // Total records count
-        $totalRecordsCpm = Record::where('mdd_id', $user->mdd_id)->where('physics', 'cpm')->count();
-        $totalRecordsVq3 = Record::where('mdd_id', $user->mdd_id)->where('physics', 'vq3')->count();
+        // Helper: should we compute this prop?
+        $needs = function ($prop) use ($isPartial, $partialProps) {
+            return !$isPartial || in_array($prop, $partialProps);
+        };
 
-        // Top 3 positions count
-        $top3Cpm = Record::where('mdd_id', $user->mdd_id)->where('physics', 'cpm')->whereBetween('rank', [1, 3])->count();
-        $top3Vq3 = Record::where('mdd_id', $user->mdd_id)->where('physics', 'vq3')->whereBetween('rank', [1, 3])->count();
-
-        // Top 10 positions count
-        $top10Cpm = Record::where('mdd_id', $user->mdd_id)->where('physics', 'cpm')->whereBetween('rank', [1, 10])->count();
-        $top10Vq3 = Record::where('mdd_id', $user->mdd_id)->where('physics', 'vq3')->whereBetween('rank', [1, 10])->count();
-        $timings['basic_stats'] = round((microtime(true) - $start) * 1000, 2);
-
-        // Map feature stats - join with maps table to check features
-        $start = microtime(true);
-        // Slick records
-        $slickCpm = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'cpm')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%slick%')
-            ->count();
-        $slickVq3 = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'vq3')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%slick%')
-            ->count();
-
-        // Jumppad records
-        $jumppadCpm = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'cpm')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%jumppad%')
-            ->count();
-        $jumppadVq3 = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'vq3')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%jumppad%')
-            ->count();
-
-        // Teleporter records
-        $teleporterCpm = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'cpm')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%tele%')
-            ->count();
-        $teleporterVq3 = Record::where('records.mdd_id', $user->mdd_id)
-            ->where('records.physics', 'vq3')
-            ->join('maps', 'records.mapname', '=', 'maps.name')
-            ->where('maps.functions', 'LIKE', '%tele%')
-            ->count();
-        $timings['map_features'] = round((microtime(true) - $start) * 1000, 2);
-
-        // Activity streak - longest consecutive days with records
-        $start = microtime(true);
-        $longestStreak = DB::select("
-            SELECT MAX(streak) as longest_streak
-            FROM (
-                SELECT
-                    @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak,
-                    @prev_date := DATE(date_set) as date_set
-                FROM records, (SELECT @streak := 0, @prev_date := NULL) vars
-                WHERE mdd_id = ?
-                ORDER BY date_set
-            ) streaks
-        ", [$user->mdd_id]);
-        $longestStreakDays = $longestStreak[0]->longest_streak ?? 0;
-        $timings['activity_streak'] = round((microtime(true) - $start) * 1000, 2);
-
-        // Unique maps played
-        $start = microtime(true);
-        $uniqueMapsCpm = Record::where('mdd_id', $user->mdd_id)->where('physics', 'cpm')->distinct('mapname')->count('mapname');
-        $uniqueMapsVq3 = Record::where('mdd_id', $user->mdd_id)->where('physics', 'vq3')->distinct('mapname')->count('mapname');
-
-        // Average Rank - Overall average position across all records
-        $avgRankCpm = Record::where('mdd_id', $user->mdd_id)->where('physics', 'cpm')->avg('rank');
-        $avgRankVq3 = Record::where('mdd_id', $user->mdd_id)->where('physics', 'vq3')->avg('rank');
-
-        // Dominance Score - % of unique maps where you hold #1
-        $dominanceCpm = $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0;
-        $dominanceVq3 = $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0;
-
-        // First Record Date - Defrag journey start
-        $firstRecord = Record::where('mdd_id', $user->mdd_id)->orderBy('date_set', 'ASC')->first(['date_set']);
-        $firstRecordDate = $firstRecord ? $firstRecord->date_set : null;
-
-        // Most Active Month/Year - When most records were set
-        $mostActiveMonth = DB::select("
-            SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count
-            FROM records
-            WHERE mdd_id = ?
-            GROUP BY month
-            ORDER BY count DESC
-            LIMIT 1
-        ", [$user->mdd_id]);
-        $mostActiveMonthData = $mostActiveMonth[0] ?? null;
-
-        // Weapon Specialist - now cached in mdd_profiles table via processStats()
-
-        // Marathon Runner - Longest time record set
-        $marathonRecord = Record::where('mdd_id', $user->mdd_id)
-            ->orderBy('time', 'DESC')
-            ->first(['time', 'mapname', 'physics', 'mode']);
-        $timings['additional_stats'] = round((microtime(true) - $start) * 1000, 2);
-
+        $mddId = $user->mdd_id;
         $type = $request->input('type', 'latest');
         $mode = $request->input('mode', 'all');
 
-        $types = ['recentlybeaten', 'tiedranks', 'bestranks', 'besttimes', 'worstranks', 'worsttimes', 'untouchable'];
-
-        if (!in_array($type, $types)) {
-            $type = 'latest';
-        }
-
-        $baseRecords = match ($type) {
-            'recentlybeaten'    => $this->recentlyBeaten($user->mdd_id),
-            'tiedranks'         => $this->tiedRanks($user->mdd_id),
-            'bestranks'         => $this->bestRanks($user->mdd_id),
-            'besttimes'         => $this->bestTimes($user->mdd_id),
-            'worstranks'        => $this->worstRanks($user->mdd_id),
-            'worsttimes'        => $this->worstTimes($user->mdd_id),
-            'untouchable'       => $this->untouchableWRs($user->mdd_id),
-            default             => $this->latestRecords($user->mdd_id),
-        };
-
-        // Apply mode filter (use table alias 'a' for queries that use it, otherwise default 'records')
-        $tablePrefix = ($type === 'recentlybeaten' || $type === 'tiedranks' || $type === 'besttimes' || $type === 'worsttimes') ? 'a' : 'records';
-
-        if ($mode == 'run') {
-            $baseRecords->where($tablePrefix . '.mode', 'run');
-        } elseif ($mode == 'ctf') {
-            $baseRecords->where($tablePrefix . '.mode', 'LIKE', 'ctf%');
-        } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
-            $baseRecords->where($tablePrefix . '.mode', $mode);
-        }
-
-        // Get VQ3 records (20 per page)
-        $start = microtime(true);
-        $vq3Records = clone $baseRecords;
-        $vq3Records = $vq3Records->where($tablePrefix . '.physics', 'vq3');
-
-        // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
-        if ($tablePrefix === 'records') {
-            $vq3Records = $vq3Records->with('map');
-        }
-        $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
-        $timings['vq3_records'] = round((microtime(true) - $start) * 1000, 2);
-
-        // Get CPM records (20 per page)
-        $start = microtime(true);
-        $cpmRecords = clone $baseRecords;
-        $cpmRecords = $cpmRecords->where($tablePrefix . '.physics', 'cpm');
-
-        // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
-        if ($tablePrefix === 'records') {
-            $cpmRecords = $cpmRecords->with('map');
-        }
-        $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
-        $timings['cpm_records'] = round((microtime(true) - $start) * 1000, 2);
-
-        // Merge profile data with additional stats
-        $profileData = $user->mdd_profile;
-        if ($profileData) {
-            $profileData->cpm_records = $totalRecordsCpm;
-            $profileData->vq3_records = $totalRecordsVq3;
-            $profileData->cpm_top3 = $top3Cpm;
-            $profileData->vq3_top3 = $top3Vq3;
-            $profileData->cpm_top10 = $top10Cpm;
-            $profileData->vq3_top10 = $top10Vq3;
-            $profileData->cpm_slick = $slickCpm;
-            $profileData->vq3_slick = $slickVq3;
-            $profileData->cpm_jumppad = $jumppadCpm;
-            $profileData->vq3_jumppad = $jumppadVq3;
-            $profileData->cpm_teleporter = $teleporterCpm;
-            $profileData->vq3_teleporter = $teleporterVq3;
-            $profileData->cpm_unique_maps = $uniqueMapsCpm;
-            $profileData->vq3_unique_maps = $uniqueMapsVq3;
-            $profileData->longest_streak = $longestStreakDays;
-            $profileData->cpm_avg_rank = $avgRankCpm ? round($avgRankCpm, 1) : 0;
-            $profileData->vq3_avg_rank = $avgRankVq3 ? round($avgRankVq3, 1) : 0;
-            $profileData->cpm_dominance = $dominanceCpm;
-            $profileData->vq3_dominance = $dominanceVq3;
-            $profileData->first_record_date = $firstRecordDate;
-            $profileData->most_active_month = $mostActiveMonthData;
-            $profileData->marathon_record = $marathonRecord;
-        }
-
-        // Get competitors and rivals (with error handling)
-        $start = microtime(true);
-        try {
-            $start_cpm_comp = microtime(true);
-            $cpmCompetitors = $this->getCachedCompetitors($user->mdd_id, 'cpm');
-            $timings['cpm_competitors_ms'] = round((microtime(true) - $start_cpm_comp) * 1000, 2);
-
-            $start_vq3_comp = microtime(true);
-            $vq3Competitors = $this->getCachedCompetitors($user->mdd_id, 'vq3');
-            $timings['vq3_competitors_ms'] = round((microtime(true) - $start_vq3_comp) * 1000, 2);
-
-            $start_cpm_rivals = microtime(true);
-            $cpmRivals = $this->getCachedRivals($user->mdd_id, 'cpm');
-            $timings['cpm_rivals_ms'] = round((microtime(true) - $start_cpm_rivals) * 1000, 2);
-
-            $start_vq3_rivals = microtime(true);
-            $vq3Rivals = $this->getCachedRivals($user->mdd_id, 'vq3');
-            $timings['vq3_rivals_ms'] = round((microtime(true) - $start_vq3_rivals) * 1000, 2);
-
-            $timings['competitors_rivals'] = round((microtime(true) - $start) * 1000, 2);
-
-            // Debug logging
-            \Log::info('Competitors/Rivals loaded', [
-                'cpm_comp_better' => count($cpmCompetitors['better']),
-                'cpm_comp_worse' => count($cpmCompetitors['worse']),
-                'cpm_rivals_beaten' => count($cpmRivals['beaten']),
-                'cpm_rivals_beaten_by' => count($cpmRivals['beaten_by']),
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error loading competitors/rivals: ' . $e->getMessage());
-            $cpmCompetitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-            $vq3Competitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-            $cpmRivals = ['beaten' => [], 'beaten_by' => []];
-            $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
-            $timings['competitors_rivals'] = round((microtime(true) - $start) * 1000, 2);
-        }
-
-        // Get unplayed maps for completionist list
-        $start = microtime(true);
-        $unplayedMaps = $this->getUnplayedMaps($user->mdd_id, $request->input('unplayed_page', 1));
-        $totalMaps = DB::table('maps')->count();
-        $timings['unplayed_maps'] = round((microtime(true) - $start) * 1000, 2);
-
-        \Log::info('Unplayed maps data', [
-            'total' => $unplayedMaps->total(),
-            'per_page' => $unplayedMaps->perPage(),
-            'current_page' => $unplayedMaps->currentPage(),
-            'count' => count($unplayedMaps->items())
-        ]);
-
-        // Get user's maplists
-        $start = microtime(true);
-        $isOwnProfile = auth()->check() && auth()->id() === $user->id;
-
-        if ($isOwnProfile) {
-            // For own profile: show Play Later first, then top 3 public maplists
-            $playLater = \App\Models\Maplist::where('user_id', $user->id)
-                ->where('is_play_later', true)
-                ->first();
-
-            $publicMaplists = \App\Models\Maplist::where('user_id', $user->id)
-                ->where('is_public', true)
-                ->orderBy('favorites_count', 'desc')
-                ->limit(3)
-                ->get();
-
-            $userMaplists = collect();
-            if ($playLater) {
-                $userMaplists->push($playLater);
+        // --- Records (needed for records pagination or full load) ---
+        if ($needs('vq3Records') || $needs('cpmRecords')) {
+            $types = ['recentlybeaten', 'tiedranks', 'bestranks', 'besttimes', 'worstranks', 'worsttimes', 'untouchable'];
+            if (!in_array($type, $types)) {
+                $type = 'latest';
             }
-            $userMaplists = $userMaplists->merge($publicMaplists);
-        } else {
-            // For other users' profiles: show only public maplists
-            $userMaplists = \App\Models\Maplist::where('user_id', $user->id)
-                ->where('is_public', true)
-                ->orderBy('favorites_count', 'desc')
-                ->limit(3)
-                ->get();
-        }
-        $timings['maplists'] = round((microtime(true) - $start) * 1000, 2);
 
-        $timings['total'] = round((microtime(true) - $totalStart) * 1000, 2);
+            $baseRecords = match ($type) {
+                'recentlybeaten'    => $this->recentlyBeaten($mddId),
+                'tiedranks'         => $this->tiedRanks($mddId),
+                'bestranks'         => $this->bestRanks($mddId),
+                'besttimes'         => $this->bestTimes($mddId),
+                'worstranks'        => $this->worstRanks($mddId),
+                'worsttimes'        => $this->worstTimes($mddId),
+                'untouchable'       => $this->untouchableWRs($mddId),
+                default             => $this->latestRecords($mddId),
+            };
 
-        \Log::info('Profile page load times', $timings);
+            $tablePrefix = ($type === 'recentlybeaten' || $type === 'tiedranks' || $type === 'besttimes' || $type === 'worsttimes') ? 'a' : 'records';
 
-        // Load user aliases - Always load aliases (even if empty) to allow suggestions
-        $canManageAliases = false;
-        $aliasSuggestions = null;
-        $canSuggestAlias = false;
-
-        if ($isOwnProfile) {
-            // For own profile, show all aliases (approved and pending)
-            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->get(['id', 'alias', 'is_approved', 'created_at']);
-            $canManageAliases = true;
-
-            // Load pending alias suggestions for this user
-            $aliasSuggestions = \App\Models\AliasSuggestion::where('user_id', $user->id)
-                ->where('status', 'pending')
-                ->with('suggestedBy:id,name,profile_photo_path')
-                ->orderBy('created_at', 'desc')
-                ->get();
-        } else {
-            // For public profiles, only show approved aliases
-            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
-                ->where('is_approved', true)
-                ->orderBy('created_at', 'desc')
-                ->get(['alias']);
-
-            // Check if current user can suggest aliases (authenticated and has 30+ records)
-            // Allow suggesting even if target user has no aliases yet
-            if (auth()->check()) {
-                $canSuggestAlias = auth()->user()->canReportDemos(); // Uses same 30 record requirement
+            if ($mode == 'run') {
+                $baseRecords->where($tablePrefix . '.mode', 'run');
+            } elseif ($mode == 'ctf') {
+                $baseRecords->where($tablePrefix . '.mode', 'LIKE', 'ctf%');
+            } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
+                $baseRecords->where($tablePrefix . '.mode', $mode);
             }
+
+            $vq3Records = clone $baseRecords;
+            $vq3Records = $vq3Records->where($tablePrefix . '.physics', 'vq3');
+            if ($tablePrefix === 'records') {
+                $vq3Records = $vq3Records->with('map');
+            }
+            $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
+
+            $cpmRecords = clone $baseRecords;
+            $cpmRecords = $cpmRecords->where($tablePrefix . '.physics', 'cpm');
+            if ($tablePrefix === 'records') {
+                $cpmRecords = $cpmRecords->with('map');
+            }
+            $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
         }
 
-        // Load top downloaded demos
-        $topDownloadedDemos = \App\Models\UploadedDemo::where('user_id', $user->id)
-            ->where('download_count', '>', 0)
-            ->orderBy('download_count', 'desc')
-            ->limit(5)
-            ->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
+        // --- Profile stats (only on full load) ---
+        if (!$isPartial) {
+            $worldRecordsCpm = Record::where('mdd_id', $mddId)->where('rank', 1)->where('physics', 'cpm')->count();
+            $worldRecordsVq3 = Record::where('mdd_id', $mddId)->where('rank', 1)->where('physics', 'vq3')->count();
+            $totalRecordsCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->count();
+            $totalRecordsVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->count();
+            $top3Cpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->whereBetween('rank', [1, 3])->count();
+            $top3Vq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->whereBetween('rank', [1, 3])->count();
+            $top10Cpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->whereBetween('rank', [1, 10])->count();
+            $top10Vq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->whereBetween('rank', [1, 10])->count();
 
-        // Demo statistics for stat box
-        $demoStats = [
-            'total_demos' => \App\Models\UploadedDemo::where('user_id', $user->id)->count(),
-            'total_downloads' => (int) \App\Models\UploadedDemo::where('user_id', $user->id)->sum('download_count'),
-            'demos_with_downloads' => \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->count(),
-            'unique_maps' => \App\Models\UploadedDemo::where('user_id', $user->id)->distinct('map_name')->count('map_name'),
-            'most_downloaded' => $topDownloadedDemos->first()?->download_count ?? 0,
-        ];
+            $slickCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
+            $slickVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
+            $jumppadCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
+            $jumppadVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
+            $teleporterCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
+            $teleporterVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
 
-        return Inertia::render('Profile')
-            ->with('vq3Records', $vq3Records)
-            ->with('cpmRecords', $cpmRecords)
+            $longestStreak = DB::select("SELECT MAX(streak) as longest_streak FROM (SELECT @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak, @prev_date := DATE(date_set) as date_set FROM records, (SELECT @streak := 0, @prev_date := NULL) vars WHERE mdd_id = ? ORDER BY date_set) streaks", [$mddId]);
+            $longestStreakDays = $longestStreak[0]->longest_streak ?? 0;
+
+            $uniqueMapsCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->distinct('mapname')->count('mapname');
+            $uniqueMapsVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->distinct('mapname')->count('mapname');
+            $avgRankCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->avg('rank');
+            $avgRankVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->avg('rank');
+            $dominanceCpm = $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0;
+            $dominanceVq3 = $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0;
+            $firstRecord = Record::where('mdd_id', $mddId)->orderBy('date_set', 'ASC')->first(['date_set']);
+            $firstRecordDate = $firstRecord ? $firstRecord->date_set : null;
+            $mostActiveMonth = DB::select("SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count FROM records WHERE mdd_id = ? GROUP BY month ORDER BY count DESC LIMIT 1", [$mddId]);
+            $mostActiveMonthData = $mostActiveMonth[0] ?? null;
+            $marathonRecord = Record::where('mdd_id', $mddId)->orderBy('time', 'DESC')->first(['time', 'mapname', 'physics', 'mode']);
+
+            $profileData = $user->mdd_profile;
+            if ($profileData) {
+                $profileData->cpm_records = $totalRecordsCpm;
+                $profileData->vq3_records = $totalRecordsVq3;
+                $profileData->cpm_top3 = $top3Cpm;
+                $profileData->vq3_top3 = $top3Vq3;
+                $profileData->cpm_top10 = $top10Cpm;
+                $profileData->vq3_top10 = $top10Vq3;
+                $profileData->cpm_slick = $slickCpm;
+                $profileData->vq3_slick = $slickVq3;
+                $profileData->cpm_jumppad = $jumppadCpm;
+                $profileData->vq3_jumppad = $jumppadVq3;
+                $profileData->cpm_teleporter = $teleporterCpm;
+                $profileData->vq3_teleporter = $teleporterVq3;
+                $profileData->cpm_unique_maps = $uniqueMapsCpm;
+                $profileData->vq3_unique_maps = $uniqueMapsVq3;
+                $profileData->longest_streak = $longestStreakDays;
+                $profileData->cpm_avg_rank = $avgRankCpm ? round($avgRankCpm, 1) : 0;
+                $profileData->vq3_avg_rank = $avgRankVq3 ? round($avgRankVq3, 1) : 0;
+                $profileData->cpm_dominance = $dominanceCpm;
+                $profileData->vq3_dominance = $dominanceVq3;
+                $profileData->first_record_date = $firstRecordDate;
+                $profileData->most_active_month = $mostActiveMonthData;
+                $profileData->marathon_record = $marathonRecord;
+            }
+
+            // Competitors and rivals
+            try {
+                $cpmCompetitors = $this->getCachedCompetitors($mddId, 'cpm');
+                $vq3Competitors = $this->getCachedCompetitors($mddId, 'vq3');
+                $cpmRivals = $this->getCachedRivals($mddId, 'cpm');
+                $vq3Rivals = $this->getCachedRivals($mddId, 'vq3');
+            } catch (\Exception $e) {
+                $cpmCompetitors = ['better' => [], 'worse' => [], 'my_score' => 0];
+                $vq3Competitors = ['better' => [], 'worse' => [], 'my_score' => 0];
+                $cpmRivals = ['beaten' => [], 'beaten_by' => []];
+                $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
+            }
+
+            // Activity heatmap
+            $activityYear = (int) $request->input('activity_year', date('Y'));
+            $activityData = $this->getActivityData($mddId, $activityYear);
+            $activityYears = $this->getActivityYears($mddId);
+
+            // Maplists
+            $isOwnProfile = auth()->check() && auth()->id() === $user->id;
+            if ($isOwnProfile) {
+                $playLater = \App\Models\Maplist::where('user_id', $user->id)->where('is_play_later', true)->first();
+                $publicMaplists = \App\Models\Maplist::where('user_id', $user->id)->where('is_public', true)->orderBy('favorites_count', 'desc')->limit(3)->get();
+                $userMaplists = collect();
+                if ($playLater) $userMaplists->push($playLater);
+                $userMaplists = $userMaplists->merge($publicMaplists);
+            } else {
+                $userMaplists = \App\Models\Maplist::where('user_id', $user->id)->where('is_public', true)->orderBy('favorites_count', 'desc')->limit(3)->get();
+            }
+
+            // Aliases
+            $isOwnProfile = $isOwnProfile ?? (auth()->check() && auth()->id() === $user->id);
+            $canManageAliases = false;
+            $aliasSuggestions = null;
+            $canSuggestAlias = false;
+
+            if ($isOwnProfile) {
+                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->orderBy('created_at', 'desc')->get(['id', 'alias', 'is_approved', 'created_at']);
+                $canManageAliases = true;
+                $aliasSuggestions = \App\Models\AliasSuggestion::where('user_id', $user->id)->where('status', 'pending')->with('suggestedBy:id,name,profile_photo_path')->orderBy('created_at', 'desc')->get();
+            } else {
+                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->where('is_approved', true)->orderBy('created_at', 'desc')->get(['alias']);
+                if (auth()->check()) {
+                    $canSuggestAlias = auth()->user()->canReportDemos();
+                }
+            }
+
+            // Demos
+            $topDownloadedDemos = \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->orderBy('download_count', 'desc')->limit(5)->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
+            $demoStats = [
+                'total_demos' => \App\Models\UploadedDemo::where('user_id', $user->id)->count(),
+                'total_downloads' => (int) \App\Models\UploadedDemo::where('user_id', $user->id)->sum('download_count'),
+                'demos_with_downloads' => \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->count(),
+                'unique_maps' => \App\Models\UploadedDemo::where('user_id', $user->id)->distinct('map_name')->count('map_name'),
+                'most_downloaded' => $topDownloadedDemos->first()?->download_count ?? 0,
+            ];
+        }
+
+        // --- Unplayed maps (partial or full) ---
+        if ($needs('unplayed_maps')) {
+            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1));
+            $totalMaps = DB::table('maps')->count();
+        }
+
+        // Build response - only include what's needed
+        $response = Inertia::render('Profile')
             ->with('user', $user)
             ->with('type', $type)
-            ->with('cpm_world_records', $worldRecordsCpm)
-            ->with('vq3_world_records', $worldRecordsVq3)
-            ->with('profile', $profileData)
-            ->with('cpm_competitors', $cpmCompetitors)
-            ->with('vq3_competitors', $vq3Competitors)
-            ->with('cpm_rivals', $cpmRivals)
-            ->with('vq3_rivals', $vq3Rivals)
-            ->with('unplayed_maps', $unplayedMaps)
-            ->with('total_maps', $totalMaps)
-            ->with('user_maplists', $userMaplists)
-            ->with('aliases', $aliases)
-            ->with('can_manage_aliases', $canManageAliases)
-            ->with('alias_suggestions', $aliasSuggestions)
-            ->with('can_suggest_alias', $canSuggestAlias)
-            ->with('topDownloadedDemos', $topDownloadedDemos)
-            ->with('demoStats', $demoStats)
-            ->with('load_times', $timings)
             ->with('hasProfile', true);
+
+        if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
+        if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
+        if ($needs('unplayed_maps')) {
+            $response->with('unplayed_maps', $unplayedMaps ?? collect());
+            $response->with('total_maps', $totalMaps ?? 0);
+        }
+
+        if (!$isPartial) {
+            $response->with('cpm_world_records', $worldRecordsCpm)
+                ->with('vq3_world_records', $worldRecordsVq3)
+                ->with('profile', $profileData)
+                ->with('cpm_competitors', $cpmCompetitors)
+                ->with('vq3_competitors', $vq3Competitors)
+                ->with('cpm_rivals', $cpmRivals)
+                ->with('vq3_rivals', $vq3Rivals)
+                ->with('user_maplists', $userMaplists)
+                ->with('aliases', $aliases)
+                ->with('can_manage_aliases', $canManageAliases)
+                ->with('alias_suggestions', $aliasSuggestions)
+                ->with('can_suggest_alias', $canSuggestAlias)
+                ->with('topDownloadedDemos', $topDownloadedDemos)
+                ->with('demoStats', $demoStats)
+                ->with('activity_data', $activityData)
+                ->with('activity_year', $activityYear)
+                ->with('activity_years', $activityYears)
+                ->with('load_times', []);
+        }
+
+        return $response;
     }
 
     public function mdd(Request $request, $userId) {
@@ -528,6 +392,11 @@ class ProfileController extends Controller {
             $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
         }
 
+        // Get activity heatmap data
+        $activityYear = (int) $request->input('activity_year', date('Y'));
+        $activityData = $this->getActivityData($user->id, $activityYear);
+        $activityYears = $this->getActivityYears($user->id);
+
         // Get unplayed maps for completionist list
         $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1));
         $totalMaps = DB::table('maps')->count();
@@ -570,7 +439,10 @@ class ProfileController extends Controller {
             ->with('can_suggest_alias', false)
             ->with('can_manage_aliases', false)
             ->with('user_maplists', [])
-            ->with('topDownloadedDemos', []);
+            ->with('topDownloadedDemos', [])
+            ->with('activity_data', $activityData)
+            ->with('activity_year', $activityYear)
+            ->with('activity_years', $activityYears);
     }
 
     public function latestRecords($mddId) {
@@ -1132,5 +1004,46 @@ class ProfileController extends Controller {
             'played_maps' => $playedMaps,
             'unplayed_maps' => $unplayedMaps,
         ]);
+    }
+
+    public function activityData(Request $request, $mddId)
+    {
+        $year = (int) $request->input('year', date('Y'));
+        return response()->json([
+            'activity_data' => $this->getActivityData($mddId, $year),
+            'activity_year' => $year,
+        ]);
+    }
+
+    private function getActivityData($mddId, $year)
+    {
+        return Cache::remember("activity:{$mddId}:{$year}:v2", 3600, function () use ($mddId, $year) {
+            $rows = Record::where('mdd_id', $mddId)
+                ->whereYear('date_set', $year)
+                ->selectRaw('DATE(date_set) as date, physics, COUNT(*) as count')
+                ->groupBy('date', 'physics')
+                ->get();
+
+            $result = [];
+            foreach ($rows as $row) {
+                if (!isset($result[$row->date])) {
+                    $result[$row->date] = ['vq3' => 0, 'cpm' => 0];
+                }
+                $result[$row->date][$row->physics] = $row->count;
+            }
+
+            return $result;
+        });
+    }
+
+    private function getActivityYears($mddId)
+    {
+        return Cache::remember("activity_years:{$mddId}", 3600, function () use ($mddId) {
+            return Record::where('mdd_id', $mddId)
+                ->selectRaw('DISTINCT YEAR(date_set) as year')
+                ->orderBy('year', 'desc')
+                ->pluck('year')
+                ->toArray();
+        });
     }
 }

@@ -20,6 +20,7 @@ const allStatBoxes = [
 ];
 
 const allSections = [
+    { id: 'activity_history', label: 'Activity History' },
     { id: 'records', label: 'VQ3 / CPM Records' },
     { id: 'similar_skill_rivals', label: 'Skill Level & Rivals' },
     { id: 'competitor_comparison', label: 'Competitor Comparison' },

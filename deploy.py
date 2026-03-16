@@ -51,7 +51,9 @@ def pipeline_cmds(name):
         f"test -d {PROJECT_PATH}/deploy/baseq3-hd && ln -sf {PROJECT_PATH}/deploy/baseq3-hd {PROJECT_PATH}/releases/{name}/public/baseq3-hd || true",
         f"rm {PROJECT_PATH}/current",
         f"ln -s {PROJECT_PATH}/releases/{name} {PROJECT_PATH}/current",
+        "php artisan optimize:clear",
         'supervisorctl restart "defrag-racing-octane:*"',
+        'supervisorctl restart "defrag-racing-worker:*"',
         "php artisan octane:reload",
         "php artisan queue:restart"
     ]

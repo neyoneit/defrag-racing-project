@@ -359,9 +359,9 @@ class MapsController extends Controller
                 'demo_id' => $record->demo_id,
                 'record_id' => null,
                 'user' => null,
-                'country' => $record->demo->country,
+                'country' => $record->demo?->country ?? $record->user?->country ?? '_404',
                 'rank' => $record->rank,
-                'is_online' => str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
+                'is_online' => $record->gametype && str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
                 'verification_type' => $flagType, // ONLINE/OFFLINE or validity flag
             ];
         });
@@ -414,8 +414,8 @@ class MapsController extends Controller
             ];
         });
 
-        // Merge collections
-        $combined = $offlineItems->merge($onlineDemos);
+        // Merge collections - use base collect() to avoid EloquentCollection's getKey() calls
+        $combined = collect($offlineItems->all())->merge($onlineDemos);
 
         // Sort by time_ms or date_set
         $sortField = $column === 'date_set' ? 'date_set' : 'time_ms';
@@ -436,8 +436,8 @@ class MapsController extends Controller
                 : $combined->sortByDesc('date_set')->values();
         }
 
-        // Update paginator with combined data
-        $offlineRecords->setCollection($combined);
+        // Update paginator with combined data - use base Collection to avoid Eloquent's getKey() calls
+        $offlineRecords->setCollection(collect($combined->all()));
 
         return $offlineRecords;
     }
