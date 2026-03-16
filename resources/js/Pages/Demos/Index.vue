@@ -2066,11 +2066,10 @@ watch(selectedPhysics, () => {
                                                         'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
                                                         'bg-blue-900/50 text-blue-200': demo.status === 'processing',
                                                         'bg-green-900/50 text-green-200': demo.status === 'processed',
-                                                        'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
-                                                        'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
-                                                        'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
-                                                        'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'unsupported-version',
-                                                        'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
+                                                        'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 cursor-help': demo.status === 'assigned' || demo.status === 'unsupported-version',
+                                                        'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
+                                                        'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
+                                                        'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                                     }"
                                                     @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                                     @mouseleave="hideTooltip"
@@ -2369,11 +2368,10 @@ watch(selectedPhysics, () => {
                                                 'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
                                                 'bg-blue-900/50 text-blue-200': demo.status === 'processing',
                                                 'bg-green-900/50 text-green-200': demo.status === 'processed',
-                                                'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'assigned',
-                                                'bg-orange-900/50 text-orange-200 hover:bg-orange-800/50 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
-                                                'bg-red-900/50 text-red-200 hover:bg-red-800/50 cursor-help': demo.status === 'failed',
-                                                'bg-purple-900/50 text-purple-200 hover:bg-purple-800/50 cursor-help': demo.status === 'unsupported-version',
-                                                'bg-gray-900/50 text-gray-200': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
+                                                'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 cursor-help': demo.status === 'assigned' || demo.status === 'unsupported-version',
+                                                'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 cursor-help': demo.status === 'fallback-assigned' || demo.status === 'failed-validity',
+                                                'bg-red-500/20 text-red-300 hover:bg-red-500/30 cursor-help': demo.status === 'failed',
+                                                'bg-gray-500/20 text-gray-300': !['uploaded', 'processing', 'processed', 'assigned', 'fallback-assigned', 'failed-validity', 'failed', 'unsupported-version'].includes(demo.status)
                                             }"
                                             @mouseenter="(demo.status === 'failed' && demo.processing_output) || (demo.status === 'failed-validity' && demo.validity) || (demo.status === 'unsupported-version' && demo.processing_output) || (demo.status === 'assigned' && (demo.record || demo.offline_record)) || (demo.status === 'fallback-assigned' && demo.offline_record) ? showTooltip(demo, $event) : null"
                                             @mouseleave="hideTooltip"
@@ -2691,7 +2689,7 @@ watch(selectedPhysics, () => {
                 <div class="space-y-1 text-gray-300">
                     <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.record_id }}</span></div>
                     <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.record.mapname }}</span></div>
-                    <div v-if="hoveredDemo.record.user"><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.record.user.name }}</span></div>
+                    <div v-if="hoveredDemo.record.user"><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.record.user.name)"></span></div>
                     <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.record.time) }}</span></div>
                     <div v-if="hoveredDemo.record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.record.date_set).toLocaleDateString() }}</span></div>
                 </div>
@@ -2718,7 +2716,7 @@ watch(selectedPhysics, () => {
                 <div class="space-y-1 text-gray-300">
                     <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-purple-300">#{{ hoveredDemo.offline_record.id }}</span></div>
                     <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
-                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.offline_record.player_name }}</span></div>
+                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
                     <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
                     <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
                     <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
@@ -2747,14 +2745,14 @@ watch(selectedPhysics, () => {
                 <div class="space-y-1 text-gray-300 mb-2">
                     <div><span class="text-gray-400">Record ID:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.id }}</span></div>
                     <div><span class="text-gray-400">Map:</span> <span class="font-semibold text-blue-300">{{ hoveredDemo.offline_record.map_name }}</span></div>
-                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold text-green-300">{{ hoveredDemo.offline_record.player_name }}</span></div>
+                    <div><span class="text-gray-400">Player:</span> <span class="font-semibold" v-html="q3tohtml(hoveredDemo.offline_record.player_name)"></span></div>
                     <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.offline_record.time_ms) }}</span></div>
                     <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
                     <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
                     <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
                 </div>
                 <div class="text-[10px] text-orange-200/70 border-t border-orange-600/30 pt-2 mt-2">
-                    ⚠️ This online demo created a fallback offline record but can still be matched to an online record later.
+                    This online demo created a fallback offline record but can still be matched to an online record later.
                 </div>
             </div>
         </div>

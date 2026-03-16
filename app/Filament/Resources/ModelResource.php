@@ -17,6 +17,8 @@ class ModelResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
 
+    protected static ?string $navigationGroup = 'Content';
+
     protected static ?string $navigationLabel = 'Models';
 
     protected static ?string $modelLabel = 'Model';
@@ -79,6 +81,7 @@ class ModelResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\ImageColumn::make('head_icon')
                     ->label('Preview')

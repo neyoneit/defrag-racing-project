@@ -18,9 +18,9 @@ class UserAliasResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationLabel = 'User Aliases';
+    protected static ?string $navigationGroup = 'Community';
 
-    protected static ?string $navigationGroup = null;
+    protected static ?string $navigationLabel = 'User Aliases';
 
     protected static ?int $navigationSort = 3;
 
@@ -65,6 +65,7 @@ class UserAliasResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')

@@ -19,6 +19,8 @@ class BundleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationGroup = 'Bundles';
+
     public static function form(Form $form): Form
     {
         return $form
@@ -46,6 +48,7 @@ class BundleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),

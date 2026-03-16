@@ -16,9 +16,9 @@ class DonationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-heart';
 
-    protected static ?string $navigationLabel = 'Donations';
+    protected static ?string $navigationGroup = 'Finance';
 
-    protected static ?string $navigationGroup = null;
+    protected static ?string $navigationLabel = 'Donations';
 
     protected static ?int $navigationSort = 15;
 
@@ -68,6 +68,7 @@ class DonationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
