@@ -27,6 +27,11 @@ class DonationResource extends Resource
         return true;
     }
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

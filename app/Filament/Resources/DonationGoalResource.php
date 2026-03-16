@@ -25,6 +25,11 @@ class DonationGoalResource extends Resource
 
     protected static ?int $navigationSort = 17;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

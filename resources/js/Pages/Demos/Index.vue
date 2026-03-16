@@ -2693,6 +2693,26 @@ watch(selectedPhysics, () => {
                     <div><span class="text-gray-400">Time:</span> <span class="font-semibold font-mono text-yellow-300">{{ formatTime(hoveredDemo.record.time) }}</span></div>
                     <div v-if="hoveredDemo.record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.record.date_set).toLocaleDateString() }}</span></div>
                 </div>
+                <div class="border-t border-purple-600/30 pt-2 mt-2 space-y-1">
+                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">Match details:</div>
+                    <div class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Method:</span>
+                        <span v-if="hoveredDemo.user_id && hoveredDemo.record.user_id === hoveredDemo.user_id" class="text-green-400">Uploader match</span>
+                        <span v-else class="text-blue-400">Name match</span>
+                    </div>
+                    <div v-if="hoveredDemo.name_confidence !== null" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Confidence:</span>
+                        <span :class="hoveredDemo.name_confidence === 100 ? 'text-green-400' : hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : 'text-yellow-400'">{{ hoveredDemo.name_confidence }}%</span>
+                    </div>
+                    <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-purple-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
+                    </div>
+                    <div class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Matched:</span>
+                        <span class="text-gray-300">map + gametype + time + player</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2721,6 +2741,21 @@ watch(selectedPhysics, () => {
                     <div><span class="text-gray-400">Rank:</span> <span class="font-semibold text-orange-300">#{{ hoveredDemo.offline_record.rank }}</span></div>
                     <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
                     <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
+                </div>
+                <div class="border-t border-purple-600/30 pt-2 mt-2 space-y-1">
+                    <div class="text-[10px] text-purple-200/70 font-semibold mb-1">Match details:</div>
+                    <div class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Method:</span>
+                        <span class="text-cyan-400">Offline demo (direct record)</span>
+                    </div>
+                    <div v-if="hoveredDemo.name_confidence !== null" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Confidence:</span>
+                        <span :class="hoveredDemo.name_confidence === 100 ? 'text-green-400' : hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : 'text-yellow-400'">{{ hoveredDemo.name_confidence }}%</span>
+                    </div>
+                    <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-purple-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2751,8 +2786,23 @@ watch(selectedPhysics, () => {
                     <div><span class="text-gray-400">Gametype:</span> <span class="font-semibold text-cyan-300 uppercase">{{ hoveredDemo.offline_record.gametype }}</span></div>
                     <div v-if="hoveredDemo.offline_record.date_set"><span class="text-gray-400">Date:</span> <span class="font-semibold text-gray-300">{{ new Date(hoveredDemo.offline_record.date_set).toLocaleDateString() }}</span></div>
                 </div>
-                <div class="text-[10px] text-orange-200/70 border-t border-orange-600/30 pt-2 mt-2">
-                    This online demo created a fallback offline record but can still be matched to an online record later.
+                <div class="border-t border-orange-600/30 pt-2 mt-2 space-y-1">
+                    <div class="text-[10px] text-orange-200/70 font-semibold mb-1">Why fallback?</div>
+                    <div v-if="hoveredDemo.name_confidence !== null && hoveredDemo.name_confidence < 100" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Confidence:</span>
+                        <span :class="hoveredDemo.name_confidence >= 90 ? 'text-blue-400' : hoveredDemo.name_confidence >= 70 ? 'text-yellow-400' : 'text-red-400'">{{ hoveredDemo.name_confidence }}%</span>
+                        <span class="text-gray-500">(needs 100% for direct match)</span>
+                    </div>
+                    <div v-else class="text-[10px] text-gray-400">
+                        <span class="text-orange-300">No matching online record found</span>
+                    </div>
+                    <div v-if="hoveredDemo.matched_alias" class="text-[10px] text-gray-400">
+                        <span class="text-gray-500">Alias:</span>
+                        <span class="text-orange-300" v-html="q3tohtml(hoveredDemo.matched_alias)"></span>
+                    </div>
+                    <div class="text-[10px] text-orange-200/50 mt-1">
+                        Can still be matched to an online record later.
+                    </div>
                 </div>
             </div>
         </div>

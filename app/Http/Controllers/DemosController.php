@@ -1177,9 +1177,8 @@ class DemosController extends Controller
     public function assign(Request $request, UploadedDemo $demo)
     {
         $currentUser = Auth::user();
-        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
-        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
-            abort(403, 'Unauthorized');
+        if (!$currentUser) {
+            abort(403, 'You must be logged in');
         }
 
         $request->validate([
@@ -1187,6 +1186,16 @@ class DemosController extends Controller
         ]);
 
         $record = \App\Models\Record::findOrFail($request->record_id);
+        $previousRecordId = $demo->record_id;
+
+        Log::info('Demo assign', [
+            'demo_id' => $demo->id,
+            'record_id' => $record->id,
+            'previous_record_id' => $previousRecordId,
+            'by_user' => $currentUser->id,
+            'by_user_name' => $currentUser->name,
+            'is_owner' => $demo->user_id === $currentUser->id,
+        ]);
 
         // Delete any existing offline_record (from fallback-assigned status)
         // When assigning to an online record, the demo should only appear in online demos, not offline
@@ -1197,6 +1206,23 @@ class DemosController extends Controller
         $demo->update([
             'record_id' => $record->id,
             'status' => 'assigned',
+            'manually_assigned' => true,
+        ]);
+
+        // Log manual assign in demo reports for admin visibility
+        \App\Models\DemoAssignmentReport::create([
+            'demo_id' => $demo->id,
+            'report_type' => 'manual_assign',
+            'reported_by_user_id' => $currentUser->id,
+            'current_record_id' => $previousRecordId,
+            'suggested_record_id' => $record->id,
+            'reason_type' => 'manual_action',
+            'reason_details' => $previousRecordId
+                ? "Reassigned from record #{$previousRecordId} to #{$record->id}"
+                : "Manually assigned to record #{$record->id}",
+            'status' => 'resolved',
+            'resolved_by_admin_id' => $currentUser->id,
+            'resolved_at' => now(),
         ]);
 
         return response()->json([
@@ -1212,21 +1238,39 @@ class DemosController extends Controller
     public function unassign(UploadedDemo $demo)
     {
         $currentUser = Auth::user();
-        $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
-        Log::info('Unassign attempt', ['demo_id' => $demo->id, 'current_user_id' => optional($currentUser)->id, 'is_admin' => $isAdmin]);
-
-        if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {
-            Log::warning('Unassign unauthorized', ['demo_id' => $demo->id, 'current_user_id' => optional($currentUser)->id]);
-            abort(403, 'Unauthorized');
+        if (!$currentUser) {
+            abort(403, 'You must be logged in');
         }
+
+        Log::info('Demo unassign', [
+            'demo_id' => $demo->id,
+            'previous_record_id' => $demo->record_id,
+            'by_user' => $currentUser->id,
+            'by_user_name' => $currentUser->name,
+            'is_owner' => $demo->user_id === $currentUser->id,
+        ]);
+
+        $previousRecordId = $demo->record_id;
 
         try {
             $demo->update([
                 'record_id' => null,
                 'status' => 'processed',
+                'manually_assigned' => false,
             ]);
 
-            Log::info('Unassign successful', ['demo_id' => $demo->id, 'by_user' => optional($currentUser)->id]);
+            // Log manual unassign in demo reports for admin visibility
+            \App\Models\DemoAssignmentReport::create([
+                'demo_id' => $demo->id,
+                'report_type' => 'manual_unassign',
+                'reported_by_user_id' => $currentUser->id,
+                'current_record_id' => $previousRecordId,
+                'reason_type' => 'manual_action',
+                'reason_details' => "Unassigned from record #{$previousRecordId}",
+                'status' => 'resolved',
+                'resolved_by_admin_id' => $currentUser->id,
+                'resolved_at' => now(),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -1234,7 +1278,7 @@ class DemosController extends Controller
                 'demo' => $demo->fresh(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Unassign failed', ['demo_id' => $demo->id, 'error' => $e->getMessage()]);
+            Log::error('Demo unassign failed', ['demo_id' => $demo->id, 'error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove assignment: ' . $e->getMessage(),

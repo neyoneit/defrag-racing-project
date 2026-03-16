@@ -25,6 +25,11 @@ class ModelResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Models';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
