@@ -67,7 +67,7 @@
 
 .avatar-effect-orbit {
     position: relative;
-    display: inline-block;
+    display: flex;
     --orbit-radius: 20px; /* Default radius, will be overridden by inline styles */
 }
 

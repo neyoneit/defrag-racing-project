@@ -2,6 +2,7 @@
     import { Link, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
     import DemoReportModal from '@/Components/DemoReportModal.vue';
+    import DemoFlagModal from '@/Components/DemoFlagModal.vue';
 
     const props = defineProps({
         record: Object,
@@ -27,10 +28,124 @@
     const page = usePage();
     const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
+    const showFlagModal = ref(false);
+
+    const flagRecordId = computed(() => {
+        if (isOfflineRecord.value || isOnlineDemo.value) return null;
+        return props.record.id ?? null;
+    });
+
+    const flagDemoId = computed(() => {
+        if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return props.record.demo.id;
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return props.record.uploaded_demos[0].id;
+        return null;
+    });
     const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const canReportDemo = computed(() => {
         return isLoggedIn.value && page.props.canReportDemos;
+    });
+
+    const showValidityTooltip = ref(false);
+    const validityTooltipPos = ref({ x: 0, y: 0 });
+    const hoveredCommunityFlag = ref(null);
+    const communityFlagTooltipPos = ref({ x: 0, y: 0 });
+
+    const onCommunityFlagHover = (event, flag) => {
+        hoveredCommunityFlag.value = flag;
+        const rect = event.target.getBoundingClientRect();
+        communityFlagTooltipPos.value = {
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+        };
+    };
+
+    const onValidityHover = (event) => {
+        showValidityTooltip.value = true;
+        const rect = event.target.getBoundingClientRect();
+        validityTooltipPos.value = {
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+        };
+    };
+
+    const VALIDITY_FLAGS = {
+        'sv_cheats=1.0': { short: 'cheats', desc: 'sv_cheats was enabled - cheat commands allowed' },
+        'client_finish=false': { short: 'no finish', desc: 'Player did not cross the finish line properly' },
+        'tool_assisted=true': { short: 'TAS', desc: 'Tool-assisted speedrun - not human input' },
+        'timescale=': { short: 'timescale', desc: 'Game speed was altered with timescale', prefix: true },
+        'g_speed=': { short: 'speed', desc: 'Player movement speed was modified', prefix: true, showValue: true },
+        'g_gravity=': { short: 'gravity', desc: 'Gravity was modified from default value', prefix: true },
+        'pmove_fixed=0.0': { short: 'pmove 0', desc: 'pmove_fixed=0 - physics not fixed to framerate' },
+        'pmove_fixed=': { short: 'pmove', desc: 'Non-standard pmove_fixed value', prefix: true, showValue: true },
+        'pmove_msec=': { short: 'msec', desc: 'Non-standard pmove_msec value', prefix: true, showValue: true },
+        'sv_fps=': { short: 'fps', desc: 'Non-standard server framerate', prefix: true, showValue: true },
+        'com_maxfps=': { short: 'maxfps', desc: 'Non-standard max framerate cap', prefix: true, showValue: true },
+        'df_mp_interferenceoff=': { short: 'interf', desc: 'df_mp_interferenceoff - interference setting modified', prefix: true, showValue: true },
+    };
+
+    const formatValidityFlag = (flag) => {
+        if (!flag) return { short: flag, original: flag, desc: '' };
+
+        // Exact match first
+        if (VALIDITY_FLAGS[flag]) {
+            return { short: VALIDITY_FLAGS[flag].short, original: flag, desc: VALIDITY_FLAGS[flag].desc };
+        }
+
+        // Prefix match
+        for (const [key, config] of Object.entries(VALIDITY_FLAGS)) {
+            if (config.prefix && flag.startsWith(key)) {
+                const value = flag.slice(key.length).replace(/\.0$/, '');
+                const short = config.showValue ? `${config.short} ${value}` : config.short;
+                return { short, original: flag, desc: `${config.desc} (${flag})` };
+            }
+        }
+
+        // Unknown flag - just clean it up
+        return { short: flag.replace(/=.*/, ''), original: flag, desc: flag };
+    };
+
+    const validityInfo = computed(() => {
+        if (!props.record.verification_type) return null;
+        if (['OFFLINE', 'ONLINE', 'verified'].includes(props.record.verification_type)) return null;
+        return formatValidityFlag(props.record.verification_type);
+    });
+
+    // Community flags (approved by admin)
+    const COMMUNITY_FLAG_LABELS = {
+        'sv_cheats': { short: 'cheats', desc: 'sv_cheats was enabled - flagged by community' },
+        'tool_assisted': { short: 'TAS', desc: 'Tool-assisted speedrun - flagged by community' },
+        'client_finish': { short: 'no finish', desc: 'No proper finish - flagged by community' },
+        'timescale': { short: 'timescale', desc: 'Game speed was altered - flagged by community' },
+        'g_speed': { short: 'speed', desc: 'Movement speed modified - flagged by community' },
+        'g_gravity': { short: 'gravity', desc: 'Gravity modified - flagged by community' },
+        'sv_fps': { short: 'fps', desc: 'Non-standard server FPS - flagged by community' },
+        'com_maxfps': { short: 'maxfps', desc: 'Non-standard max FPS - flagged by community' },
+        'pmove_fixed': { short: 'pmove', desc: 'Non-standard pmove_fixed - flagged by community' },
+        'pmove_msec': { short: 'msec', desc: 'Non-standard pmove_msec - flagged by community' },
+        'df_mp_interferenceoff': { short: 'interf', desc: 'Interference setting modified - flagged by community' },
+        'other': { short: 'flagged', desc: 'Flagged by community for validity issue' },
+    };
+
+    const communityFlags = computed(() => {
+        const flags = props.record.approved_flags;
+        if (!flags || flags.length === 0) return [];
+        return flags.map(f => ({
+            short: COMMUNITY_FLAG_LABELS[f.flag_type]?.short ?? f.flag_type,
+            desc: COMMUNITY_FLAG_LABELS[f.flag_type]?.desc ?? f.flag_type,
+            count: f.flag_count || 1,
+            original: f.flag_type,
+        }));
+    });
+
+    const demoDownloadUrl = computed(() => {
+        if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) {
+            return `/demos/${props.record.demo.id}/download`;
+        }
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) {
+            return `/demos/${props.record.uploaded_demos[0].id}/download`;
+        }
+        return null;
     });
 
     const getDemoForReport = computed(() => {
@@ -115,7 +230,14 @@
         return null;
     })
 
+    const hasValidityIssue = computed(() => {
+        return !!validityInfo.value || communityFlags.value.length > 0;
+    });
+
     const rankColorClass = computed(() => {
+        if (hasValidityIssue.value) {
+            return 'text-red-500/50';
+        }
         if (isMyRecord.value) {
             return 'text-emerald-400 group-hover:text-emerald-300';
         }
@@ -135,7 +257,7 @@
 
 <template>
     <div
-        class="group relative flex items-center gap-2 px-2 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg"
+        class="group relative flex items-center gap-2 pr-2 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-2"
         :class="{
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
             'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord
@@ -143,10 +265,11 @@
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
         <div
-            class="font-black text-lg w-7 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-125 group-hover:translate-x-1 group-hover:mr-1"
+            class="font-black text-lg w-8 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-110"
             :class="rankColorClass"
         >
-            {{ record.rank }}
+            <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
+            <template v-else>{{ record.rank }}</template>
         </div>
 
         <!-- Player Info - Compact -->
@@ -193,51 +316,185 @@
 
             <!-- Source type chips (shown in mixed views) -->
             <template v-if="showSourceChips">
-                <!-- Primary chip: what type of entry is this -->
+                <!-- Primary chip: what type of entry is this (clickable with download icon if demo available) -->
                 <span v-if="record.oldtop" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50">
-                    OLD RECORD
+                    old record
                 </span>
-                <span v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                    ONLINE DEMO
-                </span>
-                <span v-else-if="isOfflineRecord" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
-                    OFFLINE DEMO
-                </span>
-                <span v-else class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50">
-                    RECORD
+                <component
+                    v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)"
+                    :is="demoDownloadUrl ? 'a' : 'span'"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50"
+                    :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
+                    :title="demoDownloadUrl ? 'Download online demo' : ''"
+                >
+                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    online demo
+                </component>
+                <component
+                    v-else-if="isOfflineRecord"
+                    :is="demoDownloadUrl ? 'a' : 'span'"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50"
+                    :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
+                    :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                >
+                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    offline demo
+                </component>
+                <component
+                    v-else
+                    :is="demoDownloadUrl ? 'a' : 'span'"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50"
+                    :class="{ 'hover:bg-green-500/30 hover:text-green-300 transition-colors': demoDownloadUrl }"
+                    :title="demoDownloadUrl ? 'Download demo' : ''"
+                >
+                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    record
+                </component>
+
+                <!-- Verified badge: record has demo attached -->
+                <span
+                    v-if="!record.oldtop && ((!isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0) || record.verification_type === 'verified')"
+                    class="ml-1 flex-shrink-0 text-green-400"
+                    title="Verified - demo attached"
+                >
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
                 </span>
 
                 <!-- Secondary chip: demo attached to a record -->
-                <span v-if="!record.oldtop && !isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30">
-                    ONLINE DEMO
-                </span>
+                <a
+                    v-if="!record.oldtop && !isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
+                    title="Download demo"
+                >
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    online demo
+                </a>
 
                 <!-- Secondary chip: validity flags (sv_cheats etc.) -->
-                <span v-if="record.verification_type && record.verification_type !== 'OFFLINE' && record.verification_type !== 'ONLINE' && record.verification_type !== 'verified'" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
-                    {{ record.verification_type }}
+                <span
+                    v-if="validityInfo"
+                    class="relative inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50 cursor-help"
+                    @mouseenter="onValidityHover($event)"
+                    @mouseleave="showValidityTooltip = false"
+                >
+                    {{ validityInfo.short }}
+                    <Teleport to="body" v-if="showValidityTooltip">
+                        <div class="fixed z-[9999] pointer-events-none" :style="{ top: validityTooltipPos.y + 'px', left: validityTooltipPos.x + 'px' }">
+                            <div class="bg-gray-900 border border-red-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                                <div class="text-red-400 font-semibold text-xs">{{ validityInfo.original }}</div>
+                                <div class="text-gray-300 text-xs mt-0.5">{{ validityInfo.desc }}</div>
+                            </div>
+                        </div>
+                    </Teleport>
+                </span>
+
+                <!-- Community flags (approved by admin) -->
+                <span
+                    v-for="cf in communityFlags"
+                    :key="cf.original"
+                    class="relative inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/50 cursor-help"
+                    @mouseenter="onCommunityFlagHover($event, cf)"
+                    @mouseleave="hoveredCommunityFlag = null"
+                >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                    {{ cf.short }}
+                    <span v-if="cf.count > 1" class="text-orange-300">({{ cf.count }})</span>
                 </span>
             </template>
 
-            <!-- Default view (no mixed mode): just show verified badge -->
+            <!-- Default view (no mixed mode) -->
             <template v-else>
+                <!-- Record with demo attached: show verified badge + online demo chip with download -->
+                <template v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0">
+                    <span class="ml-1 flex-shrink-0 text-green-400" title="Verified - demo attached">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    <a
+                        v-if="demoDownloadUrl"
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
+                        title="Download demo"
+                    >
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        online demo
+                    </a>
+                </template>
+                <!-- Verified badge for demos top entries -->
                 <span
-                    v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                    v-else-if="record.verification_type === 'verified'"
                     class="ml-1 flex-shrink-0 text-green-400"
-                    title="Verified — demo attached"
+                    title="Verified - demo attached"
                 >
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
                 </span>
                 <!-- Validity flags in demos top without mixed mode -->
-                <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
-                    OFFLINE
+                <component
+                    v-else-if="record.verification_type === 'OFFLINE'"
+                    :is="demoDownloadUrl ? 'a' : 'span'"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50"
+                    :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
+                    :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                >
+                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    offline
+                </component>
+                <component
+                    v-else-if="record.verification_type === 'ONLINE'"
+                    :is="demoDownloadUrl ? 'a' : 'span'"
+                    :href="demoDownloadUrl"
+                    @click.stop
+                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50"
+                    :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
+                    :title="demoDownloadUrl ? 'Download online demo' : ''"
+                >
+                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                    online
+                </component>
+                <span
+                    v-else-if="validityInfo"
+                    class="relative ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50 cursor-help"
+                    @mouseenter="onValidityHover($event)"
+                    @mouseleave="showValidityTooltip = false"
+                >
+                    {{ validityInfo.short }}
+                    <Teleport to="body" v-if="showValidityTooltip">
+                        <div class="fixed z-[9999] pointer-events-none" :style="{ top: validityTooltipPos.y + 'px', left: validityTooltipPos.x + 'px' }">
+                            <div class="bg-gray-900 border border-red-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                                <div class="text-red-400 font-semibold text-xs">{{ validityInfo.original }}</div>
+                                <div class="text-gray-300 text-xs mt-0.5">{{ validityInfo.desc }}</div>
+                            </div>
+                        </div>
+                    </Teleport>
                 </span>
-                <span v-else-if="record.verification_type === 'ONLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                    ONLINE
-                </span>
-                <span v-else-if="record.verification_type && record.verification_type !== 'verified'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
-                    {{ record.verification_type }}
+
+                <!-- Community flags (approved by admin) -->
+                <span
+                    v-for="cf in communityFlags"
+                    :key="cf.original"
+                    class="relative ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/50 cursor-help"
+                    @mouseenter="onCommunityFlagHover($event, cf)"
+                    @mouseleave="hoveredCommunityFlag = null"
+                >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                    {{ cf.short }}
+                    <span v-if="cf.count > 1" class="text-orange-300">({{ cf.count }})</span>
                 </span>
             </template>
         </component>
@@ -251,12 +508,26 @@
             </div>
         </Teleport>
 
-        <!-- Action Icons - Fixed width to keep time/date columns aligned -->
-        <div class="flex items-center gap-1 w-16 justify-end flex-shrink-0">
+        <!-- Community flag tooltip - TELEPORTED -->
+        <Teleport to="body" v-if="hoveredCommunityFlag">
+            <div class="fixed z-[9999] pointer-events-none" :style="{ top: communityFlagTooltipPos.y + 'px', left: communityFlagTooltipPos.x + 'px' }">
+                <div class="bg-gray-900 border border-orange-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                    <div class="text-orange-400 font-semibold text-xs flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                        Community Flag
+                    </div>
+                    <div class="text-gray-300 text-xs mt-0.5">{{ hoveredCommunityFlag.desc }}</div>
+                    <div v-if="hoveredCommunityFlag.count > 1" class="text-orange-300/70 text-xs mt-0.5">Flagged by {{ hoveredCommunityFlag.count }} users</div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Action Icons -->
+        <div class="flex items-center justify-end flex-shrink-0">
             <a
-                v-if="(record.uploaded_demos && record.uploaded_demos.length > 0) || (isOfflineRecord && record.demo) || (isOnlineDemo && record.demo)"
-                :href="(isOfflineRecord || isOnlineDemo) ? `/demos/${record.demo.id}/download` : `/demos/${record.uploaded_demos[0].id}/download`"
-                class="p-1 rounded transition-all hover:scale-110"
+                v-if="false"
+                :href="demoDownloadUrl"
+                class="p-0.5 rounded transition-all hover:scale-110"
                 :class="{
                     'bg-emerald-500/20 text-emerald-400': isMyRecord,
                     'bg-gray-700/50 text-gray-400': !isMyRecord
@@ -272,7 +543,7 @@
             <button
                 v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
-                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                 title="Assign to online record"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +554,7 @@
             <button
                 v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
                 @click.stop="emit('assign-from-record', record)"
-                class="p-1 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
                 :title="`${demoMatches.length} possible demo match${demoMatches.length > 1 ? 'es' : ''}`"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -294,7 +565,7 @@
             <button
                 v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                 @click.stop="emit('reassign-record', record)"
-                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                 title="Reassign demo"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,9 +574,20 @@
             </button>
 
             <button
+                v-if="canReportDemo && !record.oldtop"
+                @click.stop="showFlagModal = true"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                title="Flag validity issue"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+            </button>
+
+            <button
                 v-if="canReportDemo && getDemoForReport"
                 @click.stop="showReportModal = true"
-                class="p-1 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                 title="Report demo"
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,12 +622,6 @@
             </div>
         </div>
 
-        <!-- Left side badges -->
-        <div class="absolute -left-1 top-1/2 -translate-y-1/2 text-lg transition-all duration-200 group-hover:scale-110 group-hover:translate-x-0.5">
-            <span v-if="record.rank === 1">🥇</span>
-            <span v-else-if="record.rank === 2">🥈</span>
-            <span v-else-if="record.rank === 3">🥉</span>
-        </div>
     </div>
 
     <!-- Demo Report Modal -->
@@ -353,5 +629,13 @@
         :show="showReportModal"
         :demo="getDemoForReport"
         @close="showReportModal = false"
+    />
+
+    <!-- Demo Flag Modal -->
+    <DemoFlagModal
+        :show="showFlagModal"
+        :record-id="flagRecordId"
+        :demo-id="flagDemoId"
+        @close="showFlagModal = false"
     />
 </template>

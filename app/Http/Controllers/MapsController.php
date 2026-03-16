@@ -12,6 +12,7 @@ use App\Models\UploadedDemo;
 use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
+use App\Models\RecordFlag;
 
 use App\Filters\MapFilters;
 use App\Services\NameMatcher;
@@ -130,9 +131,35 @@ class MapsController extends Controller
 
         $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
-        // Assign time-based ranks (always based on fastest time, not current sort)
-        $cpmRecords->getCollection()->transform(function ($record) use ($allCpmRecordsByTime) {
-            $record->rank = array_search($record->id, $allCpmRecordsByTime) + 1;
+        // Attach community flags before ranking
+        $this->attachCommunityFlags($cpmRecords);
+
+        // Get IDs of records with approved community flags (excluded from ranking)
+        $cpmFlaggedIds = $cpmRecords->getCollection()->filter(fn ($r) => !empty($r->approved_flags))->pluck('id')->toArray();
+        $allCpmFlaggedIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
+            ->whereIn('record_id', $allCpmRecordsByTime)->pluck('record_id')->unique()->toArray();
+        // Also check flags via demos
+        $cpmDemoFlaggedRecordIds = [];
+        $cpmRecordDemoIds = UploadedDemo::whereIn('record_id', $allCpmRecordsByTime)->whereNotNull('record_id')->pluck('id', 'record_id')->toArray();
+        if (!empty($cpmRecordDemoIds)) {
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', array_values($cpmRecordDemoIds))->pluck('demo_id')->unique()->toArray();
+            $cpmDemoFlaggedRecordIds = collect($cpmRecordDemoIds)->filter(fn ($demoId) => in_array($demoId, $flaggedDemoIds))->keys()->toArray();
+        }
+        $allCpmFlaggedIds = array_unique(array_merge($allCpmFlaggedIds, $cpmDemoFlaggedRecordIds));
+
+        // Calculate ranks excluding flagged records
+        $cpmRankMap = [];
+        $rank = 0;
+        foreach ($allCpmRecordsByTime as $id) {
+            if (in_array($id, $allCpmFlaggedIds)) {
+                $cpmRankMap[$id] = null;
+            } else {
+                $rank++;
+                $cpmRankMap[$id] = $rank;
+            }
+        }
+        $cpmRecords->getCollection()->transform(function ($record) use ($cpmRankMap) {
+            $record->rank = $cpmRankMap[$record->id] ?? null;
             return $record;
         });
 
@@ -150,9 +177,30 @@ class MapsController extends Controller
 
         $vq3Records = $vq3Records->with(['user', 'uploadedDemos'])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
 
-        // Assign time-based ranks (always based on fastest time, not current sort)
-        $vq3Records->getCollection()->transform(function ($record) use ($allVq3RecordsByTime) {
-            $record->rank = array_search($record->id, $allVq3RecordsByTime) + 1;
+        // Attach community flags before ranking
+        $this->attachCommunityFlags($vq3Records);
+
+        $allVq3FlaggedIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
+            ->whereIn('record_id', $allVq3RecordsByTime)->pluck('record_id')->unique()->toArray();
+        $vq3RecordDemoIds = UploadedDemo::whereIn('record_id', $allVq3RecordsByTime)->whereNotNull('record_id')->pluck('id', 'record_id')->toArray();
+        if (!empty($vq3RecordDemoIds)) {
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', array_values($vq3RecordDemoIds))->pluck('demo_id')->unique()->toArray();
+            $vq3DemoFlaggedRecordIds = collect($vq3RecordDemoIds)->filter(fn ($demoId) => in_array($demoId, $flaggedDemoIds))->keys()->toArray();
+            $allVq3FlaggedIds = array_unique(array_merge($allVq3FlaggedIds, $vq3DemoFlaggedRecordIds));
+        }
+
+        $vq3RankMap = [];
+        $rank = 0;
+        foreach ($allVq3RecordsByTime as $id) {
+            if (in_array($id, $allVq3FlaggedIds)) {
+                $vq3RankMap[$id] = null;
+            } else {
+                $rank++;
+                $vq3RankMap[$id] = $rank;
+            }
+        }
+        $vq3Records->getCollection()->transform(function ($record) use ($vq3RankMap) {
+            $record->rank = $vq3RankMap[$record->id] ?? null;
             return $record;
         });
 
@@ -205,7 +253,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order
+                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -217,7 +265,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order
+                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order, $allVq3RecordsByTime
                 );
             } elseif ($offlineGametype === 'fc') {
                 // Fast caps map but no specific CTF mode selected (on "run" gametype)
@@ -231,7 +279,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -243,7 +291,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
                 );
             } else {
                 // For df (defrag), physics can be "CPM" or "CPM.TR" (with timer reset)
@@ -257,7 +305,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -269,7 +317,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
                 );
             }
         } else {
@@ -329,7 +377,7 @@ class MapsController extends Controller
     /**
      * Combine offline records with assigned online demos for "Demos Top" section
      */
-    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order)
+    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order, $mainRecordIds = [])
     {
         if (!$offlineRecords) {
             return null;
@@ -379,6 +427,11 @@ class MapsController extends Controller
             $onlineDemosQuery->where('physics', $physics);
         }
 
+        // Exclude demos already shown in main records table (avoid duplicates)
+        if (!empty($mainRecordIds)) {
+            $onlineDemosQuery->whereNotIn('record_id', $mainRecordIds);
+        }
+
         $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
             // Determine which user to use: record owner takes priority
             // If record has a registered user, use that for avatar/effects
@@ -417,19 +470,65 @@ class MapsController extends Controller
         // Merge collections - use base collect() to avoid EloquentCollection's getKey() calls
         $combined = collect($offlineItems->all())->merge($onlineDemos);
 
-        // Sort by time_ms or date_set
-        $sortField = $column === 'date_set' ? 'date_set' : 'time_ms';
-        $combined = $order === 'ASC'
-            ? $combined->sortBy($sortField)->values()
-            : $combined->sortByDesc($sortField)->values();
+        // Attach community flags BEFORE ranking (so flagged items get excluded from ranks)
+        $allDemoIds = $combined->pluck('demo_id')->filter()->values()->toArray();
+        $allRecordIds = $combined->pluck('record_id')->filter()->values()->toArray();
 
-        // Recalculate ranks based on time_ms
-        $combined = $combined->sortBy('time_ms')->values()->map(function ($item, $index) {
-            $item->rank = $index + 1;
+        if (!empty($allDemoIds) || !empty($allRecordIds)) {
+            $flags = RecordFlag::where('status', 'approved')
+                ->where(function ($q) use ($allRecordIds, $allDemoIds) {
+                    if (!empty($allRecordIds)) {
+                        $q->whereIn('record_id', $allRecordIds);
+                    }
+                    if (!empty($allDemoIds)) {
+                        $q->orWhereIn('demo_id', $allDemoIds);
+                    }
+                })
+                ->get();
+
+            $flagsByDemo = $flags->whereNotNull('demo_id')->groupBy('demo_id');
+            $flagsByRecord = $flags->whereNotNull('record_id')->groupBy('record_id');
+
+            $combined = $combined->map(function ($item) use ($flagsByDemo, $flagsByRecord) {
+                $itemFlags = collect();
+                if ($item->demo_id && isset($flagsByDemo[$item->demo_id])) {
+                    $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo_id]);
+                }
+                if ($item->demo && isset($flagsByDemo[$item->demo->id])) {
+                    $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo->id]);
+                }
+                if ($item->record_id && isset($flagsByRecord[$item->record_id])) {
+                    $itemFlags = $itemFlags->merge($flagsByRecord[$item->record_id]);
+                }
+                $item->approved_flags = $itemFlags->groupBy('flag_type')->map(fn ($g) => $g->sortByDesc('flag_count')->first())->values()->toArray();
+                return $item;
+            });
+        }
+
+        // Recalculate ranks - skip items with validity flags or community flags
+        $rank = 0;
+        $combined = $combined->sortBy('time_ms')->values()->map(function ($item) use (&$rank) {
+            $hasFlagIssue = !empty($item->approved_flags) ||
+                ($item->verification_type && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
+
+            \Log::info('RANK_DEBUG', [
+                'player' => $item->player_name,
+                'time' => $item->time_ms,
+                'vtype' => $item->verification_type ?? null,
+                'flags' => count($item->approved_flags ?? []),
+                'hasFlagIssue' => $hasFlagIssue,
+            ]);
+
+            if ($hasFlagIssue) {
+                $item->rank = null;
+            } else {
+                $rank++;
+                $item->rank = $rank;
+            }
             return $item;
         });
 
-        // Apply original sort order again if needed
+        // Apply sort order
         if ($column === 'date_set') {
             $combined = $order === 'ASC'
                 ? $combined->sortBy('date_set')->values()
@@ -566,5 +665,63 @@ class MapsController extends Controller
         $map->save();
 
         return response()->json(['success' => true, 'message' => "Map \"{$map->name}\" NSFW flag removed."]);
+    }
+
+    /**
+     * Attach approved community flags to paginated records
+     */
+    private function attachCommunityFlags($records)
+    {
+        if (!$records) return;
+
+        $recordIds = [];
+        $demoIds = [];
+
+        foreach ($records as $record) {
+            $recordIds[] = $record->id;
+            if ($record->uploadedDemos) {
+                foreach ($record->uploadedDemos as $demo) {
+                    $demoIds[] = $demo->id;
+                }
+            }
+        }
+
+        if (empty($recordIds) && empty($demoIds)) return;
+
+        $flags = RecordFlag::where('status', 'approved')
+            ->where(function ($q) use ($recordIds, $demoIds) {
+                $q->whereIn('record_id', $recordIds);
+                if (!empty($demoIds)) {
+                    $q->orWhereIn('demo_id', $demoIds);
+                }
+            })
+            ->get();
+
+        // Index flags by record_id and demo_id
+        $flagsByRecord = $flags->whereNotNull('record_id')->groupBy('record_id');
+        $flagsByDemo = $flags->whereNotNull('demo_id')->groupBy('demo_id');
+
+        foreach ($records as $record) {
+            $recordFlags = collect();
+
+            // Flags directly on this record
+            if (isset($flagsByRecord[$record->id])) {
+                $recordFlags = $recordFlags->merge($flagsByRecord[$record->id]);
+            }
+
+            // Flags on demos attached to this record
+            if ($record->uploadedDemos) {
+                foreach ($record->uploadedDemos as $demo) {
+                    if (isset($flagsByDemo[$demo->id])) {
+                        $recordFlags = $recordFlags->merge($flagsByDemo[$demo->id]);
+                    }
+                }
+            }
+
+            // Deduplicate by flag_type (keep the one with highest count)
+            $record->approved_flags = $recordFlags->groupBy('flag_type')->map(function ($group) {
+                return $group->sortByDesc('flag_count')->first();
+            })->values()->toArray();
+        }
     }
 }

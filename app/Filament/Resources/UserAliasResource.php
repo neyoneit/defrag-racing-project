@@ -20,9 +20,9 @@ class UserAliasResource extends Resource
 
     protected static ?string $navigationLabel = 'User Aliases';
 
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = null;
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     public static function form(Form $form): Form
     {

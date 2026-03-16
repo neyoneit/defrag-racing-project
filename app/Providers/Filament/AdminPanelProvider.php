@@ -37,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->brandLogo(asset('images/logo.png'))
             ->favicon(asset('favicon.png'))
+            ->maxContentWidth(\Filament\Support\Enums\MaxWidth::Full)
             ->renderHook(
                 'panels::head.end',
                 fn () => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/filament/filament/q3.css\') }}">')

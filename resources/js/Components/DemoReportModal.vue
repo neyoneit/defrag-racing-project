@@ -19,20 +19,6 @@
                         <div>
                             <label class="block text-sm font-semibold text-gray-300 mb-2">Report Type</label>
                             <div class="space-y-2">
-                                <!-- Reassignment Request -->
-                                <label class="flex items-start gap-3 bg-white/5 p-4 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                                    <input
-                                        type="radio"
-                                        v-model="form.report_type"
-                                        value="reassignment_request"
-                                        class="mt-1"
-                                    />
-                                    <div>
-                                        <div class="text-white font-semibold">Reassign Demo</div>
-                                        <div class="text-sm text-gray-400">Request to assign this demo to a different record</div>
-                                    </div>
-                                </label>
-
                                 <!-- Wrong Assignment -->
                                 <label class="flex items-start gap-3 bg-white/5 p-4 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
                                     <input
@@ -42,7 +28,7 @@
                                         class="mt-1"
                                     />
                                     <div>
-                                        <div class="text-white font-semibold">Report Wrong Assignment</div>
+                                        <div class="text-white font-semibold">Wrong Assignment</div>
                                         <div class="text-sm text-gray-400">This demo is assigned to the wrong player/record</div>
                                     </div>
                                 </label>
@@ -56,76 +42,24 @@
                                         class="mt-1"
                                     />
                                     <div>
-                                        <div class="text-white font-semibold">Report Bad Demo</div>
+                                        <div class="text-white font-semibold">Bad Demo</div>
                                         <div class="text-sm text-gray-400">Demo is corrupted, fake, spam, or inappropriate</div>
                                     </div>
                                 </label>
-                            </div>
-                        </div>
 
-                        <!-- Reassignment: Record Selection -->
-                        <div v-if="form.report_type === 'reassignment_request'">
-                            <label class="block text-sm font-semibold text-gray-300 mb-2">
-                                Assign to Record <span class="text-red-400">*</span>
-                            </label>
-                            <div class="space-y-2">
-                                <!-- Map/Player Search -->
-                                <div class="relative">
+                                <!-- False Flag -->
+                                <label class="flex items-start gap-3 bg-white/5 p-4 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
                                     <input
-                                        type="text"
-                                        v-model="recordSearch"
-                                        @input="searchRecords"
-                                        placeholder="Search for record (map name, player...)"
-                                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none"
+                                        type="radio"
+                                        v-model="form.report_type"
+                                        value="false_flag"
+                                        class="mt-1"
                                     />
-                                    <div v-if="searching" class="absolute right-3 top-2.5">
-                                        <svg class="animate-spin h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
+                                    <div>
+                                        <div class="text-white font-semibold">False Flag</div>
+                                        <div class="text-sm text-gray-400">This record/demo was incorrectly flagged for a validity issue</div>
                                     </div>
-                                </div>
-
-                                <!-- Time Filter -->
-                                <div class="relative">
-                                    <input
-                                        type="text"
-                                        v-model="timeFilter"
-                                        @input="searchRecords"
-                                        placeholder="Filter by max time - e.g. 25 (seconds), 1:30, or 1:30.500"
-                                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-indigo-500 focus:outline-none text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Record Search Results -->
-                            <div v-if="searchResults.length > 0" class="mt-2 bg-white/5 rounded-lg border border-white/10 max-h-48 overflow-y-auto">
-                                <button
-                                    v-for="record in searchResults"
-                                    :key="record.id"
-                                    type="button"
-                                    @click="selectRecord(record)"
-                                    class="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
-                                >
-                                    <div class="text-white font-semibold">{{ record.user?.name }}</div>
-                                    <div class="text-sm text-gray-400">
-                                        {{ record.mapname }} • {{ formatTime(record.time) }} • {{ record.physics.toUpperCase() }} • {{ record.mode.toUpperCase() }}
-                                    </div>
-                                </button>
-                            </div>
-
-                            <!-- No results message -->
-                            <div v-if="!searching && recordSearch.length >= 2 && searchResults.length === 0" class="mt-2 text-sm text-gray-500 text-center py-2">
-                                No records found. Try a different search term.
-                            </div>
-
-                            <!-- Selected Record -->
-                            <div v-if="selectedRecord" class="mt-2 bg-indigo-500/10 border border-indigo-500/50 rounded-lg p-3">
-                                <div class="text-sm text-gray-400">Selected Record:</div>
-                                <div class="text-white font-semibold">{{ selectedRecord.user?.name }}</div>
-                                <div class="text-sm text-gray-400">
-                                    {{ selectedRecord.mapname }} • {{ formatTime(selectedRecord.time) }} • {{ selectedRecord.physics.toUpperCase() }} • {{ selectedRecord.mode.toUpperCase() }}
-                                </div>
+                                </label>
                             </div>
                         </div>
 
@@ -218,13 +152,6 @@ const submitting = ref(false);
 const searching = ref(false);
 let searchTimeout = null;
 
-const REASSIGNMENT_REASONS = {
-    'wrong_player': 'Wrong player assigned',
-    'better_match': 'Better match found',
-    'time_mismatch': 'Time/physics mismatch',
-    'other': 'Other',
-};
-
 const WRONG_ASSIGNMENT_REASONS = {
     'wrong_player': 'Wrong player - name doesn\'t match',
     'wrong_map': 'Wrong map',
@@ -243,16 +170,22 @@ const BAD_DEMO_REASONS = {
     'other': 'Other',
 };
 
+const FALSE_FLAG_REASONS = {
+    'legitimate': 'Record is legitimate - flag is incorrect',
+    'wrong_flag': 'Wrong flag type was applied',
+    'resolved': 'Issue was already resolved',
+    'other': 'Other',
+};
+
 const getReasonOptions = () => {
-    if (form.value.report_type === 'reassignment_request') return REASSIGNMENT_REASONS;
     if (form.value.report_type === 'wrong_assignment') return WRONG_ASSIGNMENT_REASONS;
     if (form.value.report_type === 'bad_demo') return BAD_DEMO_REASONS;
+    if (form.value.report_type === 'false_flag') return FALSE_FLAG_REASONS;
     return {};
 };
 
 const canSubmit = computed(() => {
     if (!form.value.report_type || !form.value.reason_type) return false;
-    if (form.value.report_type === 'reassignment_request' && !selectedRecord.value) return false;
     return true;
 });
 

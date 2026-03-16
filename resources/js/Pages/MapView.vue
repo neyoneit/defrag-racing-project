@@ -516,9 +516,18 @@
             combined = [...combined, ...offlineRecords.data];
         }
 
-        // Sort by time and recalculate ranks
+        // Sort by time and recalculate ranks (skip flagged items)
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
-        combined = combined.map((item, index) => ({ ...item, rank: index + 1 }));
+        let rankCounter = 0;
+        combined = combined.map((item) => {
+            const hasFlag = (item.approved_flags && item.approved_flags.length > 0) ||
+                (item.verification_type && !['OFFLINE', 'ONLINE', 'verified'].includes(item.verification_type));
+            if (hasFlag) {
+                return { ...item, rank: null };
+            }
+            rankCounter++;
+            return { ...item, rank: rankCounter };
+        });
 
         let maxTotal = onlineRecords.total;
         let maxLastPage = onlineRecords.last_page;

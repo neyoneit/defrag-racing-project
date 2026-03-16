@@ -13,13 +13,6 @@ class DemoReportController extends Controller
     /**
      * Predefined report reasons
      */
-    const REASSIGNMENT_REASONS = [
-        'wrong_player' => 'Wrong player assigned',
-        'better_match' => 'Better match found',
-        'time_mismatch' => 'Time/physics mismatch',
-        'other' => 'Other',
-    ];
-
     const WRONG_ASSIGNMENT_REASONS = [
         'wrong_player' => 'Wrong player - name doesn\'t match',
         'wrong_map' => 'Wrong map',
@@ -38,6 +31,13 @@ class DemoReportController extends Controller
         'other' => 'Other',
     ];
 
+    const FALSE_FLAG_REASONS = [
+        'legitimate' => 'Record is legitimate - flag is incorrect',
+        'wrong_flag' => 'Wrong flag type was applied',
+        'resolved' => 'Issue was already resolved',
+        'other' => 'Other',
+    ];
+
     /**
      * Submit a demo report
      */
@@ -51,22 +51,11 @@ class DemoReportController extends Controller
         }
 
         $request->validate([
-            'report_type' => 'required|in:reassignment_request,wrong_assignment,bad_demo',
+            'report_type' => 'required|in:wrong_assignment,bad_demo,false_flag',
             'reason_type' => 'required|string',
             'reason_details' => 'nullable|string|max:1000',
             'suggested_record_id' => 'nullable|exists:records,id',
         ]);
-
-        // For reassignment requests, check if user can assign demos
-        if ($request->report_type === 'reassignment_request') {
-            if (!$user->canAssignDemos()) {
-                return back()->with('danger', 'You need at least 30 records and cannot be restricted to request reassignments.');
-            }
-
-            if (!$request->suggested_record_id) {
-                return back()->with('danger', 'Please select a record to assign this demo to.');
-            }
-        }
 
         // Check if user already reported this demo recently
         $recentReport = DemoAssignmentReport::where('demo_id', $demo->id)
@@ -91,9 +80,9 @@ class DemoReportController extends Controller
         ]);
 
         $messages = [
-            'reassignment_request' => 'Reassignment request submitted for admin review.',
             'wrong_assignment' => 'Wrong assignment reported. Admins will investigate.',
             'bad_demo' => 'Demo reported. Admins will review it.',
+            'false_flag' => 'False flag reported. Admins will review it.',
         ];
 
         return back()->with('success', $messages[$request->report_type]);
