@@ -25,6 +25,6 @@ class BotDetector
 
     public static function isVerifiedBot(string $ua): bool
     {
-        return (bool) preg_match('/Googlebot|Bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot/i', $ua);
+        return (bool) preg_match('/Googlebot|Bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|YandexRenderResourcesBot|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot|Applebot|AhrefsBot|Barkrowler|UptimeRobot|GPTBot|ClaudeBot|PetalBot|SemrushBot|MJ12bot|DotBot/i', $ua);
     }
 }
