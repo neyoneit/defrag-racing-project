@@ -88,7 +88,8 @@ class ModelsController extends Controller
             $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'); // newest (default)
         }
 
-        $models = $query->paginate(12)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [12, 24, 48]) ? (int) $request->input('per_page') : 12;
+        $models = $query->paginate($perPage)->withQueryString();
         $timings['models_query'] = round((microtime(true) - $start) * 1000, 2);
 
         // Add resolved MD3 paths to each model for optimized rendering
@@ -134,9 +135,11 @@ class ModelsController extends Controller
             'search' => $search,
             'myUploads' => $myUploads,
             'approvalStatus' => $approvalStatus,
+            'perPage' => $perPage,
             'load_times' => $timings,
             'availableBaseModels' => $availableBaseModels,
             'availableAuthors' => $availableAuthors,
+            'hasUploads' => auth()->check() ? \App\Models\PlayerModel::where('user_id', auth()->id())->exists() : false,
         ]);
     }
 
