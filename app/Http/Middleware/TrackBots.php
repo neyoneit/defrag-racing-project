@@ -17,7 +17,7 @@ class TrackBots
 
         if (BotDetector::isBot($ua)) {
             $date = now()->toDateString();
-            $ip = $request->ip();
+            $ip = $request->header('CF-Connecting-IP', $request->ip());
             $path = substr($request->path(), 0, 500);
             $method = $request->method();
             $status = $response->getStatusCode();

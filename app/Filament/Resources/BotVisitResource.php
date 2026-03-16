@@ -85,7 +85,12 @@ class BotVisitResource extends Resource
                     ->getStateUsing(fn ($record) => BotDetector::isVerifiedBot($record->user_agent) ? 'Verified' : 'Fake/Unknown')
                     ->badge()
                     ->color(fn (string $state) => $state === 'Verified' ? 'success' : 'danger'),
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Last seen')
+                    ->since()
+                    ->sortable(),
             ])
+            ->defaultSort('updated_at', 'desc')
             ->filters([
                 Tables\Filters\Filter::make('today')
                     ->label('Today')

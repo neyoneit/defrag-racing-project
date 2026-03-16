@@ -37,15 +37,18 @@ class FrontendErrorResource extends Resource
                     ->description('Copy this text and paste it to Claude to debug the error')
                     ->schema([
                         Forms\Components\Textarea::make('claude_summary')
-                            ->label('')
+                            ->label('Click to copy')
                             ->disabled()
                             ->rows(12)
                             ->columnSpanFull()
-                            ->extraAttributes(['id' => 'claude-summary-text', 'style' => 'font-family: monospace; font-size: 12px;'])
+                            ->extraAttributes([
+                                'x-on:click' => 'navigator.clipboard.writeText($el.value); $el.style.borderColor = "#22c55e"; setTimeout(() => $el.style.borderColor = "", 1500)',
+                                'style' => 'font-family:monospace;font-size:12px;cursor:pointer;',
+                            ])
                             ->formatStateUsing(fn ($record) => $record ? self::buildClaudeSummary($record) : ''),
                         Forms\Components\Placeholder::make('')
                             ->content(new \Illuminate\Support\HtmlString(
-                                '<button type="button" onclick="const t=document.getElementById(\'claude-summary-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';setTimeout(()=>this.textContent=\'Copy to Clipboard\',2000)" class="fi-btn fi-btn-size-md px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium text-sm">Copy to Clipboard</button>'
+                                '<div x-data="{ copied: false }"><button type="button" x-on:click="const ta = $el.closest(\'.fi-section-content\').querySelector(\'textarea\'); navigator.clipboard.writeText(ta.value); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? \'Copied!\' : \'Copy to Clipboard\'" :style="copied ? \'padding:8px 16px;background:#22c55e;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\' : \'padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\'">Copy to Clipboard</button></div>'
                             )),
                     ])
                     ->collapsed(false),
@@ -204,13 +207,16 @@ class FrontendErrorResource extends Resource
                     ->fillForm(fn ($record) => ['copy_text' => self::buildClaudeSummary($record)])
                     ->form([
                         Forms\Components\Textarea::make('copy_text')
-                            ->label('Click text to copy, or use button below')
+                            ->label('Click text to copy')
                             ->rows(14)
                             ->columnSpanFull()
-                            ->extraAttributes(['id' => 'claude-copy-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
+                            ->extraAttributes([
+                                'x-on:click' => 'navigator.clipboard.writeText($el.value); $el.style.borderColor = "#22c55e"; setTimeout(() => $el.style.borderColor = "", 1500)',
+                                'style' => 'font-family:monospace;font-size:12px;cursor:pointer;',
+                            ]),
                         Forms\Components\Placeholder::make('')
                             ->content(new \Illuminate\Support\HtmlString(
-                                '<button type="button" onclick="const t=document.getElementById(\'claude-copy-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
+                                '<div x-data="{ copied: false }"><button type="button" x-on:click="const ta = $el.closest(\'.fi-modal-content\').querySelector(\'textarea\'); navigator.clipboard.writeText(ta.value); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? \'Copied!\' : \'Copy to Clipboard\'" :style="copied ? \'padding:8px 16px;background:#22c55e;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\' : \'padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\'">Copy to Clipboard</button></div>'
                             )),
                     ])
                     ->modalSubmitActionLabel('Delete error')
@@ -226,13 +232,16 @@ class FrontendErrorResource extends Resource
                     ->fillForm(fn ($record) => ['copy_text' => self::buildGroupSummary($record)])
                     ->form([
                         Forms\Components\Textarea::make('copy_text')
-                            ->label('Click text to copy, or use button below')
+                            ->label('Click text to copy')
                             ->rows(18)
                             ->columnSpanFull()
-                            ->extraAttributes(['id' => 'claude-group-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
+                            ->extraAttributes([
+                                'x-on:click' => 'navigator.clipboard.writeText($el.value); $el.style.borderColor = "#22c55e"; setTimeout(() => $el.style.borderColor = "", 1500)',
+                                'style' => 'font-family:monospace;font-size:12px;cursor:pointer;',
+                            ]),
                         Forms\Components\Placeholder::make('')
                             ->content(new \Illuminate\Support\HtmlString(
-                                '<button type="button" onclick="const t=document.getElementById(\'claude-group-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
+                                '<div x-data="{ copied: false }"><button type="button" x-on:click="const ta = $el.closest(\'.fi-modal-content\').querySelector(\'textarea\'); navigator.clipboard.writeText(ta.value); copied = true; setTimeout(() => copied = false, 1500)" x-text="copied ? \'Copied!\' : \'Copy to Clipboard\'" :style="copied ? \'padding:8px 16px;background:#22c55e;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\' : \'padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;\'">Copy to Clipboard</button></div>'
                             )),
                     ])
                     ->modalSubmitActionLabel('Delete all duplicates')
@@ -250,14 +259,13 @@ class FrontendErrorResource extends Resource
                         ->modalWidth('4xl')
                         ->form([
                             Forms\Components\Textarea::make('copy_text')
-                                ->label('Click text to copy, or use button below')
+                                ->label('Click text to copy')
                                 ->rows(18)
                                 ->columnSpanFull()
-                                ->extraAttributes(['id' => 'claude-bulk-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
-                            Forms\Components\Placeholder::make('')
-                                ->content(new \Illuminate\Support\HtmlString(
-                                    '<button type="button" onclick="const t=document.getElementById(\'claude-bulk-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
-                                )),
+                                ->extraAttributes([
+                                    'x-on:click' => 'navigator.clipboard.writeText($el.value); $el.style.borderColor = "#22c55e"; setTimeout(() => $el.style.borderColor = "", 1500)',
+                                    'style' => 'font-family:monospace;font-size:12px;cursor:pointer;',
+                                ]),
                         ])
                         ->fillForm(fn (Collection $records) => ['copy_text' => self::buildBulkSummary($records)])
                         ->modalSubmitActionLabel('Delete selected')
