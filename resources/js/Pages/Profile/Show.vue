@@ -290,8 +290,100 @@ const validTabs = ['profile', 'customize', 'notifications', 'security'];
 const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
 const activeTab = ref(initialTab);
 
+// Mapper Claims
+const mapperClaims = ref([]);
+const loadingMapperClaims = ref(true);
+const savingMapperClaims = ref(false);
+const mapperClaimsSaved = ref(false);
+const newClaimName = ref('');
+const newClaimType = ref('map');
+const claimPreview = ref(null);
+const loadingPreview = ref(false);
+let previewTimeout = null;
+
+const fetchMapperClaims = async () => {
+    loadingMapperClaims.value = true;
+    try {
+        const res = await fetch(route('settings.mapper-claims.get'));
+        mapperClaims.value = await res.json();
+    } catch (e) {
+        console.error('Error loading mapper claims:', e);
+    } finally {
+        loadingMapperClaims.value = false;
+    }
+};
+
+const previewClaim = () => {
+    if (previewTimeout) clearTimeout(previewTimeout);
+    const name = newClaimName.value.trim();
+    if (name.length < 2) {
+        claimPreview.value = null;
+        return;
+    }
+    previewTimeout = setTimeout(async () => {
+        loadingPreview.value = true;
+        try {
+            const res = await fetch(route('settings.mapper-claims.preview'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ name, type: newClaimType.value }),
+            });
+            claimPreview.value = await res.json();
+        } catch (e) {
+            claimPreview.value = null;
+        } finally {
+            loadingPreview.value = false;
+        }
+    }, 300);
+};
+
+const addMapperClaim = () => {
+    const name = newClaimName.value.trim();
+    if (!name) return;
+    if (mapperClaims.value.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === newClaimType.value)) return;
+    mapperClaims.value.push({ name, type: newClaimType.value, matching_count: claimPreview.value?.count || 0, matching_samples: claimPreview.value?.maps?.map(m => m.name) || [] });
+    newClaimName.value = '';
+    claimPreview.value = null;
+};
+
+const removeMapperClaim = (index) => {
+    mapperClaims.value.splice(index, 1);
+};
+
+const saveMapperClaims = async () => {
+    savingMapperClaims.value = true;
+    try {
+        await fetch(route('settings.mapper-claims'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ claims: mapperClaims.value }),
+        });
+        mapperClaimsSaved.value = true;
+        setTimeout(() => { mapperClaimsSaved.value = false; }, 3000);
+        // Refresh to get updated matching counts
+        await fetchMapperClaims();
+    } catch (e) {
+        console.error('Error saving mapper claims:', e);
+    } finally {
+        savingMapperClaims.value = false;
+    }
+};
+
+onMounted(() => {
+    fetchMapperClaims();
+});
+
 const tabs = [
     { id: 'profile', label: 'Profile', icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
+    { id: 'creator', label: 'Creator', icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
     { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
     { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
     { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
@@ -527,6 +619,182 @@ const tabs = [
                             <SecondaryButton type="button" @click="cancelBackgroundCrop">
                                 Cancel
                             </SecondaryButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                </template>
+
+                <!-- ==================== CREATOR TAB ==================== -->
+                <template v-if="activeTab === 'creator'">
+
+            <!-- Intro / Explanation -->
+            <div class="rounded-xl bg-gradient-to-br from-green-500/5 via-green-600/10 to-green-500/5 border border-green-500/20 mb-4">
+                <div class="p-5">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-green-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-black text-white mb-1">Creator Profile</h2>
+                            <p class="text-sm text-gray-400 leading-relaxed">
+                                Link your mapper or model author names to your account. A <span class="text-green-400 font-bold">Creator</span> tab will appear on your profile showcasing all your maps, stats, top players, and more.
+                            </p>
+                            <div class="mt-3 space-y-1.5 text-xs text-gray-500">
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    <span>Maps are matched by the <span class="text-gray-300">author</span> field - partial matches work for collaborations (e.g. claiming "Nt" matches "Nt &amp; Sonic")</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    <span>New maps added to the database are <span class="text-gray-300">automatically included</span> - no need to re-claim</span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    <span>You can claim multiple names if you've published under different aliases</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Claims Management -->
+            <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-bold text-white">Your Creator Names</h3>
+                        <div class="flex items-center gap-2">
+                            <div v-if="mapperClaimsSaved" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span class="text-xs font-medium text-green-400">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="saveMapperClaims" :disabled="savingMapperClaims">
+                                Save
+                            </PrimaryButton>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div v-if="loadingMapperClaims" class="flex items-center justify-center py-4">
+                        <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+                    </div>
+
+                    <div v-else>
+                        <!-- Existing Claims -->
+                        <div v-if="mapperClaims.length" class="space-y-3 mb-5">
+                            <div v-for="(claim, idx) in mapperClaims" :key="idx"
+                                class="bg-black/30 rounded-lg border border-white/5 overflow-hidden">
+                                <div class="flex items-center gap-3 px-4 py-3">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm font-bold text-white">{{ claim.name }}</span>
+                                            <span class="text-xs font-bold px-2 py-0.5 rounded"
+                                                :class="claim.type === 'map' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'">
+                                                {{ claim.type }}
+                                            </span>
+                                        </div>
+                                        <div v-if="claim.matching_count !== undefined" class="text-xs text-gray-500 mt-0.5">
+                                            <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> matching maps
+                                            <span v-if="claim.matching_samples?.length" class="text-gray-600">
+                                                - {{ claim.matching_samples.slice(0, 3).join(', ') }}<span v-if="claim.matching_count > 3">...</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button @click="removeMapperClaim(idx)" class="text-red-400 hover:text-red-300 transition p-1.5 rounded hover:bg-red-500/10 flex-shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-else class="text-center py-6 mb-4">
+                            <div class="text-gray-600 text-sm">No creator names claimed yet</div>
+                            <div class="text-gray-700 text-xs mt-1">Add your mapper name below to get started</div>
+                        </div>
+
+                        <!-- Add New Claim -->
+                        <div class="bg-black/20 rounded-lg border border-white/5 p-4">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Add Creator Name</div>
+
+                            <!-- Type toggle -->
+                            <div class="flex items-center gap-1 mb-3">
+                                <button @click="newClaimType = 'map'; previewClaim()" type="button"
+                                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                    :class="newClaimType === 'map' ? 'bg-green-600/30 text-green-400 border border-green-500/40' : 'bg-black/30 text-gray-500 border border-white/5 hover:text-gray-300'">
+                                    Map Author
+                                </button>
+                                <button @click="newClaimType = 'model'; previewClaim()" type="button"
+                                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                    :class="newClaimType === 'model' ? 'bg-blue-600/30 text-blue-400 border border-blue-500/40' : 'bg-black/30 text-gray-500 border border-white/5 hover:text-gray-300'">
+                                    Model Author
+                                </button>
+                            </div>
+
+                            <!-- Name input -->
+                            <div class="flex items-center gap-2">
+                                <input v-model="newClaimName" type="text" placeholder="Type author name to search..."
+                                    @input="previewClaim"
+                                    @keyup.enter="addMapperClaim"
+                                    class="flex-1 px-3 py-2.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-green-500/50 focus:outline-none">
+                                <button @click="addMapperClaim"
+                                    :disabled="!newClaimName.trim() || (claimPreview && claimPreview.count === 0)"
+                                    class="px-5 py-2.5 rounded-lg text-sm font-bold transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                    :class="claimPreview && claimPreview.count > 0 ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-700 text-gray-400'">
+                                    Add
+                                </button>
+                            </div>
+
+                            <!-- Live Preview -->
+                            <div v-if="loadingPreview" class="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                                <div class="animate-spin rounded-full h-3 w-3 border-t border-b border-green-500"></div>
+                                Searching...
+                            </div>
+
+                            <div v-else-if="claimPreview" class="mt-3">
+                                <div v-if="claimPreview.count === 0" class="text-xs text-red-400 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    No {{ newClaimType === 'model' ? 'models' : 'maps' }} found with this author name
+                                </div>
+                                <div v-else>
+                                    <div class="text-xs text-green-400 font-bold mb-2 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        {{ claimPreview.count }} {{ newClaimType === 'model' ? 'models' : 'maps' }} found
+                                    </div>
+                                    <!-- Map previews -->
+                                    <div v-if="claimPreview.maps?.length" class="grid grid-cols-4 gap-2">
+                                        <div v-for="map in claimPreview.maps" :key="map.name"
+                                            class="bg-black/30 rounded overflow-hidden border border-white/5">
+                                            <div class="h-16 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`"></div>
+                                            <div class="px-2 py-1.5">
+                                                <div class="text-[11px] font-bold text-white truncate">{{ map.name }}</div>
+                                                <div class="text-[10px] text-gray-500 truncate">by {{ map.author }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- Model previews -->
+                                    <div v-if="claimPreview.models?.length" class="grid grid-cols-4 gap-2">
+                                        <div v-for="model in claimPreview.models" :key="model.name"
+                                            class="bg-black/30 rounded overflow-hidden border border-white/5">
+                                            <div class="h-16 bg-cover bg-center" :style="`background-image: url('/storage/${model.thumbnail}')`"></div>
+                                            <div class="px-2 py-1.5">
+                                                <div class="text-[11px] font-bold text-white truncate">{{ model.name }}</div>
+                                                <div class="text-[10px] text-gray-500 truncate">by {{ model.author }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="claimPreview.count > 8" class="text-[10px] text-gray-500 mt-1.5">
+                                        ...and {{ claimPreview.count - 8 }} more
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

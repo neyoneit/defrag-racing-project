@@ -195,6 +195,9 @@ Route::delete('/settings/background', [SettingsController::class, 'deleteBackgro
 Route::post('/settings/map-view-preferences', [SettingsController::class, 'mapViewPreferences'])->name('settings.map-view-preferences');
 Route::post('/settings/physics-order', [SettingsController::class, 'physicsOrderPreferences'])->name('settings.physics-order');
 Route::post('/settings/profile-layout', [SettingsController::class, 'profileLayout'])->name('settings.profile-layout');
+Route::post('/settings/mapper-claims', [SettingsController::class, 'mapperClaims'])->middleware('auth')->name('settings.mapper-claims');
+Route::get('/settings/mapper-claims', [SettingsController::class, 'getMapperClaims'])->middleware('auth')->name('settings.mapper-claims.get');
+Route::post('/settings/mapper-claims/preview', [SettingsController::class, 'previewMapperClaim'])->middleware('auth')->name('settings.mapper-claims.preview');
 
 
 Route::get('/notifications/records', [NotificationsController::class, 'records'])->middleware('auth')->name('notifications.index');
@@ -206,6 +209,15 @@ Route::get('/notifications/system', [NotificationsController::class, 'system'])-
 Route::post('/notifications/system', [NotificationsController::class, 'systemclear'])->middleware('auth')->name('notifications.system.clear');
 Route::post('/notifications/system/mark-unread', [NotificationsController::class, 'systemMarkAllUnread'])->middleware('auth')->name('notifications.system.mark.unread');
 Route::post('/notifications/system/{id}/toggle', [NotificationsController::class, 'systemToggle'])->middleware('auth')->name('notifications.system.toggle');
+
+// Mapper/Creator profile API routes
+Route::get('/api/profile/{userId}/mapper/stats', [\App\Http\Controllers\MapperProfileController::class, 'stats'])->name('mapper.stats');
+Route::get('/api/profile/{userId}/mapper/maps', [\App\Http\Controllers\MapperProfileController::class, 'maps'])->name('mapper.maps');
+Route::get('/api/profile/{userId}/mapper/top-players', [\App\Http\Controllers\MapperProfileController::class, 'topPlayers'])->name('mapper.topPlayers');
+Route::get('/api/profile/{userId}/mapper/recent-activity', [\App\Http\Controllers\MapperProfileController::class, 'recentActivity'])->name('mapper.recentActivity');
+Route::get('/api/profile/{userId}/mapper/heatmap', [\App\Http\Controllers\MapperProfileController::class, 'heatmap'])->name('mapper.heatmap');
+Route::get('/api/profile/{userId}/mapper/highlighted-map', [\App\Http\Controllers\MapperProfileController::class, 'highlightedMap'])->name('mapper.highlightedMap');
+Route::get('/api/profile/{userId}/mapper/models', [\App\Http\Controllers\MapperProfileController::class, 'models'])->name('mapper.models');
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/api/profile/{mddId}/activity', [ProfileController::class, 'activityData'])->name('profile.activity');

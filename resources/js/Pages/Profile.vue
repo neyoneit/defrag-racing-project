@@ -3,6 +3,7 @@
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ActivityHeatmap from '@/Components/ActivityHeatmap.vue';
+    import ProfileCreatorTab from '@/Components/ProfileCreatorTab.vue';
     import { useClipboard } from '@/Composables/useClipboard';
 
     const { copy, copyState } = useClipboard();
@@ -73,10 +74,29 @@
             default: () => []
         },
         hasProfile: Boolean,
+        hasMapperProfile: {
+            type: Boolean,
+            default: false
+        },
         load_times: Object
     });
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
+
+    // Tab navigation
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = ref(urlParams.get('tab') === 'creator' && props.hasMapperProfile ? 'creator' : 'records');
+
+    const switchTab = (tab) => {
+        activeTab.value = tab;
+        const url = new URL(window.location);
+        if (tab === 'records') {
+            url.searchParams.delete('tab');
+        } else {
+            url.searchParams.set('tab', tab);
+        }
+        window.history.replaceState({}, '', url);
+    };
 
     // Profile layout customization
     const defaultStatBoxes = ['performance', 'activity', 'record_types', 'map_features'];
@@ -648,8 +668,30 @@
             </div>
         </div>
 
-        <!-- EPIC REDESIGN - Main Content -->
-        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+        <!-- Profile Tabs -->
+        <div v-if="hasMapperProfile" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 mb-3 relative z-10">
+            <div class="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-white/5 w-fit">
+                <button @click="switchTab('records')"
+                    class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+                    :class="activeTab === 'records' ? 'bg-white/10 text-white border border-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+                    Records
+                </button>
+                <button @click="switchTab('creator')"
+                    class="px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                    :class="activeTab === 'creator' ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                    Creator
+                </button>
+            </div>
+        </div>
+
+        <!-- Creator Tab -->
+        <div v-if="hasMapperProfile && activeTab === 'creator'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <ProfileCreatorTab :userId="user?.id" />
+        </div>
+
+        <!-- EPIC REDESIGN - Main Content (Records Tab) -->
+        <div v-show="activeTab === 'records'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10"
 
             <!-- Not Linked Account Overlay (viewing MDD-only profile) -->
             <div v-if="!user?.id" class="relative z-20 mb-6">

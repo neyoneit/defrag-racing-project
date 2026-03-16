@@ -328,6 +328,40 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     /**
+     * Get user's mapper claims
+     */
+    public function mapperClaims()
+    {
+        return $this->hasMany(MapperClaim::class);
+    }
+
+    /**
+     * Get maps claimed by this user (via mapper claims)
+     */
+    public function getClaimedMapsQuery()
+    {
+        $claimNames = $this->mapperClaims()->where('type', 'map')->pluck('name');
+
+        if ($claimNames->isEmpty()) {
+            return Map::where('id', 0); // empty query
+        }
+
+        return Map::where('visible', true)->where(function ($q) use ($claimNames) {
+            foreach ($claimNames as $name) {
+                $q->orWhere('author', 'LIKE', '%' . $name . '%');
+            }
+        });
+    }
+
+    /**
+     * Check if user has any mapper claims with matching maps
+     */
+    public function hasMapperProfile(): bool
+    {
+        return $this->getClaimedMapsQuery()->exists();
+    }
+
+    /**
      * Get user's aliases
      */
     public function aliases()
