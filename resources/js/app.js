@@ -2,6 +2,15 @@ import './bootstrap';
 import '../css/app.css';
 import '../css/items.css';
 
+// Auto-reload on stale chunk after deploy
+window.addEventListener('vite:preloadError', () => {
+    const lastReload = sessionStorage.getItem('chunk_reload');
+    if (!lastReload || Date.now() - Number(lastReload) > 10000) {
+        sessionStorage.setItem('chunk_reload', Date.now());
+        window.location.reload();
+    }
+});
+
 import { createApp, h } from 'vue';
 import { reactive } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3';
@@ -50,13 +59,16 @@ const padZero = (num) => {
 };
 
 const q3tohtml = (name) => {
+    if (!name) return '';
     let result = '';
     let color = '7';
     let buffer = '';
 
+    const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     const flush = () => {
         if (buffer) {
-            result += `<span class="q3c-${color}">${buffer}</span>`;
+            result += `<span class="q3c-${color}">${escapeHtml(buffer)}</span>`;
             buffer = '';
         }
     };

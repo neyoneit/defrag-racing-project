@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Services;
+
+class BotDetector
+{
+    public static function isBot(string $ua): bool
+    {
+        if (empty($ua)) return true;
+
+        // Fake Chrome with impossible build numbers (5+ digits)
+        if (preg_match('/Chrome\/[\d]+\.[\d]+\.(\d{5,})/', $ua)) return true;
+
+        // Very old browsers that wouldn't run modern JS
+        if (preg_match('/Chrome\/[1-4]\d\./', $ua)) return true;
+
+        // Known headless/scraper signatures
+        if (preg_match('/HeadlessChrome|PhantomJS|Selenium|Puppeteer/i', $ua)) return true;
+
+        // Known bot user agents
+        if (preg_match('/bot|crawler|spider|scraper|wget|curl|python-requests|Go-http-client|Java\/|libwww|httpclient/i', $ua)) return true;
+
+        return false;
+    }
+
+    public static function isVerifiedBot(string $ua): bool
+    {
+        return (bool) preg_match('/Googlebot|Bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot/i', $ua);
+    }
+}

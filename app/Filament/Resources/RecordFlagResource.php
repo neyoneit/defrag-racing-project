@@ -174,7 +174,7 @@ class RecordFlagResource extends Resource
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ])
-                    ->default('pending'),
+                    ->default(null),
 
                 Tables\Filters\SelectFilter::make('flag_type')
                     ->label('Flag Type')
@@ -193,6 +193,7 @@ class RecordFlagResource extends Resource
                         'other' => 'Other',
                     ]),
             ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),

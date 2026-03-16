@@ -40,6 +40,7 @@ class Kernel extends HttpKernel
             \Laravel\Jetstream\Http\Middleware\ShareInertiaData::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\ShareFooterPages::class,
+            \App\Http\Middleware\TrackBots::class,
         ],
 
         'general' => [

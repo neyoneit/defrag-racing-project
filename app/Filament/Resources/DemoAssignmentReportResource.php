@@ -283,7 +283,7 @@ class DemoAssignmentReportResource extends Resource
                         'rejected' => 'Rejected',
                         'resolved' => 'Resolved',
                     ])
-                    ->default('pending'),
+                    ->default(null),
 
                 Tables\Filters\SelectFilter::make('report_type')
                     ->label('Type')
@@ -296,6 +296,7 @@ class DemoAssignmentReportResource extends Resource
                         'manual_unassign' => 'Manual Unassign',
                     ]),
             ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
