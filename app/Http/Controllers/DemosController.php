@@ -229,7 +229,7 @@ class DemosController extends Controller
                 }
 
                 if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = $this->computeDemoCounts(UploadedDemo::query());
+                if ($needs('demoCounts')) $demoCounts = Cache::remember('demo_counts_admin', 60, fn () => $this->computeDemoCounts(UploadedDemo::query()));
             } else {
                 $query = UploadedDemo::where('user_id', $currentUser->id)
                     ->with(['record.user', 'offlineRecord']);
@@ -270,7 +270,7 @@ class DemosController extends Controller
                 }
 
                 if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id));
+                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 60, fn () => $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id)));
             }
         }
 
@@ -317,9 +317,9 @@ class DemosController extends Controller
             }
 
             if ($needs('browseCounts')) {
-                $browseCounts = $this->computeDemoCounts(
+                $browseCounts = Cache::remember('demo_counts_browse', 60, fn () => $this->computeDemoCounts(
                     UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
-                );
+                ));
             }
         }
 
