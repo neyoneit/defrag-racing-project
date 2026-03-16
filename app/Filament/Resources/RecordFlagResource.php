@@ -134,8 +134,14 @@ class RecordFlagResource extends Resource
                     ->tooltip(fn ($record) => $record->demo?->original_filename)
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('flag_count')
+                    ->label('Users')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (int $state): string => $state >= 3 ? 'danger' : ($state >= 2 ? 'warning' : 'gray')),
+
                 Tables\Columns\TextColumn::make('flagger.name')
-                    ->label('Flagged By')
+                    ->label('First Flagged By')
                     ->searchable()
                     ->sortable()
                     ->html()

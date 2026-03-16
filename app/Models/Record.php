@@ -39,6 +39,11 @@ class Record extends Model
         return $this->hasMany(UploadedDemo::class, 'record_id', 'id');
     }
 
+    public function approvedFlags()
+    {
+        return $this->hasMany(RecordFlag::class)->where('status', 'approved');
+    }
+
     /**
      * Boot method to clear profile cache when records change
      */

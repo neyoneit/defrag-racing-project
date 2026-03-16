@@ -44,29 +44,55 @@ class RecordFlagController extends Controller
             return back()->with('danger', 'No record or demo specified.');
         }
 
-        // Check duplicate: same user, same target, same flag, within 30 days
-        $duplicate = RecordFlag::where('flagged_by_user_id', $user->id)
-            ->where('flag_type', $request->flag_type)
-            ->where('created_at', '>', now()->subDays(30))
+        // Find existing flag with same type on same target (pending or approved)
+        $existing = RecordFlag::where('flag_type', $request->flag_type)
+            ->whereIn('status', ['pending', 'approved'])
             ->where(function ($q) use ($request) {
                 if ($request->record_id) {
                     $q->where('record_id', $request->record_id);
+                } else {
+                    $q->whereNull('record_id');
                 }
                 if ($request->demo_id) {
                     $q->where('demo_id', $request->demo_id);
+                } else {
+                    $q->whereNull('demo_id');
                 }
             })
-            ->exists();
+            ->first();
 
-        if ($duplicate) {
-            return back()->with('warning', 'You have already flagged this with the same flag recently.');
+        if ($existing) {
+            $users = $existing->flagged_by_users ?? [$existing->flagged_by_user_id];
+
+            // Check if this user already flagged
+            if (in_array($user->id, $users)) {
+                return back()->with('warning', 'You have already flagged this with the same flag.');
+            }
+
+            // Accumulate
+            $users[] = $user->id;
+            $notes = $existing->note;
+            if ($request->note) {
+                $notes = ($notes ? $notes . "\n" : '') . "[{$user->name}] {$request->note}";
+            }
+
+            $existing->update([
+                'flagged_by_users' => $users,
+                'flag_count' => count($users),
+                'note' => $notes,
+            ]);
+
+            return back()->with('success', 'Flag added. ' . count($users) . ' users have flagged this.');
         }
 
+        // New flag
         RecordFlag::create([
             'record_id' => $request->record_id,
             'demo_id' => $request->demo_id,
             'flag_type' => $request->flag_type,
             'flagged_by_user_id' => $user->id,
+            'flagged_by_users' => [$user->id],
+            'flag_count' => 1,
             'note' => $request->note,
             'status' => 'pending',
         ]);

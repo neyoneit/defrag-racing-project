@@ -11,6 +11,8 @@ class RecordFlag extends Model
         'demo_id',
         'flag_type',
         'flagged_by_user_id',
+        'flagged_by_users',
+        'flag_count',
         'status',
         'note',
         'resolved_by_admin_id',
@@ -20,6 +22,7 @@ class RecordFlag extends Model
 
     protected $casts = [
         'resolved_at' => 'datetime',
+        'flagged_by_users' => 'array',
     ];
 
     public function record()
