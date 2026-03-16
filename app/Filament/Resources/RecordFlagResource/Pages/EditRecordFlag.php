@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\DemoAssignmentReportResource\Pages;
+namespace App\Filament\Resources\RecordFlagResource\Pages;
 
-use App\Filament\Resources\DemoAssignmentReportResource;
+use App\Filament\Resources\RecordFlagResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
-class EditDemoAssignmentReport extends EditRecord
+class EditRecordFlag extends EditRecord
 {
-    protected static string $resource = DemoAssignmentReportResource::class;
+    protected static string $resource = RecordFlagResource::class;
 
     protected function getHeaderActions(): array
     {
@@ -22,6 +22,7 @@ class EditDemoAssignmentReport extends EditRecord
         if (!empty($data['admin_notes'])) {
             $adminName = auth()->user()->name;
             $timestamp = now()->format('Y-m-d H:i');
+            // Only prefix if not already prefixed
             if (!str_starts_with($data['admin_notes'], '[')) {
                 $data['admin_notes'] = "[{$adminName} - {$timestamp}] {$data['admin_notes']}";
             }

@@ -131,6 +131,9 @@ Route::middleware('auth')->group(function () {
 
     // Demo reporting routes
     Route::post('/demos/{demo}/report', [DemoReportController::class, 'store'])->name('demos.report');
+
+    // Record/demo flag routes
+    Route::post('/flags', [\App\Http\Controllers\RecordFlagController::class, 'store'])->name('flags.store');
 });
 
 // Make the main upload endpoint publicly reachable so the demos page can accept

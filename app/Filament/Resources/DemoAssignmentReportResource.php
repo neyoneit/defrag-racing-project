@@ -51,6 +51,7 @@ class DemoAssignmentReportResource extends Resource
                                 'reassignment_request' => 'Reassignment Request',
                                 'wrong_assignment' => 'Wrong Assignment',
                                 'bad_demo' => 'Bad Demo',
+                                'false_flag' => 'False Flag',
                             ])
                             ->required()
                             ->disabled(),
@@ -179,7 +180,10 @@ class DemoAssignmentReportResource extends Resource
                         Forms\Components\Textarea::make('admin_notes')
                             ->label('Admin Notes')
                             ->rows(3)
-                            ->placeholder('Add notes about this report resolution...'),
+                            ->placeholder('Add notes about this report resolution...')
+                            ->helperText(fn () => new \Illuminate\Support\HtmlString(
+                                'Your name will be added automatically: [' . UserResource::q3tohtml(auth()->user()?->name ?? '') . ']'
+                            )),
 
                         Forms\Components\DateTimePicker::make('resolved_at')
                             ->label('Resolved At')
@@ -206,11 +210,14 @@ class DemoAssignmentReportResource extends Resource
                         'primary' => 'reassignment_request',
                         'warning' => 'wrong_assignment',
                         'danger' => 'bad_demo',
+                        'info' => 'false_flag',
                     ])
                     ->formatStateUsing(fn (string $state): string => match($state) {
                         'reassignment_request' => 'Reassign',
                         'wrong_assignment' => 'Wrong',
                         'bad_demo' => 'Bad Demo',
+                        'false_flag' => 'False Flag',
+                        default => $state,
                     }),
 
                 Tables\Columns\TextColumn::make('demo.processed_filename')
@@ -277,6 +284,7 @@ class DemoAssignmentReportResource extends Resource
                         'reassignment_request' => 'Reassignment Request',
                         'wrong_assignment' => 'Wrong Assignment',
                         'bad_demo' => 'Bad Demo',
+                        'false_flag' => 'False Flag',
                     ]),
             ])
             ->actions([
@@ -299,11 +307,17 @@ class DemoAssignmentReportResource extends Resource
                             ->rows(3),
                     ])
                     ->action(function (DemoAssignmentReport $record, array $data) {
+                        $adminName = auth()->user()->name;
+                        $notes = $data['admin_notes'] ?? null;
+                        if ($notes) {
+                            $notes = "[{$adminName} - " . now()->format('Y-m-d H:i') . "] {$notes}";
+                        }
+
                         $record->update([
                             'status' => 'approved',
                             'resolved_at' => now(),
                             'resolved_by_admin_id' => auth()->id(),
-                            'admin_notes' => $data['admin_notes'] ?? null,
+                            'admin_notes' => $notes,
                         ]);
 
                         // Handle reassignment if it's a reassignment request
@@ -338,11 +352,14 @@ class DemoAssignmentReportResource extends Resource
                             ->rows(3),
                     ])
                     ->action(function (DemoAssignmentReport $record, array $data) {
+                        $adminName = auth()->user()->name;
+                        $notes = "[{$adminName} - " . now()->format('Y-m-d H:i') . "] {$data['admin_notes']}";
+
                         $record->update([
                             'status' => 'rejected',
                             'resolved_at' => now(),
                             'resolved_by_admin_id' => auth()->id(),
-                            'admin_notes' => $data['admin_notes'],
+                            'admin_notes' => $notes,
                         ]);
 
                         Notification::make()
