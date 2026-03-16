@@ -344,18 +344,12 @@
                     <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                     offline demo
                 </component>
-                <component
+                <span
                     v-else
-                    :is="demoDownloadUrl ? 'a' : 'span'"
-                    :href="demoDownloadUrl"
-                    @click.stop
                     class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50"
-                    :class="{ 'hover:bg-green-500/30 hover:text-green-300 transition-colors': demoDownloadUrl }"
-                    :title="demoDownloadUrl ? 'Download demo' : ''"
                 >
-                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                     record
-                </component>
+                </span>
 
                 <!-- Verified badge: record has demo attached -->
                 <span
