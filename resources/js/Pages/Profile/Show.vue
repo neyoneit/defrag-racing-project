@@ -54,6 +54,16 @@ const updatePhotoPreview = () => {
     const reader = new FileReader();
     reader.onload = (e) => { photoPreview.value = e.target.result; };
     reader.readAsDataURL(photo);
+
+    // Auto-save avatar immediately
+    profileForm.photo = photo;
+    profileForm.post(route('user-profile-information.update'), {
+        errorBag: 'updateProfileInformation',
+        preserveScroll: true,
+        onSuccess: () => {
+            if (photoInput.value?.value) photoInput.value.value = null;
+        },
+    });
 };
 
 const deletePhoto = () => {

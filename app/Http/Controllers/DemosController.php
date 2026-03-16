@@ -128,13 +128,22 @@ class DemosController extends Controller
         $currentUser = Auth::user();
         $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
 
+        // Check which props Inertia is requesting (partial reload)
+        $only = $request->header('X-Inertia-Partial-Data');
+        $partialProps = $only ? explode(',', $only) : [];
+        $isPartial = !empty($partialProps);
+
+        $needs = function ($prop) use ($isPartial, $partialProps) {
+            return !$isPartial || in_array($prop, $partialProps);
+        };
+
         // Get sorting parameters
         $sortBy = $request->input('sort', 'created_at');
         $sortOrder = $request->input('order', 'desc');
 
         // Get filter parameters
-        $filterTab = $request->input('tab', 'all'); // all, online, offline
-        $filterStatus = $request->input('status', 'all'); // all, assigned, failed
+        $filterTab = $request->input('tab', 'all');
+        $filterStatus = $request->input('status', 'all');
         $searchQuery = $request->input('search', '');
 
         // Get advanced filter parameters (admin only)
@@ -153,15 +162,13 @@ class DemosController extends Controller
             $sortOrder = 'desc';
         }
 
-        // Get user's own uploads if authenticated
+        // --- User's own uploads (only when needed) ---
         $userDemos = null;
         $demoCounts = null;
-        if (Auth::check()) {
+        if (Auth::check() && ($needs('userDemos') || $needs('demoCounts'))) {
             if ($isAdmin) {
-                // Admin sees all uploads (including guest uploads) in "Your Uploads" section
                 $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord', 'suggestedUser']);
 
-                // Apply filters
                 if ($filterTab === 'online') {
                     $query->where('gametype', 'LIKE', 'm%');
                 } elseif ($filterTab === 'offline') {
@@ -184,7 +191,6 @@ class DemosController extends Controller
                     $query->whereIn('status', ['uploaded', 'pending', 'processing']);
                 }
 
-                // Apply search filter
                 if (!empty($searchQuery)) {
                     $query->where(function($q) use ($searchQuery) {
                         $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
@@ -192,38 +198,23 @@ class DemosController extends Controller
                     });
                 }
 
-                // Apply confidence filter (admin only)
                 if ($confidenceFilter) {
                     switch ($confidenceFilter) {
-                        case '90-99':
-                            $query->whereBetween('name_confidence', [90, 99]);
-                            break;
-                        case '80-89':
-                            $query->whereBetween('name_confidence', [80, 89]);
-                            break;
-                        case '70-79':
-                            $query->whereBetween('name_confidence', [70, 79]);
-                            break;
-                        case '60-69':
-                            $query->whereBetween('name_confidence', [60, 69]);
-                            break;
-                        case '50-59':
-                            $query->whereBetween('name_confidence', [50, 59]);
-                            break;
-                        case 'below-50':
-                            $query->where('name_confidence', '<', 50);
-                            break;
+                        case '90-99': $query->whereBetween('name_confidence', [90, 99]); break;
+                        case '80-89': $query->whereBetween('name_confidence', [80, 89]); break;
+                        case '70-79': $query->whereBetween('name_confidence', [70, 79]); break;
+                        case '60-69': $query->whereBetween('name_confidence', [60, 69]); break;
+                        case '50-59': $query->whereBetween('name_confidence', [50, 59]); break;
+                        case 'below-50': $query->where('name_confidence', '<', 50); break;
                     }
                 }
 
-                // Filter for demos matched to other users (admin only)
                 if ($showOtherUserMatches) {
                     $query->where('name_confidence', 100)
                           ->whereNotNull('suggested_user_id')
                           ->where('suggested_user_id', '!=', Auth::id());
                 }
 
-                // Filter by uploader (admin only)
                 if ($uploadedBy) {
                     $uploaderUser = \App\Models\User::where('name', $uploadedBy)->first();
                     if ($uploaderUser) {
@@ -231,23 +222,18 @@ class DemosController extends Controller
                     }
                 }
 
-                // Apply sorting
                 if ($sortBy === 'status') {
                     $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
 
-                $userDemos = $query->paginate(20, ['*'], 'userPage');
-
-                // Calculate total counts for filters (all demos for admin) - single GROUP BY query
-                $demoCounts = $this->computeDemoCounts(UploadedDemo::query());
+                if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
+                if ($needs('demoCounts')) $demoCounts = $this->computeDemoCounts(UploadedDemo::query());
             } else {
-                // Regular users see only their own uploads
                 $query = UploadedDemo::where('user_id', $currentUser->id)
                     ->with(['record.user', 'offlineRecord']);
 
-                // Apply filters
                 if ($filterTab === 'online') {
                     $query->where('gametype', 'LIKE', 'm%');
                 } elseif ($filterTab === 'offline') {
@@ -270,7 +256,6 @@ class DemosController extends Controller
                     $query->whereIn('status', ['uploaded', 'pending', 'processing']);
                 }
 
-                // Apply search filter
                 if (!empty($searchQuery)) {
                     $query->where(function($q) use ($searchQuery) {
                         $q->where('original_filename', 'LIKE', '%' . $searchQuery . '%')
@@ -278,81 +263,86 @@ class DemosController extends Controller
                     });
                 }
 
-                // Apply sorting
                 if ($sortBy === 'status') {
                     $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
 
-                $userDemos = $query->paginate(20, ['*'], 'userPage');
-
-                // Calculate total counts for filters (only user's demos) - single GROUP BY query
-                $demoCounts = $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id));
+                if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
+                if ($needs('demoCounts')) $demoCounts = $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id));
             }
         }
 
-        // Get browse filter parameters
-        $browseTab = $request->input('browse_tab', 'all'); // all, online, offline
-        $browseStatus = $request->input('browse_status', 'all'); // all, assigned, processed, failed
-        $browseSearch = $request->input('browse_search', ''); // filename search
+        // --- Browse section (only when needed) ---
+        $publicDemos = null;
+        $browseCounts = null;
+        $browseTab = $request->input('browse_tab', 'all');
+        $browseStatus = $request->input('browse_status', 'all');
+        $browseSearch = $request->input('browse_search', '');
 
-        // Get all public demos for the "Browse" section
-        $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
+        if ($needs('publicDemos') || $needs('browseCounts')) {
+            if ($needs('publicDemos')) {
+                $query = UploadedDemo::with(['record.user', 'user', 'offlineRecord']);
 
-        // Apply status filter first
-        if ($browseStatus === 'assigned') {
-            $query->whereIn('status', ['assigned', 'fallback-assigned']);
-        } elseif ($browseStatus === 'fallback-assigned') {
-            $query->where('status', 'fallback-assigned');
-        } elseif ($browseStatus === 'processed') {
-            $query->where('status', 'processed');
-        } elseif ($browseStatus === 'failed-validity') {
-            $query->where('status', 'failed-validity');
-        } elseif ($browseStatus === 'failed') {
-            $query->where('status', 'failed');
-        } else {
-            // Show all statuses: assigned, fallback-assigned, processed, failed-validity, failed
-            $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
+                if ($browseStatus === 'assigned') {
+                    $query->whereIn('status', ['assigned', 'fallback-assigned']);
+                } elseif ($browseStatus === 'fallback-assigned') {
+                    $query->where('status', 'fallback-assigned');
+                } elseif ($browseStatus === 'processed') {
+                    $query->where('status', 'processed');
+                } elseif ($browseStatus === 'failed-validity') {
+                    $query->where('status', 'failed-validity');
+                } elseif ($browseStatus === 'failed') {
+                    $query->where('status', 'failed');
+                } else {
+                    $query->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed']);
+                }
+
+                if ($browseTab === 'online') {
+                    $query->where('gametype', 'LIKE', 'm%');
+                } elseif ($browseTab === 'offline') {
+                    $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+                }
+
+                if (!empty($browseSearch)) {
+                    $query->where(function($q) use ($browseSearch) {
+                        $q->where('original_filename', 'LIKE', "%{$browseSearch}%")
+                          ->orWhere('processed_filename', 'LIKE', "%{$browseSearch}%");
+                    });
+                }
+
+                $publicDemos = $query->orderBy('created_at', 'desc')
+                    ->paginate(20, ['*'], 'browsePage');
+            }
+
+            if ($needs('browseCounts')) {
+                $browseCounts = $this->computeDemoCounts(
+                    UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
+                );
+            }
         }
 
-        // Apply browse tab filters (online/offline)
-        if ($browseTab === 'online') {
-            $query->where('gametype', 'LIKE', 'm%');
-        } elseif ($browseTab === 'offline') {
-            $query->where('gametype', 'NOT LIKE', 'm%')->whereNotNull('gametype');
+        // --- Download limit (only on full load) ---
+        $downloadLimitInfo = null;
+        if (!$isPartial) {
+            $rateLimitKey = $currentUser
+                ? "demo_download_user_{$currentUser->id}"
+                : "demo_download_ip_" . request()->ip();
+
+            $downloadsToday = Cache::get($rateLimitKey, 0);
+            $maxDownloads = $currentUser ? 50 : 1;
+            $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
+
+            $downloadLimitInfo = [
+                'used' => $downloadsToday,
+                'limit' => $maxDownloads,
+                'remaining' => $remainingDownloads,
+                'isGuest' => !$currentUser,
+            ];
         }
 
-        // Apply search filter
-        if (!empty($browseSearch)) {
-            $query->where(function($q) use ($browseSearch) {
-                $q->where('original_filename', 'LIKE', "%{$browseSearch}%")
-                  ->orWhere('processed_filename', 'LIKE', "%{$browseSearch}%");
-            });
-        }
-
-        $publicDemos = $query->orderBy('created_at', 'desc')
-            ->paginate(20, ['*'], 'browsePage');
-
-        // Calculate counts for browse section filters - single GROUP BY query
-        $browseCounts = $this->computeDemoCounts(
-            UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
-        );
-
-        // Get download limit info for current user/IP
-        $rateLimitKey = $currentUser
-            ? "demo_download_user_{$currentUser->id}"
-            : "demo_download_ip_" . request()->ip();
-
-        $downloadsToday = Cache::get($rateLimitKey, 0);
-        $maxDownloads = $currentUser ? 50 : 1;
-        $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
-
-        return Inertia::render('Demos/Index', [
-            'userDemos' => $userDemos,
-            'publicDemos' => $publicDemos,
-            'demoCounts' => $demoCounts,
-            'browseCounts' => $browseCounts,
+        $data = [
             'sortBy' => $sortBy,
             'sortOrder' => $sortOrder,
             'browseTab' => $browseTab,
@@ -362,13 +352,15 @@ class DemosController extends Controller
             'confidenceFilter' => $confidenceFilter,
             'showOtherUserMatches' => $showOtherUserMatches,
             'uploadedBy' => $uploadedBy,
-            'downloadLimitInfo' => [
-                'used' => $downloadsToday,
-                'limit' => $maxDownloads,
-                'remaining' => $remainingDownloads,
-                'isGuest' => !$currentUser,
-            ],
-        ]);
+        ];
+
+        if ($needs('userDemos')) $data['userDemos'] = $userDemos;
+        if ($needs('demoCounts')) $data['demoCounts'] = $demoCounts;
+        if ($needs('publicDemos')) $data['publicDemos'] = $publicDemos;
+        if ($needs('browseCounts')) $data['browseCounts'] = $browseCounts;
+        if (!$isPartial) $data['downloadLimitInfo'] = $downloadLimitInfo;
+
+        return Inertia::render('Demos/Index', $data);
     }
 
     /**

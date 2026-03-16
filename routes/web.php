@@ -202,6 +202,7 @@ Route::post('/notifications/system/mark-unread', [NotificationsController::class
 Route::post('/notifications/system/{id}/toggle', [NotificationsController::class, 'systemToggle'])->middleware('auth')->name('notifications.system.toggle');
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
+Route::get('/api/profile/{mddId}/activity', [ProfileController::class, 'activityData'])->name('profile.activity');
 Route::get('/profile/mdd/{userId}', [ProfileController::class, 'mdd'])->name('profile.mdd');
 Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('profile.index');
 

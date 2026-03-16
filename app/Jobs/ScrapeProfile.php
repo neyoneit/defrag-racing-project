@@ -17,8 +17,8 @@ class ScrapeProfile implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 3;
-    public $backoff = [10, 60, 300];
+    public $tries = 1;
+    public $maxExceptions = 1;
 
     private $mdd_id;
 
@@ -34,7 +34,12 @@ class ScrapeProfile implements ShouldQueue
             return;
         }
 
-        $result = $this->get_profile($this->mdd_id);
+        try {
+            $result = $this->get_profile($this->mdd_id);
+        } catch (\Exception $e) {
+            \Log::warning("ScrapeProfile failed for mdd_id={$this->mdd_id}: {$e->getMessage()}");
+            return;
+        }
 
         if ($result === null) {
             return;
@@ -66,7 +71,14 @@ class ScrapeProfile implements ShouldQueue
     public function get_profile ($id) {
         $url = 'https://q3df.org/profil?id=' . $id;
 
-        $response = file_get_contents($url);
+        $context = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true]]);
+        $response = @file_get_contents($url, false, $context);
+
+        // Fallback: retry without SSL verification if certificate fails
+        if ($response === false) {
+            $context = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+            $response = @file_get_contents($url, false, $context);
+        }
 
         if ($response === false) {
             return null;
