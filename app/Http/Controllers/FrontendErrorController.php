@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FrontendError;
+use App\Services\BotDetector;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,6 +11,10 @@ class FrontendErrorController extends Controller
 {
     public function store(Request $request)
     {
+        if (BotDetector::isBot($request->userAgent() ?? '')) {
+            return response()->json(['ok' => true]);
+        }
+
         $request->validate([
             'type' => 'required|string|in:js_error,api_error,vue_error',
             'message' => 'required|string|max:1000',

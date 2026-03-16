@@ -157,7 +157,7 @@ class AliasReportResource extends Resource
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ])
-                    ->default('pending'),
+                    ->default(null),
 
                 Tables\Filters\TernaryFilter::make('alias.is_approved')
                     ->label('Alias Approved')
@@ -165,6 +165,7 @@ class AliasReportResource extends Resource
                     ->trueLabel('Approved aliases only')
                     ->falseLabel('Unapproved aliases only'),
             ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),

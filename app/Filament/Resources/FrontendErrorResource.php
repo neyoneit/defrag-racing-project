@@ -118,6 +118,14 @@ class FrontendErrorResource extends Resource
                     ->html()
                     ->formatStateUsing(fn ($state) => $state ? UserResource::q3tohtml($state) : 'Anonymous'),
 
+                Tables\Columns\IconColumn::make('is_bot')
+                    ->label('Bot')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-bug-ant')
+                    ->falseIcon('heroicon-o-user')
+                    ->trueColor('danger')
+                    ->falseColor('success'),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('When')
                     ->dateTime()
@@ -132,7 +140,13 @@ class FrontendErrorResource extends Resource
                         'api_error' => 'API Error',
                         'vue_error' => 'Vue Error',
                     ]),
+                Tables\Filters\TernaryFilter::make('is_bot')
+                    ->label('Bot')
+                    ->placeholder('All')
+                    ->trueLabel('Bots only')
+                    ->falseLabel('Real users only'),
             ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\Action::make('copy_for_claude')
                     ->label('Copy')
