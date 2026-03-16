@@ -494,6 +494,7 @@
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
                                             <Link :href="route('profile.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
+                                            <Link :href="route('profile.show') + '?tab=creator'" class="block text-sm text-gray-400 hover:text-yellow-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Creator</Link>
                                             <Link :href="route('profile.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
                                             <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications</Link>
                                             <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
