@@ -10,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class FrontendErrorResource extends Resource
 {
@@ -71,6 +72,42 @@ class FrontendErrorResource extends Resource
                         Forms\Components\TextInput::make('user_agent')->disabled()->columnSpanFull(),
                         Forms\Components\DateTimePicker::make('created_at')->disabled(),
                     ])->columns(2),
+                Forms\Components\Section::make('Other occurrences')
+                    ->schema([
+                        Forms\Components\Placeholder::make('duplicates')
+                            ->label('')
+                            ->content(function ($record) {
+                                if (!$record) return 'N/A';
+                                $dupes = FrontendError::where('message', $record->message)
+                                    ->where('id', '!=', $record->id)
+                                    ->orderBy('created_at', 'desc')
+                                    ->limit(20)
+                                    ->get();
+                                if ($dupes->isEmpty()) return new \Illuminate\Support\HtmlString('<span style="color:#6b7280;">No other occurrences.</span>');
+                                $html = '<div style="overflow-x:auto;"><table style="width:100%;font-size:13px;border-collapse:collapse;">'
+                                    . '<tr style="border-bottom:1px solid #374151;color:#9ca3af;"><th style="padding:6px 8px;text-align:left;">#</th><th style="padding:6px 8px;text-align:left;">User</th><th style="padding:6px 8px;text-align:left;">IP</th><th style="padding:6px 8px;text-align:left;">URL</th><th style="padding:6px 8px;text-align:left;">UA</th><th style="padding:6px 8px;text-align:left;">When</th></tr>';
+                                foreach ($dupes as $d) {
+                                    $user = e($d->user?->name ?? 'anonymous');
+                                    $ip = e($d->ip);
+                                    $url = e(\Illuminate\Support\Str::limit($d->url, 40));
+                                    $ua = e(\Illuminate\Support\Str::limit($d->user_agent, 30));
+                                    $when = $d->created_at->diffForHumans();
+                                    $html .= "<tr style=\"border-bottom:1px solid #1f2937;\">"
+                                        . "<td style=\"padding:6px 8px;color:#e5e7eb;\">{$d->id}</td>"
+                                        . "<td style=\"padding:6px 8px;color:#e5e7eb;\">{$user}</td>"
+                                        . "<td style=\"padding:6px 8px;color:#9ca3af;font-family:monospace;font-size:12px;\">{$ip}</td>"
+                                        . "<td style=\"padding:6px 8px;color:#9ca3af;\" title=\"" . e($d->url) . "\">{$url}</td>"
+                                        . "<td style=\"padding:6px 8px;color:#6b7280;font-size:11px;\" title=\"" . e($d->user_agent) . "\">{$ua}</td>"
+                                        . "<td style=\"padding:6px 8px;color:#9ca3af;\">{$when}</td>"
+                                        . "</tr>";
+                                }
+                                $total = FrontendError::where('message', $record->message)->count();
+                                $html .= '</table></div>';
+                                if ($total > 21) $html .= '<div style="color:#6b7280;font-size:12px;margin-top:8px;">Showing 20 of ' . $total . ' total occurrences.</div>';
+                                return new \Illuminate\Support\HtmlString($html);
+                            }),
+                    ])
+                    ->collapsed(false),
             ]);
     }
 
@@ -93,6 +130,16 @@ class FrontendErrorResource extends Resource
                     ->limit(60)
                     ->tooltip(fn ($record) => $record->message)
                     ->searchable(),
+
+                Tables\Columns\TextColumn::make('duplicate_count')
+                    ->label('Count')
+                    ->getStateUsing(fn ($record) => FrontendError::where('message', $record->message)->count())
+                    ->badge()
+                    ->color(fn (int $state) => match (true) {
+                        $state >= 10 => 'danger',
+                        $state >= 3 => 'warning',
+                        default => 'gray',
+                    }),
 
                 Tables\Columns\TextColumn::make('url')
                     ->limit(30)
@@ -148,25 +195,75 @@ class FrontendErrorResource extends Resource
             ])
             ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
-                Tables\Actions\Action::make('copy_for_claude')
-                    ->label('Copy')
+                Tables\Actions\Action::make('copy_and_delete')
+                    ->label('Copy & Delete')
                     ->icon('heroicon-o-clipboard-document')
                     ->color('info')
-                    ->requiresConfirmation()
                     ->modalHeading('Copy for Claude')
-                    ->modalDescription(fn ($record) => new \Illuminate\Support\HtmlString(
-                        '<textarea id="claude-copy-text" style="width:100%;height:16rem;font-family:monospace;font-size:12px;background:#111827;color:#e5e7eb;padding:12px;border-radius:8px;border:1px solid #374151;resize:none;" readonly>'
-                        . e(self::buildClaudeSummary($record))
-                        . '</textarea>'
-                        . '<script>setTimeout(() => { const t = document.getElementById("claude-copy-text"); if(t) { t.select(); navigator.clipboard.writeText(t.value).catch(() => {}); } }, 100);</script>'
-                    ))
-                    ->modalSubmitActionLabel('Done')
-                    ->action(fn () => null),
+                    ->modalWidth('4xl')
+                    ->fillForm(fn ($record) => ['copy_text' => self::buildClaudeSummary($record)])
+                    ->form([
+                        Forms\Components\Textarea::make('copy_text')
+                            ->label('Click text to copy, or use button below')
+                            ->rows(14)
+                            ->columnSpanFull()
+                            ->extraAttributes(['id' => 'claude-copy-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
+                        Forms\Components\Placeholder::make('')
+                            ->content(new \Illuminate\Support\HtmlString(
+                                '<button type="button" onclick="const t=document.getElementById(\'claude-copy-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
+                            )),
+                    ])
+                    ->modalSubmitActionLabel('Delete error')
+                    ->modalCancelActionLabel('Keep')
+                    ->action(fn ($record) => $record->delete()),
+                Tables\Actions\Action::make('copy_group')
+                    ->label('Copy group')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('warning')
+                    ->visible(fn ($record) => FrontendError::where('message', $record->message)->count() > 1)
+                    ->modalHeading('Copy grouped errors for Claude')
+                    ->modalWidth('4xl')
+                    ->fillForm(fn ($record) => ['copy_text' => self::buildGroupSummary($record)])
+                    ->form([
+                        Forms\Components\Textarea::make('copy_text')
+                            ->label('Click text to copy, or use button below')
+                            ->rows(18)
+                            ->columnSpanFull()
+                            ->extraAttributes(['id' => 'claude-group-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
+                        Forms\Components\Placeholder::make('')
+                            ->content(new \Illuminate\Support\HtmlString(
+                                '<button type="button" onclick="const t=document.getElementById(\'claude-group-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
+                            )),
+                    ])
+                    ->modalSubmitActionLabel('Delete all duplicates')
+                    ->modalCancelActionLabel('Keep')
+                    ->action(fn ($record) => FrontendError::where('message', $record->message)->delete()),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('copy_selected')
+                        ->label('Copy for Claude')
+                        ->icon('heroicon-o-clipboard-document')
+                        ->modalHeading('Copy selected errors for Claude')
+                        ->modalWidth('4xl')
+                        ->form([
+                            Forms\Components\Textarea::make('copy_text')
+                                ->label('Click text to copy, or use button below')
+                                ->rows(18)
+                                ->columnSpanFull()
+                                ->extraAttributes(['id' => 'claude-bulk-text', 'onclick' => "this.select();navigator.clipboard.writeText(this.value).then(()=>{this.style.borderColor='#22c55e';setTimeout(()=>this.style.borderColor='',1000)})", 'style' => 'font-family:monospace;font-size:12px;cursor:pointer;']),
+                            Forms\Components\Placeholder::make('')
+                                ->content(new \Illuminate\Support\HtmlString(
+                                    '<button type="button" onclick="const t=document.getElementById(\'claude-bulk-text\');t.select();navigator.clipboard.writeText(t.value);this.textContent=\'Copied!\';this.style.background=\'#22c55e\';setTimeout(()=>{this.textContent=\'Copy to Clipboard\';this.style.background=\'#2563eb\'},1500)" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Copy to Clipboard</button>'
+                                )),
+                        ])
+                        ->fillForm(fn (Collection $records) => ['copy_text' => self::buildBulkSummary($records)])
+                        ->modalSubmitActionLabel('Delete selected')
+                        ->modalCancelActionLabel('Keep')
+                        ->action(fn (Collection $records) => $records->each->delete())
+                        ->deselectRecordsAfterCompletion(),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
@@ -206,6 +303,43 @@ class FrontendErrorResource extends Resource
         if ($record->request_data) $lines[] = "Request data: {$record->request_data}";
         if ($record->response_data) $lines[] = "Response: {$record->response_data}";
         $lines[] = "\nFind and fix this error. Show me how to reproduce it.";
+        return implode("\n", $lines);
+    }
+
+    public static function buildGroupSummary($record): string
+    {
+        $duplicates = FrontendError::where('message', $record->message)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $lines = [
+            "Grouped frontend error - {$duplicates->count()} occurrences",
+            "Message: {$record->message}",
+            "Type: {$record->type}",
+            "",
+            "Occurrences:",
+        ];
+
+        foreach ($duplicates as $dup) {
+            $user = $dup->user?->name ?? 'anonymous';
+            $lines[] = "  - #{$dup->id} by {$user} at {$dup->created_at} on {$dup->url}";
+        }
+
+        if ($record->stack) $lines[] = "\nStack (from latest):\n{$record->stack}";
+        $lines[] = "\nFind and fix this error. Show me how to reproduce it.";
+        return implode("\n", $lines);
+    }
+
+    public static function buildBulkSummary(Collection $records): string
+    {
+        $lines = ["Selected {$records->count()} frontend errors:", ""];
+
+        foreach ($records as $record) {
+            $lines[] = "--- Error #{$record->id} ---";
+            $lines[] = self::buildClaudeSummary($record);
+            $lines[] = "";
+        }
+
         return implode("\n", $lines);
     }
 }
