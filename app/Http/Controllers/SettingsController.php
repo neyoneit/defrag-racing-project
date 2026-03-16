@@ -279,6 +279,103 @@ class SettingsController extends Controller
         return back();
     }
 
+    public function mapperClaims(Request $request)
+    {
+        $request->validate([
+            'claims' => ['required', 'array', 'max:20'],
+            'claims.*.name' => ['required', 'string', 'max:255'],
+            'claims.*.type' => ['required', 'string', 'in:map,model'],
+        ]);
+
+        $user = $request->user();
+
+        // Sync claims: delete removed, add new
+        $newClaims = collect($request->claims)->map(fn ($c) => [
+            'name' => trim($c['name']),
+            'type' => $c['type'],
+        ])->unique(fn ($c) => $c['name'] . '|' . $c['type']);
+
+        // Delete claims not in the new list
+        $user->mapperClaims()->where(function ($q) use ($newClaims) {
+            $q->whereNotIn('name', $newClaims->pluck('name'))
+              ->orWhereNotIn('type', $newClaims->pluck('type'));
+        })->delete();
+
+        // Actually, simpler: delete all and re-create
+        $user->mapperClaims()->delete();
+
+        foreach ($newClaims as $claim) {
+            if (empty($claim['name'])) continue;
+            $user->mapperClaims()->create($claim);
+        }
+
+        return back();
+    }
+
+    public function getMapperClaims(Request $request)
+    {
+        $claims = $request->user()->mapperClaims()->get(['id', 'name', 'type']);
+
+        // Enrich each claim with matching count + sample names
+        foreach ($claims as $claim) {
+            if ($claim->type === 'model') {
+                $query = \App\Models\PlayerModel::where('author', 'LIKE', '%' . $claim->name . '%')
+                    ->where('approval_status', 'approved');
+                $claim->matching_count = $query->count();
+                $claim->matching_samples = $query->orderByDesc('created_at')
+                    ->limit(5)
+                    ->pluck('name')
+                    ->toArray();
+            } else {
+                $query = \App\Models\Map::where('visible', true)
+                    ->where('author', 'LIKE', '%' . $claim->name . '%');
+                $claim->matching_count = $query->count();
+                $claim->matching_samples = $query->orderByDesc('date_added')
+                    ->limit(5)
+                    ->pluck('name')
+                    ->toArray();
+            }
+        }
+
+        return $claims;
+    }
+
+    public function previewMapperClaim(Request $request)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'string', 'in:map,model'],
+        ]);
+
+        $name = trim($request->name);
+
+        if ($request->type === 'map') {
+            $query = \App\Models\Map::where('visible', true)
+                ->where('author', 'LIKE', '%' . $name . '%');
+
+            return [
+                'count' => $query->count(),
+                'maps' => $query->orderByDesc('date_added')
+                    ->limit(8)
+                    ->get(['name', 'author', 'thumbnail', 'physics', 'gametype', 'date_added']),
+            ];
+        }
+
+        if ($request->type === 'model') {
+            $query = \App\Models\PlayerModel::where('author', 'LIKE', '%' . $name . '%')
+                ->where('approval_status', 'approved');
+
+            return [
+                'count' => $query->count(),
+                'models' => $query->orderByDesc('created_at')
+                    ->limit(8)
+                    ->get(['name', 'author', 'thumbnail', 'base_model']),
+            ];
+        }
+
+        return ['count' => 0];
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 
