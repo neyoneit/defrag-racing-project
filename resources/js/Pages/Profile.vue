@@ -118,15 +118,23 @@
         const idx = orderedSections.value.findIndex(s => s.id === id);
         return idx >= 0 ? idx : 99;
     };
-    // Detect new sections not yet in user's saved layout
+    // Detect new sections not yet in user's saved layout (show badge once)
+    const dismissedSections = JSON.parse(localStorage.getItem('dismissed_new_sections') || '[]');
     const newSections = computed(() => {
         const saved = layout.value.sections;
         if (!saved || !saved.length) return [];
         return defaultSections
             .filter(def => !saved.find(s => s.id === def.id))
+            .filter(def => !dismissedSections.includes(def.id))
             .map(s => s.id);
     });
     const isNewSection = (id) => newSections.value.includes(id);
+
+    // Auto-dismiss new section badges after first render
+    if (newSections.value.length > 0) {
+        const updated = [...new Set([...dismissedSections, ...newSections.value])];
+        localStorage.setItem('dismissed_new_sections', JSON.stringify(updated));
+    }
     const isOwnProfile = computed(() => page.props.auth?.user?.id === props.user?.id);
 
     const profileRoute = (params = {}) => {
@@ -628,6 +636,12 @@
                                 </svg>
                                 <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
                             </a>
+
+                            <!-- Customize Profile -->
+                            <Link v-if="isOwnProfile" :href="route('profile.show') + '?tab=customize'" class="group relative px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-gray-400 transition group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                <span class="text-xs font-bold text-gray-400 transition group-hover:text-white">CUSTOMIZE</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -932,16 +946,13 @@
 
             <!-- Activity History Heatmap -->
             <div v-if="hasProfile && showSection('activity_history') && activity_years && activity_years.length > 0" class="mb-6" :style="{ order: sectionOrder('activity_history') }">
-                <div v-if="isOwnProfile && isNewSection('activity_history')" class="mb-2 flex items-center gap-2 px-1">
-                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30">New</span>
-                    <span class="text-xs text-gray-400">Want to reorder or hide sections?</span>
-                    <Link :href="route('profile.show') + '?tab=customize'" class="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-2">Customize your profile</Link>
-                </div>
                 <ActivityHeatmap
                     :activityData="activity_data"
                     :activityYear="activity_year"
                     :activityYears="activity_years"
                     :mddId="profile?.id || profile?.mdd_id"
+                    :isNew="isOwnProfile && isNewSection('activity_history')"
+                    :customizeUrl="route('profile.show') + '?tab=customize'"
                 />
             </div>
 
