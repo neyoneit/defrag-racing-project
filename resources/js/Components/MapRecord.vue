@@ -195,21 +195,32 @@
             <template v-if="showSourceChips">
                 <!-- Primary chip: what type of entry is this -->
                 <span v-if="record.oldtop" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50">
-                    OLD RECORD
+                    old record
                 </span>
                 <span v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                    ONLINE DEMO
+                    online demo
                 </span>
                 <span v-else-if="isOfflineRecord" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
-                    OFFLINE DEMO
+                    offline demo
                 </span>
                 <span v-else class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50">
-                    RECORD
+                    record
+                </span>
+
+                <!-- Verified badge: record has demo attached -->
+                <span
+                    v-if="!record.oldtop && ((!isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0) || record.verification_type === 'verified')"
+                    class="ml-1 flex-shrink-0 text-green-400"
+                    title="Verified - demo attached"
+                >
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
                 </span>
 
                 <!-- Secondary chip: demo attached to a record -->
                 <span v-if="!record.oldtop && !isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30">
-                    ONLINE DEMO
+                    online demo
                 </span>
 
                 <!-- Secondary chip: validity flags (sv_cheats etc.) -->
@@ -223,18 +234,28 @@
                 <span
                     v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                     class="ml-1 flex-shrink-0 text-green-400"
-                    title="Verified — demo attached"
+                    title="Verified - demo attached"
+                >
+                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </span>
+                <!-- Verified badge for demos top entries -->
+                <span
+                    v-if="record.verification_type === 'verified'"
+                    class="ml-1 flex-shrink-0 text-green-400"
+                    title="Verified - demo attached"
                 >
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
                 </span>
                 <!-- Validity flags in demos top without mixed mode -->
-                <span v-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
-                    OFFLINE
+                <span v-else-if="record.verification_type === 'OFFLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50">
+                    offline
                 </span>
                 <span v-else-if="record.verification_type === 'ONLINE'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50">
-                    ONLINE
+                    online
                 </span>
                 <span v-else-if="record.verification_type && record.verification_type !== 'verified'" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50">
                     {{ record.verification_type }}

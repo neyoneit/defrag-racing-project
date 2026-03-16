@@ -205,7 +205,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order
+                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -217,7 +217,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order
+                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order, $allVq3RecordsByTime
                 );
             } elseif ($offlineGametype === 'fc') {
                 // Fast caps map but no specific CTF mode selected (on "run" gametype)
@@ -231,7 +231,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -243,7 +243,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
                 );
             } else {
                 // For df (defrag), physics can be "CPM" or "CPM.TR" (with timer reset)
@@ -257,7 +257,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order
+                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
                 );
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
@@ -269,7 +269,7 @@ class MapsController extends Controller
 
                 // Combine with assigned online demos
                 $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order
+                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
                 );
             }
         } else {
@@ -329,7 +329,7 @@ class MapsController extends Controller
     /**
      * Combine offline records with assigned online demos for "Demos Top" section
      */
-    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order)
+    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order, $mainRecordIds = [])
     {
         if (!$offlineRecords) {
             return null;
@@ -377,6 +377,11 @@ class MapsController extends Controller
             $onlineDemosQuery->where('physics', 'LIKE', $physicsPattern);
         } else {
             $onlineDemosQuery->where('physics', $physics);
+        }
+
+        // Exclude demos already shown in main records table (avoid duplicates)
+        if (!empty($mainRecordIds)) {
+            $onlineDemosQuery->whereNotIn('record_id', $mainRecordIds);
         }
 
         $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
