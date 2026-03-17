@@ -168,7 +168,7 @@ class SettingsController extends Controller
         $found = false;
 
         try {
-            $response = $client->head($profile_link, ['allow_redirects' => false]);
+            $response = $client->head($profile_link, ['allow_redirects' => false, 'verify' => false]);
             $statusCode = $response->getStatusCode();
 
             $found = $statusCode === 200;

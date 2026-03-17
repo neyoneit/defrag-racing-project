@@ -99,10 +99,14 @@ class DemoProcessorService
                 'status' => $status,
             ]);
 
-            // Update demo record with metadata
+            // Upload to Backblaze immediately after compression (before cleaning up temp files)
+            // This ensures the file is safely stored even if auto-assignment fails
+            $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $compressedFilename);
+
+            // Update demo record with metadata and file path
             $demo->update([
                 'processed_filename' => $compressedFilename,
-                'file_path' => null, // Will be set after upload if successful
+                'file_path' => $uploadedPath,
                 'map_name' => $metadata['map'] ?? null,
                 'physics' => $metadata['physics'] ?? null,
                 'gametype' => $metadata['gametype'] ?? null,
@@ -154,6 +158,11 @@ class DemoProcessorService
                     'demo_id' => $demo->id,
                     'validity' => $demo->validity,
                 ]);
+            }
+
+            // Clean up local compressed file (already uploaded to Backblaze)
+            if (file_exists($compressedLocalPath)) {
+                unlink($compressedLocalPath);
             }
 
             return $demo;
@@ -603,28 +612,21 @@ class DemoProcessorService
 
             if ($uploaderRecord) {
                 // Uploader has a matching record - assign immediately with 100% confidence
-                $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
-
+                // File already uploaded to Backblaze during processing
                 $demo->update([
                     'record_id' => $uploaderRecord->id,
                     'status' => 'assigned',
-                    'file_path' => $uploadedPath,
                     'name_confidence' => 100,
                     'suggested_user_id' => $demo->user_id,
                     'matched_alias' => null, // Matched by uploader record, not name
                 ]);
-
-                // Clean up local compressed file after successful upload
-                if (file_exists($compressedLocalPath)) {
-                    unlink($compressedLocalPath);
-                }
 
                 Log::info('Demo auto-assigned to uploader\'s record', [
                     'demo_id' => $demo->id,
                     'record_id' => $uploaderRecord->id,
                     'user_id' => $demo->user_id,
                     'gametype' => $gametype,
-                    'uploaded_path' => $uploadedPath,
+                    'file_path' => $demo->file_path,
                 ]);
 
                 $uploaderRecordMatch = true;
@@ -663,19 +665,11 @@ class DemoProcessorService
                     ->first();
 
                 if ($record) {
-                    // Perfect match found! Upload to Backblaze
-                    $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
-
+                    // Perfect match found! File already uploaded to Backblaze during processing
                     $demo->update([
                         'record_id' => $record->id,
                         'status' => 'assigned',
-                        'file_path' => $uploadedPath,
                     ]);
-
-                    // Clean up local compressed file after successful upload
-                    if (file_exists($compressedLocalPath)) {
-                        unlink($compressedLocalPath);
-                    }
 
                     Log::info('Demo auto-assigned to record with 100% name match', [
                         'demo_id' => $demo->id,
@@ -683,7 +677,7 @@ class DemoProcessorService
                         'user_id' => $nameMatch['user_id'],
                         'gametype' => $demo->gametype,
                         'matched_alias' => $nameMatch['matched_name'] ?? null,
-                        'uploaded_path' => $uploadedPath,
+                        'file_path' => $demo->file_path,
                     ]);
 
                     return;
@@ -748,8 +742,7 @@ class DemoProcessorService
         $fasterTimes = $query->count();
         $rank = $fasterTimes + 1;
 
-        // Upload to Backblaze for offline records too
-        $uploadedPath = $this->uploadToBackblaze($compressedLocalPath, $demo->processed_filename);
+        // File already uploaded to Backblaze during processing
 
         // Create the offline record using firstOrCreate to handle race conditions
         // Multiple workers might try to create the same offline record simultaneously
@@ -793,16 +786,10 @@ class DemoProcessorService
             $status = 'failed-validity';
         }
 
-        // Update demo with uploaded path and appropriate status
+        // Update demo with appropriate status (file_path already set during processing)
         $demo->update([
-            'file_path' => $uploadedPath,
             'status' => $status,
         ]);
-
-        // Clean up local compressed file after successful upload
-        if (file_exists($compressedLocalPath)) {
-            unlink($compressedLocalPath);
-        }
 
         // Update ranks for all records slower than this one
         // (increment their rank by 1 since a new faster/equal record was inserted)

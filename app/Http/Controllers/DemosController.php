@@ -673,6 +673,11 @@ class DemosController extends Controller
 
         $filename = $demo->processed_filename ?: $demo->original_filename;
 
+        // If file_path is empty/null, the file was lost (processed before Backblaze upload fix)
+        if (empty($demo->file_path)) {
+            abort(404, 'Demo file is no longer available - it was processed before cloud storage was enabled.');
+        }
+
         // Check if demo is stored locally (failed or temp demos) or in Backblaze (processed demos)
         $isLocal = str_starts_with($demo->file_path, 'demos/temp/') ||
                    str_starts_with($demo->file_path, 'demos/failed/');
