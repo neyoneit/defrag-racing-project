@@ -23,6 +23,56 @@
 
     const page = usePage();
 
+    // NEW badge tracking - hide after user visits a section
+    const seenSections = ref(JSON.parse(localStorage.getItem('seen_sections') || '[]'));
+
+    const isNew = (section) => !seenSections.value.includes(section);
+
+    const markSeen = (section) => {
+        if (!seenSections.value.includes(section)) {
+            seenSections.value.push(section);
+            localStorage.setItem('seen_sections', JSON.stringify(seenSections.value));
+        }
+    };
+
+    // Map route patterns to section names
+    const routeSectionMap = {
+        'ranking': 'ranking',
+        'maplists': 'maplists',
+        'clans': 'clans',
+        'headhunter': 'headhunter',
+        'models': 'models',
+        'marketplace': 'marketplace',
+        'demos': 'demos',
+    };
+
+    // Mark current section as seen on page load
+    onMounted(() => {
+        const currentRoute = route().current() || '';
+        for (const [prefix, section] of Object.entries(routeSectionMap)) {
+            if (currentRoute.startsWith(prefix)) {
+                markSeen(section);
+                break;
+            }
+        }
+        // Also handle /models which uses href not route name
+        if (window.location.pathname.startsWith('/models')) markSeen('models');
+        if (window.location.pathname.startsWith('/test-map-viewer')) markSeen('beta');
+    });
+
+    // Track navigation
+    router.on('navigate', (event) => {
+        const url = event.detail?.page?.url || '';
+        for (const [prefix, section] of Object.entries(routeSectionMap)) {
+            if (url.startsWith('/' + prefix)) {
+                markSeen(section);
+                break;
+            }
+        }
+        if (url.startsWith('/models')) markSeen('models');
+        if (url.startsWith('/test-map-viewer')) markSeen('beta');
+    });
+
     const search = ref('');
 
     const maps = ref([]);
@@ -499,6 +549,7 @@
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
                                             <Link :href="route('profile.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
                                             <Link :href="route('profile.show') + '?tab=creator'" class="block text-sm text-gray-400 hover:text-yellow-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Creator</Link>
+                                            <Link :href="route('profile.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
                                             <Link :href="route('profile.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
                                             <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
                                             <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
@@ -552,36 +603,40 @@
                         </NavLink>
                         <NavLink :href="route('ranking')" :active="route().current('ranking')" class="hidden sm:inline-flex">
                             Ranking
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('ranking')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')" class="hidden md:inline-flex">
                             Maplists
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('maplists')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink :href="route('bundles')" :active="route().current('bundles')" class="hidden md:inline-flex">
                             Bundles
                         </NavLink>
                         <NavLink :href="route('clans.index')" :active="route().current('clans.*')" class="hidden lg:inline-flex">
                             Clans
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('clans')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink :href="route('headhunter.index')" :active="route().current('headhunter.*')" class="hidden lg:inline-flex">
                             Headhunter
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('headhunter')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink href="/models" :active="route().current('models.*')" class="hidden lg:inline-flex">
                             Models
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('models')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                        </NavLink>
+                        <NavLink :href="route('marketplace.index')" :active="route().current('marketplace.*')" class="hidden xl:inline-flex">
+                            Marketplace
+                            <span v-if="isNew('marketplace')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
                         <NavLink :href="route('demos.index')" :active="route().current('demos.*')" class="hidden xl:inline-flex">
                             Demos
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('demos')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
 
                         <!-- Beta - VISIBLE AT XL -->
                         <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun" :active="false" class="hidden xl:inline-flex">
                             Beta
-                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                            <span v-if="isNew('beta')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
 
                         <!-- More Dropdown (hidden at xl when all items are visible) -->
@@ -598,13 +653,17 @@
                             <template #content>
                                 <!-- Items hidden below xl -->
                                 <div class="xl:hidden">
+                                    <DropdownLink :href="route('marketplace.index')">
+                                        Marketplace
+                                        <span v-if="isNew('marketplace')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                    </DropdownLink>
                                     <DropdownLink :href="route('demos.index')">
                                         Demos
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('demos')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">
                                         Beta
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('beta')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                 </div>
 
@@ -612,15 +671,15 @@
                                 <div class="lg:hidden">
                                     <DropdownLink href="/models">
                                         Models
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('models')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                     <DropdownLink :href="route('clans.index')">
                                         Clans
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('clans')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                     <DropdownLink :href="route('headhunter.index')">
                                         Headhunter
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('headhunter')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                 </div>
 
@@ -631,7 +690,7 @@
                                     </DropdownLink>
                                     <DropdownLink :href="route('maplists.index')">
                                         Maplists
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('maplists')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                 </div>
 
@@ -639,7 +698,7 @@
                                 <div class="sm:hidden">
                                     <DropdownLink :href="route('ranking')">
                                         Ranking
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                        <span v-if="isNew('ranking')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                                     </DropdownLink>
                                 </div>
                             </template>

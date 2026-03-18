@@ -55,6 +55,7 @@ class Record extends Model
             if ($record->mdd_id) {
                 self::clearProfileCache($record->mdd_id);
             }
+            self::clearRecordsCounts();
         });
 
         // Clear cache when record is deleted
@@ -62,6 +63,7 @@ class Record extends Model
             if ($record->mdd_id) {
                 self::clearProfileCache($record->mdd_id);
             }
+            self::clearRecordsCounts();
         });
     }
 
@@ -75,5 +77,15 @@ class Record extends Model
         Cache::forget("profile:rivals:{$mddId}:vq3");
 
         \Log::info("Profile cache cleared for player {$mddId}");
+    }
+
+    /**
+     * Clear records page count cache (all mode variants)
+     */
+    protected static function clearRecordsCounts()
+    {
+        foreach (['all', 'run', 'ctf', 'ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'] as $mode) {
+            Cache::forget('records_count_' . $mode);
+        }
     }
 }

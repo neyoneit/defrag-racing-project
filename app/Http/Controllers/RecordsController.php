@@ -31,9 +31,9 @@ class RecordsController extends Controller
             return $query;
         };
 
-        // Cache record counts per physics (refreshed every 5 minutes)
+        // Cache record counts per physics (invalidated by Record model events)
         $cacheKey = 'records_count_' . $mode;
-        $counts = Cache::remember($cacheKey, 30, function () use ($mode, $baseQuery) {
+        $counts = Cache::remember($cacheKey, 3600, function () use ($mode, $baseQuery) {
             return [
                 'vq3' => $baseQuery()->where('physics', 'vq3')->count(),
                 'cpm' => $baseQuery()->where('physics', 'cpm')->count(),

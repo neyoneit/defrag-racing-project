@@ -152,7 +152,7 @@ class DemosController extends Controller
         $uploadedBy = $request->input('uploaded_by');
 
         // Validate sort column
-        $allowedColumns = ['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at'];
+        $allowedColumns = ['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'status', 'created_at', 'gametype', 'physics'];
         if (!in_array($sortBy, $allowedColumns)) {
             $sortBy = 'created_at';
         }
@@ -270,7 +270,7 @@ class DemosController extends Controller
                 }
 
                 if ($needs('userDemos')) $userDemos = $query->paginate(20, ['*'], 'userPage');
-                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 60, fn () => $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id)));
+                if ($needs('demoCounts')) $demoCounts = Cache::remember("demo_counts_user_{$currentUser->id}", 3600, fn () => $this->computeDemoCounts(UploadedDemo::where('user_id', $currentUser->id)));
             }
         }
 
@@ -280,6 +280,15 @@ class DemosController extends Controller
         $browseTab = $request->input('browse_tab', 'all');
         $browseStatus = $request->input('browse_status', 'all');
         $browseSearch = $request->input('browse_search', '');
+        $browseSortBy = $request->input('browse_sort', 'created_at');
+        $browseSortOrder = $request->input('browse_order', 'desc');
+
+        if (!in_array($browseSortBy, $allowedColumns)) {
+            $browseSortBy = 'created_at';
+        }
+        if (!in_array($browseSortOrder, ['asc', 'desc'])) {
+            $browseSortOrder = 'desc';
+        }
 
         if ($needs('publicDemos') || $needs('browseCounts')) {
             if ($needs('publicDemos')) {
@@ -312,12 +321,17 @@ class DemosController extends Controller
                     });
                 }
 
-                $publicDemos = $query->orderBy('created_at', 'desc')
-                    ->paginate(20, ['*'], 'browsePage');
+                if ($browseSortBy === 'status') {
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed')");
+                } else {
+                    $query->orderBy($browseSortBy, $browseSortOrder);
+                }
+
+                $publicDemos = $query->paginate(20, ['*'], 'browsePage');
             }
 
             if ($needs('browseCounts')) {
-                $browseCounts = Cache::remember('demo_counts_browse', 60, fn () => $this->computeDemoCounts(
+                $browseCounts = Cache::remember('demo_counts_browse', 3600, fn () => $this->computeDemoCounts(
                     UploadedDemo::whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed'])
                 ));
             }
@@ -348,6 +362,8 @@ class DemosController extends Controller
             'browseTab' => $browseTab,
             'browseStatus' => $browseStatus,
             'browseSearch' => $browseSearch,
+            'browseSortBy' => $browseSortBy,
+            'browseSortOrder' => $browseSortOrder,
             'userSearch' => $searchQuery,
             'confidenceFilter' => $confidenceFilter,
             'showOtherUserMatches' => $showOtherUserMatches,
@@ -683,9 +699,18 @@ class DemosController extends Controller
                    str_starts_with($demo->file_path, 'demos/failed/');
 
         if ($isLocal) {
-            // Download from local storage
             $fullPath = storage_path("app/{$demo->file_path}");
             if (file_exists($fullPath)) {
+                // Try to extract from archive
+                $contents = file_get_contents($fullPath);
+                $extracted = $this->extractFromArchive($contents, $filename);
+                if ($extracted) {
+                    return response()->streamDownload(function() use ($extracted) {
+                        echo $extracted['contents'];
+                    }, $extracted['filename'], [
+                        'Content-Type' => 'application/octet-stream',
+                    ]);
+                }
                 return response()->download($fullPath, $filename);
             } else {
                 abort(404, 'Demo file not found');
@@ -694,9 +719,19 @@ class DemosController extends Controller
 
         try {
             // Download from Backblaze (processed demos)
-            // Use get() instead of download() to avoid size() metadata check that fails on Backblaze
             $fileContents = Storage::get($demo->file_path);
 
+            // Try to extract the demo from 7z archive and serve the raw .dm_68 file
+            $extracted = $this->extractFromArchive($fileContents, $filename);
+            if ($extracted) {
+                return response()->streamDownload(function() use ($extracted) {
+                    echo $extracted['contents'];
+                }, $extracted['filename'], [
+                    'Content-Type' => 'application/octet-stream',
+                ]);
+            }
+
+            // Fallback: serve the archive as-is
             return response()->streamDownload(function() use ($fileContents) {
                 echo $fileContents;
             }, $filename, [
@@ -715,12 +750,73 @@ class DemosController extends Controller
                 return response()->download($fullPath, $filename);
             }
 
-            // If the file does not exist anywhere, return 404
             Log::error('Demo file not found in Backblaze or local storage', [
                 'demo_id' => $demo->id,
                 'file_path' => $demo->file_path,
             ]);
             abort(404, 'Demo file not found');
+        }
+    }
+
+    /**
+     * Extract a file from a 7z archive in memory.
+     * Returns ['filename' => ..., 'contents' => ...] or null on failure.
+     */
+    private function extractFromArchive(string $archiveContents, string $archiveFilename): ?array
+    {
+        // Only process 7z files
+        if (!str_ends_with(strtolower($archiveFilename), '.7z')) {
+            return null;
+        }
+
+        $tempDir = sys_get_temp_dir() . '/demo_extract_' . uniqid();
+        $tempArchive = $tempDir . '/' . $archiveFilename;
+
+        try {
+            mkdir($tempDir, 0755, true);
+            file_put_contents($tempArchive, $archiveContents);
+
+            // Extract with 7z
+            $cmd = sprintf('7z x %s -o%s -y 2>&1', escapeshellarg($tempArchive), escapeshellarg($tempDir));
+            exec($cmd, $output, $exitCode);
+
+            if ($exitCode !== 0) {
+                return null;
+            }
+
+            // Find the extracted demo file (should be exactly one .dm_68 file)
+            $files = glob($tempDir . '/*.dm_68') ?: glob($tempDir . '/*.dm_*');
+            if (empty($files)) {
+                // Try any file that's not the archive itself
+                $allFiles = array_diff(scandir($tempDir), ['.', '..', basename($archiveFilename)]);
+                $files = array_map(fn($f) => $tempDir . '/' . $f, $allFiles);
+                $files = array_filter($files, 'is_file');
+            }
+
+            if (empty($files)) {
+                return null;
+            }
+
+            $extractedFile = reset($files);
+            $contents = file_get_contents($extractedFile);
+            $extractedFilename = basename($extractedFile);
+
+            return [
+                'filename' => $extractedFilename,
+                'contents' => $contents,
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Failed to extract demo archive', [
+                'filename' => $archiveFilename,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        } finally {
+            // Clean up temp files
+            if (is_dir($tempDir)) {
+                array_map('unlink', glob($tempDir . '/*'));
+                @rmdir($tempDir);
+            }
         }
     }
 

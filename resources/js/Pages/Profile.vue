@@ -4,6 +4,10 @@
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ActivityHeatmap from '@/Components/ActivityHeatmap.vue';
     import ProfileCreatorTab from '@/Components/ProfileCreatorTab.vue';
+    import ProfileLayoutForm from '@/Pages/Profile/Partials/ProfileLayoutForm.vue';
+    import AvatarNameEffectsForm from '@/Pages/Profile/Partials/AvatarNameEffectsForm.vue';
+    import MapRecordsViewForm from '@/Pages/Profile/Partials/MapRecordsViewForm.vue';
+    import PhysicsOrderForm from '@/Pages/Profile/Partials/PhysicsOrderForm.vue';
     import { useClipboard } from '@/Composables/useClipboard';
 
     const { copy, copyState } = useClipboard();
@@ -156,6 +160,34 @@
         localStorage.setItem('dismissed_new_sections', JSON.stringify(updated));
     }
     const isOwnProfile = computed(() => page.props.auth?.user?.id === props.user?.id);
+    const showQuickSettings = ref(false);
+    const quickSettingsPanel = ref(localStorage.getItem('quick_settings_panel') || 'layout');
+    const quickSettingsDropdown = ref(false);
+    const customizeArrowBtn = ref(null);
+    const customizeDropdownStyle = computed(() => {
+        if (!customizeArrowBtn.value) return {};
+        const rect = customizeArrowBtn.value.getBoundingClientRect();
+        return {
+            top: `${rect.bottom + 4}px`,
+            left: `${rect.right - 224}px`,
+        };
+    });
+
+    const quickSettingsPanels = [
+        { id: 'layout', label: 'Profile Layout' },
+        { id: 'effects', label: 'Avatar & Name Effects' },
+        { id: 'map_view', label: 'Map Records Default View' },
+        { id: 'physics_order', label: 'Physics Column Order' },
+    ];
+
+    const selectQuickPanel = (id) => {
+        quickSettingsPanel.value = id;
+        localStorage.setItem('quick_settings_panel', id);
+        quickSettingsDropdown.value = false;
+        if (!showQuickSettings.value) showQuickSettings.value = true;
+    };
+
+    const currentPanelLabel = computed(() => quickSettingsPanels.find(p => p.id === quickSettingsPanel.value)?.label || 'Profile Layout');
 
     const profileRoute = (params = {}) => {
         if (props.user?.id) {
@@ -559,7 +591,7 @@
                 <!-- Fade to transparent at bottom -->
                 <div class="absolute inset-0 bg-gradient-to-b from-transparent from-0% via-transparent via-60% to-gray-900 to-100%"></div>
                 <!-- Dark overlay on top -->
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-transparent"></div>
             </div>
 
             <!-- Profile Content - Compact Design -->
@@ -582,11 +614,11 @@
                     <div class="flex flex-col gap-2">
                         <!-- Country Flag + Name -->
                         <div class="flex items-center gap-3">
-                            <div class="bg-black/30 px-3 py-1.5 rounded-lg border border-white/20">
+                            <div class="px-1">
                                 <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-8 h-5">
                             </div>
                             <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
-                            <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-400" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
+                            <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-300 px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
                             <!-- LIVE Badge -->
                             <a v-if="user?.is_live && user?.twitch_name" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
                                 <div class="w-2 h-2 rounded-full bg-white animate-ping absolute"></div>
@@ -598,29 +630,29 @@
                         <!-- Clan + Stats Row -->
                         <div class="flex items-center gap-3 flex-wrap">
                             <!-- Clan Badge -->
-                            <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600/30 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-600/40 transition-all hover:scale-105 shadow-xl group">
+                            <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
                                 <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Clan</span>
                                 <span class="text-sm font-black text-white group-hover:text-blue-100 transition" v-html="q3tohtml(user.clan.name)"></span>
                             </Link>
 
                             <!-- CPM WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-purple-500/30 border border-purple-400/40 shadow-xl">
+                            <div class="px-3 py-1.5 rounded-lg bg-purple-950/70 border border-purple-400/40 shadow-xl backdrop-blur-sm">
                                 <div class="flex items-center gap-2">
                                     <div>
-                                        <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider leading-none">CPM</div>
-                                        <div class="text-lg font-black text-purple-400 leading-tight">{{ cpm_world_records }}</div>
+                                        <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</div>
+                                        <div class="text-lg font-black text-purple-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</div>
                                     </div>
                                     <svg class="w-4 h-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
                             </div>
 
                             <!-- VQ3 WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-blue-500/30 border border-blue-400/40 shadow-xl">
+                            <div class="px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/40 shadow-xl backdrop-blur-sm">
                                 <div class="flex items-center gap-2">
                                     <div>
-                                        <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider leading-none">VQ3</div>
-                                        <div class="text-lg font-black text-blue-400 leading-tight">{{ vq3_world_records }}</div>
+                                        <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</div>
+                                        <div class="text-lg font-black text-blue-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</div>
                                     </div>
                                     <svg class="w-4 h-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
@@ -630,7 +662,7 @@
                         <!-- Social Links -->
                         <div class="flex items-center gap-2">
                             <!-- Twitch -->
-                            <a v-if="user?.twitch_name" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-600/30 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <a v-if="user?.twitch_name" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg">
                                     <g fill="currentColor">
                                         <path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/>
@@ -640,7 +672,7 @@
                             </a>
 
                             <!-- Discord -->
-                            <div @click="copy(user?.discord_name)" v-if="user?.discord_name" class="group cursor-pointer relative px-3 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <div @click="copy(user?.discord_name)" v-if="user?.discord_name" class="group cursor-pointer relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/>
                                 </svg>
@@ -649,7 +681,7 @@
                             </div>
 
                             <!-- Twitter -->
-                            <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-600/30 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-600/40 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
+                            <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg">
                                     <g fill="currentColor">
                                         <path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/>
@@ -658,16 +690,54 @@
                                 <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
                             </a>
 
-                            <!-- Customize Profile -->
-                            <Link v-if="isOwnProfile" :href="route('profile.show') + '?tab=customize'" class="group relative px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all hover:scale-110 shadow-xl flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-gray-400 transition group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                                <span class="text-xs font-bold text-gray-400 transition group-hover:text-white">CUSTOMIZE</span>
-                            </Link>
+                            <!-- Customize Profile (split button: toggle + dropdown) -->
+                            <div v-if="isOwnProfile" class="relative flex items-center shadow-xl">
+                                <button @click="showQuickSettings = !showQuickSettings" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-l-lg transition-all backdrop-blur-sm flex items-center gap-1.5 border border-r-0">
+                                    <svg class="w-4 h-4 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                    <span class="text-xs font-bold transition">CUSTOMIZE</span>
+                                </button>
+                                <button ref="customizeArrowBtn" @click="quickSettingsDropdown = !quickSettingsDropdown" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-1.5 py-1.5 rounded-r-lg transition-all backdrop-blur-sm border">
+                                    <svg class="w-3.5 h-3.5 transition-transform" :class="quickSettingsDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                </button>
+                                <!-- Dropdown (teleported to body to avoid overflow-hidden clipping) -->
+                                <Teleport to="body">
+                                    <div v-if="quickSettingsDropdown" @click="quickSettingsDropdown = false" class="fixed inset-0 z-[998]"></div>
+                                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
+                                        <button
+                                            v-for="panel in quickSettingsPanels"
+                                            :key="panel.id"
+                                            @click="selectQuickPanel(panel.id)"
+                                            :class="quickSettingsPanel === panel.id ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
+                                            class="w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                                        >
+                                            <svg v-if="quickSettingsPanel === panel.id" class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                                            <span :class="quickSettingsPanel !== panel.id ? 'ml-5' : ''">{{ panel.label }}</span>
+                                        </button>
+                                    </div>
+                                </Teleport>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Quick Settings Panel (own profile only) -->
+        <transition
+            enter-active-class="transition-all duration-300 ease-out"
+            leave-active-class="transition-all duration-200 ease-in"
+            enter-from-class="opacity-0 -translate-y-2 max-h-0"
+            enter-to-class="opacity-100 translate-y-0 max-h-[500px]"
+            leave-from-class="opacity-100 translate-y-0 max-h-[500px]"
+            leave-to-class="opacity-0 -translate-y-2 max-h-0"
+        >
+            <div v-if="isOwnProfile && showQuickSettings" class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-2 mb-3 relative z-20 overflow-hidden">
+                <ProfileLayoutForm v-if="quickSettingsPanel === 'layout'" />
+                <AvatarNameEffectsForm v-else-if="quickSettingsPanel === 'effects'" />
+                <MapRecordsViewForm v-else-if="quickSettingsPanel === 'map_view'" />
+                <PhysicsOrderForm v-else-if="quickSettingsPanel === 'physics_order'" />
+            </div>
+        </transition>
 
         <!-- Profile Tabs -->
         <div v-if="hasMapperProfile" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 mb-3 relative z-10">
@@ -695,13 +765,17 @@
         <div v-show="activeTab === 'records'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10"
 
             <!-- Not Linked Account Overlay (viewing MDD-only profile) -->
-            <div v-if="!user?.id" class="relative z-20 mb-6">
+            <div v-if="!user?.id && !$page.props.auth?.user?.mdd_id" class="relative z-20 mb-6">
                 <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
                     <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
-                    <div class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
+                    <div v-if="!$page.props.auth?.user" class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
+                    <div v-else class="text-lg font-semibold text-orange-200/80">Is this you? Link your account to claim this profile!</div>
                     <div class="flex justify-center gap-4 mt-4">
-                        <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
-                        <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
+                        <template v-if="!$page.props.auth?.user">
+                            <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
+                            <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
+                        </template>
+                        <Link v-else href="/link-account" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">Link Account</Link>
                     </div>
                 </div>
             </div>
