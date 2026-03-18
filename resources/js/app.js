@@ -11,6 +11,18 @@ window.addEventListener('vite:preloadError', () => {
     }
 });
 
+// Auto-refresh page on expired CSRF token (419 response) - max once per page load
+let csrfReloaded = false;
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+    const response = await originalFetch(...args);
+    if (response.status === 419 && !csrfReloaded) {
+        csrfReloaded = true;
+        window.location.reload();
+    }
+    return response;
+};
+
 import { createApp, h } from 'vue';
 import { reactive } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3';

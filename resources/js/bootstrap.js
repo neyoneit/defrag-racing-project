@@ -9,6 +9,19 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+// Auto-refresh page on expired CSRF token (419 response) - max once per page load
+let axiosCsrfReloaded = false;
+window.axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 419 && !axiosCsrfReloaded) {
+            axiosCsrfReloaded = true;
+            window.location.reload();
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Log API errors to backend for admin review
 window.axios.interceptors.response.use(
     (response) => response,

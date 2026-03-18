@@ -829,7 +829,7 @@ class DemoProcessorService
             'rank' => $rank,
             'time_ms' => $demo->time_ms,
             'status' => $status,
-            'uploaded_path' => $uploadedPath,
+            'uploaded_path' => $demo->file_path,
         ]);
     }
 }

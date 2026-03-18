@@ -1,7 +1,7 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import { useClipboard } from '@/Composables/useClipboard';
 import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
@@ -24,6 +24,16 @@ const copyServerIP = (serverIP) => {
     }, 2000);
 };
 
+const copiedMap = ref(null);
+const hoveredMapServer = ref(null);
+const copyMapName = (mapName) => {
+    copy(mapName);
+    copiedMap.value = mapName;
+    setTimeout(() => {
+        copiedMap.value = null;
+    }, 2000);
+};
+
 const players = ref(0);
 const interval = ref(null);
 const isRotating = ref(false);
@@ -37,11 +47,21 @@ const getLayoutFromCookie = () => {
 
 const layout = ref(getLayoutFromCookie()); // 'large' or 'compact'
 
-// Filters
+// Filters - restore from localStorage
+const savedFilters = JSON.parse(localStorage.getItem('servers_filters') || '{}');
 const filters = ref({
     gametype: 'all', // all, run, ctf, freestyle, teamrun
     physics: 'all', // all, cpm, vq3
-    hideEmpty: false,
+    hideEmpty: savedFilters.hideEmpty || false,
+    showDetails: savedFilters.showDetails !== undefined ? savedFilters.showDetails : true,
+});
+
+// Persist filter changes to localStorage
+watch(() => [filters.value.hideEmpty, filters.value.showDetails], () => {
+    localStorage.setItem('servers_filters', JSON.stringify({
+        hideEmpty: filters.value.hideEmpty,
+        showDetails: filters.value.showDetails,
+    }));
 });
 
 const sorting = ref('popularity');
@@ -433,6 +453,12 @@ const getFunctionName = (abbr) => {
                             </svg>
                             {{ filters.hideEmpty ? 'Show All' : 'Hide Empty' }}
                         </button>
+                        <button @click="filters.showDetails = !filters.showDetails" :class="filters.showDetails ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                            </svg>
+                            {{ filters.showDetails ? 'Hide Details' : 'Show Details' }}
+                        </button>
                     </div>
                 </div>
                     </div>
@@ -450,19 +476,19 @@ const getFunctionName = (abbr) => {
                         <div class="relative inline-block w-full">
                             <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
                             <!-- Fade positioned at bottom of actual image -->
-                            <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
+                            <div :class="['absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black via-black/80 to-transparent map-hover-fade', hoveredMapServer === server.id ? 'opacity-0' : 'opacity-100']"></div>
                             <!-- Reverse fade right below the image - fades from black to transparent -->
-                            <div class="absolute inset-x-0 top-full h-[160px] w-full bg-gradient-to-b from-black via-black/80 to-transparent"></div>
+                            <div :class="['absolute inset-x-0 top-full h-[160px] w-full bg-gradient-to-b from-black via-black/80 to-transparent map-hover-fade', hoveredMapServer === server.id ? 'opacity-0' : 'opacity-100']"></div>
                         </div>
                     </div>
 
                     <div class="relative p-6 flex flex-col h-full">
                         <!-- Server Info Box -->
-                        <div class="mb-4 p-4 bg-black/40 rounded-lg border border-white/20 ">
+                        <div :class="['mb-4 p-4 rounded-lg border transition-all duration-300', hoveredMapServer === server.id ? 'bg-transparent border-transparent' : 'bg-black/40 border-white/20']">
                             <!-- Server Name with Flag and Copy IP - Left Aligned -->
-                            <div class="flex items-center gap-2 mb-3">
-                                <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-lg" :title="server.location" @error="$event.target.style.display='none'">
-                                <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
+                            <div :class="['flex items-center gap-2 mb-3 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                                <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 8px rgba(0,0,0,0.8));" :title="server.location" @error="$event.target.style.display='none'">
+                                <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                 <button @click="copyServerIP(server.ip + ':' + server.port)" :class="copiedIP === server.ip + ':' + server.port ? 'bg-green-600 border-green-400 text-white' : 'bg-white/10 hover:bg-white/15 border-white/30 hover:border-white/40 text-gray-200 hover:text-blue-400'" class="px-2 py-1 border rounded-lg transition-all  text-xs font-bold">
                                     {{ copiedIP === server.ip + ':' + server.port ? 'Copied!' : 'Copy IP' }}
                                 </button>
@@ -470,16 +496,33 @@ const getFunctionName = (abbr) => {
 
                             <!-- Map Info with hover group -->
                             <div class="space-y-1.5">
-                                <div v-if="server.map" class="bg-white/5  rounded-lg px-3 py-2 border border-white/10 transition-all relative map-features-hover-group">
+                                <div v-if="server.map" :class="['bg-white/5 rounded-lg px-3 py-2 border border-white/10 transition-all relative map-features-hover-group', filters.showDetails ? 'map-features-expanded' : '']">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
-                                            <span class="text-gray-300 text-base font-semibold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Map:</span>
-                                            <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
+                                                <span class="text-gray-300 text-base font-semibold cursor-default" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</span>
+                                                <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            </div>
+                                            <!-- Copy map name -->
+                                            <button
+                                                @click.stop="copyMapName(server.map)"
+                                                :class="[copiedMap === server.map ? 'text-green-400' : 'text-gray-400 hover:text-blue-400', 'p-1 rounded transition-colors']"
+                                                style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1));"
+                                                :title="copiedMap === server.map ? 'Copied!' : 'Copy map name'"
+                                            >
+                                                <svg v-if="copiedMap === server.map" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                </svg>
+                                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                                </svg>
+                                            </button>
                                             <!-- Add to Maplist button (only if logged in and map has ID) -->
                                             <button
                                                 v-if="page.props.auth.user && server.mapdata?.id"
                                                 @click.stop="openAddToMaplist(server.mapdata.id)"
                                                 class="p-1 text-gray-400 hover:text-purple-400 rounded transition-colors"
+                                                style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1));"
                                                 title="Add to Maplist"
                                             >
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -500,84 +543,89 @@ const getFunctionName = (abbr) => {
                                         <div class="flex flex-wrap gap-2 pt-2 border-t border-white/10 mt-2">
                                             <!-- Weapons -->
                                             <div v-if="server.mapdata.weapons && server.mapdata.weapons.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">Weapons:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Weapons:</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="weapon in server.mapdata.weapons.split(',')" :key="weapon"
                                                          :src="getWeaponIcon(weapon)"
                                                          :alt="getWeaponName(weapon)"
                                                          :title="getWeaponName(weapon)"
-                                                         class="w-7 h-7 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
+                                                         class="w-4 h-4 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
                                                 </div>
                                             </div>
 
                                             <!-- Items -->
                                             <div v-if="server.mapdata.items && server.mapdata.items.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">Items:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Items:</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="item in server.mapdata.items.split(',')" :key="item"
                                                          :src="getItemIcon(item)"
                                                          :alt="getItemName(item)"
                                                          :title="getItemName(item)"
-                                                         class="w-7 h-7 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
+                                                         class="w-4 h-4 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
                                                 </div>
                                             </div>
 
                                             <!-- Functions -->
                                             <div v-if="server.mapdata.functions && server.mapdata.functions.length > 0" class="flex items-center gap-1.5">
-                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">Functions:</span>
+                                                <span class="text-gray-200 font-bold text-[11px] uppercase tracking-wide drop-shadow-[0_2px_6px_rgba(0,0,0,1)] drop-shadow-[0_0_8px_rgba(0,0,0,0.8)]">Functions:</span>
                                                 <div class="flex gap-1">
                                                     <img v-for="func in server.mapdata.functions.split(',')" :key="func"
                                                          :src="getFunctionIcon(func)"
                                                          :alt="getFunctionName(func)"
                                                          :title="getFunctionName(func)"
-                                                         class="w-7 h-7 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
+                                                         class="w-4 h-4 opacity-95 hover:opacity-100 transition-opacity map-feature-icon" />
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div v-if="server.besttime_time && server.besttime_time > 0" class="flex items-center gap-2 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-yellow-500 flex-shrink-0">
+                                <div v-if="server.besttime_time && server.besttime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-yellow-500 flex-shrink-0" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));">
                                         <path fill-rule="evenodd" d="M5.166 2.621v.858c-1.035.148-2.059.33-3.071.543a.75.75 0 0 0-.584.859 6.753 6.753 0 0 0 6.138 5.6 6.73 6.73 0 0 0 2.743 1.346A6.707 6.707 0 0 1 9.279 15H8.54c-1.036 0-1.875.84-1.875 1.875V19.5h-.75a2.25 2.25 0 0 0-2.25 2.25c0 .414.336.75.75.75h15a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-2.25-2.25h-.75v-2.625c0-1.036-.84-1.875-1.875-1.875h-.739a6.706 6.706 0 0 1-1.112-3.173 6.73 6.73 0 0 0 2.743-1.347 6.753 6.753 0 0 0 6.139-5.6.75.75 0 0 0-.585-.858 47.077 47.077 0 0 0-3.07-.543V2.62a.75.75 0 0 0-.658-.744 49.22 49.22 0 0 0-6.093-.377c-2.063 0-4.096.128-6.093.377a.75.75 0 0 0-.657.744Zm0 2.629c0 1.196.312 2.32.857 3.294A5.266 5.266 0 0 1 3.16 5.337a45.6 45.6 0 0 1 2.006-.343v.256Zm13.5 0v-.256c.674.1 1.343.214 2.006.343a5.265 5.265 0 0 1-2.863 3.207 6.72 6.72 0 0 0 .857-3.294Z" clip-rule="evenodd" />
                                     </svg>
                                     <div class="flex items-center gap-2 flex-1">
-                                        <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`" class="w-4 h-3 rounded shadow-md" @error="$event.target.style.display='none'">
-                                        <span class="font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
+                                        <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`" class="w-4 h-3 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));" @error="$event.target.style.display='none'">
+                                        <span class="font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
                                     </div>
-                                    <span class="font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
+                                    <span class="font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
                                 </div>
-                                <div v-if="server.mytime_time && server.mytime_time > 0" class="flex items-center gap-2 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="w-4 h-4 flex-shrink-0">
+                                <div v-if="server.mytime_time && server.mytime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="w-4 h-4 flex-shrink-0" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));">
                                         <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
                                     </svg>
-                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">My Time</span>
-                                    <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Rank {{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                    <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
+                                    <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">My Time</span>
+                                    <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Rank {{ server.myrank_position }}/{{ server.myrank_total }}</span>
+                                    <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Players List - Always expanded -->
-                        <div v-if="server.online_players.length > 0" :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
+                        <div v-if="server.online_players.length > 0" :class="[(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]'), 'map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="bg-black/50 rounded-lg p-2 border border-white/10 ">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
                                 </div>
                             </div>
                         </div>
-                        <div v-else :class="(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]')">
+                        <div v-else :class="[(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]'), 'map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="p-3 bg-black/50 rounded-lg border border-white/10 text-center ">
                                 <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
                             </div>
                         </div>
 
                         <!-- Actions -->
-                        <div class="mt-auto">
-                            <a :href="`defrag://${server.ip}:${server.port}`" :class="server.defrag.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'" class="connect-button w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-white font-bold text-sm transition-all hover:scale-[1.02]">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                                </svg>
-                                Connect to Server
+                        <div :class="['mt-auto map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                            <a :href="`defrag://${server.ip}:${server.port}`" :class="server.defrag.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'" class="connect-button w-full flex items-center justify-between px-4 py-3 rounded-lg text-white font-bold text-sm transition-all hover:scale-[1.02]">
+                                <div class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                                    </svg>
+                                    Connect
+                                </div>
+                                <span :class="server.defrag.toLowerCase().includes('cpm') ? 'bg-purple-500/30 border-purple-400/50 text-purple-300' : 'bg-blue-500/30 border-blue-400/50 text-blue-300'" class="px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded border">
+                                    {{ server.defrag.toLowerCase().includes('cpm') ? 'CPM' : 'VQ3' }}
+                                </span>
                             </a>
                         </div>
                     </div>
@@ -620,7 +668,7 @@ const getFunctionName = (abbr) => {
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
-                                        <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
+                                        <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
                                             <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                         </div>
@@ -724,7 +772,7 @@ const getFunctionName = (abbr) => {
                                     <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded shadow-md flex-shrink-0" :title="server.location" @error="$event.target.style.display='none'">
 
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
-                                        <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
+                                        <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
                                             <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-purple-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                         </div>
@@ -866,15 +914,28 @@ const getFunctionName = (abbr) => {
     transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
-.map-features-hover-group:hover .map-features-container {
+.map-features-hover-group:hover .map-features-container,
+.map-features-expanded .map-features-container {
     max-height: 200px;
     opacity: 1;
     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 }
 
+.map-features-expanded .map-expand-indicator {
+    display: none;
+}
+
+/* Map name hover - fade out fast (300ms), fade back in slow (1000ms) */
+.map-hover-fade {
+    transition: opacity 1000ms ease;
+}
+.map-hover-fade.opacity-0 {
+    transition: opacity 300ms ease;
+}
+
 /* Map feature icon shadows */
 .map-feature-icon {
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 1)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.8));
 }
 
 /* Player list hover-to-expand animation */
