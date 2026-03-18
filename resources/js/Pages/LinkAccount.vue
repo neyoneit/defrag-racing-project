@@ -145,17 +145,17 @@
                                     v-model="profile_link"
                                     type="text"
                                     class="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
-                                    placeholder="https://q3df.org/profil?id=12705"
+                                    placeholder="https://q3df.org/profil?id=2640"
                                 />
                                 <p v-if="error" class="text-red-400 text-xs mt-1">{{ error }}</p>
 
                                 <!-- Inline Help -->
-                                <div class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-gray-300 space-y-1.5">
+                                <div class="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-gray-300 space-y-1.5">
                                     <p class="font-medium text-gray-200">How to find your profile link:</p>
-                                    <p>1. Go to <a href="https://q3df.org/records" target="_blank" class="text-blue-400 hover:text-blue-300">q3df.org/records</a></p>
-                                    <p>2. Search for your username and press Enter</p>
-                                    <p>3. Click on your name in the results</p>
-                                    <p>4. Copy the URL, e.g. <span class="text-orange-400">https://q3df.org/profil?id=12705</span></p>
+                                    <p>1. Open <a href="https://q3df.org/profil" target="_blank" class="text-blue-400 hover:text-blue-300">q3df.org/profil</a> (you must be logged in)</p>
+                                    <p>2. Click <span class="text-white font-semibold">Show all</span> below your avatar</p>
+                                    <p>3. Copy the URL from your browser</p>
+                                    <p class="text-orange-400 pl-3">e.g. https://q3df.org/profil?id=2640</p>
                                 </div>
                             </div>
 

@@ -198,6 +198,9 @@ Route::post('/settings/profile-layout', [SettingsController::class, 'profileLayo
 Route::post('/settings/mapper-claims', [SettingsController::class, 'mapperClaims'])->middleware('auth')->name('settings.mapper-claims');
 Route::get('/settings/mapper-claims', [SettingsController::class, 'getMapperClaims'])->middleware('auth')->name('settings.mapper-claims.get');
 Route::post('/settings/mapper-claims/preview', [SettingsController::class, 'previewMapperClaim'])->middleware('auth')->name('settings.mapper-claims.preview');
+Route::get('/settings/mapper-claims/{claimId}/maps', [SettingsController::class, 'getClaimMaps'])->middleware('auth')->name('settings.mapper-claims.maps');
+Route::post('/settings/mapper-claims/{claimId}/exclusions/toggle', [SettingsController::class, 'toggleClaimExclusion'])->middleware('auth')->name('settings.mapper-claims.exclusions.toggle');
+Route::post('/settings/mapper-claims/report', [SettingsController::class, 'reportMapperClaim'])->middleware('auth')->name('settings.mapper-claims.report');
 
 
 Route::get('/notifications/records', [NotificationsController::class, 'records'])->middleware('auth')->name('notifications.index');

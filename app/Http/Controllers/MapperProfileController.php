@@ -7,6 +7,7 @@ use App\Models\Map;
 use App\Models\Record;
 use App\Models\MapperClaim;
 use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -17,17 +18,25 @@ class MapperProfileController extends Controller
      */
     private function getClaimedMapNames(User $user): array
     {
-        $claimNames = $user->mapperClaims()->where('type', 'map')->pluck('name')->toArray();
+        $claims = $user->mapperClaims()->where('type', 'map')->with('exclusions')->get();
+        $claimNames = $claims->pluck('name')->toArray();
 
         if (empty($claimNames)) {
             return ['claims' => [], 'mapNames' => collect()];
         }
 
+        // Collect all excluded map IDs across all claims
+        $excludedMapIds = $claims->flatMap(fn($c) => $c->exclusions->pluck('map_id'))->unique()->toArray();
+
         $query = Map::where('visible', true)->where(function ($q) use ($claimNames) {
             foreach ($claimNames as $name) {
-                $q->orWhere('author', 'LIKE', '%' . $name . '%');
+                $q->orWhere('author', 'REGEXP', MapperClaim::authorRegexp($name));
             }
         });
+
+        if (!empty($excludedMapIds)) {
+            $query->whereNotIn('id', $excludedMapIds);
+        }
 
         return [
             'claims' => $claimNames,
@@ -473,7 +482,7 @@ class MapperProfileController extends Controller
                 $models = \App\Models\PlayerModel::where('approval_status', 'approved')
                     ->where(function ($q) use ($modelClaims) {
                         foreach ($modelClaims as $name) {
-                            $q->orWhere('author', 'LIKE', '%' . $name . '%');
+                            $q->orWhere('author', 'REGEXP', MapperClaim::authorRegexp($name));
                         }
                     })
                     ->select('name', 'created_at')
@@ -586,7 +595,7 @@ class MapperProfileController extends Controller
         $query = \App\Models\PlayerModel::where('approval_status', 'approved')
             ->where(function ($q) use ($claimNames) {
                 foreach ($claimNames as $name) {
-                    $q->orWhere('author', 'LIKE', '%' . $name . '%');
+                    $q->orWhere('author', 'REGEXP', MapperClaim::authorRegexp($name));
                 }
             });
 

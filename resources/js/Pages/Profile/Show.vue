@@ -306,6 +306,8 @@ const fetchMapperClaims = async () => {
     try {
         const res = await fetch(route('settings.mapper-claims.get'));
         mapperClaims.value = await res.json();
+        // Auto-fetch maps for all claims
+        await fetchAllClaimMaps();
     } catch (e) {
         console.error('Error loading mapper claims:', e);
     } finally {
@@ -341,17 +343,125 @@ const previewClaim = () => {
     }, 300);
 };
 
-const addMapperClaim = () => {
+// Exclusion management
+const expandedClaims = ref(new Set());
+let claimMapsSearchTimeout = null;
+
+// Store maps per claim
+const claimMapsById = ref({});
+const loadingClaimMapsById = ref({});
+
+const fetchClaimMaps = async (claimId, search = '') => {
+    loadingClaimMapsById.value[claimId] = true;
+    try {
+        const url = `/settings/mapper-claims/${claimId}/maps` + (search ? `?search=${encodeURIComponent(search)}` : '');
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        claimMapsById.value[claimId] = data.maps;
+    } catch (e) {
+        claimMapsById.value[claimId] = [];
+    } finally {
+        loadingClaimMapsById.value[claimId] = false;
+    }
+};
+
+const fetchAllClaimMaps = async () => {
+    for (const claim of mapperClaims.value) {
+        if (claim.id) {
+            await fetchClaimMaps(claim.id);
+        }
+    }
+};
+
+const claimSearches = ref({});
+const searchClaimMaps = (claimId) => {
+    if (claimMapsSearchTimeout) clearTimeout(claimMapsSearchTimeout);
+    claimMapsSearchTimeout = setTimeout(() => {
+        fetchClaimMaps(claimId, claimSearches.value[claimId] || '');
+    }, 300);
+};
+
+const toggleExclusion = async (claimId, mapId) => {
+    const maps = claimMapsById.value[claimId] || [];
+    const map = maps.find(m => m.id === mapId);
+    if (map) map.excluded = !map.excluded; // optimistic
+
+    try {
+        const res = await fetch(`/settings/mapper-claims/${claimId}/exclusions/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ map_id: mapId }),
+        });
+        const data = await res.json();
+        if (map) map.excluded = data.excluded;
+    } catch (e) {
+        if (map) map.excluded = !map.excluded; // revert
+    }
+};
+
+// Claim dispute reporting
+const reportingClaim = ref(false);
+const reportSent = ref(false);
+const reportReason = ref('');
+const showReportForm = ref(false);
+
+const reportError = ref('');
+
+const reportClaim = async () => {
+    if (!claimPreview.value?.claimed_by) return;
+    reportingClaim.value = true;
+    reportError.value = '';
+    try {
+        const res = await fetch('/settings/mapper-claims/report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                mapper_claim_id: claimPreview.value.claimed_by.claim_id,
+                reason: reportReason.value,
+            }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            reportSent.value = true;
+            showReportForm.value = false;
+        } else if (data.error) {
+            reportError.value = data.error;
+        }
+    } catch (e) {
+        reportError.value = 'Failed to submit dispute. Please try again.';
+    } finally {
+        reportingClaim.value = false;
+    }
+};
+
+const addMapperClaim = async () => {
     const name = newClaimName.value.trim();
     if (!name) return;
+    if (claimPreview.value?.claimed_by) return;
     if (mapperClaims.value.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === newClaimType.value)) return;
     mapperClaims.value.push({ name, type: newClaimType.value, matching_count: claimPreview.value?.count || 0, matching_samples: claimPreview.value?.maps?.map(m => m.name) || [] });
     newClaimName.value = '';
     claimPreview.value = null;
+    // Auto-save
+    await saveMapperClaims();
 };
 
-const removeMapperClaim = (index) => {
+const removeMapperClaim = async (index) => {
     mapperClaims.value.splice(index, 1);
+    // Auto-save
+    await saveMapperClaims();
 };
 
 const saveMapperClaims = async () => {
@@ -646,7 +756,11 @@ const tabs = [
                             <div class="mt-3 space-y-1.5 text-xs text-gray-500">
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                    <span>Maps are matched by the <span class="text-gray-300">author</span> field - partial matches work for collaborations (e.g. claiming "Nt" matches "Nt &amp; Sonic")</span>
+                                    <span>Your claimed name matches maps where the author field contains your name as a <span class="text-gray-300">standalone word</span>. Collaboration separators (spaces, &amp;, -, +, @, commas, etc.) are recognized - e.g. claiming <span class="text-orange-400">"Foo"</span> will match <span class="text-gray-300">"Foo"</span>, <span class="text-gray-300">"Foo &amp; Bar"</span>, or <span class="text-gray-300">"Foo@Bar"</span>, but <span class="text-red-400">NOT</span> <span class="text-gray-300">"SgtFoo"</span> or <span class="text-gray-300">"Foobar"</span></span>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                    <span>If another user claims a more specific name (e.g. <span class="text-orange-400">"Foo@Bar"</span>), those maps <span class="text-gray-300">automatically move</span> to their profile since it's a more precise match</span>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -689,7 +803,7 @@ const tabs = [
                         <!-- Existing Claims -->
                         <div v-if="mapperClaims.length" class="space-y-3 mb-5">
                             <div v-for="(claim, idx) in mapperClaims" :key="idx"
-                                class="bg-black/30 rounded-lg border border-white/5 overflow-hidden">
+                                class="bg-black/30 rounded-lg border border-white/5">
                                 <div class="flex items-center gap-3 px-4 py-3">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2">
@@ -701,6 +815,7 @@ const tabs = [
                                         </div>
                                         <div v-if="claim.matching_count !== undefined" class="text-xs text-gray-500 mt-0.5">
                                             <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> matching maps
+                                            <span v-if="claim.exclusions_count" class="text-yellow-400 ml-1">({{ claim.exclusions_count }} excluded)</span>
                                             <span v-if="claim.matching_samples?.length" class="text-gray-600">
                                                 - {{ claim.matching_samples.slice(0, 3).join(', ') }}<span v-if="claim.matching_count > 3">...</span>
                                             </span>
@@ -711,6 +826,57 @@ const tabs = [
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
                                     </button>
+                                </div>
+
+                                <!-- Maps for this claim (always visible) -->
+                                <div v-if="claim.id && claimMapsById[claim.id]" class="px-4 pb-4">
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <input v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" placeholder="Search maps..."
+                                            class="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none">
+                                        <div class="text-xs text-gray-400 whitespace-nowrap">
+                                            <span class="text-green-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => !m.excluded).length }}</span> included,
+                                            <span class="text-red-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => m.excluded).length }}</span> excluded
+                                        </div>
+                                    </div>
+
+                                    <div v-if="loadingClaimMapsById[claim.id]" class="flex items-center justify-center py-8">
+                                        <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                                    </div>
+
+                                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[500px] overflow-y-auto pr-1">
+                                        <div v-for="map in claimMapsById[claim.id]" :key="map.id"
+                                            @click="toggleExclusion(claim.id, map.id)"
+                                            class="relative rounded-lg overflow-hidden cursor-pointer transition-all group"
+                                            :class="map.excluded
+                                                ? 'ring-2 ring-red-500/60 opacity-50 hover:opacity-70'
+                                                : 'ring-2 ring-green-500/40 hover:ring-green-400/60'">
+                                            <div class="h-20 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
+                                                <!-- Status indicator -->
+                                                <div class="absolute top-1.5 right-1.5">
+                                                    <div v-if="map.excluded" class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                    </div>
+                                                    <div v-else class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
+                                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                                    </div>
+                                                </div>
+                                                <!-- Hover overlay -->
+                                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                                    :class="map.excluded ? 'bg-green-900/60' : 'bg-red-900/60'">
+                                                    <span v-if="map.excluded" class="text-xs font-bold text-green-300 bg-black/50 px-3 py-1 rounded-full">Click to Include</span>
+                                                    <span v-else class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Click to Exclude</span>
+                                                </div>
+                                            </div>
+                                            <div class="px-2 py-1.5" :class="map.excluded ? 'bg-red-950/40' : 'bg-black/60'">
+                                                <div class="text-[11px] font-bold truncate" :class="map.excluded ? 'text-red-300 line-through' : 'text-white'">{{ map.name }}</div>
+                                                <div class="text-[10px] text-gray-500 truncate">{{ map.author }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="!loadingClaimMapsById[claim.id] && (claimMapsById[claim.id] || []).length === 0" class="text-center py-6 text-sm text-gray-500">
+                                        No maps found
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -745,9 +911,9 @@ const tabs = [
                                     @keyup.enter="addMapperClaim"
                                     class="flex-1 px-3 py-2.5 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-green-500/50 focus:outline-none">
                                 <button @click="addMapperClaim"
-                                    :disabled="!newClaimName.trim() || (claimPreview && claimPreview.count === 0)"
+                                    :disabled="!newClaimName.trim() || (claimPreview && claimPreview.count === 0) || claimPreview?.claimed_by"
                                     class="px-5 py-2.5 rounded-lg text-sm font-bold transition disabled:opacity-30 disabled:cursor-not-allowed"
-                                    :class="claimPreview && claimPreview.count > 0 ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-700 text-gray-400'">
+                                    :class="claimPreview && claimPreview.count > 0 && !claimPreview.claimed_by ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-gray-700 text-gray-400'">
                                     Add
                                 </button>
                             </div>
@@ -759,12 +925,45 @@ const tabs = [
                             </div>
 
                             <div v-else-if="claimPreview" class="mt-3">
+                                <!-- Already claimed warning -->
+                                <div v-if="claimPreview.claimed_by" class="mb-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2 text-sm text-yellow-400">
+                                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                                            <span>Already claimed by
+                                                <a :href="`/profile/${claimPreview.claimed_by.user_id}`" class="font-bold hover:underline inline" v-html="q3tohtml(claimPreview.claimed_by.user_name)"></a>
+                                            </span>
+                                        </div>
+                                        <button v-if="!reportSent" @click="showReportForm = !showReportForm"
+                                            class="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium transition shrink-0 border border-red-500/20">
+                                            Dispute Claim
+                                        </button>
+                                        <span v-else class="text-xs text-green-400 font-medium shrink-0">Reported</span>
+                                    </div>
+                                    <!-- Report form -->
+                                    <div v-if="showReportForm && !reportSent" class="mt-3 pt-3 border-t border-yellow-500/20">
+                                        <p class="text-xs text-gray-400 mb-2">If you believe this name was claimed incorrectly, describe why you are the rightful author:</p>
+                                        <textarea v-model="reportReason" rows="2" placeholder="e.g. I am the original author of these maps, I go by this name on q3df.org..."
+                                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-red-500 placeholder-gray-500 mb-2"></textarea>
+                                        <div v-if="reportError" class="text-xs text-red-400 mb-2">{{ reportError }}</div>
+                                        <div class="flex items-center gap-2">
+                                            <button @click="reportClaim" :disabled="reportingClaim"
+                                                class="px-3 py-1.5 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white text-xs font-medium rounded-lg transition">
+                                                {{ reportingClaim ? 'Submitting...' : 'Submit Dispute' }}
+                                            </button>
+                                            <button @click="showReportForm = false" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs rounded-lg transition">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div v-if="claimPreview.count === 0" class="text-xs text-red-400 flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     No {{ newClaimType === 'model' ? 'models' : 'maps' }} found with this author name
                                 </div>
                                 <div v-else>
-                                    <div class="text-xs text-green-400 font-bold mb-2 flex items-center gap-1.5">
+                                    <div class="text-xs font-bold mb-2 flex items-center gap-1.5" :class="claimPreview.claimed_by ? 'text-gray-400' : 'text-green-400'">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                                         {{ claimPreview.count }} {{ newClaimType === 'model' ? 'models' : 'maps' }} found
                                     </div>

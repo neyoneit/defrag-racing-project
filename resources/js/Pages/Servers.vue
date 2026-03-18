@@ -117,20 +117,29 @@ const toggleSort = (type) => {
 const filteredAndSortedServers = computed(() => {
     let result = [...props.servers];
 
-    // Filter by gametype (using manually set 'type' field)
+    // Filter by gametype (using 'type' field + fallback to server name detection)
     if (filters.value.gametype !== 'all') {
         result = result.filter(server => {
             const serverType = server.type?.toLowerCase() || 'run';
+            const serverName = (server.name || '').replace(/\^\d|\^x[\da-fA-F]{2}|\^[\da-fA-F]{6}/g, '').toLowerCase();
+
+            // Detect effective type: DB type first, then name-based detection
+            let effectiveType = serverType;
+            if (serverType === 'run') {
+                if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
+                else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
+                else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
+            }
 
             switch (filters.value.gametype) {
                 case 'run':
-                    return serverType === 'run';
+                    return effectiveType === 'run';
                 case 'ctf':
-                    return serverType === 'ctf';
+                    return effectiveType === 'ctf' || effectiveType === 'fastcaps';
                 case 'freestyle':
-                    return serverType === 'freestyle';
+                    return effectiveType === 'freestyle';
                 case 'teamrun':
-                    return serverType === 'teamrun' || serverType === 'team';
+                    return effectiveType === 'teamrun' || effectiveType === 'team';
                 default:
                     return true;
             }
@@ -314,8 +323,8 @@ const getFunctionName = (abbr) => {
         <Head title="Servers" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">

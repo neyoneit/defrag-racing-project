@@ -23,8 +23,8 @@ const commitItems = props.commits;
 
     <div>
         <!-- Header -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="text-center">
                     <h1 class="text-4xl font-bold text-white mb-4">Development Roadmap</h1>
                     <p class="text-xl text-gray-400">{{ commitItems.length }} commits of progress - hover for details</p>
