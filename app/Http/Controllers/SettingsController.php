@@ -512,6 +512,22 @@ class SettingsController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function effectsIntensity(Request $request) {
+        $request->validate([
+            'avatar_effects_intensity' => ['required', 'integer', 'min:0', 'max:100'],
+            'name_effects_intensity' => ['required', 'integer', 'min:0', 'max:100'],
+            'avatar_effects_speed' => ['required', 'integer', 'min:0', 'max:100'],
+            'name_effects_speed' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $user = $request->user();
+        $user->avatar_effects_intensity = $request->avatar_effects_intensity;
+        $user->name_effects_intensity = $request->name_effects_intensity;
+        $user->avatar_effects_speed = $request->avatar_effects_speed;
+        $user->name_effects_speed = $request->name_effects_speed;
+        $user->save();
+    }
+
     public function deleteBackground(Request $request) {
         $user = $request->user();
 

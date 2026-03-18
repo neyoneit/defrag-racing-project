@@ -52,6 +52,10 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'avatar_effect',
         'name_effect',
         'avatar_border_color',
+        'avatar_effects_intensity',
+        'name_effects_intensity',
+        'avatar_effects_speed',
+        'name_effects_speed',
         'defrag_news',
         'tournament_news',
         'clan_notifications',
@@ -109,6 +113,10 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'default_show_offline' => 'boolean',
         'default_physics_order' => 'string',
         'profile_layout' => 'array',
+        'avatar_effects_intensity' => 'integer',
+        'name_effects_intensity' => 'integer',
+        'avatar_effects_speed' => 'integer',
+        'name_effects_speed' => 'integer',
     ];
 
     /**

@@ -47,7 +47,28 @@
     };
 
     // Mark current section as seen on page load
+    // Effects - apply body classes based on viewer's preferences
+    const applyEffectsIntensity = () => {
+        const user = page.props.auth?.user;
+        const avatarOn = (user?.avatar_effects_intensity ?? 100) > 0;
+        const nameOn = (user?.name_effects_intensity ?? 100) > 0;
+        const avatarSpeed = user?.avatar_effects_speed ?? 100;
+        const nameSpeed = user?.name_effects_speed ?? 100;
+
+        document.body.classList.remove('avatar-fx-off', 'avatar-speed-off', 'avatar-speed-reduced', 'name-fx-off', 'name-speed-off', 'name-speed-reduced');
+
+        if (!avatarOn) document.body.classList.add('avatar-fx-off');
+        if (avatarSpeed === 0) document.body.classList.add('avatar-speed-off');
+        else if (avatarSpeed <= 50) document.body.classList.add('avatar-speed-reduced');
+
+        if (!nameOn) document.body.classList.add('name-fx-off');
+        if (nameSpeed === 0) document.body.classList.add('name-speed-off');
+        else if (nameSpeed <= 50) document.body.classList.add('name-speed-reduced');
+    };
+
     onMounted(() => {
+        applyEffectsIntensity();
+
         const currentRoute = route().current() || '';
         for (const [prefix, section] of Object.entries(routeSectionMap)) {
             if (currentRoute.startsWith(prefix)) {

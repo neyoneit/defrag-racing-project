@@ -195,6 +195,7 @@ Route::delete('/settings/background', [SettingsController::class, 'deleteBackgro
 Route::post('/settings/map-view-preferences', [SettingsController::class, 'mapViewPreferences'])->name('settings.map-view-preferences');
 Route::post('/settings/physics-order', [SettingsController::class, 'physicsOrderPreferences'])->name('settings.physics-order');
 Route::post('/settings/profile-layout', [SettingsController::class, 'profileLayout'])->name('settings.profile-layout');
+Route::post('/settings/effects-intensity', [SettingsController::class, 'effectsIntensity'])->name('settings.effects-intensity');
 Route::post('/settings/mapper-claims', [SettingsController::class, 'mapperClaims'])->middleware('auth')->name('settings.mapper-claims');
 Route::get('/settings/mapper-claims', [SettingsController::class, 'getMapperClaims'])->middleware('auth')->name('settings.mapper-claims.get');
 Route::post('/settings/mapper-claims/preview', [SettingsController::class, 'previewMapperClaim'])->middleware('auth')->name('settings.mapper-claims.preview');

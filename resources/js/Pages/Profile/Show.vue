@@ -11,6 +11,7 @@ import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaFor
 
 import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
 import ProfileLayoutForm from '@/Pages/Profile/Partials/ProfileLayoutForm.vue';
+import EffectsIntensityForm from '@/Pages/Profile/Partials/EffectsIntensityForm.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
 import TextInput from '@/Components/Laravel/TextInput.vue';
@@ -1506,6 +1507,9 @@ const tabs = [
                 </div>
             </div>
             </div> <!-- Close View Preferences Grid -->
+
+            <!-- Effects Intensity -->
+            <EffectsIntensityForm />
 
             <!-- Profile Layout Customization -->
             <ProfileLayoutForm />

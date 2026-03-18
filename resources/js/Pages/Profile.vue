@@ -8,6 +8,7 @@
     import AvatarNameEffectsForm from '@/Pages/Profile/Partials/AvatarNameEffectsForm.vue';
     import MapRecordsViewForm from '@/Pages/Profile/Partials/MapRecordsViewForm.vue';
     import PhysicsOrderForm from '@/Pages/Profile/Partials/PhysicsOrderForm.vue';
+    import EffectsIntensityForm from '@/Pages/Profile/Partials/EffectsIntensityForm.vue';
     import { useClipboard } from '@/Composables/useClipboard';
 
     const { copy, copyState } = useClipboard();
@@ -178,6 +179,7 @@
         { id: 'effects', label: 'Avatar & Name Effects' },
         { id: 'map_view', label: 'Map Records Default View' },
         { id: 'physics_order', label: 'Physics Column Order' },
+        { id: 'effects_intensity', label: 'Effects Intensity' },
     ];
 
     const selectQuickPanel = (id) => {
@@ -736,6 +738,7 @@
                 <AvatarNameEffectsForm v-else-if="quickSettingsPanel === 'effects'" />
                 <MapRecordsViewForm v-else-if="quickSettingsPanel === 'map_view'" />
                 <PhysicsOrderForm v-else-if="quickSettingsPanel === 'physics_order'" />
+                <EffectsIntensityForm v-else-if="quickSettingsPanel === 'effects_intensity'" />
             </div>
         </transition>
 
