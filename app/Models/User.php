@@ -145,9 +145,29 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     public function toSearchableArray () {
+        $substrings = $this->generateSubstrings($this->plain_name);
+
+        // Also index linked MDD profile name (stripped of color codes) for search
+        if ($this->mdd_id) {
+            $mddProfile = MddProfile::find($this->mdd_id);
+            if ($mddProfile) {
+                $mddPlain = preg_replace('/\^[\dA-Fa-f]/', '', $mddProfile->name);
+                $mddSubstrings = $this->generateSubstrings($mddPlain);
+                $substrings = array_values(array_unique(array_merge($substrings, $mddSubstrings)));
+            }
+        }
+
+        // Also index approved aliases
+        $aliases = $this->aliases()->where('is_approved', true)->pluck('alias');
+        foreach ($aliases as $alias) {
+            $aliasPlain = preg_replace('/\^[\dA-Fa-f]/', '', $alias);
+            $aliasSubstrings = $this->generateSubstrings($aliasPlain);
+            $substrings = array_values(array_unique(array_merge($substrings, $aliasSubstrings)));
+        }
+
         return [
             'id' => (string) $this->id,
-            'plain_name' => $this->generateSubstrings($this->plain_name),
+            'plain_name' => $substrings,
             'created_at' => Carbon::parse($this->created_at)->timestamp,
         ];
     }

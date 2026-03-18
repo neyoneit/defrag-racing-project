@@ -586,6 +586,7 @@
                                 <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-8 h-5">
                             </div>
                             <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
+                            <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-400" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
                             <!-- LIVE Badge -->
                             <a v-if="user?.is_live && user?.twitch_name" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
                                 <div class="w-2 h-2 rounded-full bg-white animate-ping absolute"></div>
@@ -1034,7 +1035,7 @@
                                 </button>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4">Aliases are used to match uploaded demos to this player's account. Demos are automatically paired with records based on these names.</p>
+                        <p class="text-xs text-gray-400 mb-4">Aliases are alternative nicknames this player has used in Defrag. They help match uploaded demos and make the player searchable by any of their past names.</p>
 
                         <!-- Pending Suggestions (only visible on own profile) -->
                         <div v-if="alias_suggestions && alias_suggestions.length > 0" class="mb-4">

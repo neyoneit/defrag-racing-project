@@ -55,6 +55,7 @@
                     clans.value = response.data?.clans || []
                     bundles.value = response.data?.bundles || []
                     models.value = response.data?.models || []
+                    showResultsSection.value = true;
                 });
             }
         }, 250);
