@@ -1,4 +1,86 @@
-/* Avatar Effects */
+/* === Effects Control === */
+/* Visibility: body classes toggle effects on/off */
+/* Speed: body classes control animation-duration / play-state */
+
+/* GPU acceleration for all effect elements */
+[class*="avatar-effect-"]:not(.avatar-effect-none) {
+    will-change: transform, filter;
+    transform: translateZ(0);
+    contain: layout style;
+}
+
+[class*="avatar-effect-"]:not(.avatar-effect-none)::before,
+[class*="avatar-effect-"]:not(.avatar-effect-none)::after {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+}
+
+[class*="name-effect-"]:not(.name-effect-none) {
+    will-change: transform, filter;
+    transform: translateZ(0);
+    contain: layout style;
+}
+
+/* --- AVATAR OFF --- */
+body.avatar-fx-off [class*="avatar-effect-"]:not(.avatar-effect-none) {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+    box-shadow: none !important;
+    clip-path: none !important;
+}
+
+body.avatar-fx-off [class*="avatar-effect-"]:not(.avatar-effect-none)::before,
+body.avatar-fx-off [class*="avatar-effect-"]:not(.avatar-effect-none)::after {
+    display: none !important;
+}
+
+/* --- AVATAR SPEED --- */
+body.avatar-speed-off [class*="avatar-effect-"]:not(.avatar-effect-none),
+body.avatar-speed-off [class*="avatar-effect-"]:not(.avatar-effect-none)::before,
+body.avatar-speed-off [class*="avatar-effect-"]:not(.avatar-effect-none)::after {
+    animation-play-state: paused !important;
+}
+
+body.avatar-speed-reduced [class*="avatar-effect-"]:not(.avatar-effect-none),
+body.avatar-speed-reduced [class*="avatar-effect-"]:not(.avatar-effect-none)::before,
+body.avatar-speed-reduced [class*="avatar-effect-"]:not(.avatar-effect-none)::after {
+    animation-duration: 10s !important;
+}
+
+/* --- NAME OFF --- */
+body.name-fx-off [class*="name-effect-"]:not(.name-effect-none) {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+    -webkit-text-fill-color: unset !important;
+    background-clip: unset !important;
+    -webkit-background-clip: unset !important;
+    clip-path: none !important;
+}
+
+body.name-fx-off [class*="name-effect-"]:not(.name-effect-none)::before,
+body.name-fx-off [class*="name-effect-"]:not(.name-effect-none)::after {
+    display: none !important;
+}
+
+/* --- NAME SPEED --- */
+body.name-speed-off [class*="name-effect-"]:not(.name-effect-none),
+body.name-speed-off [class*="name-effect-"]:not(.name-effect-none)::before,
+body.name-speed-off [class*="name-effect-"]:not(.name-effect-none)::after {
+    animation-play-state: paused !important;
+}
+
+body.name-speed-reduced [class*="name-effect-"]:not(.name-effect-none),
+body.name-speed-reduced [class*="name-effect-"]:not(.name-effect-none)::before,
+body.name-speed-reduced [class*="name-effect-"]:not(.name-effect-none)::after {
+    animation-duration: 10s !important;
+}
+
+/* === End Effects Control === */
+
+/* ==================== Avatar Effects ==================== */
+
 .avatar-effect-glow {
     position: relative;
     filter: drop-shadow(0 0 20px var(--effect-color));
@@ -68,7 +150,7 @@
 .avatar-effect-orbit {
     position: relative;
     display: flex;
-    --orbit-radius: 20px; /* Default radius, will be overridden by inline styles */
+    --orbit-radius: 20px;
 }
 
 .avatar-effect-orbit::before,
@@ -238,7 +320,8 @@
     50% { filter: drop-shadow(0 0 30px var(--effect-color)) drop-shadow(0 0 60px var(--effect-color)); }
 }
 
-/* Name Effects */
+/* ==================== Name Effects ==================== */
+
 .name-effect-wave {
     animation: name-wave 2s ease-in-out infinite;
 }
@@ -400,7 +483,8 @@
     to { text-shadow: 0 0 15px #ff6347, 0 0 30px #ff4500, 0 0 45px #ff6347; }
 }
 
-/* New Crazy Avatar Effects */
+/* ==================== Advanced Avatar Effects ==================== */
+
 .avatar-effect-matrix {
     position: relative;
     filter: drop-shadow(0 0 15px #00ff00);
@@ -570,7 +654,8 @@
     75% { filter: drop-shadow(0 0 25px #ffff00) saturate(1.5); }
 }
 
-/* New Crazy Name Effects */
+/* ==================== Advanced Name Effects ==================== */
+
 .name-effect-matrix {
     animation: name-matrix 2s linear infinite;
     text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
