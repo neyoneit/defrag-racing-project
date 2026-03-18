@@ -430,6 +430,26 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return $this->hasMany(Record::class, 'user_id');
     }
 
+    public function creatorProfile()
+    {
+        return $this->hasOne(MarketplaceCreatorProfile::class);
+    }
+
+    public function marketplaceListings()
+    {
+        return $this->hasMany(MarketplaceListing::class);
+    }
+
+    public function marketplaceReviewsReceived()
+    {
+        return $this->hasMany(MarketplaceReview::class, 'reviewee_id');
+    }
+
+    public function canPostOnMarketplace(): bool
+    {
+        return $this->records()->count() >= 50;
+    }
+
     /**
      * Get user's top 5 most downloaded demos
      */
