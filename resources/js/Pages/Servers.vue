@@ -472,9 +472,12 @@ const getFunctionName = (abbr) => {
             <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative  bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
-                    <div class="absolute top-0 left-0 right-0 h-[450px] pointer-events-none rounded-t-2xl">
+                    <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl" :class="hoveredMapServer === server.id ? 'pointer-events-auto' : 'pointer-events-none'">
                         <div class="relative inline-block w-full">
-                            <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
+                            <a v-if="server.map" :href="`/maps/${server.map}`" class="block">
+                                <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
+                            </a>
+                            <img v-else :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
                             <!-- Fade positioned at bottom of actual image -->
                             <div :class="['absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent', hoveredMapServer === server.id ? 'h-6 from-gray-950/90' : 'h-40 from-black via-black/80']"></div>
                             <!-- Solid dark below the image -->
@@ -502,7 +505,7 @@ const getFunctionName = (abbr) => {
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <span class="text-gray-300 text-base font-semibold cursor-default" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</span>
+                                                <a :href="`/maps/${server.map}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</a>
                                                 <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->

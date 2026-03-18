@@ -4,10 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class UploadedDemo extends Model
 {
     use HasFactory;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        $clearCache = function ($demo) {
+            Cache::forget('demo_counts_browse');
+            if ($demo->user_id) {
+                Cache::forget("demo_counts_user_{$demo->user_id}");
+            }
+        };
+
+        static::saved($clearCache);
+        static::deleted($clearCache);
+    }
 
     protected $fillable = [
         'original_filename',

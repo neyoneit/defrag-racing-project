@@ -220,6 +220,12 @@ class SettingsController extends Controller
             'user_id'   =>  $request->user()->id
         ]);
 
+        // Auto-create marketplace creator profile with is_listed=true
+        \App\Models\MarketplaceCreatorProfile::firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['is_listed' => true, 'accepting_commissions' => true, 'specialties' => []]
+        );
+
         return [
             'success'   =>      true,
             'mdd_id'    =>      $id

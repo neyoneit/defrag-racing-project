@@ -24,6 +24,8 @@ const props = defineProps({
     browseTab: String,
     browseStatus: String,
     browseSearch: String,
+    browseSortBy: String,
+    browseSortOrder: String,
     userSearch: String,
     downloadLimitInfo: Object,
     confidenceFilter: String,
@@ -183,8 +185,21 @@ const userSearchQuery = ref(props.userSearch || '');
 
 // Advanced filter state (admin only)
 const confidenceFilterValue = ref(props.confidenceFilter || '');
+const confidenceDropdownOpen = ref(false);
 const showOtherUserMatchesValue = ref(props.showOtherUserMatches || false);
 const uploadedByValue = ref(props.uploadedBy || '');
+
+const confidenceOptions = [
+    { value: '', label: 'All Confidence Levels' },
+    { value: '90-99', label: '90-99%' },
+    { value: '80-89', label: '80-89%' },
+    { value: '70-79', label: '70-79%' },
+    { value: '60-69', label: '60-69%' },
+    { value: '50-59', label: '50-59%' },
+    { value: 'below-50', label: 'Below 50%' },
+];
+
+const selectedConfidenceLabel = () => confidenceOptions.find(c => c.value === confidenceFilterValue.value)?.label || 'All Confidence Levels';
 
 // Tooltip state
 const hoveredDemo = ref(null);
@@ -213,6 +228,7 @@ const searchQuery = ref('');
 const availableMaps = ref([]);
 const selectedMap = ref('');
 const selectedPhysics = ref('VQ3');
+const physicsDropdownOpen = ref(false);
 const availableRecords = ref([]);
 const selectedRecord = ref('');
 const loadingMaps = ref(false);
@@ -787,6 +803,19 @@ const sortColumn = (column) => {
         order: newOrder,
         userPage: props.userDemos?.current_page || 1,
     }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const sortBrowseColumn = (column) => {
+    const newOrder = props.browseSortBy === column && props.browseSortOrder === 'asc' ? 'desc' : 'asc';
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('browse_sort', column);
+    currentUrl.searchParams.set('browse_order', newOrder);
+    currentUrl.searchParams.delete('browsePage');
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
         preserveState: true,
         preserveScroll: true,
     });
@@ -1871,18 +1900,29 @@ watch(selectedPhysics, () => {
                                 <!-- Confidence Filter -->
                                 <div>
                                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Confidence Range</label>
-                                    <select
-                                        v-model="confidenceFilterValue"
-                                        class="w-full px-3 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    >
-                                        <option value="">All Confidence Levels</option>
-                                        <option value="90-99">90-99%</option>
-                                        <option value="80-89">80-89%</option>
-                                        <option value="70-79">70-79%</option>
-                                        <option value="60-69">60-69%</option>
-                                        <option value="50-59">50-59%</option>
-                                        <option value="below-50">Below 50%</option>
-                                    </select>
+                                    <div class="relative">
+                                        <button
+                                            @click="confidenceDropdownOpen = !confidenceDropdownOpen"
+                                            class="w-full bg-gray-700/50 border border-gray-600/50 rounded-lg px-3 py-1.5 text-sm text-gray-200 text-left flex items-center justify-between hover:border-gray-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <span>{{ selectedConfidenceLabel() }}</span>
+                                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="confidenceDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                            </svg>
+                                        </button>
+                                        <div v-if="confidenceDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                                            <button
+                                                v-for="opt in confidenceOptions"
+                                                :key="opt.value"
+                                                @click="confidenceFilterValue = opt.value; confidenceDropdownOpen = false"
+                                                :class="confidenceFilterValue === opt.value ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
+                                                class="w-full px-3 py-1.5 text-left text-sm transition-colors"
+                                            >
+                                                {{ opt.label }}
+                                            </button>
+                                        </div>
+                                        <div v-if="confidenceDropdownOpen" @click="confidenceDropdownOpen = false" class="fixed inset-0 z-40"></div>
+                                    </div>
                                 </div>
 
                                 <!-- 100% Match Other User Filter -->
@@ -2302,25 +2342,61 @@ watch(selectedPhysics, () => {
                             <thead class="bg-gray-700/50">
                                 <tr>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Filename
+                                        <button @click="sortBrowseColumn('original_filename')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Filename</span>
+                                            <svg v-if="browseSortBy === 'original_filename'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Uploaded By
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Map
+                                        <button @click="sortBrowseColumn('map_name')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Map</span>
+                                            <svg v-if="browseSortBy === 'map_name'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Type
+                                        <button @click="sortBrowseColumn('gametype')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Type</span>
+                                            <svg v-if="browseSortBy === 'gametype'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Physics
+                                        <button @click="sortBrowseColumn('physics')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Physics</span>
+                                            <svg v-if="browseSortBy === 'physics'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Time
+                                        <button @click="sortBrowseColumn('time_ms')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Time</span>
+                                            <svg v-if="browseSortBy === 'time_ms'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        Status
+                                        <button @click="sortBrowseColumn('status')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                            <span>Status</span>
+                                            <svg v-if="browseSortBy === 'status'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </button>
                                     </th>
                                     <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Actions
@@ -2463,10 +2539,29 @@ watch(selectedPhysics, () => {
                 <!-- Physics Selection -->
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-400 mb-2">Physics</label>
-                    <select v-model="selectedPhysics" @change="selectedMap && loadRecords()" class="w-full px-3 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white">
-                        <option value="VQ3">VQ3</option>
-                        <option value="CPM">CPM</option>
-                    </select>
+                    <div class="relative">
+                        <button
+                            @click="physicsDropdownOpen = !physicsDropdownOpen"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-left flex items-center justify-between hover:border-gray-600 transition-colors"
+                        >
+                            <span>{{ selectedPhysics }}</span>
+                            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="physicsDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                            </svg>
+                        </button>
+                        <div v-if="physicsDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-50 shadow-2xl">
+                            <button
+                                v-for="p in ['VQ3', 'CPM']"
+                                :key="p"
+                                @click="selectedPhysics = p; physicsDropdownOpen = false; selectedMap && loadRecords()"
+                                :class="selectedPhysics === p ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
+                                class="w-full px-3 py-2 text-left text-sm transition-colors"
+                            >
+                                {{ p }}
+                            </button>
+                        </div>
+                        <div v-if="physicsDropdownOpen" @click="physicsDropdownOpen = false" class="fixed inset-0 z-40"></div>
+                    </div>
                 </div>
 
                 <!-- Map Search -->

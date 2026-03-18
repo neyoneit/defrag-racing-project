@@ -83,7 +83,10 @@ const save = async () => {
             sections: sections.value,
         });
         recentlySuccessful.value = true;
-        setTimeout(() => recentlySuccessful.value = false, 3000);
+        setTimeout(() => {
+            recentlySuccessful.value = false;
+            window.location.reload();
+        }, 500);
     } catch (error) {
         console.error('Failed to save profile layout:', error);
     } finally {

@@ -286,7 +286,7 @@ const updateNotifications = () => {
 
 // Resolve initial tab from URL query param ?tab=
 const urlParams = new URLSearchParams(window.location.search);
-const validTabs = ['profile', 'creator', 'customize', 'notifications', 'security'];
+const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'notifications', 'security'];
 const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
 const activeTab = ref(initialTab);
 
@@ -487,13 +487,124 @@ const saveMapperClaims = async () => {
     }
 };
 
+// Marketplace Creator Profile
+const mpProfile = ref({
+    is_listed: false,
+    accepting_commissions: true,
+    specialties: [],
+    bio: '',
+    rate_maps: '',
+    rate_models: '',
+    featured_map_ids: [],
+    portfolio_urls: [],
+    featured_maps: [],
+});
+const mpLoading = ref(false);
+const mpSaving = ref(false);
+const mpSuccess = ref('');
+const mpMapSearch = ref('');
+const mpMapResults = ref([]);
+const mpSearchTimeout = ref(null);
+
+const fetchCreatorProfile = async () => {
+    mpLoading.value = true;
+    try {
+        const res = await fetch(route('settings.creator-profile.get'), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        mpProfile.value = { ...mpProfile.value, ...data };
+    } catch (e) {
+        console.error('Failed to load creator profile', e);
+    } finally {
+        mpLoading.value = false;
+    }
+};
+
+const saveCreatorProfile = async () => {
+    mpSaving.value = true;
+    mpSuccess.value = '';
+    try {
+        const res = await fetch(route('settings.creator-profile'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                is_listed: mpProfile.value.is_listed,
+                accepting_commissions: mpProfile.value.accepting_commissions,
+                specialties: mpProfile.value.specialties,
+                bio: mpProfile.value.bio,
+                rate_maps: mpProfile.value.rate_maps,
+                rate_models: mpProfile.value.rate_models,
+                featured_map_ids: mpProfile.value.featured_map_ids,
+                portfolio_urls: mpProfile.value.portfolio_urls,
+            }),
+        });
+        if (res.ok) {
+            mpSuccess.value = 'Saved!';
+            setTimeout(() => mpSuccess.value = '', 3000);
+        }
+    } catch (e) {
+        console.error('Failed to save creator profile', e);
+    } finally {
+        mpSaving.value = false;
+    }
+};
+
+const toggleMpSpecialty = (spec) => {
+    const idx = mpProfile.value.specialties.indexOf(spec);
+    if (idx === -1) {
+        mpProfile.value.specialties.push(spec);
+    } else {
+        mpProfile.value.specialties.splice(idx, 1);
+    }
+};
+
+const searchMapsForFeatured = () => {
+    clearTimeout(mpSearchTimeout.value);
+    if (mpMapSearch.value.length < 2) {
+        mpMapResults.value = [];
+        return;
+    }
+    mpSearchTimeout.value = setTimeout(async () => {
+        try {
+            const res = await fetch(route('settings.creator-profile.search-maps') + `?search=${encodeURIComponent(mpMapSearch.value)}`, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            mpMapResults.value = await res.json();
+        } catch (e) {
+            mpMapResults.value = [];
+        }
+    }, 300);
+};
+
+const addFeaturedMap = (map) => {
+    if (mpProfile.value.featured_map_ids.length >= 5) return;
+    if (mpProfile.value.featured_map_ids.includes(map.id)) return;
+    mpProfile.value.featured_map_ids.push(map.id);
+    mpProfile.value.featured_maps.push(map);
+    mpMapSearch.value = '';
+    mpMapResults.value = [];
+};
+
+const removeFeaturedMap = (mapId) => {
+    mpProfile.value.featured_map_ids = mpProfile.value.featured_map_ids.filter(id => id !== mapId);
+    mpProfile.value.featured_maps = mpProfile.value.featured_maps.filter(m => m.id !== mapId);
+};
+
 onMounted(() => {
     fetchMapperClaims();
+    fetchCreatorProfile();
 });
 
 const tabs = [
     { id: 'profile', label: 'Profile', icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
     { id: 'creator', label: 'Creator', icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
+    { id: 'marketplace', label: 'Marketplace', icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z' },
     { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
     { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
     { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
@@ -1001,6 +1112,188 @@ const tabs = [
 
                 </template>
 
+                <!-- ==================== MARKETPLACE TAB ==================== -->
+                <template v-if="activeTab === 'marketplace'">
+            <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-sm font-bold text-white">Marketplace Creator Profile</h2>
+                        </div>
+                        <div v-if="mpSuccess" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                            <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                            <span class="text-xs font-medium text-green-400">{{ mpSuccess }}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-gray-400 mb-6">
+                        Set up your creator profile to appear in the Creator Directory. Players can browse creators and commission work directly.
+                    </div>
+
+                    <div v-if="mpLoading" class="text-center py-8 text-gray-500">Loading...</div>
+
+                    <div v-else class="space-y-5">
+                        <!-- Toggles -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-white/5 cursor-pointer hover:border-white/10 transition">
+                                <input type="checkbox" v-model="mpProfile.is_listed" class="rounded border-gray-600 bg-black/40 text-blue-600 focus:ring-blue-500/50" />
+                                <div>
+                                    <div class="text-sm font-semibold text-white">List in Directory</div>
+                                    <div class="text-xs text-gray-500">Show your profile in the Creator Directory</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 rounded-lg bg-black/20 border border-white/5 cursor-pointer hover:border-white/10 transition">
+                                <input type="checkbox" v-model="mpProfile.accepting_commissions" class="rounded border-gray-600 bg-black/40 text-green-600 focus:ring-green-500/50" />
+                                <div>
+                                    <div class="text-sm font-semibold text-white">Accepting Commissions</div>
+                                    <div class="text-xs text-gray-500">Show as available for work</div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Specialties -->
+                        <div>
+                            <label class="block text-sm font-bold text-white mb-2">Specialties</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="spec in [{v:'map',l:'Mapping'},{v:'player_model',l:'Player Models'},{v:'weapon_model',l:'Weapon Models'},{v:'shadow_model',l:'Shadow Models'}]"
+                                    :key="spec.v"
+                                    type="button"
+                                    @click="toggleMpSpecialty(spec.v)"
+                                    :class="mpProfile.specialties.includes(spec.v) ? 'bg-blue-600/20 border-blue-500/50 text-blue-300' : 'bg-black/20 border-white/10 text-gray-400 hover:border-white/20'"
+                                    class="px-3 py-1.5 text-sm font-medium rounded-lg border transition"
+                                >
+                                    {{ spec.l }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Rates -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 mb-1">Rate for Maps</label>
+                                <input
+                                    v-model="mpProfile.rate_maps"
+                                    type="text"
+                                    placeholder="e.g., 15 EUR/hour"
+                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 mb-1">Rate for Models</label>
+                                <input
+                                    v-model="mpProfile.rate_models"
+                                    type="text"
+                                    placeholder="e.g., 10 EUR/hour"
+                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">Bio / Portfolio Description</label>
+                            <textarea
+                                v-model="mpProfile.bio"
+                                rows="4"
+                                placeholder="Tell potential clients about your experience and work..."
+                                maxlength="2000"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 resize-none"
+                            ></textarea>
+                            <div class="text-xs text-gray-500 text-right">{{ (mpProfile.bio || '').length }}/2000</div>
+                        </div>
+
+                        <!-- Featured Maps -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2">Featured Maps (up to 5)</label>
+                            <div v-if="mpProfile.featured_maps && mpProfile.featured_maps.length > 0" class="flex flex-wrap gap-2 mb-3">
+                                <div
+                                    v-for="map in mpProfile.featured_maps"
+                                    :key="map.id"
+                                    class="flex items-center gap-2 px-2 py-1 bg-black/30 border border-white/10 rounded-lg"
+                                >
+                                    <img
+                                        :src="map.thumbnail ? `/images/thumbnails/${map.thumbnail}` : '/images/thumbnails/noimage.jpg'"
+                                        class="w-8 h-5 rounded object-cover"
+                                    />
+                                    <span class="text-xs text-white font-medium">{{ map.name }}</span>
+                                    <button @click="removeFeaturedMap(map.id)" class="text-red-400 hover:text-red-300 transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="mpProfile.featured_map_ids.length < 5" class="relative">
+                                <input
+                                    v-model="mpMapSearch"
+                                    @input="searchMapsForFeatured"
+                                    type="text"
+                                    placeholder="Search maps to feature..."
+                                    class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                />
+                                <div v-if="mpMapResults.length > 0" class="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-white/10 rounded-lg max-h-48 overflow-y-auto z-50 shadow-2xl">
+                                    <button
+                                        v-for="map in mpMapResults"
+                                        :key="map.id"
+                                        type="button"
+                                        @click="addFeaturedMap(map)"
+                                        class="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-white/10 transition"
+                                    >
+                                        <img :src="map.thumbnail ? `/images/thumbnails/${map.thumbnail}` : '/images/thumbnails/noimage.jpg'" class="w-10 h-6 rounded object-cover" />
+                                        <div>
+                                            <div class="text-white font-medium">{{ map.name }}</div>
+                                            <div class="text-xs text-gray-500">{{ map.author }}</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portfolio URLs -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2">Portfolio Links (optional)</label>
+                            <div class="space-y-2">
+                                <div v-for="(url, i) in (mpProfile.portfolio_urls || [])" :key="i" class="flex gap-2">
+                                    <input
+                                        v-model="mpProfile.portfolio_urls[i]"
+                                        type="url"
+                                        placeholder="https://..."
+                                        class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                    />
+                                    <button @click="mpProfile.portfolio_urls.splice(i, 1)" class="text-red-400 hover:text-red-300 px-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                v-if="!mpProfile.portfolio_urls || mpProfile.portfolio_urls.length < 5"
+                                @click="if (!mpProfile.portfolio_urls) mpProfile.portfolio_urls = []; mpProfile.portfolio_urls.push('')"
+                                type="button"
+                                class="mt-2 text-sm text-blue-400 hover:text-blue-300 transition"
+                            >
+                                + Add link
+                            </button>
+                        </div>
+
+                        <!-- Save -->
+                        <div class="flex justify-end pt-2">
+                            <button
+                                @click="saveCreatorProfile"
+                                :disabled="mpSaving"
+                                class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-bold rounded-lg transition"
+                            >
+                                {{ mpSaving ? 'Saving...' : 'Save Marketplace Profile' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                </template>
+
                 <!-- ==================== CUSTOMIZE TAB ==================== -->
                 <template v-if="activeTab === 'customize'">
             <!-- Preferences Card -->
@@ -1013,7 +1306,7 @@ const tabs = [
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
                                 </svg>
                             </div>
-                            <h2 class="text-sm font-bold text-white">Customization</h2>
+                            <h2 class="text-sm font-bold text-white">Avatar & Name Effects</h2>
                         </div>
                         <div class="flex items-center gap-2">
                             <div v-if="prefsForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
