@@ -476,9 +476,11 @@ const getFunctionName = (abbr) => {
                         <div class="relative inline-block w-full">
                             <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
                             <!-- Fade positioned at bottom of actual image -->
-                            <div :class="['absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black via-black/80 to-transparent map-hover-fade', hoveredMapServer === server.id ? 'opacity-0' : 'opacity-100']"></div>
-                            <!-- Reverse fade right below the image - fades from black to transparent -->
-                            <div :class="['absolute inset-x-0 top-full h-[160px] w-full bg-gradient-to-b from-black via-black/80 to-transparent map-hover-fade', hoveredMapServer === server.id ? 'opacity-0' : 'opacity-100']"></div>
+                            <div :class="['absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent', hoveredMapServer === server.id ? 'h-6 from-gray-950/90' : 'h-40 from-black via-black/80']"></div>
+                            <!-- Solid dark below the image -->
+                            <div :class="['absolute inset-x-0 top-full w-full bg-gray-950/90', hoveredMapServer === server.id ? 'h-[300px]' : 'h-0']" style="transition: height 0.3s ease;"></div>
+                            <!-- Reverse fade right below the image -->
+                            <div :class="['absolute inset-x-0 top-full w-full bg-gradient-to-b from-black via-black/80 to-transparent', hoveredMapServer === server.id ? 'h-0 opacity-0' : 'h-[160px] opacity-100']"></div>
                         </div>
                     </div>
 
