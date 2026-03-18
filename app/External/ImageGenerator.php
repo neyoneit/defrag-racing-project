@@ -54,9 +54,19 @@ class ImageGenerator {
     }
 
     public function verify ($id) {
-        $imagePath = $this->get_mdd_image($id);
+        $imageUrl = $this->get_mdd_image($id);
 
-        $image = imagecreatefrompng($imagePath);
+        if ($imageUrl === null) {
+            return false;
+        }
+
+        // Download image via Guzzle (bypass SSL verification for q3df.org)
+        $imageData = $this->fetchUrl($imageUrl);
+        if ($imageData === null) {
+            return false;
+        }
+
+        $image = imagecreatefromstring($imageData);
 
         $width = imagesx($image);
         $height = imagesy($image);
