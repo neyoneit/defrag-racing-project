@@ -20,6 +20,8 @@
             <div class="text-xs text-gray-400 font-semibold">
                 <span v-if="player.country">{{ player.country }}</span>
                 <span v-else>Player</span>
+                <span v-if="player.matched_alias" class="text-gray-500"> - alias: <span v-html="q3tohtml(player.matched_alias)"></span></span>
+                <span v-else-if="player.mdd_name" class="text-gray-500"> - MDD: <span v-html="q3tohtml(player.mdd_name)"></span></span>
             </div>
         </div>
 

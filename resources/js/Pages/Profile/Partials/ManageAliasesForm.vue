@@ -91,7 +91,7 @@ const cancelAddAlias = () => {
         </div>
 
         <div class="text-xs text-gray-400 mb-4">
-            Add alternative nicknames to help match your demos automatically. Maximum 10 aliases per account.
+            Add alternative nicknames you've used in Defrag. Aliases help match your demos automatically and make you searchable by any of your past nicknames. Maximum 10 aliases per account.
         </div>
 
         <!-- Alias List -->

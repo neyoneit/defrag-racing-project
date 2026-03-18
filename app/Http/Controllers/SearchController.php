@@ -22,36 +22,65 @@ class SearchController extends Controller
 
         $players = [];
 
+        // Check which MDD profiles have linked accounts (query DB, not just search results)
+        $linkedMddIds = User::whereIn('mdd_id', $profiles->pluck('id'))->pluck('mdd_id', 'id');
+
         foreach($profiles as $profile) {
-            $exists = false;
-            foreach($users as $user) {
-                if ($user->mdd_id == NULL) {
-                    continue;
+            // If this MDD profile has a linked user, show the user instead
+            $linkedUserId = $linkedMddIds->search($profile->id);
+            if ($linkedUserId !== false) {
+                $linkedUser = User::find($linkedUserId);
+                if ($linkedUser && !$users->contains('id', $linkedUserId)) {
+                    $players[] = [
+                        'id'                    => $linkedUser->id,
+                        'name'                  => $linkedUser->name,
+                        'country'               => $linkedUser->country ?? $profile->country,
+                        'profile_photo_path'    => $linkedUser->profile_photo_path,
+                        'mdd'                   => false,
+                        'mdd_name'              => $profile->name,
+                    ];
                 }
-
-                if (intval($user->mdd_id) === $profile->id) {
-                    $exists = true;
-                }
+                continue;
             }
 
-            if (! $exists) {
-                $players[] = [
-                    'id'                    => $profile->id,
-                    'name'                  => $profile->name,
-                    'country'               => $profile->country,
-                    'profile_photo_path'    => NULL,
-                    'mdd'                   => true
-                ];
-            }
+            $players[] = [
+                'id'                    => $profile->id,
+                'name'                  => $profile->name,
+                'country'               => $profile->country,
+                'profile_photo_path'    => NULL,
+                'mdd'                   => true
+            ];
         }
 
-        $players = array_merge($players, $users->map(function($user) {
+        $players = array_merge($players, $users->map(function($user) use ($request) {
+            $mddName = null;
+            if ($user->mdd_id) {
+                $mddProfile = MddProfile::find($user->mdd_id);
+                if ($mddProfile && $mddProfile->name !== $user->name) {
+                    $mddName = $mddProfile->name;
+                }
+            }
+
+            // Find matching alias for search term
+            $matchedAlias = null;
+            $search = mb_strtolower($request->search);
+            $aliases = $user->aliases()->where('is_approved', true)->pluck('alias');
+            foreach ($aliases as $alias) {
+                $aliasPlain = preg_replace('/\^[\dA-Fa-f]/', '', $alias);
+                if (str_contains(mb_strtolower($aliasPlain), $search)) {
+                    $matchedAlias = $alias;
+                    break;
+                }
+            }
+
             return [
                 'id'                    => $user->id,
                 'name'                  => $user->name,
                 'country'               => $user->country,
                 'profile_photo_path'    => $user->profile_photo_path,
-                'mdd'                   => false
+                'mdd'                   => false,
+                'mdd_name'              => $mddName,
+                'matched_alias'         => $matchedAlias,
             ];
         })->toArray());
 

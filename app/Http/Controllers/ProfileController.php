@@ -20,6 +20,12 @@ class ProfileController extends Controller {
             ->with('clan')
             ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout']);
 
+        // Add MDD name if different from site name
+        if ($user && $user->mdd_id) {
+            $mddProfile = \App\Models\MddProfile::find($user->mdd_id);
+            $user->mdd_name = $mddProfile?->name;
+        }
+
         if (! $user) {
             return redirect()->route('profile.mdd', $userId);
         }
