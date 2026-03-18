@@ -19,7 +19,7 @@ class MapperClaimResource extends Resource
 
     protected static ?string $navigationGroup = 'Community';
 
-    protected static ?string $navigationLabel = 'Mapper Claims';
+    protected static ?string $navigationLabel = 'Creator Claims';
 
     public static function canAccess(): bool
     {

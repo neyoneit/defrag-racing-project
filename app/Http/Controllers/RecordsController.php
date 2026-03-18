@@ -7,6 +7,8 @@ use Inertia\Inertia;
 
 use App\Models\Map;
 use App\Models\Record;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class RecordsController extends Controller
 {
@@ -29,25 +31,61 @@ class RecordsController extends Controller
             return $query;
         };
 
+        // Cache record counts per physics (refreshed every 5 minutes)
+        $cacheKey = 'records_count_' . $mode;
+        $counts = Cache::remember($cacheKey, 30, function () use ($mode, $baseQuery) {
+            return [
+                'vq3' => $baseQuery()->where('physics', 'vq3')->count(),
+                'cpm' => $baseQuery()->where('physics', 'cpm')->count(),
+            ];
+        });
+
         // Get VQ3 records (50 per page) - rank is pre-calculated in DB
         $vq3Records = $baseQuery()
             ->where('physics', 'vq3')
             ->with('user', 'map')
             ->orderBy('date_set', 'DESC')
-            ->paginate(50, ['*'], 'vq3_page')
+            ->simplePaginate(50, ['*'], 'vq3_page')
             ->withQueryString();
+
+        // Inject cached total for frontend pagination
+        $vq3Records = $this->addTotalToPaginator($vq3Records, $counts['vq3']);
 
         // Get CPM records (50 per page) - rank is pre-calculated in DB
         $cpmRecords = $baseQuery()
             ->where('physics', 'cpm')
             ->with('user', 'map')
             ->orderBy('date_set', 'DESC')
-            ->paginate(50, ['*'], 'cpm_page')
+            ->simplePaginate(50, ['*'], 'cpm_page')
             ->withQueryString();
+
+        // Inject cached total for frontend pagination
+        $cpmRecords = $this->addTotalToPaginator($cpmRecords, $counts['cpm']);
 
         return Inertia::render('RecordsView')
             ->with('vq3Records', $vq3Records)
             ->with('cpmRecords', $cpmRecords);
+    }
+
+    /**
+     * Convert SimplePaginate result to look like full paginate (with cached total)
+     */
+    private function addTotalToPaginator($paginator, $total)
+    {
+        $perPage = $paginator->perPage();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $currentPage = $paginator->currentPage();
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginator->items(),
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => $paginator->path(),
+                'pageName' => $paginator->getPageName(),
+            ]
+        );
     }
 
     /**

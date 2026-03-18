@@ -16,9 +16,9 @@ class MapperClaimReportResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-flag';
 
-    protected static ?string $navigationGroup = 'Community';
+    protected static ?string $navigationGroup = 'Moderation';
 
-    protected static ?string $navigationLabel = 'Claim Disputes';
+    protected static ?string $navigationLabel = 'Creator Claim Disputes';
 
     public static function canAccess(): bool
     {
@@ -116,18 +116,13 @@ class MapperClaimReportResource extends Resource
                         'resolved' => 'Resolved',
                         'dismissed' => 'Dismissed',
                     ])
-                    ->default('pending'),
+                    ->default(null),
             ])
+            ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->label('Resolve')
-                    ->mutateFormDataUsing(function (array $data): array {
-                        if ($data['status'] !== 'pending') {
-                            $data['resolved_by'] = auth()->id();
-                            $data['resolved_at'] = now();
-                        }
-                        return $data;
-                    }),
+                    ->label('View / Resolve')
+                    ->url(fn (MapperClaimReport $record) => static::getUrl('edit', ['record' => $record])),
                 Tables\Actions\Action::make('remove_claim')
                     ->label('Remove Claim')
                     ->icon('heroicon-o-trash')
@@ -164,6 +159,7 @@ class MapperClaimReportResource extends Resource
     {
         return [
             'index' => Pages\ListMapperClaimReports::route('/'),
+            'edit' => Pages\EditMapperClaimReport::route('/{record}/edit'),
         ];
     }
 }

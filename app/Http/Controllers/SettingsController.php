@@ -290,16 +290,10 @@ class SettingsController extends Controller
         $user = $request->user();
 
         // Sync claims: delete removed, add new
-        $newClaims = collect($request->claims)->map(fn ($c) => [
+        $newClaims = collect($request->claims ?? [])->map(fn ($c) => [
             'name' => trim($c['name']),
             'type' => $c['type'],
-        ])->unique(fn ($c) => $c['name'] . '|' . $c['type']);
-
-        // Delete claims not in the new list
-        $user->mapperClaims()->where(function ($q) use ($newClaims) {
-            $q->whereNotIn('name', $newClaims->pluck('name'))
-              ->orWhereNotIn('type', $newClaims->pluck('type'));
-        })->delete();
+        ])->filter(fn ($c) => !empty($c['name']))->unique(fn ($c) => $c['name'] . '|' . $c['type']);
 
         // Check if any claim is already taken by another user
         foreach ($newClaims as $claim) {
@@ -309,25 +303,24 @@ class SettingsController extends Controller
                 ->exists();
 
             if ($existing) {
-                return back()->withErrors([
-                    'claims' => "The name \"{$claim['name']}\" is already claimed by another user."
-                ]);
+                return response()->json([
+                    'error' => "The name \"{$claim['name']}\" is already claimed by another user."
+                ], 422);
             }
         }
 
         // Sync claims preserving IDs (to keep exclusions intact)
-        $existing = $user->mapperClaims()->get()->keyBy(fn($c) => $c->name . '|' . $c->type);
+        $existingClaims = $user->mapperClaims()->get()->keyBy(fn($c) => $c->name . '|' . $c->type);
         $newKeys = $newClaims->map(fn($c) => $c['name'] . '|' . $c['type']);
 
         // Delete claims not in new list
-        $keepIds = $existing->filter(fn($c, $key) => $newKeys->contains($key))->pluck('id');
+        $keepIds = $existingClaims->filter(fn($c, $key) => $newKeys->contains($key))->pluck('id');
         $user->mapperClaims()->whereNotIn('id', $keepIds)->delete();
 
         // Create only genuinely new claims
         foreach ($newClaims as $claim) {
-            if (empty($claim['name'])) continue;
             $key = $claim['name'] . '|' . $claim['type'];
-            if (!$existing->has($key)) {
+            if (!$existingClaims->has($key)) {
                 $user->mapperClaims()->create($claim);
             }
         }
