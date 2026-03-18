@@ -5,6 +5,7 @@ namespace App\External;
 use Illuminate\Support\Facades\Storage;
 use DOMDocument;
 use DOMXPath;
+use GuzzleHttp\Client;
 
 class ImageGenerator {
     public function generate ($id) {
@@ -88,9 +89,9 @@ class ImageGenerator {
     public function get_mdd_image($id) {
         $url = 'https://q3df.org/profil?id=' . $id;
 
-        $response = file_get_contents($url);
+        $response = $this->fetchUrl($url);
 
-        if ($response === false) {
+        if ($response === null) {
             return null;
         }
 
@@ -108,6 +109,16 @@ class ImageGenerator {
         return 'https://q3df.org' . $image->getAttribute('src');
     }
 
+    private function fetchUrl($url) {
+        try {
+            $client = new Client();
+            $response = $client->get($url, ['verify' => false]);
+            return $response->getBody()->getContents();
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
     private function split_integer($number) {
         $numberString = (string)$number;
 
@@ -122,9 +133,9 @@ class ImageGenerator {
     public function get_name ($id) {
         $url = 'https://q3df.org/profil?id=' . $id;
 
-        $response = file_get_contents($url);
+        $response = $this->fetchUrl($url);
 
-        if ($response === false) {
+        if ($response === null) {
             return null;
         }
 

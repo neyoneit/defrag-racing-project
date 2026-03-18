@@ -61,8 +61,8 @@
         <Head title="Tournaments" />
 
         <!-- Top Shadow Gradient -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>

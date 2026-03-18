@@ -340,17 +340,26 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
      */
     public function getClaimedMapsQuery()
     {
-        $claimNames = $this->mapperClaims()->where('type', 'map')->pluck('name');
+        $claims = $this->mapperClaims()->where('type', 'map')->with('exclusions')->get();
+        $claimNames = $claims->pluck('name');
 
         if ($claimNames->isEmpty()) {
             return Map::where('id', 0); // empty query
         }
 
-        return Map::where('visible', true)->where(function ($q) use ($claimNames) {
+        $excludedMapIds = $claims->flatMap(fn($c) => $c->exclusions->pluck('map_id'))->unique()->toArray();
+
+        $query = Map::where('visible', true)->where(function ($q) use ($claimNames) {
             foreach ($claimNames as $name) {
-                $q->orWhere('author', 'LIKE', '%' . $name . '%');
+                $q->orWhere('author', 'REGEXP', MapperClaim::authorRegexp($name));
             }
         });
+
+        if (!empty($excludedMapIds)) {
+            $query->whereNotIn('id', $excludedMapIds);
+        }
+
+        return $query;
     }
 
     /**

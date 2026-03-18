@@ -72,7 +72,7 @@ class MapperClaimResource extends Resource
                 Tables\Columns\TextColumn::make('matching_maps_count')
                     ->label('Matching Maps')
                     ->getStateUsing(fn (MapperClaim $record) => Map::where('visible', true)
-                        ->where('author', 'LIKE', '%' . $record->name . '%')
+                        ->where('author', 'REGEXP', MapperClaim::authorRegexp($record->name))
                         ->count()
                     ),
                 Tables\Columns\TextColumn::make('created_at')

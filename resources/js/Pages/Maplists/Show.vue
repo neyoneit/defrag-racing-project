@@ -373,8 +373,8 @@ const closeServerDropdown = () => {
         </div>
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96">
-            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm text-gray-400 mb-6">
                     <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
@@ -646,7 +646,7 @@ const closeServerDropdown = () => {
                                     <div
                                         v-if="showAllTags && allTags.length > 0"
                                         :style="dropdownStyle"
-                                        class="fixed bg-black/40 border border-white/5 rounded-lg shadow-xl p-3 z-[99999]">
+                                        class="fixed bg-[#111827] border border-white/20 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-3 z-[99999]">
                                         <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
                                         <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto">
                                             <button

@@ -4,8 +4,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MaplistCard from '@/Components/Maplists/MaplistCard.vue';
 import DialogModal from '@/Components/Laravel/DialogModal.vue';
 import ConfirmationModal from '@/Components/Laravel/ConfirmationModal.vue';
-import TextInput from '@/Components/Laravel/TextInput.vue';
-import InputLabel from '@/Components/Laravel/InputLabel.vue';
+
 import axios from 'axios';
 
 const page = usePage();
@@ -647,54 +646,59 @@ const createMaplist = async () => {
         </div>
 
         <!-- Create Maplist Modal -->
-        <DialogModal :show="showCreateModal" @close="attemptCloseModal">
+        <DialogModal :show="showCreateModal" @close="attemptCloseModal" max-width="lg">
             <template #title>
-                Create New Maplist
+                <div class="flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Create New Maplist</span>
+                </div>
             </template>
 
             <template #content>
                 <div class="space-y-4">
                     <div>
-                        <InputLabel for="maplist_name" value="Maplist Name" />
-                        <TextInput
+                        <label for="maplist_name" class="block text-xs font-medium text-gray-400 mb-1">Maplist Name</label>
+                        <input
                             id="maplist_name"
                             v-model="newMaplistName"
                             type="text"
-                            class="mt-1 block w-full"
+                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                             placeholder="e.g., My Favorite Maps"
                         />
                     </div>
 
                     <div>
-                        <InputLabel for="maplist_description" value="Description (Optional)" />
+                        <label for="maplist_description" class="block text-xs font-medium text-gray-400 mb-1">Description (Optional)</label>
                         <textarea
                             id="maplist_description"
                             v-model="newMaplistDescription"
                             rows="3"
-                            class="mt-1 block w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                             placeholder="Describe your maplist..."
                         ></textarea>
                     </div>
 
                     <div>
-                        <InputLabel for="maplist_maps" value="Maps (Optional - One per line)" />
+                        <label for="maplist_maps" class="block text-xs font-medium text-gray-400 mb-1">Maps (Optional - One per line)</label>
                         <textarea
                             id="maplist_maps"
                             v-model="newMaplistMaps"
-                            rows="8"
-                            class="mt-1 block w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-mono"
+                            rows="6"
+                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 font-mono"
                             placeholder="skatepark&#10;temple&#10;rust3dm1&#10;..."
                         ></textarea>
-                        <p class="mt-1 text-xs text-gray-400">Enter map names, one per line. Exact names required.</p>
+                        <p class="mt-1 text-xs text-gray-500">Enter map names, one per line. Exact names required.</p>
                     </div>
 
                     <!-- Validation Errors -->
-                    <div v-if="validationErrors.length > 0" class="bg-red-600/20 border border-red-500/50 rounded-lg p-4">
-                        <h4 class="font-bold text-red-400 mb-2">Cannot create maplist - Map issues found:</h4>
+                    <div v-if="validationErrors.length > 0" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                        <h4 class="font-medium text-red-400 mb-2 text-sm">Cannot create maplist - Map issues found:</h4>
                         <div class="space-y-2">
                             <div v-for="(error, index) in validationErrors" :key="index" class="text-sm">
-                                <p class="text-red-300 font-semibold">{{ error.map_name }}</p>
-                                <p class="text-gray-300 ml-4">{{ error.message }}</p>
+                                <p class="text-red-300 font-medium">{{ error.map_name }}</p>
+                                <p class="text-gray-400 ml-4 text-xs">{{ error.message }}</p>
                                 <div v-if="error.suggestions && error.suggestions.length > 0" class="ml-4 mt-1">
                                     <p class="text-yellow-400 text-xs">Did you mean:</p>
                                     <ul class="list-disc list-inside text-gray-400 text-xs">
@@ -708,18 +712,20 @@ const createMaplist = async () => {
             </template>
 
             <template #footer>
-                <button
-                    @click="attemptCloseModal"
-                    class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition">
-                    Cancel
-                </button>
+                <div class="flex items-center gap-3">
+                    <button
+                        @click="attemptCloseModal"
+                        class="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg font-medium transition text-sm border border-white/5">
+                        Cancel
+                    </button>
 
-                <button
-                    @click="createMaplist"
-                    :disabled="creating"
-                    class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition">
-                    {{ creating ? 'Creating...' : 'Create Maplist' }}
-                </button>
+                    <button
+                        @click="createMaplist"
+                        :disabled="creating"
+                        class="px-5 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition text-sm">
+                        {{ creating ? 'Creating...' : 'Create Maplist' }}
+                    </button>
+                </div>
             </template>
         </DialogModal>
 

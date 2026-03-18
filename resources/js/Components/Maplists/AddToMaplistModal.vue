@@ -1,75 +1,84 @@
 <template>
-    <DialogModal :show="show" @close="closeModal">
+    <DialogModal :show="show" @close="closeModal" max-width="md">
         <template #title>
-            Add to Maplist
+            <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span>Add to Maplist</span>
+            </div>
         </template>
 
         <template #content>
-            <div class="space-y-4">
+            <div class="space-y-3">
                 <!-- Quick Actions: Play Later -->
-                <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition cursor-pointer"
-                     @click="addToPlayLater"
-                     :class="{ 'opacity-50': addingToMaplist }">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button
+                    @click="addToPlayLater"
+                    :disabled="addingToMaplist"
+                    class="w-full text-left bg-white/5 rounded-lg p-3 hover:bg-white/10 transition border border-white/5 hover:border-blue-500/30 disabled:opacity-50">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <div>
-                                <div class="font-semibold text-white">Play Later</div>
-                                <div class="text-sm text-gray-400">Add to your Play Later list</div>
-                            </div>
+                        </div>
+                        <div>
+                            <div class="font-medium text-white text-sm">Play Later</div>
+                            <div class="text-xs text-gray-400">Add to your Play Later list</div>
                         </div>
                     </div>
-                </div>
+                </button>
 
                 <!-- User's Maplists -->
-                <div v-if="maplists.length > 0" class="space-y-2">
-                    <h3 class="text-sm font-semibold text-gray-400 uppercase">Your Maplists</h3>
-                    <div v-for="maplist in maplists"
-                         :key="maplist.id"
-                         class="bg-gray-800 rounded-lg p-3 hover:bg-gray-700 transition cursor-pointer"
-                         @click="addToMaplist(maplist.id)"
-                         :class="{ 'opacity-50': addingToMaplist }">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium text-white">{{ maplist.name }}</div>
-                                <div class="text-sm text-gray-400">{{ maplist.maps_count }} maps</div>
+                <div v-if="maplists.length > 0" class="space-y-1.5">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Your Maplists</h3>
+                    <div class="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                        <button
+                            v-for="maplist in maplists"
+                            :key="maplist.id"
+                            @click="addToMaplist(maplist.id)"
+                            :disabled="addingToMaplist"
+                            class="w-full text-left bg-white/5 rounded-lg p-3 hover:bg-white/10 transition border border-white/5 hover:border-blue-500/30 disabled:opacity-50">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-medium text-white text-sm">{{ maplist.name }}</div>
+                                    <div class="text-xs text-gray-400">{{ maplist.maps_count }} maps</div>
+                                </div>
+                                <span v-if="maplist.is_public" class="text-xs text-green-400/80 bg-green-500/10 px-2 py-0.5 rounded-full">Public</span>
+                                <span v-else class="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">Private</span>
                             </div>
-                            <div v-if="maplist.is_public" class="text-xs text-green-400">Public</div>
-                            <div v-else class="text-xs text-gray-500">Private</div>
-                        </div>
+                        </button>
                     </div>
                 </div>
 
                 <!-- Create New Maplist -->
-                <div class="border-t border-gray-700 pt-4">
+                <div class="border-t border-white/5 pt-3">
                     <button
                         @click="showCreateForm = !showCreateForm"
-                        class="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                        class="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-lg transition text-sm"
                         type="button">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                         <span>Create New Maplist</span>
                     </button>
 
                     <!-- Create Form -->
-                    <div v-if="showCreateForm" class="mt-4 space-y-3">
+                    <div v-if="showCreateForm" class="mt-3 space-y-3 bg-white/5 rounded-lg p-3 border border-white/5">
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Maplist Name</label>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Maplist Name</label>
                             <input
                                 v-model="newMaplistForm.name"
                                 type="text"
-                                class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                                 placeholder="e.g., Favorite Strafe Maps"
                                 @keyup.enter="createAndAddToMaplist">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-1">Description (Optional)</label>
+                            <label class="block text-xs font-medium text-gray-400 mb-1">Description (Optional)</label>
                             <textarea
                                 v-model="newMaplistForm.description"
-                                class="w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
                                 rows="2"
                                 placeholder="Describe your maplist..."></textarea>
                         </div>
@@ -78,19 +87,19 @@
                                 v-model="newMaplistForm.is_public"
                                 type="checkbox"
                                 id="is-public"
-                                class="rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500">
+                                class="rounded bg-black/30 border-white/10 text-blue-600 focus:ring-blue-500">
                             <label for="is-public" class="text-sm text-gray-300">Make this maplist public</label>
                         </div>
                         <div class="flex space-x-2">
                             <button
                                 @click="createAndAddToMaplist"
                                 :disabled="!newMaplistForm.name || addingToMaplist"
-                                class="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition">
+                                class="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition text-sm">
                                 Create & Add Map
                             </button>
                             <button
                                 @click="showCreateForm = false"
-                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition">
+                                class="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg transition text-sm border border-white/5">
                                 Cancel
                             </button>
                         </div>
@@ -98,10 +107,10 @@
                 </div>
 
                 <!-- Success/Error Messages -->
-                <div v-if="successMessage" class="bg-green-900/50 border border-green-500 text-green-200 px-4 py-2 rounded-lg">
+                <div v-if="successMessage" class="bg-green-500/10 border border-green-500/30 text-green-300 px-4 py-2.5 rounded-lg text-sm">
                     {{ successMessage }}
                 </div>
-                <div v-if="errorMessage" class="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg">
+                <div v-if="errorMessage" class="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-2.5 rounded-lg text-sm">
                     {{ errorMessage }}
                 </div>
             </div>
@@ -110,7 +119,7 @@
         <template #footer>
             <button
                 @click="closeModal"
-                class="bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-lg transition">
+                class="bg-white/5 hover:bg-white/10 text-gray-300 font-medium py-2 px-6 rounded-lg transition text-sm border border-white/5">
                 Close
             </button>
         </template>

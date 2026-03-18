@@ -282,7 +282,7 @@ class SettingsController extends Controller
     public function mapperClaims(Request $request)
     {
         $request->validate([
-            'claims' => ['required', 'array', 'max:20'],
+            'claims' => ['present', 'array', 'max:20'],
             'claims.*.name' => ['required', 'string', 'max:255'],
             'claims.*.type' => ['required', 'string', 'in:map,model'],
         ]);
@@ -301,20 +301,50 @@ class SettingsController extends Controller
               ->orWhereNotIn('type', $newClaims->pluck('type'));
         })->delete();
 
-        // Actually, simpler: delete all and re-create
-        $user->mapperClaims()->delete();
+        // Check if any claim is already taken by another user
+        foreach ($newClaims as $claim) {
+            $existing = \App\Models\MapperClaim::where('name', $claim['name'])
+                ->where('type', $claim['type'])
+                ->where('user_id', '!=', $user->id)
+                ->exists();
 
+            if ($existing) {
+                return back()->withErrors([
+                    'claims' => "The name \"{$claim['name']}\" is already claimed by another user."
+                ]);
+            }
+        }
+
+        // Sync claims preserving IDs (to keep exclusions intact)
+        $existing = $user->mapperClaims()->get()->keyBy(fn($c) => $c->name . '|' . $c->type);
+        $newKeys = $newClaims->map(fn($c) => $c['name'] . '|' . $c['type']);
+
+        // Delete claims not in new list
+        $keepIds = $existing->filter(fn($c, $key) => $newKeys->contains($key))->pluck('id');
+        $user->mapperClaims()->whereNotIn('id', $keepIds)->delete();
+
+        // Create only genuinely new claims
         foreach ($newClaims as $claim) {
             if (empty($claim['name'])) continue;
-            $user->mapperClaims()->create($claim);
+            $key = $claim['name'] . '|' . $claim['type'];
+            if (!$existing->has($key)) {
+                $user->mapperClaims()->create($claim);
+            }
         }
+
+        // Clear cache
+        $userId = $user->id;
+        \Illuminate\Support\Facades\Cache::forget("mapper_stats_{$userId}");
+        \Illuminate\Support\Facades\Cache::forget("mapper_top_players_{$userId}");
+        \Illuminate\Support\Facades\Cache::forget("mapper_heatmap_{$userId}_v2");
+        \Illuminate\Support\Facades\Cache::forget("mapper_highlighted_{$userId}_v2");
 
         return back();
     }
 
     public function getMapperClaims(Request $request)
     {
-        $claims = $request->user()->mapperClaims()->get(['id', 'name', 'type']);
+        $claims = $request->user()->mapperClaims()->withCount('exclusions')->get(['id', 'name', 'type']);
 
         // Enrich each claim with matching count + sample names
         foreach ($claims as $claim) {
@@ -328,7 +358,7 @@ class SettingsController extends Controller
                     ->toArray();
             } else {
                 $query = \App\Models\Map::where('visible', true)
-                    ->where('author', 'LIKE', '%' . $claim->name . '%');
+                    ->where('author', 'REGEXP', \App\Models\MapperClaim::authorRegexp($claim->name));
                 $claim->matching_count = $query->count();
                 $claim->matching_samples = $query->orderByDesc('date_added')
                     ->limit(5)
@@ -349,15 +379,32 @@ class SettingsController extends Controller
 
         $name = trim($request->name);
 
+        // Check if someone else already claimed this name
+        $existingClaim = \App\Models\MapperClaim::where('name', $name)
+            ->where('type', $request->type)
+            ->where('user_id', '!=', $request->user()->id)
+            ->with('user:id,name')
+            ->first();
+
+        $claimed_by = null;
+        if ($existingClaim) {
+            $claimed_by = [
+                'claim_id' => $existingClaim->id,
+                'user_id' => $existingClaim->user_id,
+                'user_name' => $existingClaim->user->name,
+            ];
+        }
+
         if ($request->type === 'map') {
             $query = \App\Models\Map::where('visible', true)
-                ->where('author', 'LIKE', '%' . $name . '%');
+                ->where('author', 'REGEXP', \App\Models\MapperClaim::authorRegexp($name));
 
             return [
                 'count' => $query->count(),
                 'maps' => $query->orderByDesc('date_added')
                     ->limit(8)
                     ->get(['name', 'author', 'thumbnail', 'physics', 'gametype', 'date_added']),
+                'claimed_by' => $claimed_by,
             ];
         }
 
@@ -370,10 +417,100 @@ class SettingsController extends Controller
                 'models' => $query->orderByDesc('created_at')
                     ->limit(8)
                     ->get(['name', 'author', 'thumbnail', 'base_model']),
+                'claimed_by' => $claimed_by,
             ];
         }
 
         return ['count' => 0];
+    }
+
+    public function getClaimMaps(Request $request, $claimId)
+    {
+        $claim = \App\Models\MapperClaim::where('id', $claimId)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $query = \App\Models\Map::where('visible', true)
+            ->where('author', 'REGEXP', \App\Models\MapperClaim::authorRegexp($claim->name));
+
+        if ($request->search) {
+            $query->where('name', 'LIKE', '%' . $request->search . '%');
+        }
+
+        $excludedIds = $claim->excludedMapIds();
+
+        $maps = $query->orderByDesc('date_added')
+            ->get(['id', 'name', 'author', 'thumbnail', 'date_added']);
+
+        $maps->each(function ($map) use ($excludedIds) {
+            $map->excluded = in_array($map->id, $excludedIds);
+        });
+
+        return [
+            'maps' => $maps,
+            'total' => $maps->count(),
+            'excluded_count' => count($excludedIds),
+        ];
+    }
+
+    public function toggleClaimExclusion(Request $request, $claimId)
+    {
+        $request->validate([
+            'map_id' => ['required', 'integer'],
+        ]);
+
+        $claim = \App\Models\MapperClaim::where('id', $claimId)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $exclusion = $claim->exclusions()->where('map_id', $request->map_id)->first();
+
+        if ($exclusion) {
+            $exclusion->delete();
+            $excluded = false;
+        } else {
+            $claim->exclusions()->create(['map_id' => $request->map_id]);
+            $excluded = true;
+        }
+
+        // Clear cache
+        $userId = $request->user()->id;
+        \Illuminate\Support\Facades\Cache::forget("mapper_stats_{$userId}");
+        \Illuminate\Support\Facades\Cache::forget("mapper_top_players_{$userId}");
+        \Illuminate\Support\Facades\Cache::forget("mapper_heatmap_{$userId}_v2");
+        \Illuminate\Support\Facades\Cache::forget("mapper_highlighted_{$userId}_v2");
+
+        return ['excluded' => $excluded];
+    }
+
+    public function reportMapperClaim(Request $request)
+    {
+        $request->validate([
+            'mapper_claim_id' => ['required', 'integer', 'exists:mapper_claims,id'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $claim = \App\Models\MapperClaim::findOrFail($request->mapper_claim_id);
+
+        if ($claim->user_id === $request->user()->id) {
+            return response()->json(['error' => 'You cannot report your own claim.'], 422);
+        }
+
+        $existing = \App\Models\MapperClaimReport::where('reporter_id', $request->user()->id)
+            ->where('mapper_claim_id', $request->mapper_claim_id)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['error' => 'You have already reported this claim.'], 422);
+        }
+
+        \App\Models\MapperClaimReport::create([
+            'reporter_id' => $request->user()->id,
+            'mapper_claim_id' => $request->mapper_claim_id,
+            'reason' => $request->reason,
+        ]);
+
+        return response()->json(['success' => true]);
     }
 
     public function deleteBackground(Request $request) {

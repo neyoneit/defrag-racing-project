@@ -59,7 +59,8 @@ onUnmounted(() => {
 
 const widthClass = computed(() => {
     return {
-        '48': 'w-48'
+        '48': 'w-48',
+        '56': 'w-56'
     }[props.width.toString()];
 });
 
