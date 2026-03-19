@@ -279,6 +279,9 @@ Route::middleware('auth')->group(function () {
 // Public tag routes
 Route::get('/api/tags', [App\Http\Controllers\TagController::class, 'index'])->name('tags.index');
 
+// Map filter profiles (lazy-loaded)
+Route::get('/api/maps/profiles', [MapsController::class, 'profiles'])->name('maps.profiles');
+
 // Donation routes
 Route::get('/donations', [DonationController::class, 'index'])->name('donations.index');
 Route::get('/api/donations/progress', [DonationController::class, 'getProgress'])->name('donations.progress');

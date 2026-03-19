@@ -13,7 +13,8 @@ class MapFilters {
     protected $queries = [];
 
     public function filter(Request $request) {
-        $maps = Map::orderBy('date_added', 'DESC');
+        $maps = Map::select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at', 'cpm_average', 'vq3_average')
+            ->orderBy('date_added', 'DESC');
 
         $maps = $this->search($request, $maps);
         $maps = $this->author($request, $maps);

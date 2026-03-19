@@ -4,12 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 use Carbon\Carbon;
 
 class Tournament extends Model
 {
     use HasFactory;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        $clearHomeCache = function () {
+            Cache::forget('home:tournaments');
+        };
+
+        static::saved($clearHomeCache);
+        static::deleted($clearHomeCache);
+    }
 
     protected $fillable = [
         'name',

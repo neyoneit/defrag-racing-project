@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, watch, computed } from 'vue';
+    import { ref, watch, computed, onMounted } from 'vue';
 
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
@@ -88,6 +88,36 @@
     });
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
+
+    // Lazy-loaded competitors/rivals (fetched after initial render for faster page load)
+    const cpmCompetitors = ref(null);
+    const vq3Competitors = ref(null);
+    const cpmRivals = ref(null);
+    const vq3Rivals = ref(null);
+    const loadingExtras = ref(true);
+
+    onMounted(async () => {
+        const mddId = props.profile?.id;
+        if (!props.hasProfile || !mddId) {
+            loadingExtras.value = false;
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/profile/${mddId}/extras`);
+            if (response.ok) {
+                const data = await response.json();
+                cpmCompetitors.value = data.cpm_competitors;
+                vq3Competitors.value = data.vq3_competitors;
+                cpmRivals.value = data.cpm_rivals;
+                vq3Rivals.value = data.vq3_rivals;
+            }
+        } catch (e) {
+            console.error('Failed to load profile extras:', e);
+        } finally {
+            loadingExtras.value = false;
+        }
+    });
 
     // Tab navigation
     const urlParams = new URLSearchParams(window.location.search);
@@ -1397,8 +1427,24 @@
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->
-            <div v-if="showSection('similar_skill_rivals') && (cpm_competitors || cpm_rivals)" class="bg-black/40 rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden" :style="{ order: sectionOrder('similar_skill_rivals') }">
-                <div class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
+            <div v-if="showSection('similar_skill_rivals') && (cpmCompetitors || cpmRivals || loadingExtras)" class="bg-black/40 rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden" :style="{ order: sectionOrder('similar_skill_rivals') }">
+                <!-- Loading skeleton -->
+                <div v-if="loadingExtras" class="p-5">
+                    <div class="animate-pulse space-y-3">
+                        <div class="h-5 bg-white/10 rounded w-40"></div>
+                        <div class="h-3 bg-white/5 rounded w-64"></div>
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div v-for="i in 4" :key="i" class="flex items-center gap-2 p-2">
+                                <div class="w-8 h-8 rounded-full bg-white/10"></div>
+                                <div class="flex-1 space-y-1.5">
+                                    <div class="h-3 bg-white/10 rounded w-24"></div>
+                                    <div class="h-2 bg-white/5 rounded w-16"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/10">
                     <!-- Similar Skill Level -->
                     <div class="p-5">
                         <div class="mb-4">
@@ -1412,10 +1458,10 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <!-- Better Players -->
-                            <div v-if="cpm_competitors?.better?.length > 0">
+                            <div v-if="cpmCompetitors?.better?.length > 0">
                                 <h4 class="text-xs font-bold text-green-400 uppercase tracking-wide mb-2">Better Players</h4>
                                 <div class="space-y-1.5">
-                                    <Link v-for="player in cpm_competitors.better" :key="player.id"
+                                    <Link v-for="player in cpmCompetitors.better" :key="player.id"
                                           :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
                                           class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-green-500/10 border border-transparent hover:border-green-500/20 transition-all group cursor-pointer">
                                         <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
@@ -1424,16 +1470,16 @@
                                             <div class="text-sm font-bold text-white group-hover:text-green-300 transition-colors truncate" v-html="q3tohtml(player.name || player.plain_name)"></div>
                                             <div class="text-xs text-gray-500">{{ player.wrs }} WRs · {{ player.total_records }} records</div>
                                         </div>
-                                        <div class="text-xs font-bold text-green-400/80 shrink-0">+{{ Math.round(player.score - cpm_competitors.my_score) }}</div>
+                                        <div class="text-xs font-bold text-green-400/80 shrink-0">+{{ Math.round(player.score - cpmCompetitors.my_score) }}</div>
                                     </Link>
                                 </div>
                             </div>
 
                             <!-- Worse Players -->
-                            <div v-if="cpm_competitors?.worse?.length > 0">
+                            <div v-if="cpmCompetitors?.worse?.length > 0">
                                 <h4 class="text-xs font-bold text-orange-400 uppercase tracking-wide mb-2">Target Practice</h4>
                                 <div class="space-y-1.5">
-                                    <Link v-for="player in cpm_competitors.worse" :key="player.id"
+                                    <Link v-for="player in cpmCompetitors.worse" :key="player.id"
                                           :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
                                           class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20 transition-all group cursor-pointer">
                                         <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
@@ -1442,7 +1488,7 @@
                                             <div class="text-sm font-bold text-white group-hover:text-orange-300 transition-colors truncate" v-html="q3tohtml(player.name || player.plain_name)"></div>
                                             <div class="text-xs text-gray-500">{{ player.wrs }} WRs · {{ player.total_records }} records</div>
                                         </div>
-                                        <div class="text-xs font-bold text-orange-400/80 shrink-0">-{{ Math.round(cpm_competitors.my_score - player.score) }}</div>
+                                        <div class="text-xs font-bold text-orange-400/80 shrink-0">-{{ Math.round(cpmCompetitors.my_score - player.score) }}</div>
                                     </Link>
                                 </div>
                             </div>
@@ -1463,10 +1509,10 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <!-- Players You Beat Most -->
-                            <div v-if="cpm_rivals?.beaten?.length > 0">
+                            <div v-if="cpmRivals?.beaten?.length > 0">
                                 <h4 class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2">You Dominate</h4>
                                 <div class="space-y-1.5">
-                                    <Link v-for="rival in cpm_rivals.beaten" :key="rival.id"
+                                    <Link v-for="rival in cpmRivals.beaten" :key="rival.id"
                                           :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
                                           class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 transition-all group cursor-pointer">
                                         <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
@@ -1481,10 +1527,10 @@
                             </div>
 
                             <!-- Players Who Beat You Most -->
-                            <div v-if="cpm_rivals?.beaten_by?.length > 0">
+                            <div v-if="cpmRivals?.beaten_by?.length > 0">
                                 <h4 class="text-xs font-bold text-red-400 uppercase tracking-wide mb-2">They Dominate You</h4>
                                 <div class="space-y-1.5">
-                                    <Link v-for="rival in cpm_rivals.beaten_by" :key="rival.id"
+                                    <Link v-for="rival in cpmRivals.beaten_by" :key="rival.id"
                                           :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
                                           class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all group cursor-pointer">
                                         <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"

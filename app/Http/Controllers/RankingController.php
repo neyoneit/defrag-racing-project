@@ -8,11 +8,14 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\PlayerRating;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class RankingController extends Controller
 {
     const PAGINATION_LIMIT = 50;
     const ACTIVE_PLAYERS_MONTHS = 3; //keep in sync with one in CalculateRatings.php
+    const CACHE_TTL_RATINGS = 60; // seconds - ratings list cache
+    const CACHE_TTL_RECALCULATION = 300; // seconds - last recalculation timestamp cache
 
     public function index(Request $request) {
 
@@ -21,8 +24,11 @@ class RankingController extends Controller
         $rankingtype = $request->input('rankingtype', 'active_players');
         $category = $request->input('category', 'overall');
 
-        $vq3Ratings = $this->getRatings('vq3', $gametype, $rankingtype, $category);
-        $cpmRatings = $this->getRatings('cpm', $gametype, $rankingtype, $category);
+        $vq3Page = $request->input('vq3Page', 1);
+        $cpmPage = $request->input('cpmPage', 1);
+
+        $vq3Ratings = $this->getRatings('vq3', $gametype, $rankingtype, $category, $vq3Page);
+        $cpmRatings = $this->getRatings('cpm', $gametype, $rankingtype, $category, $cpmPage);
 
         // get VQ3 and CPM ratings for the current user
         $myVq3Rating = $this->getMyRating($request, 'vq3', $gametype, $rankingtype, $category);
@@ -40,8 +46,10 @@ class RankingController extends Controller
             return redirect()->route('ranking', ['cpmPage' => $cpmRatings->lastPage()]);
         }
 
-        // Get last recalculation time from player_ratings table
-        $lastRecalculation = DB::table('player_ratings')->max('updated_at');
+        // Get last recalculation time (cached - MAX query on 1.3M rows is ~400ms)
+        $lastRecalculation = Cache::remember('ranking:last_recalculation', self::CACHE_TTL_RECALCULATION, function () {
+            return DB::table('player_ratings')->max('updated_at');
+        });
 
         // render the view
         return Inertia::render('RankingView')
@@ -52,37 +60,41 @@ class RankingController extends Controller
             ->with('lastRecalculation', $lastRecalculation);
     }
 
-    private function getRatings(string $physics, string $gametype, string $rankingtype, string $category = 'overall'): LengthAwarePaginator
+    private function getRatings(string $physics, string $gametype, string $rankingtype, string $category = 'overall', int $page = 1): LengthAwarePaginator
     {
-        $query = PlayerRating::query();
-        $columnToChange = '';
+        $cacheKey = "ranking:{$physics}:{$gametype}:{$rankingtype}:{$category}:{$page}";
 
-        if ($rankingtype === 'active_players') {
-            $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS))
-                  ->where('active_players_rank', '>', 0);  // Exclude inactive players with rank 0
-            $columnToChange = 'active_players_rank';
+        return Cache::remember($cacheKey, self::CACHE_TTL_RATINGS, function () use ($physics, $gametype, $rankingtype, $category) {
+            $query = PlayerRating::query();
+            $columnToChange = '';
 
-        } elseif ($rankingtype === 'all_players') {
-            $columnToChange = 'all_players_rank';
-        }
+            if ($rankingtype === 'active_players') {
+                $query->where('last_activity', '>=', now()->subMonths(self::ACTIVE_PLAYERS_MONTHS))
+                      ->where('active_players_rank', '>', 0);  // Exclude inactive players with rank 0
+                $columnToChange = 'active_players_rank';
 
-        // Use pre-calculated ranks from Rust - no need to sort by player_rating
-        $query = $query
-            ->with('user')
-            ->where('physics', $physics)
-            ->where('mode', $gametype)
-            ->where('category', $category)
-            ->orderBy($columnToChange, 'ASC')  // Order by pre-calculated rank
-            ->paginate(self::PAGINATION_LIMIT, ['*'], $physics . 'Page')
-            ->withQueryString();
+            } elseif ($rankingtype === 'all_players') {
+                $columnToChange = 'all_players_rank';
+            }
 
-        $query->getCollection()->transform(function ($item) use ($columnToChange){
-            $item->rank = $item->$columnToChange;
-            unset($item->$columnToChange);
-            return $item;
+            // Use pre-calculated ranks from Rust - no need to sort by player_rating
+            $query = $query
+                ->with('user')
+                ->where('physics', $physics)
+                ->where('mode', $gametype)
+                ->where('category', $category)
+                ->orderBy($columnToChange, 'ASC')  // Order by pre-calculated rank
+                ->paginate(self::PAGINATION_LIMIT, ['*'], $physics . 'Page')
+                ->withQueryString();
+
+            $query->getCollection()->transform(function ($item) use ($columnToChange){
+                $item->rank = $item->$columnToChange;
+                unset($item->$columnToChange);
+                return $item;
+            });
+
+            return $query;
         });
-
-        return $query;
     }
 
     private function getMyRating(Request $request, string $physics, string $gametype, string $rankingtype, string $category = 'overall')

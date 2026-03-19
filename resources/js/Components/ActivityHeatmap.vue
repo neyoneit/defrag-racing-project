@@ -215,6 +215,12 @@
         if (year === selectedYear.value || loading.value) return;
         selectedYear.value = year;
         loading.value = true;
+
+        // Update URL so the selected year is shareable
+        const url = new URL(window.location);
+        url.searchParams.set('activity_year', year);
+        window.history.replaceState({}, '', url);
+
         try {
             const response = await fetch(`/api/profile/${props.mddId}/activity?year=${year}`);
             const data = await response.json();

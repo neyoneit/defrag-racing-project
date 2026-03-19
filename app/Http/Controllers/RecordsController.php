@@ -40,12 +40,15 @@ class RecordsController extends Controller
             ];
         });
 
+        // Columns actually used by Record.vue
+        $recordColumns = ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics'];
+
         // Get VQ3 records (50 per page) - rank is pre-calculated in DB
         $vq3Records = $baseQuery()
             ->where('physics', 'vq3')
-            ->with('user', 'map')
+            ->with(['user', 'map' => fn($q) => $q->select('name', 'thumbnail')])
             ->orderBy('date_set', 'DESC')
-            ->simplePaginate(50, ['*'], 'vq3_page')
+            ->simplePaginate(30, $recordColumns, 'vq3_page')
             ->withQueryString();
 
         // Inject cached total for frontend pagination
@@ -54,9 +57,9 @@ class RecordsController extends Controller
         // Get CPM records (50 per page) - rank is pre-calculated in DB
         $cpmRecords = $baseQuery()
             ->where('physics', 'cpm')
-            ->with('user', 'map')
+            ->with(['user', 'map' => fn($q) => $q->select('name', 'thumbnail')])
             ->orderBy('date_set', 'DESC')
-            ->simplePaginate(50, ['*'], 'cpm_page')
+            ->simplePaginate(30, $recordColumns, 'cpm_page')
             ->withQueryString();
 
         // Inject cached total for frontend pagination

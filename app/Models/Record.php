@@ -71,6 +71,7 @@ class Record extends Model
      * Clear all profile cache for a player
      */
     protected static function clearProfileCache($mddId) {
+        Cache::forget("profile:stats:{$mddId}");
         Cache::forget("profile:competitors:{$mddId}:cpm");
         Cache::forget("profile:competitors:{$mddId}:vq3");
         Cache::forget("profile:rivals:{$mddId}:cpm");

@@ -1,15 +1,26 @@
 <script setup>
-    import { ref } from 'vue';
+    import { ref, onMounted } from 'vue';
     import { Link, useForm } from '@inertiajs/vue3';
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import SpecialRadio from '@/Components/Basic/SpecialRadio.vue';
     import PlayerSelect from '@/Components/Basic/PlayerSelect.vue';
     import ItemsSelect from '@/Components/Basic/ItemsSelect.vue';
+    import axios from 'axios';
 
     const props = defineProps({
         show: Boolean,
         queries: Object,
-        profiles: Array
+    });
+
+    const profiles = ref([]);
+
+    onMounted(async () => {
+        try {
+            const response = await axios.get('/api/maps/profiles');
+            profiles.value = response.data;
+        } catch (error) {
+            console.error('Error fetching profiles:', error);
+        }
     });
 
     const types = {
