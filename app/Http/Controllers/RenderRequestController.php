@@ -62,7 +62,7 @@ class RenderRequestController extends Controller
             'source' => 'web',
             'requested_by' => $user->name,
             'status' => 'pending',
-            'priority' => 3,
+            'priority' => 0,
             'demo_url' => $demoUrl,
             'demo_filename' => $demo->original_filename,
         ]);

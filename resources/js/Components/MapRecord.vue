@@ -386,7 +386,7 @@
                     </component>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
@@ -415,7 +415,7 @@
                     </component>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
@@ -451,7 +451,7 @@
                     </a>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
@@ -515,7 +515,7 @@
                     </a>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
@@ -545,7 +545,7 @@
                     </component>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
@@ -575,7 +575,7 @@
                     </component>
                     <button
                         v-if="canRequestRender && !renderedVideo"
-                        @click.stop="confirmRender"
+                        @click.stop.prevent="confirmRender"
                         :disabled="renderRequesting"
                         class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
                         :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
