@@ -23,6 +23,8 @@ use App\Http\Controllers\DefragHQ\DonationManagementController;
 use App\Http\Controllers\AliasController;
 use App\Http\Controllers\AliasReportController;
 use App\Http\Controllers\DemoReportController;
+use App\Http\Controllers\YoutubeController;
+use App\Http\Controllers\RenderRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +55,9 @@ Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->wh
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
+
+Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube');
+Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware('auth')->name('render.request');
 
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 

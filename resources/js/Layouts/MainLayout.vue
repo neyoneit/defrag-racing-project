@@ -653,6 +653,10 @@
                             Demos
                             <span v-if="isNew('demos')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
                         </NavLink>
+                        <NavLink :href="route('youtube')" :active="route().current('youtube')" class="hidden xl:inline-flex">
+                            YouTube
+                            <span class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                        </NavLink>
 
                         <!-- Beta - VISIBLE AT XL -->
                         <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun" :active="false" class="hidden xl:inline-flex">
@@ -681,6 +685,9 @@
                                     <DropdownLink :href="route('demos.index')">
                                         Demos
                                         <span v-if="isNew('demos')" class="ml-1 px-1.5 py-0.5 text-xs font-semibold bg-yellow-500/20 text-yellow-400 rounded">NEW</span>
+                                    </DropdownLink>
+                                    <DropdownLink :href="route('youtube')">
+                                        YouTube
                                     </DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">
                                         Beta

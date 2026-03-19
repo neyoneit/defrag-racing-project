@@ -23,3 +23,13 @@ Route::get('/profile/{mddId}/extras', [\App\Http\Controllers\ProfileController::
 Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);
 Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\ProfileController::class, 'comparePlayer']);
 Route::get('/records/search', [\App\Http\Controllers\RecordsController::class, 'search']);
+
+// Demome renderer API
+Route::prefix('demome')->middleware('demome.token')->group(function () {
+    Route::get('/queue', [\App\Http\Controllers\Api\DemomeController::class, 'queue']);
+    Route::post('/claim/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'claim']);
+    Route::post('/complete/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'complete']);
+    Route::post('/fail/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'fail']);
+    Route::post('/heartbeat', [\App\Http\Controllers\Api\DemomeController::class, 'heartbeat']);
+    Route::post('/report', [\App\Http\Controllers\Api\DemomeController::class, 'report']);
+});

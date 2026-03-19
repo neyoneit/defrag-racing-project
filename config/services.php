@@ -56,4 +56,8 @@ return [
         'redirect' => env('TWITTER_REDIRECT_URI'),
     ],
 
+    'demome' => [
+        'api_token' => env('DEMOME_API_TOKEN'),
+    ],
+
 ];

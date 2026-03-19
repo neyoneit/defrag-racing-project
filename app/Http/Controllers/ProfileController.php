@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Record;
 use App\Models\Map;
 use App\Models\MddProfile;
+use App\Models\RenderedVideo;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -191,6 +192,8 @@ class ProfileController extends Controller {
                 ->with('can_suggest_alias', $canSuggestAlias)
                 ->with('topDownloadedDemos', $topDownloadedDemos)
                 ->with('demoStats', $demoStats)
+                ->with('renderStats', $this->getRenderStats($user->id))
+                ->with('latestRenderedVideos', $this->getLatestRenderedVideos($user->id))
                 ->with('activity_data', $activityData)
                 ->with('activity_year', $activityYear)
                 ->with('activity_years', $activityYears)
@@ -1033,5 +1036,31 @@ class ProfileController extends Controller {
                 ->pluck('year')
                 ->toArray();
         });
+    }
+
+    private function getRenderStats($userId)
+    {
+        return Cache::remember("profile:render_stats:{$userId}", 3600, function () use ($userId) {
+            $stats = DB::table('rendered_videos')
+                ->where('user_id', $userId)
+                ->where('status', 'completed')
+                ->selectRaw('COUNT(*) as total_renders, COALESCE(SUM(render_duration_seconds), 0) as total_render_seconds')
+                ->first();
+
+            return [
+                'total_renders' => (int) ($stats->total_renders ?? 0),
+                'total_render_seconds' => (int) ($stats->total_render_seconds ?? 0),
+            ];
+        });
+    }
+
+    private function getLatestRenderedVideos($userId)
+    {
+        return RenderedVideo::where('user_id', $userId)
+            ->completed()
+            ->visible()
+            ->orderBy('created_at', 'desc')
+            ->limit(6)
+            ->get(['id', 'map_name', 'player_name', 'physics', 'time_ms', 'youtube_url', 'youtube_video_id', 'created_at']);
     }
 }
