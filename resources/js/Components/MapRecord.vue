@@ -1,6 +1,7 @@
 <script setup>
     import { Link, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+    import axios from 'axios';
     import DemoReportModal from '@/Components/DemoReportModal.vue';
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
 
@@ -31,12 +32,53 @@
     const showFlagModal = ref(false);
     const showYoutubeEmbed = ref(false);
 
+    const renderRequesting = ref(false);
+    const renderRequested = ref(false);
+    const renderError = ref(null);
+    const showRenderConfirm = ref(false);
+
     const renderedVideo = computed(() => {
         if (props.record.rendered_videos && props.record.rendered_videos.length > 0) {
             return props.record.rendered_videos[0];
         }
         return null;
     });
+
+    const canRequestRender = computed(() => {
+        if (!isLoggedIn.value || renderedVideo.value || renderRequested.value) return false;
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return true;
+        if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return true;
+        return false;
+    });
+
+    const confirmRender = () => {
+        showRenderConfirm.value = true;
+    };
+
+    const cancelRender = () => {
+        showRenderConfirm.value = false;
+    };
+
+    const requestRender = async () => {
+        showRenderConfirm.value = false;
+        if (renderRequesting.value || !canRequestRender.value) return;
+        renderRequesting.value = true;
+        renderError.value = null;
+        try {
+            const demoId = props.record.uploaded_demos?.[0]?.id || props.record.demo?.id;
+            const recordId = props.record.id || props.record.record_id;
+            await axios.post('/render/request', { record_id: recordId, demo_id: demoId });
+            renderRequested.value = true;
+            // Redirect to YouTube page after short delay
+            setTimeout(() => {
+                window.location.href = '/youtube';
+            }, 500);
+        } catch (e) {
+            renderError.value = e.response?.data?.error || 'Failed';
+        } finally {
+            renderRequesting.value = false;
+        }
+    };
 
     const flagRecordId = computed(() => {
         if (isOfflineRecord.value || isOnlineDemo.value) return null;
@@ -242,23 +284,20 @@
         return !!validityInfo.value || communityFlags.value.length > 0;
     });
 
+    const isVerified = computed(() => {
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return true;
+        if (props.record.verification_type === 'verified') return true;
+        return false;
+    });
+
     const rankColorClass = computed(() => {
         if (hasValidityIssue.value) {
             return 'text-red-500/50';
         }
-        if (isMyRecord.value) {
-            return 'text-emerald-400 group-hover:text-emerald-300';
+        if (isVerified.value) {
+            return 'text-green-400 group-hover:text-green-300';
         }
-        if (props.record.rank === 1) {
-            return 'text-yellow-400 group-hover:text-yellow-300';
-        }
-        if (props.record.rank === 2) {
-            return 'text-gray-200 group-hover:text-gray-100';
-        }
-        if (props.record.rank === 3) {
-            return 'text-orange-400 group-hover:text-orange-300';
-        }
-        return 'text-gray-300 group-hover:text-white';
+        return 'text-white group-hover:text-white';
     });
 
 </script>
@@ -268,13 +307,15 @@
         class="group relative flex items-center gap-2 pr-2 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-2"
         :class="{
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
-            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord
+            'border-l-2 border-green-500/50 hover:border-green-400': !isMyRecord && isVerified,
+            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !isVerified
         }"
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
         <div
             class="font-black text-lg w-8 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-110"
             :class="rankColorClass"
+            :title="isVerified ? 'Verified - demo attached' : ''"
         >
             <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
             <template v-else>{{ record.rank }}</template>
@@ -328,59 +369,100 @@
                 <span v-if="record.oldtop" class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50">
                     old record
                 </span>
-                <component
+                <span
                     v-else-if="isOnlineDemo || (isOfflineRecord && record.is_online)"
-                    :is="demoDownloadUrl ? 'a' : 'span'"
-                    :href="demoDownloadUrl"
-                    @click.stop
-                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50"
-                    :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
-                    :title="demoDownloadUrl ? 'Download online demo' : ''"
+                    class="ml-2 inline-flex items-center rounded text-xs font-medium overflow-hidden border border-blue-500/50"
                 >
-                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                    online demo
-                </component>
-                <component
+                    <component
+                        :is="demoDownloadUrl ? 'a' : 'span'"
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
+                        :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
+                        :title="demoDownloadUrl ? 'Download online demo' : ''"
+                    >
+                        <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        online
+                    </component>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
+                </span>
+                <span
                     v-else-if="isOfflineRecord"
-                    :is="demoDownloadUrl ? 'a' : 'span'"
-                    :href="demoDownloadUrl"
-                    @click.stop
-                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50"
-                    :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
-                    :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                    class="ml-2 inline-flex items-center rounded text-xs font-medium overflow-hidden border border-gray-500/50"
                 >
-                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                    offline demo
-                </component>
+                    <component
+                        :is="demoDownloadUrl ? 'a' : 'span'"
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
+                        :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
+                        :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                    >
+                        <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        offline
+                    </component>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
+                </span>
                 <span
                     v-else
                     class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50"
                 >
-                    record
+                    rec.
                 </span>
 
-                <!-- Verified badge: record has demo attached -->
+                <!-- Combined demo download + render chip -->
                 <span
-                    v-if="!record.oldtop && ((!isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0) || record.verification_type === 'verified')"
-                    class="ml-1 flex-shrink-0 text-green-400"
-                    title="Verified - demo attached"
-                >
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                </span>
-
-                <!-- Secondary chip: demo attached to a record -->
-                <a
                     v-if="!record.oldtop && !isOfflineRecord && !isOnlineDemo && record.uploaded_demos && record.uploaded_demos.length > 0"
-                    :href="demoDownloadUrl"
-                    @click.stop
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
-                    title="Download demo"
+                    class="inline-flex items-center rounded text-xs font-medium overflow-hidden border border-blue-500/30"
                 >
-                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                    online demo
-                </a>
+                    <a
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
+                        :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
+                        title="Download demo"
+                    >
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        online
+                    </a>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
+                </span>
 
                 <!-- Secondary chip: validity flags (sv_cheats etc.) -->
                 <span
@@ -416,59 +498,95 @@
 
             <!-- Default view (no mixed mode) -->
             <template v-else>
-                <!-- Record with demo attached: show verified badge + online demo chip with download -->
-                <template v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0">
-                    <span class="ml-1 flex-shrink-0 text-green-400" title="Verified - demo attached">
-                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
-                    </span>
+                <!-- Record with demo attached: combined download + render chip -->
+                <span v-if="!isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                    class="inline-flex items-center rounded text-xs font-medium overflow-hidden border border-blue-500/30"
+                >
                     <a
                         v-if="demoDownloadUrl"
                         :href="demoDownloadUrl"
                         @click.stop
-                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/30 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
+                        :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
                         title="Download demo"
                     >
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                        online demo
+                        online
                     </a>
-                </template>
-                <!-- Verified badge for demos top entries -->
-                <span
-                    v-else-if="record.verification_type === 'verified'"
-                    class="ml-1 flex-shrink-0 text-green-400"
-                    title="Verified - demo attached"
-                >
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
                 </span>
-                <!-- Validity flags in demos top without mixed mode -->
-                <component
+                <!-- Offline demo chip (demos top) -->
+                <span
                     v-else-if="record.verification_type === 'OFFLINE'"
-                    :is="demoDownloadUrl ? 'a' : 'span'"
-                    :href="demoDownloadUrl"
-                    @click.stop
-                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/50"
-                    :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
-                    :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                    class="ml-2 inline-flex items-center rounded text-xs font-medium overflow-hidden border border-gray-500/50"
                 >
-                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                    offline
-                </component>
-                <component
+                    <component
+                        :is="demoDownloadUrl ? 'a' : 'span'"
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
+                        :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
+                        :title="demoDownloadUrl ? 'Download offline demo' : ''"
+                    >
+                        <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        offline
+                    </component>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
+                </span>
+                <!-- Online demo chip (demos top) -->
+                <span
                     v-else-if="record.verification_type === 'ONLINE'"
-                    :is="demoDownloadUrl ? 'a' : 'span'"
-                    :href="demoDownloadUrl"
-                    @click.stop
-                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/50"
-                    :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
-                    :title="demoDownloadUrl ? 'Download online demo' : ''"
+                    class="ml-2 inline-flex items-center rounded text-xs font-medium overflow-hidden border border-blue-500/50"
                 >
-                    <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
-                    online
-                </component>
+                    <component
+                        :is="demoDownloadUrl ? 'a' : 'span'"
+                        :href="demoDownloadUrl"
+                        @click.stop
+                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
+                        :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
+                        :title="demoDownloadUrl ? 'Download online demo' : ''"
+                    >
+                        <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        online
+                    </component>
+                    <button
+                        v-if="canRequestRender && !renderedVideo"
+                        @click.stop="confirmRender"
+                        :disabled="renderRequesting"
+                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
+                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
+                        :title="renderError || 'Request YouTube render'"
+                    >
+                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
+                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
+                        </span>
+                    </button>
+                </span>
                 <span
                     v-else-if="validityInfo"
                     class="relative ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/50 cursor-help"
@@ -638,6 +756,29 @@
         </div>
 
     </div>
+
+    <!-- Render Confirm Dialog -->
+    <Teleport to="body" v-if="showRenderConfirm">
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" @click.self="cancelRender">
+            <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                    </div>
+                    <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
+                </div>
+                <p class="text-xs text-gray-400 mb-4">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
+                <div class="flex gap-2 justify-end">
+                    <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="requestRender" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                        Render
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- YouTube Embed -->
     <div v-if="showYoutubeEmbed && renderedVideo" class="bg-black/60 border border-white/10 rounded-lg overflow-hidden mx-1 mb-1">
