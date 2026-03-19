@@ -75,6 +75,7 @@ class RenderedVideoResource extends Resource
                             ->required(),
                         Forms\Components\Select::make('priority')
                             ->options([
+                                0 => '0 - User Request',
                                 1 => '1 - World Record',
                                 2 => '2 - Verified Record',
                                 3 => '3 - Normal',
@@ -145,6 +146,7 @@ class RenderedVideoResource extends Resource
                 Tables\Columns\TextColumn::make('priority')
                     ->sortable()
                     ->formatStateUsing(fn (int $state): string => match($state) {
+                        0 => 'User',
                         1 => 'WR',
                         2 => 'Verified',
                         default => 'Normal',
@@ -189,6 +191,7 @@ class RenderedVideoResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('priority')
                     ->options([
+                        0 => 'User Request',
                         1 => 'World Record',
                         2 => 'Verified Record',
                         3 => 'Normal',
