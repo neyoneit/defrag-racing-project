@@ -16,15 +16,13 @@ class DemomeController extends Controller
     {
         $paused = SiteSetting::getBool('demome:paused', false);
 
+        // When paused, only serve force-render items (priority -1)
+        $query = RenderedVideo::where('status', 'pending');
         if ($paused) {
-            return response()->json([
-                'paused' => true,
-                'items' => [],
-            ]);
+            $query->where('priority', -1);
         }
 
-        $items = RenderedVideo::where('status', 'pending')
-            ->orderBy('priority', 'asc')
+        $items = $query->orderBy('priority', 'asc')
             ->orderBy('created_at', 'asc')
             ->limit(5)
             ->get()
@@ -45,7 +43,7 @@ class DemomeController extends Controller
             });
 
         return response()->json([
-            'paused' => false,
+            'paused' => $paused,
             'items' => $items,
         ]);
     }
