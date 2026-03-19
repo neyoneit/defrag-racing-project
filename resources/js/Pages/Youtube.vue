@@ -246,7 +246,7 @@
                                 <div class="flex items-center justify-between">
                                     <span class="uppercase">{{ video.physics }}</span>
                                     <span v-if="video.render_duration_seconds" class="text-gray-500">
-                                        Render: {{ formatDuration(video.render_duration_seconds) }}
+                                        Render time: {{ formatDuration(video.render_duration_seconds) }}
                                     </span>
                                 </div>
                                 <div v-if="video.requested_by" class="text-gray-500 truncate">

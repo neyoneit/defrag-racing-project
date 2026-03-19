@@ -9,7 +9,9 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\URL;
 
 class RenderedVideoResource extends Resource
 {
@@ -194,6 +196,36 @@ class RenderedVideoResource extends Resource
             ])
             ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
+                Tables\Actions\Action::make('rerender')
+                    ->label('Re-render')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->visible(fn (RenderedVideo $record) => $record->status === 'completed' || $record->status === 'failed')
+                    ->requiresConfirmation()
+                    ->modalHeading('Re-render this video?')
+                    ->modalDescription('This will reset the video to pending and queue it for re-rendering.')
+                    ->action(function (RenderedVideo $record) {
+                        $demoUrl = $record->demo_url;
+                        if ($record->demo_id) {
+                            $demoUrl = URL::signedRoute('demos.download', ['demo' => $record->demo_id], now()->addDays(7));
+                        }
+
+                        $record->update([
+                            'status' => 'pending',
+                            'youtube_url' => null,
+                            'youtube_video_id' => null,
+                            'render_duration_seconds' => null,
+                            'video_file_size' => null,
+                            'failure_reason' => null,
+                            'retry_count' => 0,
+                            'demo_url' => $demoUrl,
+                        ]);
+
+                        Notification::make()
+                            ->title('Queued for re-render')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
