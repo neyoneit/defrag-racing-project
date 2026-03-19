@@ -20,11 +20,11 @@ class YoutubeController extends Controller
             ];
         });
 
-        $videos = RenderedVideo::completed()
+        $videos = RenderedVideo::whereIn('status', ['completed', 'failed'])
             ->visible()
             ->orderBy('created_at', 'desc')
             ->select([
-                'id', 'map_name', 'player_name', 'physics', 'time_ms',
+                'id', 'map_name', 'player_name', 'physics', 'time_ms', 'status',
                 'youtube_url', 'youtube_video_id', 'source', 'requested_by',
                 'render_duration_seconds', 'record_id', 'created_at',
             ])

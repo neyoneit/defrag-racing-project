@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\RenderedVideo;
 use App\Models\Record;
+use App\Models\SiteSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,7 @@ class DemomeController extends Controller
 {
     public function queue()
     {
-        $paused = Cache::get('demome:paused', false);
+        $paused = SiteSetting::getBool('demome:paused', false);
 
         if ($paused) {
             return response()->json([
@@ -129,7 +130,7 @@ class DemomeController extends Controller
 
         return response()->json([
             'success' => true,
-            'paused' => Cache::get('demome:paused', false),
+            'paused' => SiteSetting::getBool('demome:paused', false),
         ]);
     }
 

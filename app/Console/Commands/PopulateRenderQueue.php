@@ -6,6 +6,7 @@ use App\Models\Record;
 use App\Models\RenderedVideo;
 use App\Models\UploadedDemo;
 use Illuminate\Console\Command;
+use App\Models\SiteSetting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 
@@ -17,7 +18,7 @@ class PopulateRenderQueue extends Command
 
     public function handle()
     {
-        if (Cache::get('demome:paused', false)) {
+        if (SiteSetting::getBool('demome:paused', false)) {
             $this->info('Demome is paused. Skipping.');
             return;
         }

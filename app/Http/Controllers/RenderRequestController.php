@@ -34,9 +34,9 @@ class RenderRequestController extends Controller
         $demo = UploadedDemo::findOrFail($validated['demo_id']);
         $record = Record::findOrFail($validated['record_id']);
 
-        // Check if already rendered or in queue
+        // Check if already rendered, in queue, or failed (admin handles re-render)
         $existing = RenderedVideo::where('demo_id', $demo->id)
-            ->whereIn('status', ['pending', 'rendering', 'uploading', 'completed'])
+            ->whereIn('status', ['pending', 'rendering', 'uploading', 'completed', 'failed'])
             ->first();
 
         if ($existing) {
