@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\RenderedVideo;
 use App\Models\Record;
+use App\Models\UploadedDemo;
 use App\Models\SiteSetting;
+use App\Services\DemoProcessorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class DemomeController extends Controller
 {
@@ -16,15 +20,13 @@ class DemomeController extends Controller
     {
         $paused = SiteSetting::getBool('demome:paused', false);
 
+        // When paused, only serve force-render items (priority -1)
+        $query = RenderedVideo::where('status', 'pending');
         if ($paused) {
-            return response()->json([
-                'paused' => true,
-                'items' => [],
-            ]);
+            $query->where('priority', -1);
         }
 
-        $items = RenderedVideo::where('status', 'pending')
-            ->orderBy('priority', 'asc')
+        $items = $query->orderBy('priority', 'asc')
             ->orderBy('created_at', 'asc')
             ->limit(5)
             ->get()
@@ -45,7 +47,7 @@ class DemomeController extends Controller
             });
 
         return response()->json([
-            'paused' => false,
+            'paused' => $paused,
             'items' => $items,
         ]);
     }
@@ -186,5 +188,125 @@ class DemomeController extends Controller
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
+    }
+
+    public function uploadDemo(Request $request)
+    {
+        $request->validate([
+            'demo' => 'required|file|max:524288',
+            'discord_author' => 'nullable|string',
+            'discord_message_id' => 'nullable|string',
+            'discord_channel_id' => 'nullable|string',
+        ]);
+
+        $file = $request->file('demo');
+        $originalFilename = $file->getClientOriginalName();
+
+        // Check duplicate by hash
+        $hash = md5_file($file->getRealPath());
+        $existing = UploadedDemo::where('file_hash', $hash)
+            ->whereNotIn('status', ['failed', 'failed-validity', 'unsupported-version'])
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => true,
+                'duplicate' => true,
+                'demo_id' => $existing->id,
+                'map_name' => $existing->map_name,
+                'player_name' => $existing->player_name,
+                'physics' => $existing->physics,
+                'time_ms' => $existing->time_ms,
+                'gametype' => $existing->gametype,
+                'record_id' => $existing->record_id,
+            ]);
+        }
+
+        // Create UploadedDemo record
+        $demo = UploadedDemo::create([
+            'original_filename' => $originalFilename,
+            'file_size' => $file->getSize(),
+            'file_hash' => $hash,
+            'status' => 'uploaded',
+        ]);
+
+        // Store file locally
+        $tempDir = "demos/temp/{$demo->id}";
+        $storedPath = $file->storeAs($tempDir, $originalFilename);
+
+        $demo->update(['file_path' => $storedPath]);
+
+        // Dispatch processing job (async - compression, Backblaze upload, matching)
+        \App\Jobs\ProcessDemoJob::dispatch($demo);
+
+        // Synchronously parse metadata for immediate response
+        try {
+            $processSingleScript = base_path('app/Services/DemoProcessor/bin/process_single_demo.py');
+            $fullPath = storage_path('app/' . $storedPath);
+
+            $process = new \Symfony\Component\Process\Process(
+                ['python3', '-W', 'ignore', $processSingleScript, $fullPath, '--json'],
+                dirname($processSingleScript),
+            );
+            $process->setTimeout(60);
+            $process->run();
+
+            $output = trim($process->getOutput());
+            $jsonData = json_decode($output, true);
+
+            if ($jsonData && isset($jsonData['map_name'])) {
+                $physicsParts = explode('.', strtoupper($jsonData['physics'] ?? ''));
+                $physics = $physicsParts[1] ?? ($physicsParts[0] ?? null);
+
+                return response()->json([
+                    'success' => true,
+                    'demo_id' => $demo->id,
+                    'map_name' => $jsonData['map_name'],
+                    'player_name' => $jsonData['player_name'] ?? null,
+                    'physics' => $physics,
+                    'time_ms' => isset($jsonData['time_seconds']) ? (int)($jsonData['time_seconds'] * 1000) : null,
+                    'gametype' => $physicsParts[0] ?? null,
+                    'record_id' => null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning("Demome upload: sync parse failed for {$originalFilename}: {$e->getMessage()}");
+        }
+
+        // Fallback: parse from filename
+        $metadata = $this->parseFilename($originalFilename);
+
+        return response()->json([
+            'success' => true,
+            'demo_id' => $demo->id,
+            'map_name' => $metadata['map_name'],
+            'player_name' => $metadata['player_name'],
+            'physics' => $metadata['physics'],
+            'time_ms' => $metadata['time_ms'],
+            'gametype' => $metadata['gametype'],
+            'record_id' => null,
+        ]);
+    }
+
+    private function parseFilename(string $filename): array
+    {
+        $result = [
+            'map_name' => null,
+            'player_name' => null,
+            'physics' => null,
+            'time_ms' => null,
+            'gametype' => null,
+        ];
+
+        // Pattern: mapname[gametype.physics]mm.ss.mmm(player.country).dm_68
+        if (preg_match('/([^[]+)\[([^.]+)\.([^\]]+)\](\d+)\.(\d+)\.(\d+)\(([^.]+)/', $filename, $m)) {
+            $result['map_name'] = $m[1];
+            $result['gametype'] = $m[2];
+            $result['physics'] = strtoupper($m[3]);
+            $result['time_ms'] = ((int)$m[4] * 60000) + ((int)$m[5] * 1000) + (int)$m[6];
+            $result['player_name'] = $m[7];
+        }
+
+        return $result;
     }
 }

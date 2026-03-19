@@ -229,6 +229,38 @@ class RenderedVideoResource extends Resource
                             ->success()
                             ->send();
                     }),
+                Tables\Actions\Action::make('force_render')
+                    ->label('Force render')
+                    ->icon('heroicon-o-bolt')
+                    ->color('danger')
+                    ->visible(fn (RenderedVideo $record) => in_array($record->status, ['pending', 'failed']))
+                    ->requiresConfirmation()
+                    ->modalHeading('Force render this video?')
+                    ->modalDescription('This will set highest priority (-1) and bypass pause. Demome will pick it up on next poll.')
+                    ->action(function (RenderedVideo $record) {
+                        $demoUrl = $record->demo_url;
+                        if ($record->demo_id) {
+                            $demoUrl = URL::signedRoute('demos.download', ['demo' => $record->demo_id], now()->addDays(7));
+                        }
+
+                        $record->update([
+                            'status' => 'pending',
+                            'priority' => -1,
+                            'youtube_url' => null,
+                            'youtube_video_id' => null,
+                            'render_duration_seconds' => null,
+                            'video_file_size' => null,
+                            'failure_reason' => null,
+                            'retry_count' => 0,
+                            'demo_url' => $demoUrl,
+                        ]);
+
+                        Notification::make()
+                            ->title('Force render queued')
+                            ->body('Will bypass pause and render next.')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
