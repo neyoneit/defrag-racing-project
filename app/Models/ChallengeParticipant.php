@@ -14,6 +14,7 @@ class ChallengeParticipant extends Model
         'user_id',
         'status',
         'record_id',
+        'offline_record_id',
         'submission_notes',
         'rejection_reason',
         'submitted_at',
@@ -47,6 +48,11 @@ class ChallengeParticipant extends Model
         return $this->belongsTo(User::class, 'reviewed_by_user_id');
     }
 
+    public function offlineRecord()
+    {
+        return $this->belongsTo(OfflineRecord::class, 'offline_record_id');
+    }
+
     // Helper methods
     public function isSubmitted()
     {
@@ -55,11 +61,11 @@ class ChallengeParticipant extends Model
 
     public function canSubmit()
     {
-        return $this->status === 'participating';
+        return in_array($this->status, ['participating', 'rejected']);
     }
 
     public function hasProof()
     {
-        return $this->record_id !== null;
+        return $this->record_id !== null || $this->offline_record_id !== null;
     }
 }

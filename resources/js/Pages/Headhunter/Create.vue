@@ -135,6 +135,19 @@ const submit = () => {
 
         <!-- Content Section -->
         <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
+
+                <!-- Disclaimer Banner -->
+                <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                    <div class="flex gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                        <div class="text-sm text-yellow-300">
+                            <strong>Disclaimer:</strong> Defrag Racing is not responsible for the fulfillment of rewards. All challenges and rewards are agreements between the creator and participants. By creating a challenge, you agree to honor the stated rewards. Failure to do so may result in a ban.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Form -->
                 <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
                     <h1 class="text-3xl font-black text-white mb-6">Create New Challenge</h1>
@@ -317,7 +330,9 @@ const submit = () => {
                             <input
                                 v-model="form.expires_at"
                                 type="datetime-local"
-                                class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                @click="$event.target.showPicker?.()"
+                                style="color-scheme: dark"
+                                class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 cursor-pointer [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                             />
                             <p class="text-xs text-gray-500 mt-1">Leave empty for no expiration</p>
                             <div v-if="form.errors.expires_at" class="text-red-400 text-sm mt-1">{{ form.errors.expires_at }}</div>
@@ -335,6 +350,7 @@ const submit = () => {
                                         <li>You are responsible for paying any monetary rewards</li>
                                         <li>Failure to pay or respond to disputes within 14 days will result in a ban from creating challenges</li>
                                         <li>False or misleading challenges may result in account penalties</li>
+                                        <li>You have a 1-hour grace period after creation to edit your challenge freely. After that, edits require admin approval.</li>
                                     </ul>
                                 </div>
                             </div>

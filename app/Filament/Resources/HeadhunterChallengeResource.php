@@ -92,14 +92,16 @@ class HeadhunterChallengeResource extends Resource
                 Tables\Columns\TextColumn::make('title')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('mapname')->label('Map')->searchable(),
                 Tables\Columns\TextColumn::make('creator.username')->label('Creator')->searchable(),
-                Tables\Columns\BadgeColumn::make('status')
-                    ->colors([
-                        'success' => 'open',
-                        'warning' => 'claimed',
-                        'info' => 'completed',
-                        'danger' => 'disputed',
-                        'secondary' => 'closed',
-                    ]),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'open' => 'success',
+                        'claimed' => 'warning',
+                        'completed' => 'info',
+                        'disputed' => 'danger',
+                        'closed' => 'gray',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('participants_count')->label('Participants')->counts('participants'),
                 Tables\Columns\TextColumn::make('reward_amount')->money(fn ($record) => $record->reward_currency ?? 'USD'),
                 Tables\Columns\IconColumn::make('creator_banned')->boolean()->label('Banned'),

@@ -2,6 +2,9 @@ import './bootstrap';
 import '../css/app.css';
 import '../css/items.css';
 
+
+
+
 // Auto-reload on stale chunk after deploy
 window.addEventListener('vite:preloadError', () => {
     const lastReload = sessionStorage.getItem('chunk_reload');

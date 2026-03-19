@@ -56,6 +56,11 @@ class WorldSpawn {
             echo 'Scraping page: ' . ($page + 1) . PHP_EOL;
             $xpath = $this->read_data($this->url . $page);
 
+            if (!($xpath instanceof DOMXPath)) {
+                \Log::warning('WorldSpawn: Failed to fetch page ' . ($page + 1));
+                break;
+            }
+
             $mapsTable = $xpath->query("//table[@id='maps_table']")->item(0);
 
             $result = $this->getMaps($mapsTable, $mapname);
@@ -131,6 +136,11 @@ class WorldSpawn {
         $result = [];
 
         $xpath = $this->read_data($this->mapUrl . $map);
+
+        if (!($xpath instanceof DOMXPath)) {
+            \Log::warning('WorldSpawn: Failed to fetch map details for ' . $map);
+            return NULL;
+        }
 
         $mapImageElement = $xpath->query("//img[@id='mapdetails_levelshot']")->item(0);
 

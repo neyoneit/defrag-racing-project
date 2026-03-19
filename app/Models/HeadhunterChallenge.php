@@ -44,6 +44,11 @@ class HeadhunterChallenge extends Model
         return $this->belongsTo(User::class, 'creator_id');
     }
 
+    public function map()
+    {
+        return $this->belongsTo(Map::class, 'mapname', 'name');
+    }
+
     public function claimer()
     {
         return $this->belongsTo(User::class, 'claimed_by_user_id');
