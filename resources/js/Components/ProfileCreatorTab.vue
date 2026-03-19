@@ -245,7 +245,7 @@
                         <span class="text-gray-400"><span class="text-white font-bold">{{ formatNumber(highlightedMapData.vq3.record_count) }}</span> records</span>
                     </div>
                     <div v-if="highlightedMapData.vq3.wr" class="mt-2 flex items-center gap-2 text-xs">
-                        <svg class="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                        <svg class="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                         <span class="text-yellow-400 font-bold">WR:</span>
                         <span class="text-white font-bold" v-html="q3tohtml(highlightedMapData.vq3.wr.name)"></span>
                         <span class="text-blue-400 font-bold">{{ formatTime(highlightedMapData.vq3.wr.time) }}</span>
@@ -274,7 +274,7 @@
                         <span class="text-gray-400"><span class="text-white font-bold">{{ formatNumber(highlightedMapData.cpm.record_count) }}</span> records</span>
                     </div>
                     <div v-if="highlightedMapData.cpm.wr" class="mt-2 flex items-center gap-2 text-xs">
-                        <svg class="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                        <svg class="w-3.5 h-3.5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                         <span class="text-yellow-400 font-bold">WR:</span>
                         <span class="text-white font-bold" v-html="q3tohtml(highlightedMapData.cpm.wr.name)"></span>
                         <span class="text-purple-400 font-bold">{{ formatTime(highlightedMapData.cpm.wr.time) }}</span>
@@ -502,7 +502,7 @@
                         <!-- Hall of Fame (100%) -->
                         <div v-if="topPlayersData.completionists_by_physics[physics]?.completionists?.length" class="p-4 border-b border-white/5">
                             <div class="flex items-center gap-2 mb-2">
-                                <svg class="w-4 h-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                <svg class="w-4 h-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 <h3 class="text-xs font-black uppercase tracking-wider" :class="physics === 'vq3' ? 'text-blue-400' : 'text-purple-400'">
                                     {{ physics.toUpperCase() }} Hall of Fame
                                 </h3>
@@ -518,7 +518,7 @@
                         </div>
                         <div v-else class="p-4 border-b border-white/5">
                             <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                <svg class="w-4 h-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 <h3 class="text-xs font-black uppercase tracking-wider text-gray-600">{{ physics.toUpperCase() }} Hall of Fame</h3>
                                 <span class="text-[10px] text-gray-600 ml-auto">No 100% completionists yet</span>
                             </div>

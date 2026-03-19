@@ -66,6 +66,7 @@ class ProcessOverdueDisputes extends Command
                     // Notify the creator
                     $dispute->creator->systemNotify(
                         'headhunter_ban',
+                        'Headhunter Ban',
                         'You have been banned from creating Headhunter challenges',
                         'You failed to respond to a dispute within 14 days for challenge "' . $dispute->challenge->title . '".',
                         route('headhunter.show', $dispute->challenge_id)
@@ -77,6 +78,7 @@ class ProcessOverdueDisputes extends Command
                 // Notify the claimer
                 $dispute->claimer->systemNotify(
                     'headhunter_dispute_resolved',
+                    'Dispute Resolved',
                     'Your dispute has been automatically resolved',
                     'The creator failed to respond within 14 days for challenge "' . $dispute->challenge->title . '". They have been banned from creating new challenges.',
                     route('headhunter.show', $dispute->challenge_id)

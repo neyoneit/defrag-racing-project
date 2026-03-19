@@ -1,5 +1,6 @@
 <script setup>
     import { ref, watch, computed } from 'vue';
+
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ActivityHeatmap from '@/Components/ActivityHeatmap.vue';
@@ -645,7 +646,7 @@
                                         <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</div>
                                         <div class="text-lg font-black text-purple-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</div>
                                     </div>
-                                    <svg class="w-4 h-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                    <svg class="w-4 h-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
                             </div>
 
@@ -656,7 +657,7 @@
                                         <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</div>
                                         <div class="text-lg font-black text-blue-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</div>
                                     </div>
-                                    <svg class="w-4 h-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use xlink:href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                    <svg class="w-4 h-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
                             </div>
                         </div>
@@ -765,9 +766,7 @@
         </div>
 
         <!-- EPIC REDESIGN - Main Content (Records Tab) -->
-        <div v-show="activeTab === 'records'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10"
-
-            <!-- Not Linked Account Overlay (viewing MDD-only profile) -->
+        <div v-show="activeTab === 'records'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
             <div v-if="!user?.id && !$page.props.auth?.user?.mdd_id" class="relative z-20 mb-6">
                 <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
                     <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
@@ -796,8 +795,7 @@
             </div>
 
             <!-- Stats Grid - Clean Text Layout -->
-            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-                <!-- Performance Stats -->
+            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div v-if="showStatBox('performance')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('performance') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
@@ -1160,7 +1158,6 @@
                                 class="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-sm text-indigo-300 flex items-center gap-2"
                             >
                                 <span v-html="q3tohtml(alias.alias)"></span>
-                                <!-- Report button (only show for other users viewing profile) -->
                                 <button
                                     v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id"
                                     @click="reportAlias(alias)"
@@ -1226,7 +1223,7 @@
                                      class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-bold">
                                     <svg v-if="loading !== option" :class="selectedOption === option ? 'text-white' : data.color"
                                          class="w-6 h-6 fill-current stroke-current transition-transform">
-                                        <use :xlink:href="`/images/svg/icons.svg#icon-` + data.icon"></use>
+                                        <use :href="`/images/svg/icons.svg#icon-` + data.icon"></use>
                                     </svg>
                                     <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
                                          class="w-6 h-6 animate-spin">
@@ -1391,7 +1388,7 @@
                     <div v-else class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
                         <div class="text-center py-20">
                             <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
-                                <use xlink:href="/images/svg/icons.svg#icon-trophy"></use>
+                                <use href="/images/svg/icons.svg#icon-trophy"></use>
                             </svg>
                             <div class="text-xl font-bold text-gray-600">No Records Yet</div>
                             <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
