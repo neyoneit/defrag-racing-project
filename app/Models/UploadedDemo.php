@@ -101,6 +101,11 @@ class UploadedDemo extends Model
         return $this->belongsTo(User::class, 'suggested_user_id');
     }
 
+    public function renderedVideo()
+    {
+        return $this->hasOne(RenderedVideo::class, 'demo_id');
+    }
+
     /**
      * Check if demo is offline (df/fs/fc) vs online (mdf/mfs/mfc)
      */

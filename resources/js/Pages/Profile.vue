@@ -84,7 +84,15 @@
             type: Boolean,
             default: false
         },
-        load_times: Object
+        load_times: Object,
+        renderStats: {
+            type: Object,
+            default: () => ({})
+        },
+        latestRenderedVideos: {
+            type: Array,
+            default: () => []
+        }
     });
 
     const color = ref(props.user?.color ? props.user.color : '#ffffff');
@@ -135,10 +143,11 @@
     };
 
     // Profile layout customization
-    const defaultStatBoxes = ['performance', 'activity', 'record_types', 'map_features'];
+    const defaultStatBoxes = ['performance', 'activity', 'record_types', 'map_features', 'renders'];
     const defaultSections = [
         { id: 'activity_history', visible: true },
         { id: 'records', visible: true },
+        { id: 'rendered_videos', visible: true },
         { id: 'similar_skill_rivals', visible: true },
         { id: 'competitor_comparison', visible: true },
         { id: 'known_aliases', visible: true },
@@ -1067,6 +1076,32 @@
                     </div>
                 </div>
 
+                <!-- Renders Statistics -->
+                <div v-if="showStatBox('renders') && (renderStats.total_renders || 0) > 0" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('renders') }">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wide">Renders</h3>
+                        <div class="flex items-center gap-0">
+                            <span class="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded border text-red-400 bg-red-400/20 border-red-400/30">YouTube</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Videos Rendered</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Total number of demos rendered to YouTube videos
+                            </div>
+                            <span class="text-sm font-bold text-red-400 tabular-nums">{{ renderStats.total_renders || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center group relative">
+                            <span class="text-xs text-gray-400 cursor-help">Render Time</span>
+                            <div class="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-black/90 border border-white/20 rounded-lg text-xs text-gray-300">
+                                Total time spent rendering demos to video
+                            </div>
+                            <span class="text-sm font-bold text-red-400 tabular-nums">{{ Math.round((renderStats.total_render_seconds || 0) / 3600 * 10) / 10 }}h</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Top Downloaded Demos -->
                 <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('top_downloaded_demos') }">
                     <div class="flex justify-between items-center mb-3">
@@ -1102,6 +1137,49 @@
                     :isNew="isOwnProfile && isNewSection('activity_history')"
                     :customizeUrl="route('profile.show') + '?tab=customize'"
                 />
+            </div>
+
+            <!-- Rendered Videos -->
+            <div v-if="showSection('rendered_videos') && latestRenderedVideos && latestRenderedVideos.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('rendered_videos') }">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                            <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
+                        </svg>
+                        Rendered Videos
+                    </h3>
+                    <a href="/youtube" class="text-xs text-gray-400 hover:text-white transition-colors">View all</a>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <a
+                        v-for="video in latestRenderedVideos"
+                        :key="video.id"
+                        :href="video.youtube_url"
+                        target="_blank"
+                        rel="noopener"
+                        class="group relative rounded-lg overflow-hidden bg-black/40 border border-white/5 hover:border-white/20 transition-all"
+                    >
+                        <div class="aspect-video relative">
+                            <img
+                                :src="`https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`"
+                                :alt="video.map_name"
+                                class="w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                            <div class="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                <svg class="w-8 h-8 text-white/70 group-hover:text-white/90 transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="p-2">
+                            <div class="text-xs font-semibold text-white truncate">{{ video.map_name }}</div>
+                            <div class="text-xs text-gray-500 uppercase">{{ video.physics }}</div>
+                        </div>
+                    </a>
+                </div>
             </div>
 
             <!-- Known Aliases -->

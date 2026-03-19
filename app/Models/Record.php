@@ -44,6 +44,11 @@ class Record extends Model
         return $this->hasMany(RecordFlag::class)->where('status', 'approved');
     }
 
+    public function renderedVideos()
+    {
+        return $this->hasMany(RenderedVideo::class, 'record_id');
+    }
+
     /**
      * Boot method to clear profile cache when records change
      */

@@ -29,6 +29,14 @@
     const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
     const showFlagModal = ref(false);
+    const showYoutubeEmbed = ref(false);
+
+    const renderedVideo = computed(() => {
+        if (props.record.rendered_videos && props.record.rendered_videos.length > 0) {
+            return props.record.rendered_videos[0];
+        }
+        return null;
+    });
 
     const flagRecordId = computed(() => {
         if (isOfflineRecord.value || isOnlineDemo.value) return null;
@@ -568,6 +576,19 @@
             </button>
 
             <button
+                v-if="renderedVideo"
+                @click.stop="showYoutubeEmbed = !showYoutubeEmbed"
+                class="p-0.5 rounded transition-all hover:scale-110"
+                :class="showYoutubeEmbed ? 'bg-red-500/30 text-red-300' : 'bg-red-500/20 text-red-400 hover:text-red-300 hover:bg-red-500/30'"
+                title="Watch on YouTube"
+            >
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
+                </svg>
+            </button>
+
+            <button
                 v-if="canReportDemo && !record.oldtop"
                 @click.stop="showFlagModal = true"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
@@ -616,6 +637,19 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- YouTube Embed -->
+    <div v-if="showYoutubeEmbed && renderedVideo" class="bg-black/60 border border-white/10 rounded-lg overflow-hidden mx-1 mb-1">
+        <div class="aspect-video">
+            <iframe
+                :src="`https://www.youtube.com/embed/${renderedVideo.youtube_video_id}?autoplay=1`"
+                class="w-full h-full"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+            ></iframe>
+        </div>
     </div>
 
     <!-- Demo Report Modal -->
