@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\RenderedVideo;
+use App\Models\SiteSetting;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -36,7 +37,7 @@ class DemomeControl extends Page
 
         return [
             'apiToken' => config('services.demome.api_token') ?: 'Not set',
-            'isPaused' => Cache::get('demome:paused', false),
+            'isPaused' => SiteSetting::getBool('demome:paused', false),
             'isOnline' => $isOnline,
             'currentStatus' => Cache::get('demome:current_status', 'unknown'),
             'lastHeartbeat' => $lastHeartbeat ? Carbon::parse($lastHeartbeat)->diffForHumans() : 'Never',
@@ -62,8 +63,8 @@ class DemomeControl extends Page
 
     public function togglePause(): void
     {
-        $currentState = Cache::get('demome:paused', false);
-        Cache::forever('demome:paused', !$currentState);
+        $currentState = SiteSetting::getBool('demome:paused', false);
+        SiteSetting::set('demome:paused', !$currentState ? '1' : '0');
 
         Notification::make()
             ->title($currentState ? 'Demome Unpaused' : 'Demome Paused')
