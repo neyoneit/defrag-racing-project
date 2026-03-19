@@ -17,11 +17,13 @@ const allStatBoxes = [
     { id: 'map_features', label: 'Map Features', color: 'yellow' },
     { id: 'demos_statistics', label: 'Demos Stats', color: 'pink' },
     { id: 'top_downloaded_demos', label: 'Top Demos', color: 'cyan' },
+    { id: 'renders', label: 'YouTube Renders', color: 'red' },
 ];
 
 const allSections = [
     { id: 'activity_history', label: 'Activity History' },
     { id: 'records', label: 'VQ3 / CPM Records' },
+    { id: 'rendered_videos', label: 'Rendered Videos' },
     { id: 'similar_skill_rivals', label: 'Skill Level & Rivals' },
     { id: 'competitor_comparison', label: 'Competitor Comparison' },
     { id: 'known_aliases', label: 'Known Aliases' },
@@ -109,6 +111,7 @@ const colorMap = {
     yellow: { bg: 'from-yellow-500/20 to-yellow-600/20', border: 'border-yellow-500/30', text: 'text-yellow-400', dot: 'bg-yellow-400' },
     pink: { bg: 'from-pink-500/20 to-pink-600/20', border: 'border-pink-500/30', text: 'text-pink-400', dot: 'bg-pink-400' },
     cyan: { bg: 'from-cyan-500/20 to-cyan-600/20', border: 'border-cyan-500/30', text: 'text-cyan-400', dot: 'bg-cyan-400' },
+    red: { bg: 'from-red-500/20 to-red-600/20', border: 'border-red-500/30', text: 'text-red-400', dot: 'bg-red-400' },
 };
 </script>
 

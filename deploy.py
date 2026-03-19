@@ -38,6 +38,7 @@ def pipeline_cmds(name):
         "php artisan storage:link",
         "php artisan migrate --force",
         "php artisan filament:assets",
+        "php artisan livewire:publish --assets",
         "php artisan cache:clear",
         "php artisan config:cache",
         "php artisan route:cache",

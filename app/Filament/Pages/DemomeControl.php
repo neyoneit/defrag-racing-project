@@ -99,7 +99,10 @@ class DemomeControl extends Page
 
         file_put_contents($envPath, $envContent);
 
-        // Clear config cache so the new token takes effect
+        // Update runtime config (Octane keeps config in memory)
+        config()->set('services.demome.api_token', $newToken);
+
+        // Clear config cache for next worker restart
         \Artisan::call('config:clear');
 
         Notification::make()
