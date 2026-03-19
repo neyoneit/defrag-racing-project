@@ -346,41 +346,40 @@ const getFunctionName = (abbr) => {
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
-                    <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">
-                            Live Servers
-                        </h1>
-                        <div class="flex items-center gap-3 text-sm">
-                            <div class="flex items-center gap-2 bg-blue-500/20  px-3 py-2 rounded-lg border border-blue-400/30">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-400">
-                                    <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
-                                </svg>
-                                <span class="font-bold text-blue-300">{{ players }}</span>
-                                <span class="text-gray-300 font-semibold">Players Online</span>
-                            </div>
-                            <div class="flex items-center gap-2 bg-white/10  px-3 py-2 rounded-lg border border-white/20">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
-                                    <path d="M4.5 3.75a3 3 0 0 0-3 3v.75h21v-.75a3 3 0 0 0-3-3h-15Z" />
-                                    <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
-                                </svg>
-                                <span class="font-bold text-white">{{ serverCount }}</span>
-                                <span class="text-gray-300 font-semibold">Active Servers</span>
-                            </div>
-                        </div>
-                    </div>
+                    <h1 class="text-4xl md:text-5xl font-black text-white">
+                        Live Servers
+                    </h1>
 
-                    <!-- Layout Toggle -->
-                    <button @click="toggleLayout" class="group relative px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300">
-                        <div class="flex items-center gap-2">
-                            <svg v-if="layout === 'large'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                    <div class="flex items-center gap-3 text-sm">
+                        <div class="flex items-center gap-2 bg-blue-500/20 px-3 py-2 rounded-lg border border-blue-400/30">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-400">
+                                <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                             </svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-purple-400">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                            </svg>
-                            <span class="text-sm font-bold text-white">{{ layout === 'large' ? 'Large Cards' : 'Compact List' }}</span>
+                            <span class="font-bold text-blue-300">{{ players }}</span>
+                            <span class="text-gray-300 font-semibold">Players Online</span>
                         </div>
-                    </button>
+                        <div class="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg border border-white/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
+                                <path d="M4.5 3.75a3 3 0 0 0-3 3v.75h21v-.75a3 3 0 0 0-3-3h-15Z" />
+                                <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="font-bold text-white">{{ serverCount }}</span>
+                            <span class="text-gray-300 font-semibold">Active Servers</span>
+                        </div>
+
+                        <!-- Layout Toggle -->
+                        <button @click="toggleLayout" class="group relative px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300">
+                            <div class="flex items-center gap-2">
+                                <svg v-if="layout === 'large'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+                                </svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-purple-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                                </svg>
+                                <span class="text-sm font-bold text-white">{{ layout === 'large' ? 'Large Cards' : 'Compact List' }}</span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Filters & Controls -->
@@ -584,16 +583,14 @@ const getFunctionName = (abbr) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div v-if="server.besttime_time && server.besttime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                                <a v-if="server.besttime_time && server.besttime_time > 0" :href="server.besttime_url ? `/profile/${server.besttime_url}` : '#'" @click.stop :class="['flex items-center gap-2 text-sm hover:bg-white/5 rounded px-1 -mx-1 py-0.5 mt-1.5 transition-colors relative z-10 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-yellow-500 flex-shrink-0" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));">
                                         <path fill-rule="evenodd" d="M5.166 2.621v.858c-1.035.148-2.059.33-3.071.543a.75.75 0 0 0-.584.859 6.753 6.753 0 0 0 6.138 5.6 6.73 6.73 0 0 0 2.743 1.346A6.707 6.707 0 0 1 9.279 15H8.54c-1.036 0-1.875.84-1.875 1.875V19.5h-.75a2.25 2.25 0 0 0-2.25 2.25c0 .414.336.75.75.75h15a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-2.25-2.25h-.75v-2.625c0-1.036-.84-1.875-1.875-1.875h-.739a6.706 6.706 0 0 1-1.112-3.173 6.73 6.73 0 0 0 2.743-1.347 6.753 6.753 0 0 0 6.139-5.6.75.75 0 0 0-.585-.858 47.077 47.077 0 0 0-3.07-.543V2.62a.75.75 0 0 0-.658-.744 49.22 49.22 0 0 0-6.093-.377c-2.063 0-4.096.128-6.093.377a.75.75 0 0 0-.657.744Zm0 2.629c0 1.196.312 2.32.857 3.294A5.266 5.266 0 0 1 3.16 5.337a45.6 45.6 0 0 1 2.006-.343v.256Zm13.5 0v-.256c.674.1 1.343.214 2.006.343a5.265 5.265 0 0 1-2.863 3.207 6.72 6.72 0 0 0 .857-3.294Z" clip-rule="evenodd" />
                                     </svg>
-                                    <div class="flex items-center gap-2 flex-1">
-                                        <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`" class="w-4 h-3 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));" @error="$event.target.style.display='none'">
-                                        <span class="font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
-                                    </div>
+                                    <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`" class="w-4 h-3 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));" @error="$event.target.style.display='none'">
+                                    <span class="font-bold flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
                                     <span class="font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
-                                </div>
+                                </a>
                                 <div v-if="server.mytime_time && server.mytime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="w-4 h-4 flex-shrink-0" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));">
                                         <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
@@ -606,14 +603,14 @@ const getFunctionName = (abbr) => {
                         </div>
 
                         <!-- Players List - Always expanded -->
-                        <div v-if="server.online_players.length > 0" :class="[(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]'), 'map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                        <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="bg-black/50 rounded-lg p-2 border border-white/10 ">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
                                 </div>
                             </div>
                         </div>
-                        <div v-else :class="[(server.mytime_time && server.mytime_time > 0) ? 'mb-4 mt-1' : ((server.besttime_time && server.besttime_time > 0) ? 'mb-4 mt-[30px]' : 'mb-4 mt-[60px]'), 'map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                        <div v-else :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="p-3 bg-black/50 rounded-lg border border-white/10 text-center ">
                                 <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
                             </div>
@@ -689,7 +686,7 @@ const getFunctionName = (abbr) => {
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3 text-yellow-500 flex-shrink-0">
                                                     <path fill-rule="evenodd" d="M5.166 2.621v.858c-1.035.148-2.059.33-3.071.543a.75.75 0 0 0-.584.859 6.753 6.753 0 0 0 6.138 5.6 6.73 6.73 0 0 0 2.743 1.346A6.707 6.707 0 0 1 9.279 15H8.54c-1.036 0-1.875.84-1.875 1.875V19.5h-.75a2.25 2.25 0 0 0-2.25 2.25c0 .414.336.75.75.75h15a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-2.25-2.25h-.75v-2.625c0-1.036-.84-1.875-1.875-1.875h-.739a6.706 6.706 0 0 1-1.112-3.173 6.73 6.73 0 0 0 2.743-1.347 6.753 6.753 0 0 0 6.139-5.6.75.75 0 0 0-.585-.858 47.077 47.077 0 0 0-3.07-.543V2.62a.75.75 0 0 0-.658-.744 49.22 49.22 0 0 0-6.093-.377c-2.063 0-4.096.128-6.093.377a.75.75 0 0 0-.657.744Zm0 2.629c0 1.196.312 2.32.857 3.294A5.266 5.266 0 0 1 3.16 5.337a45.6 45.6 0 0 1 2.006-.343v.256Zm13.5 0v-.256c.674.1 1.343.214 2.006.343a5.265 5.265 0 0 1-2.863 3.207 6.72 6.72 0 0 0 .857-3.294Z" clip-rule="evenodd" />
                                                 </svg>
-                                                <span class="text-xs font-bold text-white truncate max-w-[60px]" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
+                                                <a :href="`/profile/${server.besttime_url}`" @click.stop class="text-xs font-bold text-white hover:text-yellow-300 transition-colors truncate max-w-[60px] relative z-10" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></a>
                                             </div>
                                             <span class="text-xs font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
                                         </div>
@@ -793,7 +790,7 @@ const getFunctionName = (abbr) => {
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-3 h-3 text-yellow-500 flex-shrink-0">
                                                     <path fill-rule="evenodd" d="M5.166 2.621v.858c-1.035.148-2.059.33-3.071.543a.75.75 0 0 0-.584.859 6.753 6.753 0 0 0 6.138 5.6 6.73 6.73 0 0 0 2.743 1.346A6.707 6.707 0 0 1 9.279 15H8.54c-1.036 0-1.875.84-1.875 1.875V19.5h-.75a2.25 2.25 0 0 0-2.25 2.25c0 .414.336.75.75.75h15a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-2.25-2.25h-.75v-2.625c0-1.036-.84-1.875-1.875-1.875h-.739a6.706 6.706 0 0 1-1.112-3.173 6.73 6.73 0 0 0 2.743-1.347 6.753 6.753 0 0 0 6.139-5.6.75.75 0 0 0-.585-.858 47.077 47.077 0 0 0-3.07-.543V2.62a.75.75 0 0 0-.658-.744 49.22 49.22 0 0 0-6.093-.377c-2.063 0-4.096.128-6.093.377a.75.75 0 0 0-.657.744Zm0 2.629c0 1.196.312 2.32.857 3.294A5.266 5.266 0 0 1 3.16 5.337a45.6 45.6 0 0 1 2.006-.343v.256Zm13.5 0v-.256c.674.1 1.343.214 2.006.343a5.265 5.265 0 0 1-2.863 3.207 6.72 6.72 0 0 0 .857-3.294Z" clip-rule="evenodd" />
                                                 </svg>
-                                                <span class="text-xs font-bold text-white truncate max-w-[60px]" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
+                                                <a :href="`/profile/${server.besttime_url}`" @click.stop class="text-xs font-bold text-white hover:text-yellow-300 transition-colors truncate max-w-[60px] relative z-10" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></a>
                                             </div>
                                             <span class="text-xs font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
                                         </div>

@@ -35,6 +35,8 @@
         <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img
                 :src="`/storage/${record.map.thumbnail}`"
+                loading="lazy"
+                decoding="async"
                 class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
                 :alt="record.mapname"
                 onerror="this.src='/images/unknown.jpg'"
@@ -71,6 +73,8 @@
                     <div :class="'avatar-effect-' + (record.user?.avatar_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 14px`">
                         <img
                             :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
+                            loading="lazy"
+                            decoding="async"
                             class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover border-2 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] relative"
                             :style="`border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
                             :alt="record.user?.name ?? record.name"
@@ -78,7 +82,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-1.5 min-w-0">
-                    <img :src="`/images/flags/${bestrecordCountry}.png`" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
+                    <img :src="`/images/flags/${bestrecordCountry}.png`" loading="lazy" decoding="async" class="w-3.5 h-2.5 sm:w-4 sm:h-3 flex-shrink-0 opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]" onerror="this.src='/images/flags/_404.png'" :title="bestrecordCountry">
                     <span :class="'name-effect-' + (record.user?.name_effect || 'none')" :style="`--effect-color: ${record.user?.color || '#ffffff'}`" class="text-[11px] sm:text-sm font-semibold text-gray-300 group-hover:text-white whitespace-nowrap overflow-visible group-hover/player:text-blue-200 transition-all" v-html="q3tohtml(record.user?.name ?? record.name)"></span>
                 </div>
             </component>

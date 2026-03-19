@@ -84,88 +84,27 @@ class ProfileController extends Controller {
             $vq3Records = clone $baseRecords;
             $vq3Records = $vq3Records->where($tablePrefix . '.physics', 'vq3');
             if ($tablePrefix === 'records') {
-                $vq3Records = $vq3Records->with('map');
+                $vq3Records = $vq3Records->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
             }
             $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
 
             $cpmRecords = clone $baseRecords;
             $cpmRecords = $cpmRecords->where($tablePrefix . '.physics', 'cpm');
             if ($tablePrefix === 'records') {
-                $cpmRecords = $cpmRecords->with('map');
+                $cpmRecords = $cpmRecords->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
             }
             $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
         }
 
-        // --- Profile stats (only on full load) ---
+        // --- Profile stats (cached + consolidated: ~25 queries → 6) ---
         if (!$isPartial) {
-            $worldRecordsCpm = Record::where('mdd_id', $mddId)->where('rank', 1)->where('physics', 'cpm')->count();
-            $worldRecordsVq3 = Record::where('mdd_id', $mddId)->where('rank', 1)->where('physics', 'vq3')->count();
-            $totalRecordsCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->count();
-            $totalRecordsVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->count();
-            $top3Cpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->whereBetween('rank', [1, 3])->count();
-            $top3Vq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->whereBetween('rank', [1, 3])->count();
-            $top10Cpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->whereBetween('rank', [1, 10])->count();
-            $top10Vq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->whereBetween('rank', [1, 10])->count();
-
-            $slickCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
-            $slickVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
-            $jumppadCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
-            $jumppadVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
-            $teleporterCpm = Record::where('records.mdd_id', $mddId)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
-            $teleporterVq3 = Record::where('records.mdd_id', $mddId)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
-
-            $longestStreak = DB::select("SELECT MAX(streak) as longest_streak FROM (SELECT @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak, @prev_date := DATE(date_set) as date_set FROM records, (SELECT @streak := 0, @prev_date := NULL) vars WHERE mdd_id = ? ORDER BY date_set) streaks", [$mddId]);
-            $longestStreakDays = $longestStreak[0]->longest_streak ?? 0;
-
-            $uniqueMapsCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->distinct('mapname')->count('mapname');
-            $uniqueMapsVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->distinct('mapname')->count('mapname');
-            $avgRankCpm = Record::where('mdd_id', $mddId)->where('physics', 'cpm')->avg('rank');
-            $avgRankVq3 = Record::where('mdd_id', $mddId)->where('physics', 'vq3')->avg('rank');
-            $dominanceCpm = $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0;
-            $dominanceVq3 = $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0;
-            $firstRecord = Record::where('mdd_id', $mddId)->orderBy('date_set', 'ASC')->first(['date_set']);
-            $firstRecordDate = $firstRecord ? $firstRecord->date_set : null;
-            $mostActiveMonth = DB::select("SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count FROM records WHERE mdd_id = ? GROUP BY month ORDER BY count DESC LIMIT 1", [$mddId]);
-            $mostActiveMonthData = $mostActiveMonth[0] ?? null;
-            $marathonRecord = Record::where('mdd_id', $mddId)->orderBy('time', 'DESC')->first(['time', 'mapname', 'physics', 'mode']);
+            $stats = $this->getProfileStats($mddId);
 
             $profileData = $user->mdd_profile;
             if ($profileData) {
-                $profileData->cpm_records = $totalRecordsCpm;
-                $profileData->vq3_records = $totalRecordsVq3;
-                $profileData->cpm_top3 = $top3Cpm;
-                $profileData->vq3_top3 = $top3Vq3;
-                $profileData->cpm_top10 = $top10Cpm;
-                $profileData->vq3_top10 = $top10Vq3;
-                $profileData->cpm_slick = $slickCpm;
-                $profileData->vq3_slick = $slickVq3;
-                $profileData->cpm_jumppad = $jumppadCpm;
-                $profileData->vq3_jumppad = $jumppadVq3;
-                $profileData->cpm_teleporter = $teleporterCpm;
-                $profileData->vq3_teleporter = $teleporterVq3;
-                $profileData->cpm_unique_maps = $uniqueMapsCpm;
-                $profileData->vq3_unique_maps = $uniqueMapsVq3;
-                $profileData->longest_streak = $longestStreakDays;
-                $profileData->cpm_avg_rank = $avgRankCpm ? round($avgRankCpm, 1) : 0;
-                $profileData->vq3_avg_rank = $avgRankVq3 ? round($avgRankVq3, 1) : 0;
-                $profileData->cpm_dominance = $dominanceCpm;
-                $profileData->vq3_dominance = $dominanceVq3;
-                $profileData->first_record_date = $firstRecordDate;
-                $profileData->most_active_month = $mostActiveMonthData;
-                $profileData->marathon_record = $marathonRecord;
-            }
-
-            // Competitors and rivals
-            try {
-                $cpmCompetitors = $this->getCachedCompetitors($mddId, 'cpm');
-                $vq3Competitors = $this->getCachedCompetitors($mddId, 'vq3');
-                $cpmRivals = $this->getCachedRivals($mddId, 'cpm');
-                $vq3Rivals = $this->getCachedRivals($mddId, 'vq3');
-            } catch (\Exception $e) {
-                $cpmCompetitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-                $vq3Competitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-                $cpmRivals = ['beaten' => [], 'beaten_by' => []];
-                $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
+                foreach ($stats as $key => $value) {
+                    $profileData->$key = $value;
+                }
             }
 
             // Activity heatmap
@@ -202,15 +141,23 @@ class ProfileController extends Controller {
                 }
             }
 
-            // Demos
-            $topDownloadedDemos = \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->orderBy('download_count', 'desc')->limit(5)->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
-            $demoStats = [
-                'total_demos' => \App\Models\UploadedDemo::where('user_id', $user->id)->count(),
-                'total_downloads' => (int) \App\Models\UploadedDemo::where('user_id', $user->id)->sum('download_count'),
-                'demos_with_downloads' => \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->count(),
-                'unique_maps' => \App\Models\UploadedDemo::where('user_id', $user->id)->distinct('map_name')->count('map_name'),
-                'most_downloaded' => $topDownloadedDemos->first()?->download_count ?? 0,
-            ];
+            // Demos (cached - consolidated 5+1 queries into 1+1, cached 1 hour)
+            $topDownloadedDemos = Cache::remember("profile:top_demos:{$user->id}", 3600, function () use ($user) {
+                return \App\Models\UploadedDemo::where('user_id', $user->id)->where('download_count', '>', 0)->orderBy('download_count', 'desc')->limit(5)->get(['id', 'original_filename', 'processed_filename', 'map_name', 'time_ms', 'download_count', 'record_id']);
+            });
+            $demoStats = Cache::remember("profile:demo_stats:{$user->id}", 3600, function () use ($user, $topDownloadedDemos) {
+                $stats = DB::table('uploaded_demos')
+                    ->where('user_id', $user->id)
+                    ->selectRaw('COUNT(*) as total_demos, COALESCE(SUM(download_count), 0) as total_downloads, SUM(CASE WHEN download_count > 0 THEN 1 ELSE 0 END) as demos_with_downloads, COUNT(DISTINCT map_name) as unique_maps')
+                    ->first();
+                return [
+                    'total_demos' => (int) ($stats->total_demos ?? 0),
+                    'total_downloads' => (int) ($stats->total_downloads ?? 0),
+                    'demos_with_downloads' => (int) ($stats->demos_with_downloads ?? 0),
+                    'unique_maps' => (int) ($stats->unique_maps ?? 0),
+                    'most_downloaded' => $topDownloadedDemos->first()?->download_count ?? 0,
+                ];
+            });
         }
 
         // --- Unplayed maps (partial or full) ---
@@ -234,13 +181,9 @@ class ProfileController extends Controller {
         }
 
         if (!$isPartial) {
-            $response->with('cpm_world_records', $worldRecordsCpm)
-                ->with('vq3_world_records', $worldRecordsVq3)
+            $response->with('cpm_world_records', $stats['cpm_world_records'])
+                ->with('vq3_world_records', $stats['vq3_world_records'])
                 ->with('profile', $profileData)
-                ->with('cpm_competitors', $cpmCompetitors)
-                ->with('vq3_competitors', $vq3Competitors)
-                ->with('cpm_rivals', $cpmRivals)
-                ->with('vq3_rivals', $vq3Rivals)
                 ->with('user_maplists', $userMaplists)
                 ->with('aliases', $aliases)
                 ->with('can_manage_aliases', $canManageAliases)
@@ -264,53 +207,8 @@ class ProfileController extends Controller {
             return redirect()->route('home');
         }
 
-        $worldRecordsCpm = Record::where('mdd_id', $user->id)->where('rank', 1)->where('physics', 'cpm')->count();
-        $worldRecordsVq3 = Record::where('mdd_id', $user->id)->where('rank', 1)->where('physics', 'vq3')->count();
-
-        // Total records count
-        $totalRecordsCpm = Record::where('mdd_id', $user->id)->where('physics', 'cpm')->count();
-        $totalRecordsVq3 = Record::where('mdd_id', $user->id)->where('physics', 'vq3')->count();
-
-        // Top 3 positions count
-        $top3Cpm = Record::where('mdd_id', $user->id)->where('physics', 'cpm')->whereBetween('rank', [1, 3])->count();
-        $top3Vq3 = Record::where('mdd_id', $user->id)->where('physics', 'vq3')->whereBetween('rank', [1, 3])->count();
-
-        // Top 10 positions count
-        $top10Cpm = Record::where('mdd_id', $user->id)->where('physics', 'cpm')->whereBetween('rank', [1, 10])->count();
-        $top10Vq3 = Record::where('mdd_id', $user->id)->where('physics', 'vq3')->whereBetween('rank', [1, 10])->count();
-
-        // Map feature stats
-        $slickCpm = Record::where('records.mdd_id', $user->id)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
-        $slickVq3 = Record::where('records.mdd_id', $user->id)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%slick%')->count();
-        $jumppadCpm = Record::where('records.mdd_id', $user->id)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
-        $jumppadVq3 = Record::where('records.mdd_id', $user->id)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%jumppad%')->count();
-        $teleporterCpm = Record::where('records.mdd_id', $user->id)->where('records.physics', 'cpm')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
-        $teleporterVq3 = Record::where('records.mdd_id', $user->id)->where('records.physics', 'vq3')->join('maps', 'records.mapname', '=', 'maps.name')->where('maps.functions', 'LIKE', '%tele%')->count();
-        $longestStreak = DB::select("SELECT MAX(streak) as longest_streak FROM (SELECT @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak, @prev_date := DATE(date_set) as date_set FROM records, (SELECT @streak := 0, @prev_date := NULL) vars WHERE mdd_id = ? ORDER BY date_set) streaks", [$user->id]);
-        $longestStreakDays = $longestStreak[0]->longest_streak ?? 0;
-        $uniqueMapsCpm = Record::where('mdd_id', $user->id)->where('physics', 'cpm')->distinct('mapname')->count('mapname');
-        $uniqueMapsVq3 = Record::where('mdd_id', $user->id)->where('physics', 'vq3')->distinct('mapname')->count('mapname');
-
-        // Average Rank
-        $avgRankCpm = Record::where('mdd_id', $user->id)->where('physics', 'cpm')->avg('rank');
-        $avgRankVq3 = Record::where('mdd_id', $user->id)->where('physics', 'vq3')->avg('rank');
-
-        // Dominance Score
-        $dominanceCpm = $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0;
-        $dominanceVq3 = $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0;
-
-        // First Record Date
-        $firstRecord = Record::where('mdd_id', $user->id)->orderBy('date_set', 'ASC')->first(['date_set']);
-        $firstRecordDate = $firstRecord ? $firstRecord->date_set : null;
-
-        // Most Active Month/Year
-        $mostActiveMonth = DB::select("SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count FROM records WHERE mdd_id = ? GROUP BY month ORDER BY count DESC LIMIT 1", [$user->id]);
-        $mostActiveMonthData = $mostActiveMonth[0] ?? null;
-
-        // Weapon Specialist - now cached in mdd_profiles table via processStats()
-
-        // Marathon Runner
-        $marathonRecord = Record::where('mdd_id', $user->id)->orderBy('time', 'DESC')->first(['time', 'mapname', 'physics', 'mode']);
+        // Profile stats (cached + consolidated)
+        $stats = $this->getProfileStats($user->id);
 
         $type = $request->input('type', 'latest');
         $mode = $request->input('mode', 'all');
@@ -349,7 +247,7 @@ class ProfileController extends Controller {
 
         // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
         if ($tablePrefix === 'records') {
-            $vq3Records = $vq3Records->with('map');
+            $vq3Records = $vq3Records->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
         }
         $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
 
@@ -359,45 +257,13 @@ class ProfileController extends Controller {
 
         // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
         if ($tablePrefix === 'records') {
-            $cpmRecords = $cpmRecords->with('map');
+            $cpmRecords = $cpmRecords->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
         }
         $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
 
-        // Add additional stats to profile data
-        $user->cpm_records = $totalRecordsCpm;
-        $user->vq3_records = $totalRecordsVq3;
-        $user->cpm_top3 = $top3Cpm;
-        $user->vq3_top3 = $top3Vq3;
-        $user->cpm_top10 = $top10Cpm;
-        $user->vq3_top10 = $top10Vq3;
-        $user->cpm_slick = $slickCpm;
-        $user->vq3_slick = $slickVq3;
-        $user->cpm_jumppad = $jumppadCpm;
-        $user->vq3_jumppad = $jumppadVq3;
-        $user->cpm_teleporter = $teleporterCpm;
-        $user->vq3_teleporter = $teleporterVq3;
-        $user->cpm_unique_maps = $uniqueMapsCpm;
-        $user->vq3_unique_maps = $uniqueMapsVq3;
-        $user->longest_streak = $longestStreakDays;
-        $user->cpm_avg_rank = $avgRankCpm ? round($avgRankCpm, 1) : 0;
-        $user->vq3_avg_rank = $avgRankVq3 ? round($avgRankVq3, 1) : 0;
-        $user->cpm_dominance = $dominanceCpm;
-        $user->vq3_dominance = $dominanceVq3;
-        $user->first_record_date = $firstRecordDate;
-        $user->most_active_month = $mostActiveMonthData;
-        $user->marathon_record = $marathonRecord;
-
-        // Get competitors and rivals (with error handling)
-        try {
-            $cpmCompetitors = $this->getCachedCompetitors($user->id, 'cpm');
-            $vq3Competitors = $this->getCachedCompetitors($user->id, 'vq3');
-            $cpmRivals = $this->getCachedRivals($user->id, 'cpm');
-            $vq3Rivals = $this->getCachedRivals($user->id, 'vq3');
-        } catch (\Exception $e) {
-            $cpmCompetitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-            $vq3Competitors = ['better' => [], 'worse' => [], 'my_score' => 0];
-            $cpmRivals = ['beaten' => [], 'beaten_by' => []];
-            $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
+        // Add cached stats to profile data
+        foreach ($stats as $key => $value) {
+            $user->$key = $value;
         }
 
         // Get activity heatmap data
@@ -432,13 +298,9 @@ class ProfileController extends Controller {
             ->with('cpmRecords', $cpmRecords)
             ->with('user', $linkedUser)
             ->with('type', $type)
-            ->with('cpm_world_records', $worldRecordsCpm)
-            ->with('vq3_world_records', $worldRecordsVq3)
+            ->with('cpm_world_records', $stats['cpm_world_records'])
+            ->with('vq3_world_records', $stats['vq3_world_records'])
             ->with('profile', $user)
-            ->with('cpm_competitors', $cpmCompetitors)
-            ->with('vq3_competitors', $vq3Competitors)
-            ->with('cpm_rivals', $cpmRivals)
-            ->with('vq3_rivals', $vq3Rivals)
             ->with('unplayed_maps', $unplayedMaps)
             ->with('total_maps', $totalMaps)
             ->with('hasProfile', true)
@@ -962,10 +824,127 @@ class ProfileController extends Controller {
      * Clear profile cache for a specific player
      */
     public static function clearPlayerCache($mddId) {
+        Cache::forget("profile:stats:{$mddId}");
         Cache::forget("profile:competitors:{$mddId}:cpm");
         Cache::forget("profile:competitors:{$mddId}:vq3");
         Cache::forget("profile:rivals:{$mddId}:cpm");
         Cache::forget("profile:rivals:{$mddId}:vq3");
+    }
+
+    /**
+     * Get consolidated profile stats (cached for 1 hour)
+     * Replaces ~25 individual queries with 6 consolidated ones
+     */
+    protected function getProfileStats($mddId)
+    {
+        return Cache::remember("profile:stats:{$mddId}", 3600, function () use ($mddId) {
+            // Query 1: Basic stats grouped by physics (replaces 12 individual COUNT queries)
+            $basicStats = DB::table('records')
+                ->select([
+                    'physics',
+                    DB::raw('COUNT(*) as total'),
+                    DB::raw('SUM(CASE WHEN `rank` = 1 THEN 1 ELSE 0 END) as wrs'),
+                    DB::raw('SUM(CASE WHEN `rank` BETWEEN 1 AND 3 THEN 1 ELSE 0 END) as top3'),
+                    DB::raw('SUM(CASE WHEN `rank` BETWEEN 1 AND 10 THEN 1 ELSE 0 END) as top10'),
+                    DB::raw('COUNT(DISTINCT mapname) as unique_maps'),
+                    DB::raw('AVG(`rank`) as avg_rank'),
+                ])
+                ->where('mdd_id', $mddId)
+                ->whereNull('deleted_at')
+                ->groupBy('physics')
+                ->get()
+                ->keyBy('physics');
+
+            $cpm = $basicStats->get('cpm');
+            $vq3 = $basicStats->get('vq3');
+
+            // Query 2: Map feature stats (replaces 6 individual JOIN+COUNT queries)
+            $featureStats = DB::table('records')
+                ->join('maps', 'records.mapname', '=', 'maps.name')
+                ->select([
+                    'records.physics',
+                    DB::raw("SUM(CASE WHEN maps.functions LIKE '%slick%' THEN 1 ELSE 0 END) as slick"),
+                    DB::raw("SUM(CASE WHEN maps.functions LIKE '%jumppad%' THEN 1 ELSE 0 END) as jumppad"),
+                    DB::raw("SUM(CASE WHEN maps.functions LIKE '%tele%' THEN 1 ELSE 0 END) as teleporter"),
+                ])
+                ->where('records.mdd_id', $mddId)
+                ->whereNull('records.deleted_at')
+                ->groupBy('records.physics')
+                ->get()
+                ->keyBy('physics');
+
+            $featureCpm = $featureStats->get('cpm');
+            $featureVq3 = $featureStats->get('vq3');
+
+            // Query 3: Longest streak
+            $longestStreak = DB::select("SELECT MAX(streak) as longest_streak FROM (SELECT @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak, @prev_date := DATE(date_set) as date_set FROM records, (SELECT @streak := 0, @prev_date := NULL) vars WHERE mdd_id = ? AND deleted_at IS NULL ORDER BY date_set) streaks", [$mddId]);
+
+            // Query 4: First record date
+            $firstRecordDate = DB::table('records')->where('mdd_id', $mddId)->whereNull('deleted_at')->orderBy('date_set', 'ASC')->value('date_set');
+
+            // Query 5: Most active month
+            $mostActiveMonth = DB::select("SELECT DATE_FORMAT(date_set, '%Y-%m') as month, COUNT(*) as count FROM records WHERE mdd_id = ? AND deleted_at IS NULL GROUP BY month ORDER BY count DESC LIMIT 1", [$mddId]);
+
+            // Query 6: Marathon record (longest time)
+            $marathonRecord = DB::table('records')->where('mdd_id', $mddId)->whereNull('deleted_at')->orderBy('time', 'DESC')->first(['time', 'mapname', 'physics', 'mode']);
+
+            $worldRecordsCpm = (int) ($cpm->wrs ?? 0);
+            $worldRecordsVq3 = (int) ($vq3->wrs ?? 0);
+            $uniqueMapsCpm = (int) ($cpm->unique_maps ?? 0);
+            $uniqueMapsVq3 = (int) ($vq3->unique_maps ?? 0);
+
+            return [
+                'cpm_records' => (int) ($cpm->total ?? 0),
+                'vq3_records' => (int) ($vq3->total ?? 0),
+                'cpm_world_records' => $worldRecordsCpm,
+                'vq3_world_records' => $worldRecordsVq3,
+                'cpm_top3' => (int) ($cpm->top3 ?? 0),
+                'vq3_top3' => (int) ($vq3->top3 ?? 0),
+                'cpm_top10' => (int) ($cpm->top10 ?? 0),
+                'vq3_top10' => (int) ($vq3->top10 ?? 0),
+                'cpm_unique_maps' => $uniqueMapsCpm,
+                'vq3_unique_maps' => $uniqueMapsVq3,
+                'cpm_avg_rank' => $cpm ? round($cpm->avg_rank, 1) : 0,
+                'vq3_avg_rank' => $vq3 ? round($vq3->avg_rank, 1) : 0,
+                'cpm_slick' => (int) ($featureCpm->slick ?? 0),
+                'vq3_slick' => (int) ($featureVq3->slick ?? 0),
+                'cpm_jumppad' => (int) ($featureCpm->jumppad ?? 0),
+                'vq3_jumppad' => (int) ($featureVq3->jumppad ?? 0),
+                'cpm_teleporter' => (int) ($featureCpm->teleporter ?? 0),
+                'vq3_teleporter' => (int) ($featureVq3->teleporter ?? 0),
+                'longest_streak' => $longestStreak[0]->longest_streak ?? 0,
+                'cpm_dominance' => $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0,
+                'vq3_dominance' => $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0,
+                'first_record_date' => $firstRecordDate,
+                'most_active_month' => $mostActiveMonth[0] ?? null,
+                'marathon_record' => $marathonRecord,
+            ];
+        });
+    }
+
+    /**
+     * API endpoint: returns competitors and rivals (loaded async by frontend)
+     */
+    public function profileExtras($mddId)
+    {
+        try {
+            $cpmCompetitors = $this->getCachedCompetitors($mddId, 'cpm');
+            $vq3Competitors = $this->getCachedCompetitors($mddId, 'vq3');
+            $cpmRivals = $this->getCachedRivals($mddId, 'cpm');
+            $vq3Rivals = $this->getCachedRivals($mddId, 'vq3');
+        } catch (\Exception $e) {
+            $cpmCompetitors = ['better' => [], 'worse' => [], 'my_score' => 0];
+            $vq3Competitors = ['better' => [], 'worse' => [], 'my_score' => 0];
+            $cpmRivals = ['beaten' => [], 'beaten_by' => []];
+            $vq3Rivals = ['beaten' => [], 'beaten_by' => []];
+        }
+
+        return response()->json([
+            'cpm_competitors' => $cpmCompetitors,
+            'vq3_competitors' => $vq3Competitors,
+            'cpm_rivals' => $cpmRivals,
+            'vq3_rivals' => $vq3Rivals,
+        ]);
     }
 
     /**

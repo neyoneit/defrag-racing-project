@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class CalculateRatingsRust extends Command
@@ -12,6 +13,7 @@ class CalculateRatingsRust extends Command
 
     // All available categories
     const CATEGORIES = ['overall', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg', 'strafe', 'lg'];
+    const RANKING_TYPES = ['active_players', 'all_players'];
 
     public function handle()
     {
@@ -65,6 +67,9 @@ class CalculateRatingsRust extends Command
                 $this->line($line);
             }
 
+            // Flush ranking page cache for this physics/mode/category
+            $this->flushRankingCache($physics, $mode, $category);
+
             Log::info("Rust ratings calculated", [
                 'physics' => $physics,
                 'mode' => $mode,
@@ -88,5 +93,28 @@ class CalculateRatingsRust extends Command
 
             return 1;
         }
+    }
+
+    /**
+     * Flush ranking page cache after recalculation.
+     * Uses Redis SCAN via Cache::forget for known key patterns.
+     */
+    private function flushRankingCache(string $physics, string $mode, string $category): void
+    {
+        $flushed = 0;
+
+        foreach (self::RANKING_TYPES as $rankingtype) {
+            // Flush first 50 pages (covers virtually all traffic)
+            for ($page = 1; $page <= 50; $page++) {
+                $key = "ranking:{$physics}:{$mode}:{$rankingtype}:{$category}:{$page}";
+                Cache::forget($key);
+                $flushed++;
+            }
+        }
+
+        // Also flush the last recalculation timestamp
+        Cache::forget('ranking:last_recalculation');
+
+        $this->line("  Cache flushed ({$flushed} keys + recalculation timestamp)");
     }
 }

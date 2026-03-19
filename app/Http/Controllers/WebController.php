@@ -12,51 +12,65 @@ use App\Models\Tournament;
 use App\Models\MddProfile;
 use App\Models\UploadedDemo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class WebController extends Controller
 {
     public function home() {
-        $latestAnnouncement = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first();
-        $recentAnnouncements = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->skip(1)->limit(5)->get();
+        $announcements = Cache::remember('home:announcements', 300, function () {
+            $latest = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first();
+            $recent = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->skip(1)->limit(5)->get();
+            return ['latest' => $latest, 'recent' => $recent];
+        });
 
-        $maps = Map::query()
-            ->orderBy('date_added', 'DESC')
-            ->orderBy('id', 'DESC')
-            ->limit(4)
-            ->get();
+        $maps = Cache::remember('home:latest_maps', 600, function () {
+            return Map::query()
+                ->orderBy('date_added', 'DESC')
+                ->orderBy('id', 'DESC')
+                ->limit(4)
+                ->get();
+        });
 
-        $totalMaps = Map::count();
-        $totalDemos = UploadedDemo::count();
+        $totalMaps = Cache::remember('home:total_maps', 3600, fn () => Map::count());
+        $totalDemos = Cache::remember('home:total_demos', 900, fn () => UploadedDemo::count());
 
-        $tournaments = Tournament::query()
-            ->where('start_date', '<=', now())
-            ->orderBy('start_date', 'DESC')
-            ->limit(3)
-            ->get();
+        $tournaments = Cache::remember('home:tournaments', 600, function () {
+            return Tournament::query()
+                ->where('start_date', '<=', now())
+                ->orderBy('start_date', 'DESC')
+                ->limit(3)
+                ->get();
+        });
 
-        $servers = Server::where('online', true)
-            ->where('visible', true)
-            ->with(['mapdata', 'onlinePlayers.spectators'])
-            ->orderBy('plain_name', 'asc')
-            ->get();
+        // Servers change frequently (player joins/leaves), short TTL
+        $serverData = Cache::remember('home:servers', 30, function () {
+            $servers = Server::where('online', true)
+                ->where('visible', true)
+                ->with(['mapdata', 'onlinePlayers.spectators'])
+                ->orderBy('plain_name', 'asc')
+                ->get();
 
-        $servers = $this->sortServers($servers);
+            $servers = $this->sortServers($servers);
 
-        $activeServers = $servers->count();
-        $servers = $servers->values()->take(3);
+            return [
+                'activeServers' => $servers->count(),
+                'servers' => $servers->values()->take(3),
+            ];
+        });
 
-        // Count active players in last 30 days (using updated_at as proxy for activity)
-        $activePlayers = MddProfile::where('updated_at', '>=', now()->subDays(30))->count();
+        $activePlayers = Cache::remember('home:active_players', 3600, function () {
+            return MddProfile::where('updated_at', '>=', now()->subDays(30))->count();
+        });
 
         return Inertia::render('Home')
-            ->with('latestAnnouncement', $latestAnnouncement)
-            ->with('recentAnnouncements', $recentAnnouncements)
+            ->with('latestAnnouncement', $announcements['latest'])
+            ->with('recentAnnouncements', $announcements['recent'])
             ->with('maps', $maps)
-            ->with('servers', $servers)
+            ->with('servers', $serverData['servers'])
             ->with('tournaments', $tournaments)
             ->with('totalMaps', $totalMaps)
             ->with('totalDemos', $totalDemos)
-            ->with('activeServers', $activeServers)
+            ->with('activeServers', $serverData['activeServers'])
             ->with('activePlayers', $activePlayers);
     }
 

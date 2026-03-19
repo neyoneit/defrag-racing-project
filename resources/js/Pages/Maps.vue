@@ -9,7 +9,6 @@
     const props = defineProps({
         maps: Object,
         queries: Object,
-        profiles: Array
     });
 
     const showFilters = ref(Object.keys(props.queries ?? {}).length > 0);
@@ -142,7 +141,7 @@
                 leave-to-class="opacity-0 max-h-0"
             >
                 <div v-if="showFilters" class="overflow-hidden">
-                    <MapFilters :show="showFilters" :queries="queries ?? {}" :profiles="profiles" />
+                    <MapFilters :show="showFilters" :queries="queries ?? {}" />
                 </div>
             </Transition>
 

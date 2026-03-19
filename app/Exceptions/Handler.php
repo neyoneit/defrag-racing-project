@@ -33,6 +33,15 @@ class Handler extends ExceptionHandler
         $this->renderable(function (HttpException $e, $request) {
             $status = $e->getStatusCode();
 
+            // Return minimal 404 for static file requests (images, fonts, etc.)
+            // Prevents sending 82-207KB Inertia HTML for missing thumbnails/avatars
+            if ($status === 404) {
+                $path = $request->path();
+                if (preg_match('/\.(jpg|jpeg|png|gif|webp|svg|ico|woff2?|ttf|eot|css|js|map)$/i', $path)) {
+                    return response('', 404, ['Content-Type' => 'text/plain']);
+                }
+            }
+
             // Only handle specific error codes
             if (in_array($status, [403, 404, 500, 503])) {
                 return Inertia::render('Errors/Error', [

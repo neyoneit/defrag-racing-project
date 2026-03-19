@@ -26,34 +26,26 @@ class MapsController extends Controller
             return redirect()->route('maps.filters', $request->all());
         }
 
-        $mddProfiles = MddProfile::orderBy('id', 'DESC')
-            ->with('user:id,name,plain_name,country')
-            ->get(['id', 'user_id', 'name', 'country', 'plain_name']);
-
         $maps = Map::query()
+            ->select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(30)
+            ->paginate(20)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
             return redirect()->route('maps', ['page' => $maps->lastPage()]);
         }
 
-        return Inertia::render('Maps')->with('maps', $maps)->with('profiles', $mddProfiles);
+        return Inertia::render('Maps')->with('maps', $maps);
     }
 
     public function filters(Request $request) {
-        $mddProfiles = MddProfile::orderBy('id', 'DESC')
-            ->with('user:id,name,plain_name,country')
-            ->get(['id', 'user_id', 'name', 'country', 'plain_name']);
-
-        
         $mapFilters = (new MapFilters())->filter($request);
 
         $maps = $mapFilters['query'];
 
-        $maps = $maps->paginate(30)->withQueryString();
+        $maps = $maps->paginate(20)->withQueryString();
 
         $queries = $mapFilters['data'];
 
@@ -65,8 +57,19 @@ class MapsController extends Controller
 
         return Inertia::render('Maps')
             ->with('maps', $maps)
-            ->with('queries', $queries)
-            ->with('profiles', $mddProfiles);
+            ->with('queries', $queries);
+    }
+
+    /**
+     * API endpoint: return MDD profiles for filter dropdowns (lazy-loaded)
+     */
+    public function profiles()
+    {
+        $profiles = MddProfile::orderBy('id', 'DESC')
+            ->with('user:id,name,plain_name,country')
+            ->get(['id', 'user_id', 'name', 'country', 'plain_name']);
+
+        return response()->json($profiles);
     }
 
     public function map(Request $request, $mapname) {

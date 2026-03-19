@@ -16,6 +16,7 @@ class UploadedDemo extends Model
 
         $clearCache = function ($demo) {
             Cache::forget('demo_counts_browse');
+            Cache::forget('home:total_demos');
             if ($demo->user_id) {
                 Cache::forget("demo_counts_user_{$demo->user_id}");
             }

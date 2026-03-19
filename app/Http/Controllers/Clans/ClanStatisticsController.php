@@ -41,42 +41,25 @@ class ClanStatisticsController extends Controller
                 COUNT(DISTINCT DATE(date_set)) as active_days
             FROM records
             WHERE user_id IN ($memberIdsStr)
+            AND deleted_at IS NULL
         ")[0];
 
-        // Fast top1 count using index
+        // Fast top1 count using pre-calculated rank column
         $top1Count = DB::select("
             SELECT COUNT(*) as count
-            FROM (
-                SELECT r1.id
-                FROM records r1
-                INNER JOIN (
-                    SELECT mapname, physics, mode, MIN(time) as best_time
-                    FROM records
-                    GROUP BY mapname, physics, mode
-                ) r2 ON r1.mapname = r2.mapname
-                    AND r1.physics = r2.physics
-                    AND r1.mode = r2.mode
-                    AND r1.time = r2.best_time
-                WHERE r1.user_id IN ($memberIdsStr)
-            ) as top1s
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` = 1
+            AND deleted_at IS NULL
         ")[0]->count ?? 0;
 
-        // Fast top3 count
+        // Fast top3 count using pre-calculated rank column
         $top3Count = DB::select("
             SELECT COUNT(*) as count
-            FROM (
-                SELECT r1.id
-                FROM records r1
-                WHERE r1.user_id IN ($memberIdsStr)
-                AND (
-                    SELECT COUNT(DISTINCT r2.time)
-                    FROM records r2
-                    WHERE r2.mapname = r1.mapname
-                    AND r2.physics = r1.physics
-                    AND r2.mode = r1.mode
-                    AND r2.time < r1.time
-                ) < 3
-            ) as top3s
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` <= 3
+            AND deleted_at IS NULL
         ")[0]->count ?? 0;
 
         // Optimized streak calculation using SQL
@@ -85,6 +68,7 @@ class ClanStatisticsController extends Controller
                 SELECT DISTINCT DATE(date_set) as record_date
                 FROM records
                 WHERE user_id IN ($memberIdsStr)
+                AND deleted_at IS NULL
                 ORDER BY record_date
             ),
             streaks AS (
@@ -109,24 +93,19 @@ class ClanStatisticsController extends Controller
             SELECT COUNT(*) as count
             FROM records
             WHERE user_id IN ($memberIdsStr)
+            AND deleted_at IS NULL
             GROUP BY DATE(date_set)
             ORDER BY count DESC
             LIMIT 1
         ")[0]->count ?? 0;
 
-        // Average WR age in days
+        // Average WR age in days using pre-calculated rank column
         $avgWrAge = DB::select("
-            SELECT AVG(DATEDIFF(NOW(), r1.date_set)) as avg_age
-            FROM records r1
-            INNER JOIN (
-                SELECT mapname, physics, mode, MIN(time) as best_time
-                FROM records
-                GROUP BY mapname, physics, mode
-            ) r2 ON r1.mapname = r2.mapname
-                AND r1.physics = r2.physics
-                AND r1.mode = r2.mode
-                AND r1.time = r2.best_time
-            WHERE r1.user_id IN ($memberIdsStr)
+            SELECT AVG(DATEDIFF(NOW(), date_set)) as avg_age
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` = 1
+            AND deleted_at IS NULL
         ")[0]->avg_age ?? 0;
 
         // Physics preference (VQ3 vs CPM)
@@ -136,32 +115,25 @@ class ClanStatisticsController extends Controller
                 SUM(CASE WHEN physics LIKE '%cpm%' THEN 1 ELSE 0 END) as cpm_count
             FROM records
             WHERE user_id IN ($memberIdsStr)
+            AND deleted_at IS NULL
         ")[0];
 
-        // Top 10 density
+        // Top 10 density using pre-calculated rank column
         $top10Count = DB::select("
             SELECT COUNT(*) as count
-            FROM (
-                SELECT r1.id
-                FROM records r1
-                WHERE r1.user_id IN ($memberIdsStr)
-                AND (
-                    SELECT COUNT(DISTINCT r2.time)
-                    FROM records r2
-                    WHERE r2.mapname = r1.mapname
-                    AND r2.physics = r1.physics
-                    AND r2.mode = r1.mode
-                    AND r2.time < r1.time
-                ) < 10
-            ) as top10s
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` <= 10
+            AND deleted_at IS NULL
         ")[0]->count ?? 0;
 
         // Completion rate
         $completionRate = DB::select("
             SELECT
-                (COUNT(DISTINCT r.mapname) * 100.0 / NULLIF((SELECT COUNT(DISTINCT mapname) FROM records), 0)) as rate
+                (COUNT(DISTINCT r.mapname) * 100.0 / NULLIF((SELECT COUNT(DISTINCT mapname) FROM records WHERE deleted_at IS NULL), 0)) as rate
             FROM records r
             WHERE r.user_id IN ($memberIdsStr)
+            AND r.deleted_at IS NULL
         ")[0]->rate ?? 0;
 
         return [
@@ -189,25 +161,20 @@ class ClanStatisticsController extends Controller
             SELECT user_id, COUNT(*) as total
             FROM records
             WHERE user_id IN ($memberIdsStr)
+            AND deleted_at IS NULL
             GROUP BY user_id
             ORDER BY total DESC
             LIMIT 1
         ")[0] ?? null;
 
-        // Speed Demon - Most #1 positions
+        // Speed Demon - Most #1 positions using pre-calculated rank column
         $speedDemon = DB::select("
-            SELECT r1.user_id, COUNT(*) as top1_count
-            FROM records r1
-            INNER JOIN (
-                SELECT mapname, physics, mode, MIN(time) as best_time
-                FROM records
-                GROUP BY mapname, physics, mode
-            ) r2 ON r1.mapname = r2.mapname
-                AND r1.physics = r2.physics
-                AND r1.mode = r2.mode
-                AND r1.time = r2.best_time
-            WHERE r1.user_id IN ($memberIdsStr)
-            GROUP BY r1.user_id
+            SELECT user_id, COUNT(*) as top1_count
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` = 1
+            AND deleted_at IS NULL
+            GROUP BY user_id
             ORDER BY top1_count DESC
             LIMIT 1
         ")[0] ?? null;
@@ -220,6 +187,7 @@ class ClanStatisticsController extends Controller
                     DATE(date_set) as record_date
                 FROM records
                 WHERE user_id IN ($memberIdsStr)
+                AND deleted_at IS NULL
                 GROUP BY user_id, DATE(date_set)
             ),
             player_streaks AS (
@@ -249,20 +217,14 @@ class ClanStatisticsController extends Controller
             LIMIT 1
         ")[0] ?? null;
 
-        // Sharpshooter - Most top 3 finishes
+        // Sharpshooter - Most top 3 finishes using pre-calculated rank column
         $sharpshooter = DB::select("
-            SELECT r1.user_id, COUNT(*) as top3_count
-            FROM records r1
-            WHERE r1.user_id IN ($memberIdsStr)
-            AND (
-                SELECT COUNT(DISTINCT r2.time)
-                FROM records r2
-                WHERE r2.mapname = r1.mapname
-                AND r2.physics = r1.physics
-                AND r2.mode = r1.mode
-                AND r2.time < r1.time
-            ) < 3
-            GROUP BY r1.user_id
+            SELECT user_id, COUNT(*) as top3_count
+            FROM records
+            WHERE user_id IN ($memberIdsStr)
+            AND `rank` <= 3
+            AND deleted_at IS NULL
+            GROUP BY user_id
             ORDER BY top3_count DESC
             LIMIT 1
         ")[0] ?? null;
@@ -273,6 +235,7 @@ class ClanStatisticsController extends Controller
             FROM records
             WHERE user_id IN ($memberIdsStr)
             AND date_set >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND deleted_at IS NULL
             GROUP BY user_id
             ORDER BY recent_count DESC
             LIMIT 1
@@ -283,6 +246,7 @@ class ClanStatisticsController extends Controller
             SELECT user_id, COUNT(DISTINCT mapname) as map_count
             FROM records
             WHERE user_id IN ($memberIdsStr)
+            AND deleted_at IS NULL
             GROUP BY user_id
             ORDER BY map_count DESC
             LIMIT 1
@@ -294,6 +258,7 @@ class ClanStatisticsController extends Controller
             FROM records
             WHERE user_id IN ($memberIdsStr)
             AND physics LIKE '%vq3%'
+            AND deleted_at IS NULL
             GROUP BY user_id
             ORDER BY vq3_count DESC
             LIMIT 1
@@ -305,6 +270,7 @@ class ClanStatisticsController extends Controller
             FROM records
             WHERE user_id IN ($memberIdsStr)
             AND physics LIKE '%cpm%'
+            AND deleted_at IS NULL
             GROUP BY user_id
             ORDER BY cpm_count DESC
             LIMIT 1
@@ -317,6 +283,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.weapons LIKE '%RL%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY rocket_count DESC
             LIMIT 1
@@ -329,6 +296,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.weapons LIKE '%PG%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY plasma_count DESC
             LIMIT 1
@@ -341,6 +309,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.functions LIKE '%slick%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY slick_count DESC
             LIMIT 1
@@ -353,6 +322,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.weapons LIKE '%GL%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY grenade_count DESC
             LIMIT 1
@@ -365,6 +335,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.weapons LIKE '%BFG%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY bfg_count DESC
             LIMIT 1
@@ -377,6 +348,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.functions LIKE '%teleport%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY teleporter_count DESC
             LIMIT 1
@@ -389,6 +361,7 @@ class ClanStatisticsController extends Controller
             JOIN maps m ON r.mapname = m.name
             WHERE r.user_id IN ($memberIdsStr)
             AND m.functions LIKE '%jumppad%'
+            AND r.deleted_at IS NULL
             GROUP BY user_id
             ORDER BY jumppad_count DESC
             LIMIT 1
@@ -429,11 +402,12 @@ class ClanStatisticsController extends Controller
             FROM records r
             JOIN users u ON r.user_id = u.id
             WHERE u.id IN ($memberIdsStr)
+            AND r.deleted_at IS NULL
             GROUP BY u.id, u.name, u.plain_name, u.profile_photo_path, u.country
             ORDER BY total DESC
         ");
 
-        // Top Positions Leaderboard (optimized with subquery)
+        // Top Positions Leaderboard using pre-calculated rank column
         $topPositionsLeaderboard = DB::select("
             SELECT
                 u.id,
@@ -445,32 +419,20 @@ class ClanStatisticsController extends Controller
                 COALESCE(top3_counts.top3, 0) as top3
             FROM users u
             LEFT JOIN (
-                SELECT r1.user_id, COUNT(*) as top1
-                FROM records r1
-                INNER JOIN (
-                    SELECT mapname, physics, mode, MIN(time) as best_time
-                    FROM records
-                    GROUP BY mapname, physics, mode
-                ) r2 ON r1.mapname = r2.mapname
-                    AND r1.physics = r2.physics
-                    AND r1.mode = r2.mode
-                    AND r1.time = r2.best_time
-                WHERE r1.user_id IN ($memberIdsStr)
-                GROUP BY r1.user_id
+                SELECT user_id, COUNT(*) as top1
+                FROM records
+                WHERE user_id IN ($memberIdsStr)
+                AND `rank` = 1
+                AND deleted_at IS NULL
+                GROUP BY user_id
             ) top1_counts ON u.id = top1_counts.user_id
             LEFT JOIN (
-                SELECT r1.user_id, COUNT(*) as top3
-                FROM records r1
-                WHERE r1.user_id IN ($memberIdsStr)
-                AND (
-                    SELECT COUNT(DISTINCT r2.time)
-                    FROM records r2
-                    WHERE r2.mapname = r1.mapname
-                    AND r2.physics = r1.physics
-                    AND r2.mode = r1.mode
-                    AND r2.time < r1.time
-                ) < 3
-                GROUP BY r1.user_id
+                SELECT user_id, COUNT(*) as top3
+                FROM records
+                WHERE user_id IN ($memberIdsStr)
+                AND `rank` <= 3
+                AND deleted_at IS NULL
+                GROUP BY user_id
             ) top3_counts ON u.id = top3_counts.user_id
             WHERE u.id IN ($memberIdsStr)
             ORDER BY top1 DESC, top3 DESC
@@ -489,6 +451,7 @@ class ClanStatisticsController extends Controller
             JOIN users u ON r.user_id = u.id
             WHERE u.id IN ($memberIdsStr)
             AND r.date_set >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            AND r.deleted_at IS NULL
             GROUP BY u.id, u.name, u.plain_name, u.profile_photo_path, u.country
             ORDER BY recent_count DESC
         ");
@@ -505,6 +468,7 @@ class ClanStatisticsController extends Controller
             FROM records r
             JOIN users u ON r.user_id = u.id
             WHERE u.id IN ($memberIdsStr)
+            AND r.deleted_at IS NULL
             GROUP BY u.id, u.name, u.plain_name, u.profile_photo_path, u.country
             ORDER BY unique_maps DESC
         ");
@@ -559,7 +523,7 @@ class ClanStatisticsController extends Controller
                 COALESCE(SUM(u.cached_top3_count), 0) as total_top3,
                 (COALESCE(SUM(u.cached_wr_count), 0) * 3 + COALESCE(SUM(u.cached_top3_count), 0)) as rivalry_score
             FROM clans c
-            JOIN clan_players cp ON c.id = cp.clan_id
+            JOIN clan_players cp ON c.id = cp.clan_id AND cp.deleted_at IS NULL
             JOIN users u ON cp.user_id = u.id
             WHERE c.id != ?
             GROUP BY c.id, c.name, c.tag, c.image
@@ -573,15 +537,6 @@ class ClanStatisticsController extends Controller
 
         // Untouchable World Records - Only current #1 times held by clan members
         $untouchableRecords = DB::select("
-            WITH current_wrs AS (
-                SELECT
-                    mapname,
-                    physics,
-                    mode,
-                    MIN(time) as best_time
-                FROM records
-                GROUP BY mapname, physics, mode
-            )
             SELECT
                 r.id,
                 r.mapname,
@@ -596,11 +551,9 @@ class ClanStatisticsController extends Controller
                 u.profile_photo_path
             FROM records r
             JOIN users u ON r.user_id = u.id
-            INNER JOIN current_wrs cw ON r.mapname = cw.mapname
-                AND r.physics = cw.physics
-                AND r.mode = cw.mode
-                AND r.time = cw.best_time
             WHERE r.user_id IN ($memberIdsStr)
+            AND r.`rank` = 1
+            AND r.deleted_at IS NULL
             ORDER BY days_held DESC
             LIMIT 10
         ");

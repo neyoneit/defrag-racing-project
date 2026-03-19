@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Str;
 
@@ -13,6 +14,19 @@ class Map extends Model
 {
     use HasFactory;
     use Searchable;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        $clearHomeCache = function () {
+            Cache::forget('home:latest_maps');
+            Cache::forget('home:total_maps');
+        };
+
+        static::saved($clearHomeCache);
+        static::deleted($clearHomeCache);
+    }
 
     /**
      * The attributes that are mass assignable.
