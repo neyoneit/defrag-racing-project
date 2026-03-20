@@ -105,7 +105,7 @@ class DemomeController extends Controller
         $renderedVideo->update([
             'failure_reason' => $validated['failure_reason'],
             'retry_count' => $renderedVideo->retry_count + 1,
-            'status' => $renderedVideo->retry_count < 2 ? 'pending' : 'failed',
+            'status' => 'failed',
         ]);
 
         Cache::put('demome:current_status', 'idle', now()->addMinutes(30));
