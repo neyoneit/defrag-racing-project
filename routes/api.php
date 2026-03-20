@@ -36,4 +36,5 @@ Route::prefix('demome')->middleware('demome.token')->group(function () {
     Route::get('/download-demo/{demo}', [\App\Http\Controllers\Api\DemomeController::class, 'downloadDemo']);
     Route::get('/videos-to-publish', [\App\Http\Controllers\Api\DemomeController::class, 'videosToPublish']);
     Route::post('/mark-published/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'markPublished']);
+    Route::get('/lookup-by-hash/{hash}', [\App\Http\Controllers\Api\DemomeController::class, 'lookupByHash']);
 });

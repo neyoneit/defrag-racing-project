@@ -153,13 +153,23 @@ class DemomeController extends Controller
             'youtube_video_id' => 'required|string|max:20',
             'render_duration_seconds' => 'nullable|integer',
             'video_file_size' => 'nullable|integer',
-            'source' => 'required|string|in:discord,web,auto',
+            'source' => 'required|string|in:discord,web,auto,migration',
             'requested_by' => 'nullable|string',
+            'published_at' => 'nullable|date',
+            'publish_approved' => 'nullable|boolean',
+            'record_id' => 'nullable|integer',
+            'demo_id' => 'nullable|integer',
         ]);
 
+        // Check for duplicate by youtube_video_id
+        $existing = RenderedVideo::where('youtube_video_id', $validated['youtube_video_id'])->first();
+        if ($existing) {
+            return response()->json(['success' => true, 'id' => $existing->id, 'duplicate' => true]);
+        }
+
         // Try to match to an existing record
-        $recordId = null;
-        if ($validated['map_name'] && $validated['physics'] && $validated['time_ms']) {
+        $recordId = $validated['record_id'] ?? null;
+        if (!$recordId && $validated['map_name'] && ($validated['physics'] ?? null) && ($validated['time_ms'] ?? null)) {
             $record = Record::where('mapname', $validated['map_name'])
                 ->where('physics', $validated['physics'])
                 ->where('time', $validated['time_ms'])
@@ -177,6 +187,7 @@ class DemomeController extends Controller
             'time_ms' => $validated['time_ms'],
             'gametype' => $validated['gametype'] ?? null,
             'record_id' => $recordId,
+            'demo_id' => $validated['demo_id'] ?? null,
             'source' => $validated['source'],
             'requested_by' => $validated['requested_by'],
             'status' => 'completed',
@@ -188,7 +199,8 @@ class DemomeController extends Controller
             'render_duration_seconds' => $validated['render_duration_seconds'],
             'video_file_size' => $validated['video_file_size'],
             'is_visible' => true,
-            'published_at' => now(),
+            'published_at' => $validated['published_at'] ?? now(),
+            'publish_approved' => $validated['publish_approved'] ?? true,
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
@@ -411,6 +423,30 @@ class DemomeController extends Controller
         $renderedVideo->update(['published_at' => now()]);
 
         return response()->json(['success' => true]);
+    }
+
+    public function lookupByHash(string $hash)
+    {
+        $demo = UploadedDemo::where('file_hash', $hash)
+            ->whereNotIn('status', ['failed', 'failed-validity', 'unsupported-version'])
+            ->first();
+
+        if (!$demo) {
+            return response()->json(['success' => false, 'message' => 'No demo found with this hash']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'demo_id' => $demo->id,
+            'map_name' => $demo->map_name,
+            'player_name' => $demo->player_name,
+            'physics' => $demo->physics,
+            'time_ms' => $demo->time_ms,
+            'gametype' => $demo->gametype,
+            'record_id' => $demo->record_id,
+            'demo_filename' => $demo->processed_filename ?? $demo->original_filename,
+            'download_url' => "https://defrag.racing/demos/{$demo->id}/download",
+        ]);
     }
 
     private function parseFilename(string $filename): array
