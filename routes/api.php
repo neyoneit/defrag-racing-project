@@ -33,4 +33,5 @@ Route::prefix('demome')->middleware('demome.token')->group(function () {
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DemomeController::class, 'heartbeat']);
     Route::post('/report', [\App\Http\Controllers\Api\DemomeController::class, 'report']);
     Route::post('/upload-demo', [\App\Http\Controllers\Api\DemomeController::class, 'uploadDemo']);
+    Route::get('/download-demo/{demo}', [\App\Http\Controllers\Api\DemomeController::class, 'downloadDemo']);
 });

@@ -89,7 +89,7 @@ class PopulateRenderQueue extends Command
         $added = 0;
 
         foreach ($demos as $demo) {
-            $demoUrl = URL::signedRoute('demos.download', ['demo' => $demo->id], now()->addDays(7));
+            $demoUrl = config('app.url') . "/api/demome/download-demo/{$demo->id}";
 
             RenderedVideo::create([
                 'map_name' => $demo->map_name ?? $demo->record->mapname,
