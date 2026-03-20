@@ -37,7 +37,9 @@ class ProfileController extends Controller {
                 ->with('vq3Records', (object)['total' => 0, 'data' => [], 'per_page' => 20])
                 ->with('cpmRecords', (object)['total' => 0, 'data' => [], 'per_page' => 20])
                 ->with('hasProfile', false)
-                ->with('hasMapperProfile', $user->hasMapperProfile());
+                ->with('hasMapperProfile', $user->hasMapperProfile())
+                ->with('hasModelerProfile', $user->hasModelerProfile())
+                ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get());
         }
 
         // Check which props Inertia is requesting (partial reload)
@@ -172,7 +174,9 @@ class ProfileController extends Controller {
             ->with('user', $user)
             ->with('type', $type)
             ->with('hasProfile', true)
-            ->with('hasMapperProfile', $user->hasMapperProfile());
+            ->with('hasMapperProfile', $user->hasMapperProfile())
+            ->with('hasModelerProfile', $user->hasModelerProfile())
+            ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get());
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -316,7 +320,9 @@ class ProfileController extends Controller {
             ->with('activity_data', $activityData)
             ->with('activity_year', $activityYear)
             ->with('activity_years', $activityYears)
-            ->with('hasMapperProfile', false);
+            ->with('hasMapperProfile', false)
+            ->with('hasModelerProfile', false)
+            ->with('creatorClaimNames', []);
     }
 
     public function latestRecords($mddId) {

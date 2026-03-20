@@ -1979,6 +1979,8 @@ class ModelsController extends Controller
             }
         }
 
+        $model->incrementViews();
+
         return Inertia::render('Models/Show', [
             'model' => $model,
             'baseModelData' => $baseModelData,

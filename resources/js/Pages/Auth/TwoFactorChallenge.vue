@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref } from 'vue';
+import { nextTick, ref, onMounted } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const recovery = ref(false);
@@ -11,6 +11,10 @@ const form = useForm({
 
 const recoveryCodeInput = ref(null);
 const codeInput = ref(null);
+
+onMounted(() => {
+    nextTick(() => codeInput.value?.focus());
+});
 
 const toggleRecovery = async () => {
     recovery.value ^= true;

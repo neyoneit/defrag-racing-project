@@ -31,6 +31,7 @@ class PlayerModel extends Model
         'rotate_gif',
         'gesture_gif',
         'downloads',
+        'views',
         'poly_count',
         'vert_count',
         'has_sounds',
@@ -49,6 +50,7 @@ class PlayerModel extends Model
         'hidden' => 'boolean',
         'is_nsfw' => 'boolean',
         'downloads' => 'integer',
+        'views' => 'integer',
         'poly_count' => 'integer',
         'vert_count' => 'integer',
         'available_skins' => 'array',
@@ -125,5 +127,10 @@ class PlayerModel extends Model
     public function incrementDownloads()
     {
         $this->increment('downloads');
+    }
+
+    public function incrementViews()
+    {
+        $this->increment('views');
     }
 }
