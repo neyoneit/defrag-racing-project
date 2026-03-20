@@ -38,6 +38,7 @@ class DemomeControl extends Page
         return [
             'apiToken' => config('services.demome.api_token') ?: 'Not set',
             'isPaused' => SiteSetting::getBool('demome:paused', false),
+            'isAutoQueuePaused' => SiteSetting::getBool('demome:auto_queue_paused', false),
             'isOnline' => $isOnline,
             'currentStatus' => Cache::get('demome:current_status', 'unknown'),
             'lastHeartbeat' => $lastHeartbeat ? Carbon::parse($lastHeartbeat)->diffForHumans() : 'Never',
@@ -79,8 +80,20 @@ class DemomeControl extends Page
         SiteSetting::set('demome:paused', !$currentState ? '1' : '0');
 
         Notification::make()
-            ->title($currentState ? 'Demome Unpaused' : 'Demome Paused')
-            ->body($currentState ? 'Demome will pick up new renders on next poll.' : 'Demome will not receive new items until unpaused.')
+            ->title($currentState ? 'Rendering Unpaused' : 'Rendering Paused')
+            ->body($currentState ? 'Demome will pick up renders on next poll.' : 'Demome will not pick up any videos until unpaused.')
+            ->success()
+            ->send();
+    }
+
+    public function toggleAutoQueue(): void
+    {
+        $currentState = SiteSetting::getBool('demome:auto_queue_paused', false);
+        SiteSetting::set('demome:auto_queue_paused', !$currentState ? '1' : '0');
+
+        Notification::make()
+            ->title($currentState ? 'Auto-Queue Enabled' : 'Auto-Queue Disabled')
+            ->body($currentState ? 'Verified records will be auto-added to render queue.' : 'Auto-queue stopped. User requests still work.')
             ->success()
             ->send();
     }

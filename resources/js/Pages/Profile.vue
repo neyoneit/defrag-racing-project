@@ -97,6 +97,14 @@
             type: Boolean,
             default: false
         },
+        donorTier: {
+            type: String,
+            default: null
+        },
+        donationTotal: {
+            type: Object,
+            default: () => ({})
+        },
         tagCount: {
             type: Number,
             default: 0
@@ -709,9 +717,24 @@
                             </div>
 
                             <!-- Donor Badge -->
-                            <div v-if="isDonor" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-950/70 border border-pink-400/50 shadow-xl backdrop-blur-sm">
-                                <img src="/images/svg/badge-donor.svg" class="w-4 h-4" alt="Supporter">
-                                <span class="text-xs font-bold text-pink-300 uppercase tracking-wider">Supporter</span>
+                            <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative"
+                                :class="{
+                                    'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter',
+                                    'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold',
+                                    'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond',
+                                }">
+                                <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                <span class="text-xs font-bold uppercase tracking-wider"
+                                    :class="{
+                                        'text-pink-300': donorTier === 'supporter',
+                                        'text-amber-300': donorTier === 'gold',
+                                        'text-cyan-300': donorTier === 'diamond',
+                                    }">
+                                    {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                </span>
+                                <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
+                                </div>
                             </div>
 
                             <!-- Tagger Badge -->
