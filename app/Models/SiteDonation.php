@@ -12,6 +12,7 @@ class SiteDonation extends Model
     protected $fillable = [
         'user_id',
         'donor_name',
+        'donor_email',
         'amount',
         'currency',
         'donation_date',

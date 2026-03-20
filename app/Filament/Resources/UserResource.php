@@ -87,6 +87,13 @@ class UserResource extends Resource
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),
                     ])->columns(1),
+                Forms\Components\Section::make('Donations')
+                    ->schema([
+                        Forms\Components\TagsInput::make('donation_emails')
+                            ->label('Donation Emails')
+                            ->helperText('PayPal emails used for donations. Donations with matching email are automatically linked.')
+                            ->placeholder('Add email...'),
+                    ])->columns(1),
                 Forms\Components\TextInput::make('twitter_name')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('twitch_name')

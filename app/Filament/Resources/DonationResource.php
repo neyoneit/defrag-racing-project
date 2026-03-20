@@ -37,16 +37,13 @@ class DonationResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('user_id')
-                    ->label('Linked User')
-                    ->relationship('user', 'username')
-                    ->searchable()
-                    ->preload()
-                    ->nullable()
-                    ->helperText('Link to a user account to give them the Supporter badge.'),
                 Forms\Components\TextInput::make('donor_name')
                     ->label('Donor Name')
                     ->maxLength(255),
+                Forms\Components\TextInput::make('donor_email')
+                    ->label('Donor Email (PayPal)')
+                    ->email()
+                    ->helperText('PayPal email. Automatically links to users who have this email in their Donation Emails.'),
                 Forms\Components\TextInput::make('amount')
                     ->required()
                     ->numeric()
@@ -95,8 +92,8 @@ class DonationResource extends Resource
                     ->label('Donor')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user.username')
-                    ->label('User')
+                Tables\Columns\TextColumn::make('donor_email')
+                    ->label('Email')
                     ->searchable()
                     ->sortable()
                     ->placeholder('--'),

@@ -48,6 +48,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'discord_name',
         'model',
         'pinned_models',
+        'donation_emails',
         'plain_name',
         'notification_settings',
         'created_at',
@@ -121,6 +122,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'avatar_effects_speed' => 'integer',
         'name_effects_speed' => 'integer',
         'pinned_models' => 'array',
+        'donation_emails' => 'array',
         'moderator_permissions' => 'array',
     ];
 
@@ -205,11 +207,15 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     }
 
     public function isDonor(): bool {
-        return SiteDonation::where('user_id', $this->id)->where('status', 'approved')->exists();
+        $emails = $this->donation_emails ?? [];
+        if (empty($emails)) return false;
+        return SiteDonation::whereIn('donor_email', $emails)->where('status', 'approved')->exists();
     }
 
     public function getDonationTotal(): array {
-        return SiteDonation::where('user_id', $this->id)
+        $emails = $this->donation_emails ?? [];
+        if (empty($emails)) return [];
+        return SiteDonation::whereIn('donor_email', $emails)
             ->where('status', 'approved')
             ->selectRaw('SUM(amount) as total, currency')
             ->groupBy('currency')
