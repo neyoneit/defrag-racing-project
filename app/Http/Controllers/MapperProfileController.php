@@ -273,7 +273,7 @@ class MapperProfileController extends Controller
             ->groupBy('mapname')
             ->select('mapname', DB::raw('COUNT(*) as total'), DB::raw('COUNT(DISTINCT mdd_id) as players'))
             ->get()
-            ->keyBy('mapname');
+            ->keyBy(fn ($item) => strtolower($item->mapname));
 
         // WR holders for each map (rank 1, grouped by physics)
         $wrHolders = Record::whereIn('mapname', $mapNamesPage)
@@ -281,11 +281,11 @@ class MapperProfileController extends Controller
             ->where('rank', 1)
             ->select('mapname', 'name', 'time', 'physics', 'mdd_id')
             ->get()
-            ->groupBy('mapname');
+            ->groupBy(fn ($item) => strtolower($item->mapname));
 
         $enriched = collect($maps->items())->map(function ($map) use ($recordCounts, $wrHolders) {
-            $counts = $recordCounts->get($map->name);
-            $wrs = $wrHolders->get($map->name, collect());
+            $counts = $recordCounts->get(strtolower($map->name));
+            $wrs = $wrHolders->get(strtolower($map->name), collect());
 
             return [
                 'id' => $map->id,
