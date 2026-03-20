@@ -154,12 +154,12 @@
 
                 <!-- Pending Queue -->
                 <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-                    <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                    <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
                         <span class="text-sm font-bold text-white">Queue</span>
                         <span class="text-xs text-gray-500">{{ pendingTotal }} pending</span>
                     </div>
-                    <div class="divide-y divide-white/5">
-                        <div v-for="(item, i) in pendingQueue" :key="item.id" class="px-4 py-2.5 flex items-center justify-between">
+                    <div class="divide-y divide-white/5 max-h-64 overflow-y-auto">
+                        <div v-for="(item, i) in pendingQueue" :key="item.id" class="px-3 py-1.5 flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <span class="text-xs font-bold text-gray-500 w-5 text-right">{{ i + 1 }}</span>
                                 <div>
