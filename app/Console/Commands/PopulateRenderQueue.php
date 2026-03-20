@@ -78,9 +78,7 @@ class PopulateRenderQueue extends Command
                     $q->where('rank', '>', 1);
                 }
             })
-            ->whereDoesntHave('renderedVideo', function ($q) {
-                $q->whereIn('status', ['pending', 'rendering', 'uploading', 'completed']);
-            })
+            ->whereDoesntHave('renderedVideo')
             ->with('record')
             ->orderByDesc('id')
             ->limit($limit);
