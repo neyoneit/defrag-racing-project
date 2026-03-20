@@ -589,7 +589,7 @@ class MapperProfileController extends Controller
         $claimNames = $user->mapperClaims()->where('type', 'model')->pluck('name')->toArray();
 
         if (empty($claimNames)) {
-            return ['models' => [], 'total' => 0];
+            return ['models' => [], 'total' => 0, 'total_downloads' => 0, 'total_views' => 0, 'highlighted' => null, 'timeline' => []];
         }
 
         $query = \App\Models\PlayerModel::where('approval_status', 'approved')
@@ -601,14 +601,72 @@ class MapperProfileController extends Controller
 
         $total = $query->count();
         $totalDownloads = (clone $query)->sum('downloads');
+        $totalViews = (clone $query)->sum('views');
 
         $models = $query->orderByDesc('downloads')
-            ->get(['id', 'name', 'base_model', 'author', 'thumbnail', 'idle_gif', 'rotate_gif', 'downloads', 'category', 'created_at']);
+            ->get(['id', 'name', 'base_model', 'base_model_file_path', 'model_type', 'author', 'file_path', 'thumbnail', 'idle_gif', 'rotate_gif', 'downloads', 'views', 'category', 'main_file', 'created_at']);
+
+        // Highlighted: most downloaded model
+        $highlighted = $models->first();
+
+        // Timeline: models per year
+        $timeline = $models->groupBy(fn ($m) => $m->created_at?->format('Y'))
+            ->filter(fn ($group, $year) => $year !== null)
+            ->map(fn ($group) => $group->count())
+            ->sortKeysDesc()
+            ->toArray();
+
+        // Pinned models for this user (or auto-select top 2 by downloads)
+        $pinnedIds = $user->pinned_models ?? [];
+        $pinnedSelect = ['id', 'name', 'category', 'file_path', 'main_file', 'base_model', 'base_model_file_path', 'model_type', 'thumbnail', 'idle_gif', 'rotate_gif', 'downloads', 'views', 'available_skins'];
+
+        if (!empty($pinnedIds)) {
+            $pinnedModels = \App\Models\PlayerModel::whereIn('id', $pinnedIds)
+                ->where('approval_status', 'approved')
+                ->get($pinnedSelect)
+                ->sortBy(fn ($m) => array_search($m->id, $pinnedIds))
+                ->values();
+        } else {
+            // Auto-select top 2 most downloaded
+            $pinnedModels = $models->take(2)->map(fn ($m) => $m)->values();
+        }
+
+        // Resolve base_model_file_path for skin/mixed packs missing it (same fallback as ModelsController)
+        foreach ($pinnedModels as $pinned) {
+            if (!$pinned->base_model_file_path && $pinned->model_type !== 'complete' && $pinned->base_model) {
+                $baseModel = \App\Models\PlayerModel::whereRaw('LOWER(base_model) = ?', [strtolower($pinned->base_model)])
+                    ->where('model_type', 'complete')
+                    ->first(['file_path']);
+                if ($baseModel) {
+                    $pinned->base_model_file_path = $baseModel->file_path;
+                }
+            }
+        }
 
         return [
             'models' => $models,
             'total' => $total,
             'total_downloads' => $totalDownloads,
+            'total_views' => $totalViews,
+            'highlighted' => $highlighted,
+            'timeline' => $timeline,
+            'pinned' => $pinnedModels,
         ];
+    }
+
+    /**
+     * Save pinned models for a user
+     */
+    public function savePinnedModels(Request $request)
+    {
+        $request->validate([
+            'pinned_models' => 'array|max:2',
+            'pinned_models.*' => 'integer|exists:models,id',
+        ]);
+
+        $user = $request->user();
+        $user->update(['pinned_models' => $request->pinned_models]);
+
+        return response()->json(['success' => true]);
     }
 }

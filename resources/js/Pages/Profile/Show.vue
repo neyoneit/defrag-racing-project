@@ -488,6 +488,63 @@ const saveMapperClaims = async () => {
     }
 };
 
+// Pinned Models
+const pinnedModelIds = ref([]);
+const allCreatorModels = ref([]);
+const loadingCreatorModels = ref(false);
+const savingPinnedModels = ref(false);
+const pinnedModelsSaved = ref(false);
+
+const loadPinnedModels = async () => {
+    const claims = mapperClaims.value.filter(c => c.type === 'model');
+    if (claims.length === 0) return;
+
+    loadingCreatorModels.value = true;
+    try {
+        const res = await fetch(`/api/profile/${page.props.auth?.user?.id}/mapper/models`);
+        const data = await res.json();
+        allCreatorModels.value = data.models || [];
+        pinnedModelIds.value = (data.pinned || []).map(m => m.id);
+    } catch (e) {
+        console.error('Error loading pinned models:', e);
+    } finally {
+        loadingCreatorModels.value = false;
+    }
+};
+
+const togglePinModel = async (modelId) => {
+    if (pinnedModelIds.value.includes(modelId)) {
+        pinnedModelIds.value = pinnedModelIds.value.filter(id => id !== modelId);
+    } else {
+        if (pinnedModelIds.value.length >= 2) return;
+        pinnedModelIds.value.push(modelId);
+    }
+    await savePinnedModels();
+};
+
+const isModelPinned = (modelId) => pinnedModelIds.value.includes(modelId);
+
+const savePinnedModels = async () => {
+    savingPinnedModels.value = true;
+    try {
+        await fetch('/settings/pinned-models', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ pinned_models: pinnedModelIds.value }),
+        });
+        pinnedModelsSaved.value = true;
+        setTimeout(() => { pinnedModelsSaved.value = false; }, 3000);
+    } catch (e) {
+        console.error('Error saving pinned models:', e);
+    } finally {
+        savingPinnedModels.value = false;
+    }
+};
+
 // Marketplace Creator Profile
 const mpProfile = ref({
     is_listed: false,
@@ -598,7 +655,7 @@ const removeFeaturedMap = (mapId) => {
 };
 
 onMounted(() => {
-    fetchMapperClaims();
+    fetchMapperClaims().then(() => loadPinnedModels());
     fetchCreatorProfile();
 });
 
@@ -863,7 +920,7 @@ const tabs = [
                         <div>
                             <h2 class="text-lg font-black text-white mb-1">Creator Profile</h2>
                             <p class="text-sm text-gray-400 leading-relaxed">
-                                Link your mapper or model author names to your account. A <span class="text-green-400 font-bold">Creator</span> tab will appear on your profile showcasing all your maps, stats, top players, and more.
+                                Link your mapper or model author names to your account. A <span class="text-green-400 font-bold">Mapper</span> and/or <span class="text-blue-400 font-bold">Modeler</span> tab will appear on your profile showcasing your work.
                             </p>
                             <div class="mt-3 space-y-1.5 text-xs text-gray-500">
                                 <div class="flex items-start gap-2">
@@ -940,8 +997,8 @@ const tabs = [
                                     </button>
                                 </div>
 
-                                <!-- Maps for this claim (always visible) -->
-                                <div v-if="claim.id && claimMapsById[claim.id]" class="px-4 pb-4">
+                                <!-- Maps for map claims -->
+                                <div v-if="claim.type === 'map' && claim.id && claimMapsById[claim.id]" class="px-4 pb-4">
                                     <div class="flex items-center gap-2 mb-3">
                                         <input v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" placeholder="Search maps..."
                                             class="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none">
@@ -989,6 +1046,63 @@ const tabs = [
                                     <div v-if="!loadingClaimMapsById[claim.id] && (claimMapsById[claim.id] || []).length === 0" class="text-center py-6 text-sm text-gray-500">
                                         No maps found
                                     </div>
+                                </div>
+
+                                <!-- Pin models for model claims -->
+                                <div v-if="claim.type === 'model'" class="px-4 pb-4">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <p class="text-xs text-gray-500">Pin up to 2 models for an interactive 3D viewer on your Modeler profile tab.</p>
+                                        <div class="flex items-center gap-2 flex-shrink-0">
+                                            <div v-if="pinnedModelsSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                <span class="text-[10px] text-green-400">Saved</span>
+                                            </div>
+                                            <span class="text-xs text-gray-400"><span class="text-blue-400 font-bold">{{ pinnedModelIds.length }}</span>/2 pinned</span>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="loadingCreatorModels" class="flex items-center justify-center py-8">
+                                        <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                                    </div>
+
+                                    <div v-else-if="allCreatorModels.length > 0" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto pr-1">
+                                        <div v-for="model in allCreatorModels" :key="model.id"
+                                            @click="togglePinModel(model.id)"
+                                            class="relative rounded-lg overflow-hidden transition-all group"
+                                            :class="[
+                                                isModelPinned(model.id)
+                                                    ? 'ring-2 ring-blue-500/60 cursor-pointer'
+                                                    : pinnedModelIds.length >= 2
+                                                        ? 'opacity-40 cursor-not-allowed'
+                                                        : 'ring-1 ring-white/5 hover:ring-white/20 cursor-pointer'
+                                            ]">
+                                            <div class="aspect-square bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden">
+                                                <img v-if="model.idle_gif || model.thumbnail"
+                                                    :src="`/storage/${model.idle_gif || model.thumbnail}`"
+                                                    :alt="model.name"
+                                                    class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                                                    loading="lazy">
+                                                <span v-else class="text-2xl">{{ model.category === 'player' ? '&#x1F3C3;' : '&#x1F52B;' }}</span>
+                                            </div>
+                                            <div class="absolute top-1.5 right-1.5">
+                                                <div v-if="isModelPinned(model.id)" class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
+                                                    <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+                                                </div>
+                                            </div>
+                                            <div v-if="isModelPinned(model.id) || pinnedModelIds.length < 2"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                                :class="isModelPinned(model.id) ? 'bg-red-900/60' : 'bg-blue-900/60'">
+                                                <span v-if="isModelPinned(model.id)" class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Unpin</span>
+                                                <span v-else class="text-xs font-bold text-blue-300 bg-black/50 px-3 py-1 rounded-full">Pin</span>
+                                            </div>
+                                            <div class="px-1.5 py-1" :class="isModelPinned(model.id) ? 'bg-blue-950/40' : 'bg-black/60'">
+                                                <div class="text-[10px] font-bold truncate" :class="isModelPinned(model.id) ? 'text-blue-300' : 'text-white'">{{ model.name }}</div>
+                                                <div class="text-[9px] text-gray-600">{{ model.downloads }} dl</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-else class="text-center py-6 text-sm text-gray-500">No models found</div>
                                 </div>
                             </div>
                         </div>
@@ -1110,6 +1224,7 @@ const tabs = [
                     </div>
                 </div>
             </div>
+
 
                 </template>
 

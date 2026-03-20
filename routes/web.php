@@ -227,6 +227,7 @@ Route::get('/api/profile/{userId}/mapper/recent-activity', [\App\Http\Controller
 Route::get('/api/profile/{userId}/mapper/heatmap', [\App\Http\Controllers\MapperProfileController::class, 'heatmap'])->name('mapper.heatmap');
 Route::get('/api/profile/{userId}/mapper/highlighted-map', [\App\Http\Controllers\MapperProfileController::class, 'highlightedMap'])->name('mapper.highlightedMap');
 Route::get('/api/profile/{userId}/mapper/models', [\App\Http\Controllers\MapperProfileController::class, 'models'])->name('mapper.models');
+Route::post('/settings/pinned-models', [\App\Http\Controllers\MapperProfileController::class, 'savePinnedModels'])->middleware('auth')->name('settings.pinned-models');
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/api/profile/{mddId}/activity', [ProfileController::class, 'activityData'])->name('profile.activity');

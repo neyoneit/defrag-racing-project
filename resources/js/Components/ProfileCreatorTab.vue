@@ -13,7 +13,6 @@
     const recentActivityData = ref({ records: [] });
     const heatmapData = ref({ heatmap: {}, yearly: {} });
     const highlightedMapData = ref({ vq3: null, cpm: null });
-    const modelsData = ref({ models: [], total: 0, total_downloads: 0 });
 
     // Loading states
     const loadingStats = ref(true);
@@ -120,14 +119,6 @@
         }
     };
 
-    const fetchModels = async () => {
-        try {
-            const res = await fetch(`/api/profile/${props.userId}/mapper/models`);
-            modelsData.value = await res.json();
-        } catch (e) {
-            console.error('Error loading models:', e);
-        }
-    };
 
     // Initial load
     onMounted(async () => {
@@ -140,7 +131,6 @@
                 fetchRecentActivity(),
                 fetchHeatmap(),
                 fetchHighlightedMap(),
-                fetchModels(),
             ]);
         }
     });
@@ -182,14 +172,16 @@
 
     // Heatmap rendering
     const heatmapYears = computed(() => {
-        return Object.keys(heatmapData.value.yearly || {}).sort((a, b) => b - a);
+        return Object.keys(heatmapData.value.yearly || {})
+            .filter(y => (heatmapData.value.yearly[y]?.maps || 0) > 0)
+            .sort((a, b) => b - a);
     });
 
     const timelineMax = computed(() => {
         const yearly = heatmapData.value.yearly || {};
         let max = 1;
         for (const y of Object.values(yearly)) {
-            const total = (y.maps || 0) + (y.models || 0);
+            const total = y.maps || 0;
             if (total > max) max = total;
         }
         return max;
@@ -212,14 +204,6 @@
 
         <!-- Main Content -->
         <div v-else>
-            <!-- Claim Names Badges -->
-            <div v-if="stats.claim_names?.length" class="flex items-center gap-2 mb-6 flex-wrap">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Creator Names:</span>
-                <span v-for="name in stats.claim_names" :key="name"
-                    class="px-3 py-1 rounded-full bg-green-600/20 border border-green-500/30 text-green-400 text-sm font-bold">
-                    {{ name }}
-                </span>
-            </div>
 
             <!-- Most Popular Maps - VQ3 / CPM -->
             <div v-if="highlightedMapData.vq3 || highlightedMapData.cpm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -547,32 +531,6 @@
                 </template>
             </div>
 
-            <!-- Models -->
-            <div v-if="modelsData.total > 0" class="bg-black/40 rounded-xl border border-white/5 mb-6 overflow-hidden">
-                <div class="flex items-center justify-between px-4 pt-3 pb-2">
-                    <h3 class="text-sm font-black text-white uppercase tracking-wider">Models ({{ modelsData.total }})</h3>
-                    <span class="text-xs text-gray-500">{{ formatNumber(modelsData.total_downloads) }} total downloads</span>
-                </div>
-                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-3 pt-0">
-                    <Link v-for="model in modelsData.models" :key="model.id"
-                        :href="route('models.show', model.id)"
-                        class="group bg-black/30 rounded-lg border border-white/5 hover:border-white/20 transition overflow-hidden">
-                        <div class="aspect-square bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden">
-                            <img v-if="model.idle_gif || model.thumbnail"
-                                :src="`/storage/${model.idle_gif || model.thumbnail}`"
-                                :alt="model.name"
-                                class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-                                loading="lazy">
-                            <span v-else class="text-2xl">{{ model.category === 'player' ? '&#x1F3C3;' : '&#x1F52B;' }}</span>
-                        </div>
-                        <div class="px-1.5 py-1">
-                            <div class="text-[10px] font-bold text-white truncate">{{ model.name }}</div>
-                            <div class="text-[9px] text-gray-600">{{ formatNumber(model.downloads) }} dl</div>
-                        </div>
-                    </Link>
-                </div>
-            </div>
-
             <!-- Top Players -->
             <div class="bg-black/40 rounded-xl p-4 border border-white/5 mb-6">
                 <h3 class="text-sm font-black text-white uppercase tracking-wider mb-4">Top Players on These Maps</h3>
@@ -679,34 +637,16 @@
 
                 <!-- Creation Timeline (2/5) -->
                 <div class="lg:col-span-2 bg-black/40 rounded-xl p-4 border border-white/5">
-                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">Creation Timeline</h3>
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">Maps Timeline</h3>
                     <div v-if="heatmapYears.length > 0" class="space-y-1.5">
                         <div v-for="year in heatmapYears" :key="year" class="flex items-center gap-2">
                             <span class="text-[10px] font-bold text-gray-500 w-8 flex-shrink-0 text-right">{{ year }}</span>
                             <div class="flex-1 bg-gray-800/30 rounded-full h-5 overflow-hidden flex">
-                                <!-- Maps bar (green) -->
                                 <div v-if="heatmapData.yearly[year]?.maps"
                                     class="bg-gradient-to-r from-green-600 to-green-500 h-full flex items-center justify-center transition-all duration-500"
                                     :style="{ width: `${Math.max(8, (heatmapData.yearly[year].maps / timelineMax) * 100)}%` }">
                                     <span class="text-[9px] font-black text-white whitespace-nowrap px-1">{{ heatmapData.yearly[year].maps }}</span>
                                 </div>
-                                <!-- Models bar (blue) -->
-                                <div v-if="heatmapData.yearly[year]?.models"
-                                    class="bg-gradient-to-r from-blue-600 to-blue-500 h-full flex items-center justify-center transition-all duration-500"
-                                    :style="{ width: `${Math.max(8, (heatmapData.yearly[year].models / timelineMax) * 100)}%` }">
-                                    <span class="text-[9px] font-black text-white whitespace-nowrap px-1">{{ heatmapData.yearly[year].models }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Legend -->
-                        <div class="flex items-center gap-4 mt-2 pt-2 border-t border-white/5">
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-3 h-3 rounded bg-green-500"></div>
-                                <span class="text-[10px] text-gray-500">Maps</span>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                                <div class="w-3 h-3 rounded bg-blue-500"></div>
-                                <span class="text-[10px] text-gray-500">Models</span>
                             </div>
                         </div>
                     </div>

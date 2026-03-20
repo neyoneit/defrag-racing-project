@@ -63,6 +63,13 @@ class DemomeControl extends Page
                 ->whereNull('published_at')
                 ->whereNotNull('youtube_video_id')
                 ->count(),
+            'unlisted_videos' => RenderedVideo::where('status', 'completed')
+                ->where('source', 'auto')
+                ->whereNull('published_at')
+                ->whereNotNull('youtube_video_id')
+                ->orderBy('created_at', 'desc')
+                ->limit(50)
+                ->get(),
         ];
     }
 
@@ -85,6 +92,27 @@ class DemomeControl extends Page
         Notification::make()
             ->title('Queue Populated')
             ->body(\Artisan::output())
+            ->success()
+            ->send();
+    }
+
+    public function publishSingle(int $videoId): void
+    {
+        $video = RenderedVideo::find($videoId);
+        if (!$video || $video->published_at) {
+            return;
+        }
+
+        // Set published_at so the /videos-to-publish endpoint picks it up
+        // Actually, we need demome to change it on YouTube first
+        // So we trigger the publish flag and let demome handle it
+        SiteSetting::set('demome:publish_unlisted', '1');
+        // Mark only this one as ready by setting a sentinel
+        $video->update(['published_at' => now()]);
+
+        Notification::make()
+            ->title('Video Marked as Published')
+            ->body("{$video->map_name} - {$video->player_name} marked as published.")
             ->success()
             ->send();
     }
@@ -113,6 +141,25 @@ class DemomeControl extends Page
             ->body("{$count} unlisted videos will be changed to public by demome on next cycle.")
             ->success()
             ->send();
+    }
+
+    public function regenerateTokenAction(): Action
+    {
+        return Action::make('regenerateToken')
+            ->label('Regenerate')
+            ->color('warning')
+            ->icon('heroicon-o-arrow-path')
+            ->size('sm')
+            ->requiresConfirmation()
+            ->modalHeading('Regenerate API Token')
+            ->modalDescription('This will invalidate the current token. Demome will stop working until you update its settings.py with the new token. Type "yes" to confirm.')
+            ->form([
+                \Filament\Forms\Components\TextInput::make('confirmation')
+                    ->label('Type "yes" to confirm')
+                    ->required()
+                    ->rule('in:yes'),
+            ])
+            ->action(fn () => $this->regenerateToken());
     }
 
     public function regenerateToken(): void

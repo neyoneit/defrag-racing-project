@@ -5,6 +5,7 @@
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ActivityHeatmap from '@/Components/ActivityHeatmap.vue';
     import ProfileCreatorTab from '@/Components/ProfileCreatorTab.vue';
+    import ProfileModelerTab from '@/Components/ProfileModelerTab.vue';
     import ProfileLayoutForm from '@/Pages/Profile/Partials/ProfileLayoutForm.vue';
     import AvatarNameEffectsForm from '@/Pages/Profile/Partials/AvatarNameEffectsForm.vue';
     import MapRecordsViewForm from '@/Pages/Profile/Partials/MapRecordsViewForm.vue';
@@ -84,6 +85,14 @@
             type: Boolean,
             default: false
         },
+        hasModelerProfile: {
+            type: Boolean,
+            default: false
+        },
+        creatorClaimNames: {
+            type: Array,
+            default: () => []
+        },
         load_times: Object,
         renderStats: {
             type: Object,
@@ -129,7 +138,15 @@
 
     // Tab navigation
     const urlParams = new URLSearchParams(window.location.search);
-    const activeTab = ref(urlParams.get('tab') === 'creator' && props.hasMapperProfile ? 'creator' : 'records');
+    const hasCreatorTabs = computed(() => props.hasMapperProfile || props.hasModelerProfile);
+    const initialTab = (() => {
+        const tab = urlParams.get('tab');
+        if (tab === 'mapper' && props.hasMapperProfile) return 'mapper';
+        if (tab === 'modeler' && props.hasModelerProfile) return 'modeler';
+        if (tab === 'creator' && props.hasMapperProfile) return 'mapper';
+        return 'records';
+    })();
+    const activeTab = ref(initialTab);
 
     const switchTab = (tab) => {
         activeTab.value = tab;
@@ -783,25 +800,52 @@
         </transition>
 
         <!-- Profile Tabs -->
-        <div v-if="hasMapperProfile" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 mb-3 relative z-10">
-            <div class="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-white/5 w-fit">
-                <button @click="switchTab('records')"
-                    class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
-                    :class="activeTab === 'records' ? 'bg-white/10 text-white border border-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'">
-                    Records
-                </button>
-                <button @click="switchTab('creator')"
-                    class="px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
-                    :class="activeTab === 'creator' ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
-                    Creator
-                </button>
+        <div v-if="hasCreatorTabs" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 mb-3 relative z-10">
+            <div class="flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-white/5 w-fit">
+                    <button @click="switchTab('records')"
+                        class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+                        :class="activeTab === 'records' ? 'bg-white/10 text-white border border-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'">
+                        Records
+                    </button>
+                    <button v-if="hasMapperProfile" @click="switchTab('mapper')"
+                        class="px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                        :class="activeTab === 'mapper' ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'text-gray-400 hover:text-green-400 hover:bg-green-500/10'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                        Mapper
+                    </button>
+                    <button v-if="hasModelerProfile" @click="switchTab('modeler')"
+                        class="px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+                        :class="activeTab === 'modeler' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-gray-400 hover:text-blue-400 hover:bg-blue-500/10'">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25l-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3l2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75l2.25-1.313M12 21.75V19.5m0 2.25l-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25"></path></svg>
+                        Modeler
+                    </button>
+                </div>
+                <div v-if="creatorClaimNames.length" class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Creator Names:</span>
+                    <span v-for="claim in creatorClaimNames" :key="claim.name + claim.type"
+                        class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                        :class="claim.type === 'map' ? 'bg-green-500/20 border border-green-500/30 text-green-400' : 'bg-blue-500/20 border border-blue-500/30 text-blue-400'">
+                        {{ claim.name }}
+                    </span>
+                </div>
+                <a v-if="isOwnProfile && activeTab === 'modeler'"
+                    :href="route('profile.show') + '?tab=creator'"
+                    class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 border border-white/20 hover:border-blue-400/50 hover:bg-blue-600/20 text-gray-400 hover:text-blue-300 transition-all text-xs font-bold backdrop-blur-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Customize Pinned Models
+                </a>
             </div>
         </div>
 
-        <!-- Creator Tab -->
-        <div v-if="hasMapperProfile && activeTab === 'creator'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <!-- Mapper Tab -->
+        <div v-if="hasMapperProfile && activeTab === 'mapper'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <ProfileCreatorTab :userId="user?.id" />
+        </div>
+
+        <!-- Modeler Tab -->
+        <div v-if="hasModelerProfile && activeTab === 'modeler'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <ProfileModelerTab :userId="user?.id" />
         </div>
 
         <!-- EPIC REDESIGN - Main Content (Records Tab) -->

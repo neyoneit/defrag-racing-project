@@ -121,7 +121,9 @@ class RenderedVideoResource extends Resource
 
                 Tables\Columns\TextColumn::make('player_name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->html()
+                    ->formatStateUsing(fn ($state) => $state ? UserResource::q3tohtml($state) : '-'),
 
                 Tables\Columns\TextColumn::make('physics')
                     ->badge()
@@ -161,7 +163,9 @@ class RenderedVideoResource extends Resource
 
                 Tables\Columns\TextColumn::make('requested_by')
                     ->searchable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->html()
+                    ->formatStateUsing(fn ($state) => $state ? UserResource::q3tohtml($state) : '-'),
 
                 Tables\Columns\TextColumn::make('render_duration_seconds')
                     ->label('Duration')

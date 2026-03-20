@@ -45,6 +45,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'twitch_name',
         'discord_name',
         'model',
+        'pinned_models',
         'plain_name',
         'notification_settings',
         'created_at',
@@ -117,6 +118,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'name_effects_intensity' => 'integer',
         'avatar_effects_speed' => 'integer',
         'name_effects_speed' => 'integer',
+        'pinned_models' => 'array',
     ];
 
     /**
@@ -396,6 +398,25 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
     public function hasMapperProfile(): bool
     {
         return $this->getClaimedMapsQuery()->exists();
+    }
+
+    /**
+     * Check if user has any model claims with matching models
+     */
+    public function hasModelerProfile(): bool
+    {
+        $claimNames = $this->mapperClaims()->where('type', 'model')->pluck('name');
+
+        if ($claimNames->isEmpty()) {
+            return false;
+        }
+
+        return \App\Models\PlayerModel::where('approval_status', 'approved')
+            ->where(function ($q) use ($claimNames) {
+                foreach ($claimNames as $name) {
+                    $q->orWhere('author', 'REGEXP', MapperClaim::authorRegexp($name));
+                }
+            })->exists();
     }
 
     /**
