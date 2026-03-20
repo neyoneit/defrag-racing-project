@@ -33,6 +33,7 @@ class RenderedVideo extends Model
         'video_file_size',
         'is_visible',
         'published_at',
+        'publish_approved',
     ];
 
     protected $casts = [
@@ -43,6 +44,7 @@ class RenderedVideo extends Model
         'video_file_size' => 'integer',
         'is_visible' => 'boolean',
         'published_at' => 'datetime',
+        'publish_approved' => 'boolean',
     ];
 
     protected static function boot()

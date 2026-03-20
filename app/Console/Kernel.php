@@ -54,6 +54,9 @@ class Kernel extends ConsoleKernel
 
         // Auto-populate demome render queue when idle
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
+
+        // Weekly auto-publish unlisted videos (every Sunday at 18:00)
+        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00');
     }
 
     /**

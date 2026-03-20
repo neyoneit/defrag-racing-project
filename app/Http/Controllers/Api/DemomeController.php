@@ -90,6 +90,7 @@ class DemomeController extends Controller
             'video_file_size' => $validated['video_file_size'] ?? null,
             // Non-auto sources are uploaded as public, mark as published immediately
             'published_at' => $renderedVideo->source !== 'auto' ? now() : null,
+            'publish_approved' => $renderedVideo->source !== 'auto',
         ]);
 
         Cache::put('demome:current_status', 'idle', now()->addMinutes(30));
@@ -393,23 +394,13 @@ class DemomeController extends Controller
 
     public function videosToPublish()
     {
-        // Only return videos when admin has triggered publish
-        if (!SiteSetting::getBool('demome:publish_unlisted', false)) {
-            return response()->json(['videos' => []]);
-        }
-
         $videos = RenderedVideo::where('status', 'completed')
-            ->where('source', 'auto')
+            ->where('publish_approved', true)
             ->whereNull('published_at')
             ->whereNotNull('youtube_video_id')
             ->select('id', 'youtube_video_id', 'map_name', 'player_name')
             ->limit(50)
             ->get();
-
-        // If no more videos to publish, clear the flag
-        if ($videos->isEmpty()) {
-            SiteSetting::set('demome:publish_unlisted', '0');
-        }
 
         return response()->json(['videos' => $videos]);
     }

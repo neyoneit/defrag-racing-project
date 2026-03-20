@@ -61,16 +61,26 @@ class DemomeControl extends Page
             ],
             'unlisted_count' => RenderedVideo::where('status', 'completed')
                 ->where('source', 'auto')
+                ->where('publish_approved', false)
                 ->whereNull('published_at')
                 ->whereNotNull('youtube_video_id')
                 ->count(),
             'unlisted_videos' => RenderedVideo::where('status', 'completed')
                 ->where('source', 'auto')
+                ->where('publish_approved', false)
                 ->whereNull('published_at')
                 ->whereNotNull('youtube_video_id')
                 ->orderBy('created_at', 'desc')
                 ->limit(50)
                 ->get(),
+            'publishing_count' => RenderedVideo::where('status', 'completed')
+                ->where('publish_approved', true)
+                ->whereNull('published_at')
+                ->count(),
+            'next_auto_publish' => Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0),
+            'last_auto_publish' => SiteSetting::get('demome:last_auto_publish')
+                ? Carbon::parse(SiteSetting::get('demome:last_auto_publish'))
+                : null,
         ];
     }
 
@@ -112,20 +122,15 @@ class DemomeControl extends Page
     public function publishSingle(int $videoId): void
     {
         $video = RenderedVideo::find($videoId);
-        if (!$video || $video->published_at) {
+        if (!$video || $video->published_at || $video->publish_approved) {
             return;
         }
 
-        // Set published_at so the /videos-to-publish endpoint picks it up
-        // Actually, we need demome to change it on YouTube first
-        // So we trigger the publish flag and let demome handle it
-        SiteSetting::set('demome:publish_unlisted', '1');
-        // Mark only this one as ready by setting a sentinel
-        $video->update(['published_at' => now()]);
+        $video->update(['publish_approved' => true]);
 
         Notification::make()
-            ->title('Video Marked as Published')
-            ->body("{$video->map_name} - {$video->player_name} marked as published.")
+            ->title('Video Queued for Publishing')
+            ->body("{$video->map_name} - {$video->player_name} will be published by demome on next cycle.")
             ->success()
             ->send();
     }
@@ -134,6 +139,7 @@ class DemomeControl extends Page
     {
         $count = RenderedVideo::where('status', 'completed')
             ->where('source', 'auto')
+            ->where('publish_approved', false)
             ->whereNull('published_at')
             ->whereNotNull('youtube_video_id')
             ->count();
@@ -147,7 +153,12 @@ class DemomeControl extends Page
             return;
         }
 
-        SiteSetting::set('demome:publish_unlisted', '1');
+        RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->where('publish_approved', false)
+            ->whereNull('published_at')
+            ->whereNotNull('youtube_video_id')
+            ->update(['publish_approved' => true]);
 
         Notification::make()
             ->title('Publish Triggered')

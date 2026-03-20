@@ -107,6 +107,29 @@
         </div>
     </x-filament::section>
 
+    {{-- Auto-Publish Schedule --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">Auto-Publish Schedule</x-slot>
+        <div class="flex items-center gap-6 text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-gray-500 dark:text-gray-400">Next auto-publish:</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ $next_auto_publish->format('D, M j, H:i') }}</span>
+                <x-filament::badge color="info">{{ $next_auto_publish->diffForHumans() }}</x-filament::badge>
+            </div>
+            @if($last_auto_publish)
+                <div class="flex items-center gap-2">
+                    <span class="text-gray-500 dark:text-gray-400">Last:</span>
+                    <span class="text-gray-700 dark:text-gray-300">{{ $last_auto_publish->format('D, M j, H:i') }}</span>
+                </div>
+            @endif
+            @if($publishing_count > 0)
+                <div class="flex items-center gap-2">
+                    <x-filament::badge color="warning">{{ $publishing_count }} awaiting demome</x-filament::badge>
+                </div>
+            @endif
+        </div>
+    </x-filament::section>
+
     {{-- Unlisted Videos --}}
     @if($unlisted_videos->count() > 0)
     <x-filament::section class="mt-4">

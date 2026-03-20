@@ -285,8 +285,8 @@
                                                 <MapSearchItem v-for="map in maps.data" :map="map" :key="map.id" />
                                             </div>
 
-                                            <!-- Players (logged in only) -->
-                                            <div v-if="$page.props.auth.user && players?.length > 0 && searchCategory == 'players'" @click="closeSearch">
+                                            <!-- Players -->
+                                            <div v-if="players?.length > 0 && searchCategory == 'players'" @click="closeSearch">
                                                 <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                             </div>
 
