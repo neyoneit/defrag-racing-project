@@ -144,6 +144,16 @@
             >
                 Populate Queue Now
             </x-filament::button>
+
+            <x-filament::button
+                wire:click="publishUnlisted"
+                wire:confirm="This will mark {{ $unlisted_count }} unlisted auto-rendered videos for publishing. Demome will change them to public on next cycle. Continue?"
+                color="success"
+                icon="heroicon-o-eye"
+                :disabled="$unlisted_count === 0"
+            >
+                Publish Unlisted ({{ $unlisted_count }})
+            </x-filament::button>
         </div>
     </x-filament::section>
 </x-filament-panels::page>

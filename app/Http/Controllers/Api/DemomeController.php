@@ -88,6 +88,8 @@ class DemomeController extends Controller
             'youtube_video_id' => $validated['youtube_video_id'],
             'render_duration_seconds' => $validated['render_duration_seconds'] ?? null,
             'video_file_size' => $validated['video_file_size'] ?? null,
+            // Non-auto sources are uploaded as public, mark as published immediately
+            'published_at' => $renderedVideo->source !== 'auto' ? now() : null,
         ]);
 
         Cache::put('demome:current_status', 'idle', now()->addMinutes(30));
@@ -185,6 +187,7 @@ class DemomeController extends Controller
             'render_duration_seconds' => $validated['render_duration_seconds'],
             'video_file_size' => $validated['video_file_size'],
             'is_visible' => true,
+            'published_at' => now(),
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
@@ -386,6 +389,36 @@ class DemomeController extends Controller
         @unlink($tempFile);
 
         return null;
+    }
+
+    public function videosToPublish()
+    {
+        // Only return videos when admin has triggered publish
+        if (!SiteSetting::getBool('demome:publish_unlisted', false)) {
+            return response()->json(['videos' => []]);
+        }
+
+        $videos = RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->whereNull('published_at')
+            ->whereNotNull('youtube_video_id')
+            ->select('id', 'youtube_video_id', 'map_name', 'player_name')
+            ->limit(50)
+            ->get();
+
+        // If no more videos to publish, clear the flag
+        if ($videos->isEmpty()) {
+            SiteSetting::set('demome:publish_unlisted', '0');
+        }
+
+        return response()->json(['videos' => $videos]);
+    }
+
+    public function markPublished(RenderedVideo $renderedVideo)
+    {
+        $renderedVideo->update(['published_at' => now()]);
+
+        return response()->json(['success' => true]);
     }
 
     private function parseFilename(string $filename): array
