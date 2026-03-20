@@ -435,7 +435,19 @@ class DemomeController extends Controller
             return response()->json(['success' => false, 'message' => 'No demo found with this hash']);
         }
 
-        return response()->json([
+        // Check if there's already a RenderedVideo for this demo
+        $existingVideo = RenderedVideo::where('demo_id', $demo->id)
+            ->where('status', 'completed')
+            ->first();
+
+        // Also check by record_id if no demo_id match
+        if (!$existingVideo && $demo->record_id) {
+            $existingVideo = RenderedVideo::where('record_id', $demo->record_id)
+                ->where('status', 'completed')
+                ->first();
+        }
+
+        $response = [
             'success' => true,
             'demo_id' => $demo->id,
             'map_name' => $demo->map_name,
@@ -446,6 +458,39 @@ class DemomeController extends Controller
             'record_id' => $demo->record_id,
             'demo_filename' => $demo->processed_filename ?? $demo->original_filename,
             'download_url' => "https://defrag.racing/demos/{$demo->id}/download",
+        ];
+
+        if ($existingVideo) {
+            $response['existing_video'] = [
+                'id' => $existingVideo->id,
+                'youtube_video_id' => $existingVideo->youtube_video_id,
+                'youtube_url' => $existingVideo->youtube_url,
+                'source' => $existingVideo->source,
+            ];
+        }
+
+        return response()->json($response);
+    }
+
+    public function swapVideo(RenderedVideo $renderedVideo, Request $request)
+    {
+        $validated = $request->validate([
+            'youtube_url' => 'required|string',
+            'youtube_video_id' => 'required|string|max:20',
+            'published_at' => 'nullable|date',
+        ]);
+
+        $oldYoutubeId = $renderedVideo->youtube_video_id;
+
+        $renderedVideo->update([
+            'youtube_url' => $validated['youtube_url'],
+            'youtube_video_id' => $validated['youtube_video_id'],
+            'published_at' => $validated['published_at'] ?? $renderedVideo->published_at,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'old_youtube_video_id' => $oldYoutubeId,
         ]);
     }
 
