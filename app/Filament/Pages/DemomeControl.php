@@ -58,6 +58,11 @@ class DemomeControl extends Page
                 'verified' => RenderedVideo::where('status', 'pending')->where('priority', 2)->count(),
                 'normal' => RenderedVideo::where('status', 'pending')->where('priority', 3)->count(),
             ],
+            'unlisted_count' => RenderedVideo::where('status', 'completed')
+                ->where('source', 'auto')
+                ->whereNull('published_at')
+                ->whereNotNull('youtube_video_id')
+                ->count(),
         ];
     }
 
@@ -80,6 +85,32 @@ class DemomeControl extends Page
         Notification::make()
             ->title('Queue Populated')
             ->body(\Artisan::output())
+            ->success()
+            ->send();
+    }
+
+    public function publishUnlisted(): void
+    {
+        $count = RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->whereNull('published_at')
+            ->whereNotNull('youtube_video_id')
+            ->count();
+
+        if ($count === 0) {
+            Notification::make()
+                ->title('No Videos to Publish')
+                ->body('There are no unlisted auto-rendered videos waiting to be published.')
+                ->warning()
+                ->send();
+            return;
+        }
+
+        SiteSetting::set('demome:publish_unlisted', '1');
+
+        Notification::make()
+            ->title('Publish Triggered')
+            ->body("{$count} unlisted videos will be changed to public by demome on next cycle.")
             ->success()
             ->send();
     }
