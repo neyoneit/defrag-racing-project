@@ -91,8 +91,12 @@ class UserResource extends Resource
                     ->schema([
                         Forms\Components\TagsInput::make('donation_emails')
                             ->label('Donation Emails')
-                            ->helperText('PayPal emails used for donations. Donations with matching email are automatically linked.')
-                            ->placeholder('Add email...'),
+                            ->helperText('Additional PayPal emails. Registration email is matched automatically.')
+                            ->placeholder('Add email...')
+                            ->dehydrateStateUsing(function ($state, $record) {
+                                if (!$state || !$record) return $state;
+                                return array_values(array_filter($state, fn ($email) => strtolower($email) !== strtolower($record->email)));
+                            }),
                     ])->columns(1),
                 Forms\Components\TextInput::make('twitter_name')
                     ->maxLength(255),

@@ -206,14 +206,24 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return in_array($permission, $perms);
     }
 
-    public function isDonor(): bool {
+    public function getDonorEmails(): array {
         $emails = $this->donation_emails ?? [];
+        // Include registration email (load if not selected)
+        $email = $this->email ?? static::where('id', $this->id)->value('email');
+        if ($email) {
+            $emails[] = $email;
+        }
+        return array_unique(array_filter($emails));
+    }
+
+    public function isDonor(): bool {
+        $emails = $this->getDonorEmails();
         if (empty($emails)) return false;
         return SiteDonation::whereIn('donor_email', $emails)->where('status', 'approved')->exists();
     }
 
     public function getDonationTotal(): array {
-        $emails = $this->donation_emails ?? [];
+        $emails = $this->getDonorEmails();
         if (empty($emails)) return [];
         return SiteDonation::whereIn('donor_email', $emails)
             ->where('status', 'approved')
