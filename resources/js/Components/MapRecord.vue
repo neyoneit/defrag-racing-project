@@ -4,6 +4,7 @@
     import axios from 'axios';
     import DemoReportModal from '@/Components/DemoReportModal.vue';
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
+    import DemoRenderButton from '@/Components/DemoRenderButton.vue';
 
     const props = defineProps({
         record: Object,
@@ -384,19 +385,16 @@
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         online
                     </component>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-blue-500/50"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
                 <span
                     v-else-if="isOfflineRecord"
@@ -413,19 +411,16 @@
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         offline
                     </component>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-gray-500/50"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
                 <span
                     v-else
@@ -449,19 +444,16 @@
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         online
                     </a>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-blue-500/30"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
 
                 <!-- Secondary chip: validity flags (sv_cheats etc.) -->
@@ -513,19 +505,16 @@
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         online
                     </a>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/30 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-blue-500/30"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
                 <!-- Offline demo chip (demos top) -->
                 <span
@@ -543,19 +532,16 @@
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         offline
                     </component>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-gray-500/50 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-gray-500/50"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
                 <!-- Online demo chip (demos top) -->
                 <span
@@ -573,19 +559,16 @@
                         <svg v-if="demoDownloadUrl" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
                         online
                     </component>
-                    <button
-                        v-if="canRequestRender && !renderedVideo"
-                        @click.stop.prevent="confirmRender"
-                        :disabled="renderRequesting"
-                        class="inline-flex items-center gap-0 py-0.5 px-1.5 border-l border-blue-500/50 transition-all"
-                        :class="renderRequested ? 'bg-green-500/15 text-green-400' : renderError ? 'bg-red-500/15 text-red-400' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300'"
-                        :title="renderError || 'Request YouTube render'"
-                    >
-                        <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-                        <span class="max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 whitespace-nowrap" :class="{ '!max-w-[60px]': renderRequested || renderError }">
-                            <span class="ml-1">{{ renderRequesting ? '...' : renderRequested ? 'queued' : renderError ? 'error' : 'render' }}</span>
-                        </span>
-                    </button>
+                    <DemoRenderButton
+                        :renderedVideo="renderedVideo"
+                        :canRequestRender="canRequestRender"
+                        :renderRequesting="renderRequesting"
+                        :renderRequested="renderRequested"
+                        :renderError="renderError"
+                        borderColor="border-blue-500/50"
+                        @toggle-youtube="showYoutubeEmbed = !showYoutubeEmbed"
+                        @confirm-render="confirmRender"
+                    />
                 </span>
                 <span
                     v-else-if="validityInfo"
@@ -690,19 +673,6 @@
             >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-            </button>
-
-            <button
-                v-if="renderedVideo"
-                @click.stop="showYoutubeEmbed = !showYoutubeEmbed"
-                class="p-0.5 rounded transition-all hover:scale-110"
-                :class="showYoutubeEmbed ? 'bg-red-500/30 text-red-300' : 'bg-red-500/20 text-red-400 hover:text-red-300 hover:bg-red-500/30'"
-                title="Watch on YouTube"
-            >
-                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
                 </svg>
             </button>
 
