@@ -695,7 +695,7 @@
                             <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
                             <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-300 px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
                             <!-- LIVE Badge -->
-                            <a v-if="user?.is_live && user?.twitch_name" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
+                            <a v-if="user?.is_live && user?.twitch_id" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
                                 <div class="w-2 h-2 rounded-full bg-white animate-ping absolute"></div>
                                 <div class="w-2 h-2 rounded-full bg-white"></div>
                                 <span class="text-sm font-black text-white uppercase tracking-wider">LIVE</span>
@@ -780,7 +780,7 @@
                         <!-- Social Links -->
                         <div class="flex items-center gap-2">
                             <!-- Twitch -->
-                            <a v-if="user?.twitch_name" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
+                            <a v-if="user?.twitch_id" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg">
                                     <g fill="currentColor">
                                         <path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/>
@@ -789,14 +789,13 @@
                                 <span class="text-xs font-bold text-purple-200 transition group-hover:text-white">TWITCH</span>
                             </a>
 
-                            <!-- Discord -->
-                            <div @click="copy(user?.discord_name)" v-if="user?.discord_name" class="group cursor-pointer relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
+                            <!-- Discord (linked via OAuth) -->
+                            <a v-if="user?.discord_id" :href="`https://discordapp.com/users/${user.discord_id}`" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
                                 <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/>
                                 </svg>
-                                <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white" v-if="!copyState">#{{user?.discord_name}}</span>
-                                <span class="text-xs font-bold text-white" v-else>COPIED!</span>
-                            </div>
+                                <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white">{{ user.discord_name }}</span>
+                            </a>
 
                             <!-- Twitter -->
                             <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">

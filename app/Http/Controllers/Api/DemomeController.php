@@ -232,6 +232,7 @@ class DemomeController extends Controller
             'file_size' => $file->getSize(),
             'file_hash' => $hash,
             'status' => 'uploaded',
+            'source' => 'demome',
         ]);
 
         // Store file locally

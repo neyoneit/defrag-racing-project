@@ -490,6 +490,29 @@ const getYearProgress = (year, yearTotal) => {
 
         <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
 
+            <!-- Make a Donation -->
+            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
+                <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
+                <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
+
+                <!-- PayPal Donation Button -->
+                <div class="max-w-md mx-auto">
+                    <form action="https://www.paypal.com/donate" method="post" target="_top">
+                        <input type="hidden" name="hosted_button_id" value="WH6GY4PDGU8FA" />
+                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
+                        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+                    </form>
+                    <p class="text-sm text-gray-500 mt-6">Secure payment through PayPal</p>
+                    <div class="mt-6 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 max-w-md mx-auto">
+                        <div class="flex items-center gap-2 mb-1">
+                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" alt="Supporter">
+                            <span class="text-sm font-bold text-pink-300">Supporter Badge</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Want your donation linked to your profile? Send <a href="/profile/8" class="text-blue-400 hover:text-blue-300 font-bold">me</a> a message on <a href="https://discordapp.com/users/248530770754625536" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-bold">Discord</a> after donating and I'll link it to your account - you'll get a Supporter badge on your profile!</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Current Year Progress -->
             <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <div class="relative mb-2">
@@ -654,29 +677,6 @@ const getYearProgress = (year, yearTotal) => {
                                 <span><strong>Spread the word about DefragLegends YouTube channel</strong> - We're missing 1,600 yearly watch hours to get it monetized. Playing it in the background could help!</span>
                             </li>
                         </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Donate Button -->
-            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
-                <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
-                <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
-
-                <!-- PayPal Donation Button -->
-                <div class="max-w-md mx-auto">
-                    <form action="https://www.paypal.com/donate" method="post" target="_top">
-                        <input type="hidden" name="hosted_button_id" value="WH6GY4PDGU8FA" />
-                        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" class="mx-auto transform scale-150 hover:scale-[1.55] transition-transform" />
-                        <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-                    </form>
-                    <p class="text-sm text-gray-500 mt-6">Secure payment through PayPal</p>
-                    <div class="mt-6 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 max-w-md mx-auto">
-                        <div class="flex items-center gap-2 mb-1">
-                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" alt="Supporter">
-                            <span class="text-sm font-bold text-pink-300">Supporter Badge</span>
-                        </div>
-                        <p class="text-xs text-gray-400">Want your donation linked to your profile? Send <a href="/profile/8" class="text-blue-400 hover:text-blue-300 font-bold">me</a> a message on <a href="https://discordapp.com/users/248530770754625536" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-bold">Discord</a> after donating and I'll link it to your account - you'll get a Supporter badge on your profile!</p>
                     </div>
                 </div>
             </div>

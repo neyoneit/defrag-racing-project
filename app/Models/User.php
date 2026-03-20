@@ -570,8 +570,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
             return false;
         }
 
-        // Must have at least 30 records
-        return $this->records()->count() >= 30;
+        return true;
     }
 
     /**

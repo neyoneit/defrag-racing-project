@@ -113,7 +113,12 @@ class ScrapeRecords implements ShouldQueue
             $newrecord->user_id = $user->id;
         }
 
-        $newrecord->save();
+        try {
+            $newrecord->save();
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            echo ("Skipped (duplicate constraint): [" . $record['name'] . "] (" . $record['map'] . ")") . PHP_EOL;
+            return;
+        }
 
         $serverMap = Map::where('name', $record['map'])->first();
 

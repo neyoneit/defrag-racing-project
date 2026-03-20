@@ -101,7 +101,7 @@
 
             <div>
                 <InputLabel for="discord" value="Discord" />
-                <div v-if="user.discord_id" class="mt-1 flex items-center gap-2">
+                <div v-if="user.discord_id && user.discord_id.length > 0" class="mt-1 flex items-center gap-2">
                     <div class="flex-1 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-md text-green-400 text-sm">
                         ✓ Connected as {{ user.discord_name }}
                     </div>

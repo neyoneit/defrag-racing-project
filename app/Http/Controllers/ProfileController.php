@@ -19,7 +19,7 @@ class ProfileController extends Controller {
         $user = User::query()
             ->where('id', $userId)
             ->with('clan')
-            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout', 'admin', 'is_moderator', 'donation_emails']);
+            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_id', 'discord_name', 'twitch_id', 'twitch_name', 'twitter_name', 'profile_layout', 'admin', 'is_moderator', 'donation_emails', 'is_live']);
 
         // Add MDD name if different from site name
         if ($user && $user->mdd_id) {
