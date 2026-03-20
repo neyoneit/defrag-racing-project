@@ -210,7 +210,7 @@ class RenderedVideoResource extends Resource
                     ->action(function (RenderedVideo $record) {
                         $demoUrl = $record->demo_url;
                         if ($record->demo_id) {
-                            $demoUrl = URL::signedRoute('demos.download', ['demo' => $record->demo_id], now()->addDays(7));
+                            $demoUrl = config('app.url') . "/api/demome/download-demo/{$record->demo_id}";
                         }
 
                         $record->update([
@@ -240,7 +240,7 @@ class RenderedVideoResource extends Resource
                     ->action(function (RenderedVideo $record) {
                         $demoUrl = $record->demo_url;
                         if ($record->demo_id) {
-                            $demoUrl = URL::signedRoute('demos.download', ['demo' => $record->demo_id], now()->addDays(7));
+                            $demoUrl = config('app.url') . "/api/demome/download-demo/{$record->demo_id}";
                         }
 
                         $record->update([
