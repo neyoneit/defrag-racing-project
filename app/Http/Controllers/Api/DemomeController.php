@@ -288,6 +288,106 @@ class DemomeController extends Controller
         ]);
     }
 
+    public function downloadDemo(UploadedDemo $demo)
+    {
+        if (empty($demo->file_path)) {
+            return response()->json(['error' => 'Demo file not available'], 404);
+        }
+
+        $filename = $demo->processed_filename ?: $demo->original_filename;
+
+        // Check if stored locally or on Backblaze
+        $isLocal = str_starts_with($demo->file_path, 'demos/temp/') ||
+                   str_starts_with($demo->file_path, 'demos/failed/');
+
+        if ($isLocal) {
+            $fullPath = storage_path("app/{$demo->file_path}");
+            if (!file_exists($fullPath)) {
+                return response()->json(['error' => 'Demo file not found'], 404);
+            }
+            $contents = file_get_contents($fullPath);
+        } else {
+            try {
+                $contents = Storage::get($demo->file_path);
+            } catch (\Exception $e) {
+                return response()->json(['error' => 'Failed to retrieve demo from storage'], 500);
+            }
+        }
+
+        if (!$contents) {
+            return response()->json(['error' => 'Empty demo file'], 404);
+        }
+
+        // Try to extract from 7z archive
+        $extracted = $this->extractFromArchive($contents, $filename);
+        if ($extracted) {
+            return response()->streamDownload(function() use ($extracted) {
+                echo $extracted['contents'];
+            }, $extracted['filename'], [
+                'Content-Type' => 'application/octet-stream',
+            ]);
+        }
+
+        // Return raw file
+        return response()->streamDownload(function() use ($contents) {
+            echo $contents;
+        }, $filename, [
+            'Content-Type' => 'application/octet-stream',
+        ]);
+    }
+
+    private function extractFromArchive($contents, $filename)
+    {
+        // Check for 7z magic bytes
+        if (strlen($contents) < 6 || substr($contents, 0, 6) !== "7z\xBC\xAF\x27\x1C") {
+            return null;
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'demo_');
+        file_put_contents($tempFile, $contents);
+
+        $tempDir = $tempFile . '_extracted';
+        mkdir($tempDir);
+
+        try {
+            $process = new \Symfony\Component\Process\Process(
+                ['7z', 'x', '-o' . $tempDir, '-y', $tempFile]
+            );
+            $process->setTimeout(30);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $files = glob($tempDir . '/*');
+                if (!empty($files)) {
+                    $extractedFile = $files[0];
+                    $extractedContents = file_get_contents($extractedFile);
+                    $extractedFilename = basename($extractedFile);
+
+                    // Clean up
+                    array_map('unlink', glob($tempDir . '/*'));
+                    rmdir($tempDir);
+                    unlink($tempFile);
+
+                    return [
+                        'contents' => $extractedContents,
+                        'filename' => $extractedFilename,
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("Failed to extract 7z archive: {$e->getMessage()}");
+        }
+
+        // Clean up on failure
+        if (is_dir($tempDir)) {
+            array_map('unlink', glob($tempDir . '/*'));
+            @rmdir($tempDir);
+        }
+        @unlink($tempFile);
+
+        return null;
+    }
+
     private function parseFilename(string $filename): array
     {
         $result = [

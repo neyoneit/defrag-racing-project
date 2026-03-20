@@ -47,8 +47,8 @@ class RenderRequestController extends Controller
             ], 409);
         }
 
-        // Generate signed URL for demome to download the demo
-        $demoUrl = URL::signedRoute('demos.download', ['demo' => $demo->id], now()->addDays(7));
+        // Demome downloads via its authenticated API endpoint
+        $demoUrl = config('app.url') . "/api/demome/download-demo/{$demo->id}";
 
         $video = RenderedVideo::create([
             'map_name' => $demo->map_name ?? $record->mapname,
