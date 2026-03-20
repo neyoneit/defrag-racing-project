@@ -52,8 +52,8 @@ class Kernel extends ConsoleKernel
         // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
         $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
 
-        // Auto-populate demome render queue when idle
-        $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
+        // Auto-populate demome render queue when idle (disabled until YouTube unlisted/public flow is ready)
+        // $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
     }
 
     /**

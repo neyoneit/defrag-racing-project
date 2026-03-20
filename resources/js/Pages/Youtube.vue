@@ -64,6 +64,14 @@
         return { 1: 'WR', 2: 'Verified', 3: 'Normal' }[p] || '';
     };
 
+    const estimateRender = (timeMs) => {
+        if (!timeMs) return null;
+        const totalSec = Math.round(timeMs / 1000 * 3);
+        if (totalSec < 60) return `~${totalSec}s`;
+        const min = Math.round(totalSec / 60);
+        return `~${min} min`;
+    };
+
     const timeSince = (dateStr) => {
         const now = new Date();
         const date = new Date(dateStr);
@@ -117,9 +125,9 @@
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-2 pb-12">
 
             <!-- Live Render Status -->
-            <div v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="mb-8">
-                <!-- Currently Rendering -->
-                <div v-if="currentlyRendering" class="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-xl p-5 mb-4">
+            <div v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <!-- Currently Rendering (left) -->
+                <div v-if="currentlyRendering" class="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-xl p-5">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
                         <span class="text-sm font-bold text-white uppercase tracking-wide">Currently Rendering</span>
@@ -130,7 +138,7 @@
                                 {{ currentlyRendering.map_name }}
                             </Link>
                             <div class="text-sm text-gray-400 mt-0.5">
-                                {{ currentlyRendering.player_name }}
+                                <span v-html="q3tohtml(currentlyRendering.player_name)"></span>
                                 <span class="uppercase ml-1">{{ currentlyRendering.physics }}</span>
                                 <span class="font-mono ml-2">{{ formatTime(currentlyRendering.time_ms) }}</span>
                                 <span v-if="currentlyRendering.record?.rank" class="ml-2 text-gray-500">#{{ currentlyRendering.record.rank }}</span>
@@ -141,7 +149,7 @@
                                 {{ sourceLabel(currentlyRendering.source) }}
                             </span>
                             <div v-if="currentlyRendering.requested_by" class="text-xs text-gray-500 mt-1">
-                                by {{ currentlyRendering.requested_by }}
+                                by <span v-html="q3tohtml(currentlyRendering.requested_by)"></span>
                             </div>
                         </div>
                     </div>
@@ -149,11 +157,14 @@
                     <div class="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-red-500 to-orange-500 rounded-full animate-progress-indeterminate"></div>
                     </div>
-                    <div class="text-xs text-gray-500 mt-1.5">Rendering in progress...</div>
+                    <div class="text-xs text-gray-500 mt-1.5">
+                        Started {{ timeSince(currentlyRendering.updated_at) }}
+                        <span v-if="estimateRender(currentlyRendering.time_ms)" class="ml-2">- Est. {{ estimateRender(currentlyRendering.time_ms) }} (if demo has prerun, this may be off)</span>
+                    </div>
                 </div>
 
-                <!-- Pending Queue -->
-                <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                <!-- Pending Queue (right) -->
+                <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-white/5 border border-white/10 rounded-xl overflow-hidden" :class="{ 'lg:col-start-2': !currentlyRendering }">
                     <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
                         <span class="text-sm font-bold text-white">Queue</span>
                         <span class="text-xs text-gray-500">{{ pendingTotal }} pending</span>
@@ -164,7 +175,7 @@
                                 <span class="text-xs font-bold text-gray-500 w-5 text-right">{{ i + 1 }}</span>
                                 <div>
                                     <span class="text-sm font-medium text-gray-200">{{ item.map_name }}</span>
-                                    <span class="text-xs text-gray-500 ml-2">{{ item.player_name }}</span>
+                                    <span class="text-xs text-gray-500 ml-2" v-html="q3tohtml(item.player_name)"></span>
                                     <span class="text-xs text-gray-600 uppercase ml-1">{{ item.physics }}</span>
                                     <span class="text-xs text-gray-500 font-mono ml-1">{{ formatTime(item.time_ms) }}</span>
                                     <span v-if="item.record?.rank" class="text-xs text-gray-600 ml-1">#{{ item.record.rank }}</span>
@@ -257,7 +268,7 @@
 
                             <div class="text-xs text-gray-400 space-y-0.5">
                                 <div class="flex items-center justify-between">
-                                    <span>{{ video.player_name }}</span>
+                                    <span v-html="q3tohtml(video.player_name)"></span>
                                     <span class="font-mono">{{ formatTime(video.time_ms) }}</span>
                                 </div>
                                 <div class="flex items-center justify-between">
@@ -267,7 +278,7 @@
                                     </span>
                                 </div>
                                 <div v-if="video.requested_by" class="text-gray-500 truncate">
-                                    by {{ video.requested_by }}
+                                    by <span v-html="q3tohtml(video.requested_by)"></span>
                                 </div>
                             </div>
 
