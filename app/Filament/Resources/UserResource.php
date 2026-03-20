@@ -73,8 +73,20 @@ class UserResource extends Resource
                             ->disabled(fn () => !self::isOwner()),
                         Forms\Components\Toggle::make('is_moderator')
                             ->label('Moderator')
-                            ->helperText('Limited access: Demo Reports, Record Flags, Alias Reports. Can approve/reject but cannot delete.'),
-                    ])->columns(2),
+                            ->helperText('Enable moderator role, then select which sections below.')
+                            ->live(),
+                        Forms\Components\CheckboxList::make('moderator_permissions')
+                            ->label('Moderator Sections')
+                            ->options([
+                                'demo_reports' => 'Demo Reports',
+                                'record_flags' => 'Record Flags',
+                                'alias_reports' => 'Alias Reports',
+                                'mapper_claims' => 'Mapper Claim Reports',
+                                'models' => 'Models (approve/reject)',
+                            ])
+                            ->visible(fn (Forms\Get $get) => $get('is_moderator'))
+                            ->columns(2),
+                    ])->columns(1),
                 Forms\Components\TextInput::make('twitter_name')
                     ->maxLength(255),
                 Forms\Components\TextInput::make('twitch_name')

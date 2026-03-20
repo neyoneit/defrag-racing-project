@@ -22,7 +22,7 @@ class MapperClaimReportResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasModeratorPermission('mapper_claims') ?? false;
     }
 
     public static function getNavigationBadge(): ?string

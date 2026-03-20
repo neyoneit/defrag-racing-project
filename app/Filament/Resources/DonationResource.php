@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DonationResource\Pages;
 use App\Models\SiteDonation;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -36,6 +37,13 @@ class DonationResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Select::make('user_id')
+                    ->label('Linked User')
+                    ->relationship('user', 'username')
+                    ->searchable()
+                    ->preload()
+                    ->nullable()
+                    ->helperText('Link to a user account to give them the Supporter badge.'),
                 Forms\Components\TextInput::make('donor_name')
                     ->label('Donor Name')
                     ->maxLength(255),
@@ -87,6 +95,11 @@ class DonationResource extends Resource
                     ->label('Donor')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('user.username')
+                    ->label('User')
+                    ->searchable()
+                    ->sortable()
+                    ->placeholder('--'),
                 Tables\Columns\TextColumn::make('amount')
                     ->money(fn ($record) => $record->currency)
                     ->sortable(),

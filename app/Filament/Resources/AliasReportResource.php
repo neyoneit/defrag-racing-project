@@ -25,6 +25,11 @@ class AliasReportResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasModeratorPermission('alias_reports') ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

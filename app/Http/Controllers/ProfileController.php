@@ -19,7 +19,7 @@ class ProfileController extends Controller {
         $user = User::query()
             ->where('id', $userId)
             ->with('clan')
-            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout']);
+            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_name', 'twitch_name', 'twitter_name', 'profile_layout', 'admin', 'is_moderator']);
 
         // Add MDD name if different from site name
         if ($user && $user->mdd_id) {
@@ -39,7 +39,9 @@ class ProfileController extends Controller {
                 ->with('hasProfile', false)
                 ->with('hasMapperProfile', $user->hasMapperProfile())
                 ->with('hasModelerProfile', $user->hasModelerProfile())
-                ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get());
+                ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get())
+                ->with('isDonor', $user->isDonor())
+                ->with('tagCount', $user->getTagCount());
         }
 
         // Check which props Inertia is requesting (partial reload)
@@ -176,7 +178,9 @@ class ProfileController extends Controller {
             ->with('hasProfile', true)
             ->with('hasMapperProfile', $user->hasMapperProfile())
             ->with('hasModelerProfile', $user->hasModelerProfile())
-            ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get());
+            ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get())
+            ->with('isDonor', $user->isDonor())
+            ->with('tagCount', $user->getTagCount());
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -322,7 +326,9 @@ class ProfileController extends Controller {
             ->with('activity_years', $activityYears)
             ->with('hasMapperProfile', false)
             ->with('hasModelerProfile', false)
-            ->with('creatorClaimNames', []);
+            ->with('creatorClaimNames', [])
+            ->with('isDonor', false)
+            ->with('tagCount', 0);
     }
 
     public function latestRecords($mddId) {
