@@ -208,6 +208,42 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return SiteDonation::where('user_id', $this->id)->where('status', 'approved')->exists();
     }
 
+    public function getDonationTotal(): array {
+        return SiteDonation::where('user_id', $this->id)
+            ->where('status', 'approved')
+            ->selectRaw('SUM(amount) as total, currency')
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->toArray();
+    }
+
+    public function getDonationTotalEur(): float {
+        $totals = $this->getDonationTotal();
+        if (empty($totals)) return 0;
+
+        $rates = \Cache::get('exchange_rates_v4', [
+            'EUR' => 1, 'USD' => 1.08, 'CZK' => 25.3, 'GBP' => 0.86, 'PLN' => 4.28,
+        ]);
+
+        $eur = 0;
+        foreach ($totals as $currency => $amount) {
+            if ($currency === 'EUR') {
+                $eur += $amount;
+            } elseif (isset($rates[$currency]) && $rates[$currency] > 0) {
+                $eur += $amount / $rates[$currency];
+            }
+        }
+        return round($eur, 2);
+    }
+
+    public function getDonorTier(): ?string {
+        if (!$this->isDonor()) return null;
+        $eur = $this->getDonationTotalEur();
+        if ($eur >= 100) return 'diamond';
+        if ($eur >= 50) return 'gold';
+        return 'supporter';
+    }
+
     public function getTagCount(): int {
         return \DB::table('map_tag')->where('user_id', $this->id)->count()
              + \DB::table('maplist_tag')->where('user_id', $this->id)->count();

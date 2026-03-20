@@ -18,8 +18,8 @@ class PopulateRenderQueue extends Command
 
     public function handle()
     {
-        if (SiteSetting::getBool('demome:paused', false)) {
-            $this->info('Demome is paused. Skipping.');
+        if (SiteSetting::getBool('demome:auto_queue_paused', false) && !$this->option('force')) {
+            $this->info('Auto-queue is disabled. Skipping. (Use --force to override)');
             return;
         }
 

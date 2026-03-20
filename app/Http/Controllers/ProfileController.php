@@ -41,6 +41,8 @@ class ProfileController extends Controller {
                 ->with('hasModelerProfile', $user->hasModelerProfile())
                 ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get())
                 ->with('isDonor', $user->isDonor())
+                ->with('donorTier', $user->getDonorTier())
+                ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
                 ->with('tagCount', $user->getTagCount());
         }
 
@@ -180,6 +182,8 @@ class ProfileController extends Controller {
             ->with('hasModelerProfile', $user->hasModelerProfile())
             ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get())
             ->with('isDonor', $user->isDonor())
+            ->with('donorTier', $user->getDonorTier())
+            ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
             ->with('tagCount', $user->getTagCount());
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -328,6 +332,8 @@ class ProfileController extends Controller {
             ->with('hasModelerProfile', false)
             ->with('creatorClaimNames', [])
             ->with('isDonor', false)
+            ->with('donorTier', null)
+            ->with('donationTotal', [])
             ->with('tagCount', 0);
     }
 

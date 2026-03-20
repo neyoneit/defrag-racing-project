@@ -27,11 +27,19 @@
                     <span class="text-gray-700 dark:text-gray-300">{{ $lastHeartbeat }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Queue</span>
+                    <span class="text-gray-500 dark:text-gray-400">Rendering</span>
                     @if($isPaused)
                         <x-filament::badge color="danger">Paused</x-filament::badge>
                     @else
                         <x-filament::badge color="success">Active</x-filament::badge>
+                    @endif
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-500 dark:text-gray-400">Auto-Queue</span>
+                    @if($isAutoQueuePaused)
+                        <x-filament::badge color="danger">Disabled</x-filament::badge>
+                    @else
+                        <x-filament::badge color="success">Enabled</x-filament::badge>
                     @endif
                 </div>
                 @if($currentVideo)
@@ -156,7 +164,15 @@
                 :color="$isPaused ? 'success' : 'danger'"
                 icon="{{ $isPaused ? 'heroicon-o-play' : 'heroicon-o-pause' }}"
             >
-                {{ $isPaused ? 'Unpause Queue' : 'Pause Queue' }}
+                {{ $isPaused ? 'Resume Rendering' : 'Pause Rendering' }}
+            </x-filament::button>
+
+            <x-filament::button
+                wire:click="toggleAutoQueue"
+                :color="$isAutoQueuePaused ? 'success' : 'warning'"
+                icon="{{ $isAutoQueuePaused ? 'heroicon-o-play' : 'heroicon-o-stop' }}"
+            >
+                {{ $isAutoQueuePaused ? 'Enable Auto-Queue' : 'Disable Auto-Queue' }}
             </x-filament::button>
 
             <x-filament::button
