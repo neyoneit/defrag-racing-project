@@ -39,6 +39,8 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'username',
         'country',
         'admin',
+        'is_moderator',
+        'moderator_permissions',
         'oldhash',
         'mdd_id',
         'twitter_name',
@@ -119,6 +121,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'avatar_effects_speed' => 'integer',
         'name_effects_speed' => 'integer',
         'pinned_models' => 'array',
+        'moderator_permissions' => 'array',
     ];
 
     /**
@@ -192,6 +195,22 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
 
     public function isModerator(): bool {
         return (bool) $this->is_moderator;
+    }
+
+    public function hasModeratorPermission(string $permission): bool {
+        if ($this->isAdmin()) return true;
+        if (!$this->isModerator()) return false;
+        $perms = $this->moderator_permissions ?? [];
+        return in_array($permission, $perms);
+    }
+
+    public function isDonor(): bool {
+        return SiteDonation::where('user_id', $this->id)->where('status', 'approved')->exists();
+    }
+
+    public function getTagCount(): int {
+        return \DB::table('map_tag')->where('user_id', $this->id)->count()
+             + \DB::table('maplist_tag')->where('user_id', $this->id)->count();
     }
 
     public function getFilamentAvatarUrl(): ?string {

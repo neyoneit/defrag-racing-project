@@ -671,6 +671,13 @@ const getYearProgress = (year, yearTotal) => {
                         <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
                     </form>
                     <p class="text-sm text-gray-500 mt-6">Secure payment through PayPal</p>
+                    <div class="mt-6 p-4 rounded-lg bg-pink-950/30 border border-pink-500/20 max-w-md mx-auto">
+                        <div class="flex items-center gap-2 mb-1">
+                            <img src="/images/svg/badge-donor.svg" class="w-5 h-5" alt="Supporter">
+                            <span class="text-sm font-bold text-pink-300">Supporter Badge</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Want your donation linked to your profile? Send <a href="/profile/8" class="text-blue-400 hover:text-blue-300 font-bold">me</a> a message on <a href="https://discordapp.com/users/248530770754625536" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-bold">Discord</a> after donating and I'll link it to your account - you'll get a Supporter badge on your profile!</p>
+                    </div>
                 </div>
             </div>
 

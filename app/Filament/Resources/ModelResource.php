@@ -27,7 +27,7 @@ class ModelResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasModeratorPermission('models') ?? false;
     }
 
     public static function form(Form $form): Form

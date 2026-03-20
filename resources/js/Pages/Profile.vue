@@ -93,6 +93,14 @@
             type: Array,
             default: () => []
         },
+        isDonor: {
+            type: Boolean,
+            default: false
+        },
+        tagCount: {
+            type: Number,
+            default: 0
+        },
         load_times: Object,
         renderStats: {
             type: Object,
@@ -688,6 +696,34 @@
 
                         <!-- Clan + Stats Row -->
                         <div class="flex items-center gap-3 flex-wrap">
+                            <!-- Admin Badge -->
+                            <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            </div>
+
+                            <!-- Moderator Badge -->
+                            <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+
+                            <!-- Donor Badge -->
+                            <div v-if="isDonor" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pink-950/70 border border-pink-400/50 shadow-xl backdrop-blur-sm">
+                                <img src="/images/svg/badge-donor.svg" class="w-4 h-4" alt="Supporter">
+                                <span class="text-xs font-bold text-pink-300 uppercase tracking-wider">Supporter</span>
+                            </div>
+
+                            <!-- Tagger Badge -->
+                            <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative">
+                                <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
+                                </div>
+                            </div>
+
                             <!-- Clan Badge -->
                             <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>

@@ -10,6 +10,7 @@ class SiteDonation extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'donor_name',
         'amount',
         'currency',
@@ -22,6 +23,11 @@ class SiteDonation extends Model
         'donation_date' => 'date',
         'amount' => 'decimal:2',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     // Scope for approved donations only
     public function scopeApproved($query)
