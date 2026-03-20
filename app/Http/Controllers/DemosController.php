@@ -337,8 +337,9 @@ class DemosController extends Controller
             }
         }
 
-        // --- Download limit (only on full load) ---
+        // --- Download & Upload limits (only on full load) ---
         $downloadLimitInfo = null;
+        $uploadLimitInfo = null;
         if (!$isPartial) {
             $rateLimitKey = $currentUser
                 ? "demo_download_user_{$currentUser->id}"
@@ -352,6 +353,21 @@ class DemosController extends Controller
                 'used' => $downloadsToday,
                 'limit' => $maxDownloads,
                 'remaining' => $remainingDownloads,
+                'isGuest' => !$currentUser,
+            ];
+
+            $uploadRateLimitKey = $currentUser
+                ? "demo_upload_rate_limit_{$currentUser->id}"
+                : "demo_upload_rate_limit_guest_" . request()->ip();
+
+            $uploadsUsed = Cache::get($uploadRateLimitKey, 0);
+            $maxUploads = $currentUser ? 100000 : 100;
+            $remainingUploads = max(0, $maxUploads - $uploadsUsed);
+
+            $uploadLimitInfo = [
+                'used' => $uploadsUsed,
+                'limit' => $maxUploads,
+                'remaining' => $remainingUploads,
                 'isGuest' => !$currentUser,
             ];
         }
@@ -375,6 +391,7 @@ class DemosController extends Controller
         if ($needs('publicDemos')) $data['publicDemos'] = $publicDemos;
         if ($needs('browseCounts')) $data['browseCounts'] = $browseCounts;
         if (!$isPartial) $data['downloadLimitInfo'] = $downloadLimitInfo;
+        if (!$isPartial) $data['uploadLimitInfo'] = $uploadLimitInfo;
 
         return Inertia::render('Demos/Index', $data);
     }
@@ -386,44 +403,39 @@ class DemosController extends Controller
     {
         $currentUser = Auth::user();
 
-        // Check if user is logged in
-        if (!$currentUser) {
+        // Check upload restrictions for logged-in users
+        if ($currentUser && !$currentUser->canUploadDemos()) {
             return response()->json([
                 'success' => false,
-                'message' => 'You must be logged in to upload demos.',
+                'message' => 'Your account has been restricted from uploading demos. Please contact an administrator.',
             ], 403);
         }
 
-        // Check if user meets upload requirements
-        if (!$currentUser->canUploadDemos()) {
-            $recordsCount = $currentUser->records()->count();
-
-            if ($currentUser->upload_restricted) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Your account has been restricted from uploading demos. Please contact an administrator.',
-                ], 403);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => "You need at least 30 records to upload demos. You currently have {$recordsCount} record(s).",
-            ], 403);
+        // Rate limiting
+        if ($currentUser) {
+            // Logged-in users: generous limit
+            $RATE_LIMIT_MAX = 100000;
+            $rateLimitKey = "demo_upload_rate_limit_{$currentUser->id}";
+            $rateLimitTtl = 300; // 5 minutes
+        } else {
+            // Guests: 100 per day per IP
+            $RATE_LIMIT_MAX = 100;
+            $rateLimitKey = "demo_upload_rate_limit_guest_" . $request->ip();
+            $rateLimitTtl = 86400; // 24 hours
         }
 
-        // Rate limiting: allow a larger cap to support archive imports
-        // Max demos allowed to be uploaded/processed per user per 5 minutes
-        $RATE_LIMIT_MAX = 100000;
-    $userId = Auth::id();
-        $rateLimitKey = "demo_upload_rate_limit_{$userId}";
         $currentUploads = Cache::get($rateLimitKey, 0);
 
         if ($currentUploads >= $RATE_LIMIT_MAX) {
             return response()->json([
                 'success' => false,
-                'message' => "Rate limit exceeded. You can upload maximum {$RATE_LIMIT_MAX} demos per 5 minutes.",
+                'message' => $currentUser
+                    ? "Rate limit exceeded. You can upload maximum {$RATE_LIMIT_MAX} demos per 5 minutes."
+                    : "Guest upload limit reached (100/day). Log in for unlimited uploads.",
             ], 429);
         }
+
+        $userId = $currentUser?->id;
 
         $request->validate([
             'demos' => 'required|array|min:1|max:100000', // Max 100,000 uploads per request (files or archives)
@@ -516,11 +528,13 @@ class DemosController extends Controller
                 ->get()
                 ->keyBy('file_hash');
 
-            // Batch query: existing demos by filename for this user
-            $existingByName = UploadedDemo::where('user_id', $userId)
-                ->whereIn('original_filename', $allNames)
-                ->get()
-                ->keyBy('original_filename');
+            // Batch query: existing demos by filename for this user (skip for guests)
+            $existingByName = $userId
+                ? UploadedDemo::where('user_id', $userId)
+                    ->whereIn('original_filename', $allNames)
+                    ->get()
+                    ->keyBy('original_filename')
+                : collect();
 
             // Phase 3: Filter, create records, store files, dispatch
             $reuploadableStatuses = ['failed', 'failed-validity', 'unsupported-version'];
@@ -590,7 +604,7 @@ class DemosController extends Controller
         gc_collect_cycles();
 
         // Update rate limit counter
-        Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addMinutes(5));
+        Cache::put($rateLimitKey, $currentUploads + $filesProcessed, now()->addSeconds($rateLimitTtl));
 
         // Count error types for summary
         $duplicateCount = count(array_filter($errors, fn($e) => str_contains($e, 'Duplicate') || str_contains($e, 'already uploaded')));

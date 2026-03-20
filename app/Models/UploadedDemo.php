@@ -43,6 +43,7 @@ class UploadedDemo extends Model
         'record_date',
         'validity',
         'status',
+        'source',
         'processing_output',
         'name_confidence',
         'suggested_user_id',

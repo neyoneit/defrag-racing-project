@@ -28,6 +28,7 @@ const props = defineProps({
     browseSortOrder: String,
     userSearch: String,
     downloadLimitInfo: Object,
+    uploadLimitInfo: Object,
     confidenceFilter: String,
     showOtherUserMatches: Boolean,
     uploadedBy: String,
@@ -71,6 +72,7 @@ const showDownloadLimitPopup = ref(false);
 const downloadLimitPopupMessage = ref('');
 const downloadLimitPopupIsGuest = ref(false);
 const localDownloadLimitInfo = ref(props.downloadLimitInfo ? { ...props.downloadLimitInfo } : null);
+const localUploadLimitInfo = ref(props.uploadLimitInfo ? { ...props.uploadLimitInfo } : null);
 
 const downloadDemo = async (demoId) => {
     try {
@@ -1238,31 +1240,52 @@ watch(selectedPhysics, () => {
                         </div>
                     </div>
 
-                    <!-- Download Limit Info (Compact, Right Side) -->
-                    <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
-                        <div class="flex items-center gap-2">
-                            <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <svg v-else-if="localDownloadLimitInfo.remaining === 0" class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                            </svg>
-                            <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
-                                <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
-                                <span class="text-blue-300/80 ml-1">downloads left</span>
-                                <div class="text-sm text-blue-200 font-semibold mt-1">Unlock more downloads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>.</div>
+                    <!-- Limits Info (Right Side) -->
+                    <div class="flex flex-col gap-2">
+                        <!-- Download Limit -->
+                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                            <div class="flex items-center gap-2">
+                                <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <svg v-else-if="localDownloadLimitInfo.remaining === 0" class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                                <svg v-else class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div v-if="localDownloadLimitInfo.isGuest" class="text-xs">
+                                    <span class="text-blue-200 font-semibold">{{ localDownloadLimitInfo.remaining }}/{{ localDownloadLimitInfo.limit }}</span>
+                                    <span class="text-blue-300/80 ml-1">downloads left today</span>
+                                    <div class="text-sm text-blue-200 font-semibold mt-1">Unlock more downloads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>. <a href="/donations" class="underline hover:text-white transition-colors">Donate</a> for unlimited.</div>
+                                </div>
+                                <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
+                                    <span class="text-red-200 font-semibold">Limit reached</span>
+                                </div>
+                                <div v-else class="text-xs">
+                                    <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
+                                    <span class="text-gray-300 mx-1">/</span>
+                                    <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
+                                    <span class="text-gray-400 ml-1">downloads left today</span>
+                                    <div class="text-gray-400 mt-1"><a href="/donations" class="underline hover:text-white transition-colors">Donate</a> to get unlimited downloads.</div>
+                                </div>
                             </div>
-                            <div v-else-if="localDownloadLimitInfo.remaining === 0" class="text-xs">
-                                <span class="text-red-200 font-semibold">Limit reached</span>
-                            </div>
-                            <div v-else class="text-xs">
-                                <span class="text-green-400 font-semibold">{{ localDownloadLimitInfo.remaining }}</span>
-                                <span class="text-gray-300 mx-1">/</span>
-                                <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
-                                <span class="text-gray-400 ml-1">downloads left</span>
+                        </div>
+                        <!-- Upload Limit -->
+                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-gray-900/40 border-white/5'">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 flex-shrink-0" :class="localUploadLimitInfo.isGuest ? 'text-purple-400' : 'text-green-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <div v-if="localUploadLimitInfo.isGuest" class="text-xs">
+                                    <span class="text-purple-200 font-semibold">{{ localUploadLimitInfo.remaining }}/{{ localUploadLimitInfo.limit }}</span>
+                                    <span class="text-purple-300/80 ml-1">uploads left today</span>
+                                    <div class="text-sm text-purple-200 font-semibold mt-1">Unlock unlimited uploads after <a href="/login" class="underline hover:text-white transition-colors">login</a>/<a href="/register" class="underline hover:text-white transition-colors">register</a>.</div>
+                                </div>
+                                <div v-else class="text-xs">
+                                    <span class="text-green-400 font-semibold">Unlimited</span>
+                                    <span class="text-gray-400 ml-1">uploads</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2415,6 +2438,7 @@ watch(selectedPhysics, () => {
                                     </td>
                                     <td class="px-6 py-4 text-sm text-gray-300">
                                         <span v-if="demo.user" v-html="q3tohtml(demo.user.name)"></span>
+                                        <span v-else-if="demo.source === 'demome'" class="text-cyan-400">Demome</span>
                                         <span v-else class="text-gray-500">Guest</span>
                                     </td>
                                     <td class="px-3 py-4 text-xs text-gray-300">
