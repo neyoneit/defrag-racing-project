@@ -1380,11 +1380,41 @@ class DemosController extends Controller
         $previousRecordId = $demo->record_id;
 
         try {
+            // Determine the correct status to restore
+            $restoredStatus = 'processed';
+            if ($demo->validity && $demo->validity !== 'valid') {
+                $restoredStatus = 'failed-validity';
+            } elseif ($demo->gametype && str_starts_with($demo->gametype, 'm')) {
+                $restoredStatus = 'fallback-assigned';
+            } else {
+                $restoredStatus = 'fallback-assigned';
+            }
+
             $demo->update([
                 'record_id' => null,
-                'status' => 'processed',
+                'status' => $restoredStatus,
                 'manually_assigned' => false,
             ]);
+
+            // Recreate OfflineRecord if it was deleted during assign
+            if (!$demo->offlineRecord && $demo->map_name && $demo->time_ms) {
+                $existingOffline = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
+                if (!$existingOffline) {
+                    \App\Models\OfflineRecord::create([
+                        'map_name' => $demo->map_name,
+                        'physics' => strtoupper($demo->physics ?? ''),
+                        'gametype' => $demo->gametype,
+                        'time_ms' => $demo->time_ms,
+                        'player_name' => $demo->player_name,
+                        'demo_id' => $demo->id,
+                        'date_set' => $demo->record_date ?? $demo->created_at,
+                        'validity_flag' => $demo->validity !== 'valid' ? $demo->validity : null,
+                    ]);
+                }
+            }
+
+            // Clear record_id on linked RenderedVideo
+            RenderedVideo::where('demo_id', $demo->id)->update(['record_id' => null]);
 
             // Log manual unassign in demo reports for admin visibility
             \App\Models\DemoAssignmentReport::create([
