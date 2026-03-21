@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/demos/maps/{mapname}/records', [DemosController::class, 'getRecords'])->name('demos.records');
     Route::post('/demos/{demo}/assign', [DemosController::class, 'assign'])->name('demos.assign');
     Route::post('/demos/{demo}/unassign', [DemosController::class, 'unassign'])->name('demos.unassign');
+    Route::post('/demos/{demo}/link-youtube', [DemosController::class, 'linkYoutube'])->name('demos.link-youtube');
 
     // OAuth routes
     Route::get('/oauth/discord', [App\Http\Controllers\OAuthController::class, 'redirectToDiscord'])->name('oauth.discord');
