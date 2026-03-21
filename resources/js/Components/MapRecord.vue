@@ -32,6 +32,10 @@
     const showReportModal = ref(false);
     const showFlagModal = ref(false);
     const showYoutubeEmbed = ref(false);
+    const showYoutubeLinkModal = ref(false);
+    const youtubeLinkInput = ref('');
+    const youtubeLinkSaving = ref(false);
+    const youtubeLinkError = ref(null);
 
     const renderRequesting = ref(false);
     const renderRequested = ref(false);
@@ -96,6 +100,42 @@
     const canReportDemo = computed(() => {
         return isLoggedIn.value && page.props.canReportDemos;
     });
+
+    const isAdmin = computed(() => {
+        return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
+    });
+
+    const demoIdForYoutubeLink = computed(() => {
+        if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return props.record.demo.id;
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return props.record.uploaded_demos[0].id;
+        return null;
+    });
+
+    const linkYoutube = async () => {
+        const input = youtubeLinkInput.value.trim();
+        if (!input) return;
+
+        // Extract video ID from URL or use directly
+        let videoId = input;
+        const match = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+        if (match) videoId = match[1];
+
+        const demoId = demoIdForYoutubeLink.value;
+        if (!demoId) { youtubeLinkError.value = 'No demo found'; return; }
+
+        youtubeLinkSaving.value = true;
+        youtubeLinkError.value = null;
+        try {
+            await axios.post(`/demos/${demoId}/link-youtube`, { youtube_video_id: videoId });
+            showYoutubeLinkModal.value = false;
+            youtubeLinkInput.value = '';
+            window.location.reload();
+        } catch (e) {
+            youtubeLinkError.value = e.response?.data?.message || 'Failed to link';
+        } finally {
+            youtubeLinkSaving.value = false;
+        }
+    };
 
     const showValidityTooltip = ref(false);
     const validityTooltipPos = ref({ x: 0, y: 0 });
@@ -697,6 +737,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             </button>
+
+            <button
+                v-if="isAdmin && demoIdForYoutubeLink"
+                @click.stop="showYoutubeLinkModal = true"
+                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                title="Link YouTube video"
+            >
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+            </button>
         </div>
 
         <!-- Time - MASSIVE and eye-catching -->
@@ -744,6 +793,31 @@
                     </button>
                     <button @click="requestRender" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
                         Render
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- YouTube Link Modal (admin) -->
+    <Teleport to="body" v-if="showYoutubeLinkModal">
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" @click.self="showYoutubeLinkModal = false">
+            <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
+                <h3 class="text-sm font-bold text-white mb-3">Link YouTube Video</h3>
+                <input
+                    v-model="youtubeLinkInput"
+                    type="text"
+                    placeholder="YouTube URL or video ID"
+                    class="w-full px-3 py-2 text-sm bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                    @keyup.enter="linkYoutube"
+                >
+                <p v-if="youtubeLinkError" class="text-red-400 text-xs mt-2">{{ youtubeLinkError }}</p>
+                <div class="flex gap-2 justify-end mt-4">
+                    <button @click="showYoutubeLinkModal = false" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="linkYoutube" :disabled="youtubeLinkSaving" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+                        {{ youtubeLinkSaving ? '...' : 'Link' }}
                     </button>
                 </div>
             </div>

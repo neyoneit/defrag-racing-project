@@ -1444,6 +1444,58 @@ class DemosController extends Controller
     }
 
     /**
+     * Link/update YouTube video for a demo (admin only)
+     */
+    public function linkYoutube(Request $request, UploadedDemo $demo)
+    {
+        $currentUser = Auth::user();
+        if (!$currentUser || (!$currentUser->is_admin && !$currentUser->admin)) {
+            abort(403, 'Admin only');
+        }
+
+        $request->validate([
+            'youtube_video_id' => 'required|string|max:20',
+        ]);
+
+        $youtubeVideoId = $request->youtube_video_id;
+        $youtubeUrl = "https://www.youtube.com/watch?v={$youtubeVideoId}";
+
+        // Check if demo already has a RenderedVideo
+        $existing = RenderedVideo::where('demo_id', $demo->id)->where('status', 'completed')->first();
+
+        if ($existing) {
+            $existing->update([
+                'youtube_video_id' => $youtubeVideoId,
+                'youtube_url' => $youtubeUrl,
+            ]);
+        } else {
+            RenderedVideo::create([
+                'map_name' => $demo->map_name,
+                'player_name' => $demo->player_name,
+                'physics' => $demo->physics,
+                'time_ms' => $demo->time_ms,
+                'gametype' => $demo->gametype,
+                'record_id' => $demo->record_id,
+                'demo_id' => $demo->id,
+                'source' => 'manual',
+                'status' => 'completed',
+                'priority' => 3,
+                'demo_url' => "https://defrag.racing/demos/{$demo->id}/download",
+                'youtube_url' => $youtubeUrl,
+                'youtube_video_id' => $youtubeVideoId,
+                'is_visible' => true,
+                'published_at' => now(),
+                'publish_approved' => true,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'youtube_video_id' => $youtubeVideoId,
+        ]);
+    }
+
+    /**
      * Store uploaded demo LOCALLY in temp directory for processing
      * After processing, the compressed file will be uploaded to Backblaze
      */
