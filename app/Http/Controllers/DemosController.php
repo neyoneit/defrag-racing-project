@@ -575,15 +575,23 @@ class DemosController extends Controller
 
                     if ($replacedThisDemo) $replacedCount++;
 
-                    // Create DB record
-                    $demo = UploadedDemo::create([
-                        'original_filename' => $originalName,
-                        'file_path' => '',
-                        'file_size' => $demoFile->getSize(),
-                        'file_hash' => $fileHash,
-                        'user_id' => $userId,
-                        'status' => 'uploaded',
-                    ]);
+                    // Create DB record (catch unique constraint for same-hash files within one batch)
+                    try {
+                        $demo = UploadedDemo::create([
+                            'original_filename' => $originalName,
+                            'file_path' => '',
+                            'file_size' => $demoFile->getSize(),
+                            'file_hash' => $fileHash,
+                            'user_id' => $userId,
+                            'status' => 'uploaded',
+                        ]);
+                    } catch (\Illuminate\Database\QueryException $qe) {
+                        if (str_contains($qe->getMessage(), 'Duplicate entry')) {
+                            $errors[] = $originalName . ': Duplicate file content (same hash in this batch)';
+                            continue;
+                        }
+                        throw $qe;
+                    }
 
                     // Store file and update path
                     $path = $this->storeUploadedDemoLocally($demoFile, $demo->id);

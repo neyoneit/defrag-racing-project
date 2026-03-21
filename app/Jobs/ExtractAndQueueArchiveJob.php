@@ -109,6 +109,17 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
 
+            // Create a failed demo record so the user sees the error in UI
+            UploadedDemo::create([
+                'original_filename' => $this->originalFilename,
+                'file_path' => '',
+                'file_size' => file_exists($this->archivePath) ? filesize($this->archivePath) : 0,
+                'file_hash' => md5($this->originalFilename . now()->timestamp),
+                'user_id' => $this->userId,
+                'status' => 'failed',
+                'processing_output' => $e->getMessage(),
+            ]);
+
             // Clean up archive file
             @unlink($this->archivePath);
 
