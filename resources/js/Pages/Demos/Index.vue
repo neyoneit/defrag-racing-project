@@ -632,119 +632,104 @@ const uploadDemos = async () => {
     processingStartTime.value = Date.now();
     actionStartedAt.value = new Date();
 
+    const UPLOAD_TIMEOUT = 300000; // 5 minutes per batch
+
+    const sendBatch = async (batchFiles, label) => {
+        const formData = new FormData();
+        batchFiles.forEach(file => formData.append('demos[]', file));
+
+        try {
+            const response = await axios.post(route('demos.upload'), formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: UPLOAD_TIMEOUT,
+                onUploadProgress: function (progressEvent) {
+                    if (progressEvent.lengthComputable) {
+                        uploadProgress.value = Math.round(((totalFiles - files.length + totalReceived) / totalFiles) * 100);
+                    }
+                }
+            });
+
+            if (response.data.success) {
+                console.log(`[Upload] ${label} done: queued=${response.data.summary?.queued || 0}, dupes=${response.data.summary?.duplicates || 0}`);
+                allUploaded.push(...(response.data.uploaded || []));
+                allErrors.push(...(response.data.errors || []));
+                const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
+                allDemoIds.push(...demoIds);
+                trackingDemoIds.value = [...allDemoIds];
+
+                if (!pollingStarted) {
+                    pollingStarted = true;
+                    startStatusPolling();
+                }
+
+                if (response.data.summary) {
+                    totalReceived += response.data.summary.total_received || 0;
+                    totalQueued += response.data.summary.queued || 0;
+                    totalDuplicates += response.data.summary.duplicates || 0;
+                    totalOtherErrors += response.data.summary.errors || 0;
+                    totalReplaced += response.data.summary.replaced || 0;
+                }
+                return true;
+            }
+            return true; // Server-side failure, don't split
+        } catch (error) {
+            console.warn(`[Upload] ${label} failed (${batchFiles.length} files): ${error.message}`);
+            return false;
+        }
+    };
+
+    const uploadWithSplit = async (batchFiles, label) => {
+        const success = await sendBatch(batchFiles, label);
+        if (success) return;
+
+        // Split failed batch: 100->50, 50->10, 10->1
+        let subSize;
+        if (batchFiles.length > 50) subSize = 50;
+        else if (batchFiles.length > 10) subSize = 10;
+        else subSize = 1;
+
+        if (subSize >= batchFiles.length) {
+            // Single file failed - mark as failed
+            totalFailedBatchFiles += batchFiles.length;
+            batchFiles.forEach(f => failedFileNames.push(f.name));
+            allErrors.push(`${label}: ${batchFiles[0].name} failed to upload`);
+            console.error(`[Upload] ${label} FAILED: ${batchFiles[0].name}`);
+            return;
+        }
+
+        console.log(`[Upload] ${label} splitting ${batchFiles.length} -> ${subSize}s`);
+        totalRetriedBatches++;
+
+        for (let j = 0; j < batchFiles.length; j += subSize) {
+            const subBatch = batchFiles.slice(j, j + subSize);
+            await uploadWithSplit(subBatch, `${label}.${Math.floor(j / subSize) + 1}`);
+        }
+    };
+
     try {
         for (let i = 0; i < totalBatches; i++) {
             const batchFiles = files.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
-            const formData = new FormData();
-            batchFiles.forEach(file => {
-                formData.append('demos[]', file);
-            });
-
             console.log(`[Upload] Batch ${i + 1}/${totalBatches} sending ${batchFiles.length} files...`);
 
-            const MAX_RETRIES = 2;
-            const RETRY_TIMEOUTS = [300000, 420000, 600000]; // 5min, 7min, 10min
-            let batchSuccess = false;
+            await uploadWithSplit(batchFiles, `Batch ${i + 1}/${totalBatches}`);
 
-            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-                try {
-                    if (attempt > 0) {
-                        console.log(`[Upload] Batch ${i + 1}/${totalBatches} retry ${attempt}/${MAX_RETRIES} (timeout: ${RETRY_TIMEOUTS[attempt]}ms)...`);
-                    }
-
-                    const response = await axios.post(route('demos.upload'), formData, {
-                        headers: {
-                            'Content-Type': 'multipart/form-data',
-                        },
-                        timeout: RETRY_TIMEOUTS[attempt],
-                        onUploadProgress: function (progressEvent) {
-                            if (progressEvent.lengthComputable) {
-                                const batchProgress = (progressEvent.loaded / progressEvent.total);
-                                const overallProgress = ((i + batchProgress) / totalBatches) * 100;
-                                uploadProgress.value = Math.round(overallProgress);
-                            }
-                        }
-                    });
-
-                    if (response.data.success) {
-                        if (attempt > 0) {
-                            console.log(`[Upload] Batch ${i + 1}/${totalBatches} succeeded on retry ${attempt}`);
-                            totalRetriedBatches++;
-                        }
-                        console.log(`[Upload] Batch ${i + 1}/${totalBatches} done: queued=${response.data.summary?.queued || 0}, dupes=${response.data.summary?.duplicates || 0}`);
-                        allUploaded.push(...(response.data.uploaded || []));
-                        allErrors.push(...(response.data.errors || []));
-                        const demoIds = (response.data.uploaded || []).map(d => d.id).filter(Boolean);
-                        allDemoIds.push(...demoIds);
-
-                        // Add new IDs to tracking immediately so polling picks them up
-                        trackingDemoIds.value = [...allDemoIds];
-
-                        // Start polling after first successful batch (shows queue status during upload)
-                        if (!pollingStarted) {
-                            pollingStarted = true;
-                            startStatusPolling();
-                        }
-
-                        // Accumulate summary from server
-                        if (response.data.summary) {
-                            totalReceived += response.data.summary.total_received || 0;
-                            totalQueued += response.data.summary.queued || 0;
-                            totalDuplicates += response.data.summary.duplicates || 0;
-                            totalOtherErrors += response.data.summary.errors || 0;
-                            totalReplaced += response.data.summary.replaced || 0;
-                        }
-
-                        // Update upload summary live after each batch
-                        uploadSummary.value = {
-                            total_selected: totalFiles,
-                            total_sent: totalReceived,
-                            queued: totalQueued,
-                            replaced: totalReplaced,
-                            duplicates: totalDuplicates,
-                            errors: totalOtherErrors,
-                            skipped_frontend: 0,
-                            retried_batches: totalRetriedBatches,
-                            failed_batch_files: totalFailedBatchFiles,
-                            duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
-                            batch_progress: `${i + 1}/${totalBatches}`,
-                        };
-                        uploadSuccess.value = allUploaded;
-                        uploadErrors.value = allErrors;
-                        batchSuccess = true;
-                    } else {
-                        console.error(`[Upload] Batch ${i + 1}/${totalBatches} returned success=false`, response.data);
-                        batchSuccess = true; // Don't retry server-side failures
-                    }
-                    break; // Success or server error — don't retry
-                } catch (batchError) {
-                    const isLastAttempt = attempt >= MAX_RETRIES;
-                    if (isLastAttempt) {
-                        console.error(`[Upload] Batch ${i + 1}/${totalBatches} FAILED after ${MAX_RETRIES + 1} attempts:`, batchError.message);
-                        totalFailedBatchFiles += batchFiles.length;
-                        batchFiles.forEach(f => failedFileNames.push(f.name));
-                        allErrors.push(`Batch ${i + 1} failed after ${MAX_RETRIES + 1} attempts (${batchFiles.length} files): ${batchError.message}`);
-
-                        // Update summary to show failed files live
-                        uploadSummary.value = {
-                            total_selected: totalFiles,
-                            total_sent: totalReceived,
-                            queued: totalQueued,
-                            replaced: totalReplaced,
-                            duplicates: totalDuplicates,
-                            errors: totalOtherErrors,
-                            skipped_frontend: 0,
-                            retried_batches: totalRetriedBatches,
-                            failed_batch_files: totalFailedBatchFiles,
-                            failed_file_names: [...failedFileNames],
-                            duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
-                            batch_progress: `${i + 1}/${totalBatches}`,
-                        };
-                    } else {
-                        console.warn(`[Upload] Batch ${i + 1}/${totalBatches} attempt ${attempt + 1} failed: ${batchError.message}, retrying...`);
-                    }
-                }
-            }
+            // Update summary after each top-level batch
+            uploadSummary.value = {
+                total_selected: totalFiles,
+                total_sent: totalReceived,
+                queued: totalQueued,
+                replaced: totalReplaced,
+                duplicates: totalDuplicates,
+                errors: totalOtherErrors,
+                skipped_frontend: 0,
+                retried_batches: totalRetriedBatches,
+                failed_batch_files: totalFailedBatchFiles,
+                failed_file_names: [...failedFileNames],
+                duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
+                batch_progress: `${i + 1}/${totalBatches}`,
+            };
+            uploadSuccess.value = allUploaded;
+            uploadErrors.value = allErrors;
         }
 
         console.log(`[Upload] All batches done. Total queued=${totalQueued}, dupes=${totalDuplicates}, errors=${allErrors.length}`);
