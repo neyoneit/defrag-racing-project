@@ -1332,6 +1332,9 @@ class DemosController extends Controller
             'manually_assigned' => true,
         ]);
 
+        // Update any linked RenderedVideo to point to the new record
+        RenderedVideo::where('demo_id', $demo->id)->update(['record_id' => $record->id]);
+
         // Log manual assign in demo reports for admin visibility
         \App\Models\DemoAssignmentReport::create([
             'demo_id' => $demo->id,
