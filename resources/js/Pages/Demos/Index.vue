@@ -69,6 +69,7 @@ const showUploadInfoModal = (title, message, type = 'info') => {
 };
 
 const showDownloadLimitPopup = ref(false);
+const showFailedFiles = ref(false);
 const downloadLimitPopupMessage = ref('');
 const downloadLimitPopupIsGuest = ref(false);
 const localDownloadLimitInfo = ref(props.downloadLimitInfo ? { ...props.downloadLimitInfo } : null);
@@ -622,6 +623,7 @@ const uploadDemos = async () => {
     let totalReplaced = 0;
     let totalRetriedBatches = 0;
     let totalFailedBatchFiles = 0;
+    let failedFileNames = [];
     let pollingStarted = false;
 
     // Prepare tracking state before upload loop so polling can work during upload
@@ -720,6 +722,7 @@ const uploadDemos = async () => {
                     if (isLastAttempt) {
                         console.error(`[Upload] Batch ${i + 1}/${totalBatches} FAILED after ${MAX_RETRIES + 1} attempts:`, batchError.message);
                         totalFailedBatchFiles += batchFiles.length;
+                        batchFiles.forEach(f => failedFileNames.push(f.name));
                         allErrors.push(`Batch ${i + 1} failed after ${MAX_RETRIES + 1} attempts (${batchFiles.length} files): ${batchError.message}`);
 
                         // Update summary to show failed files live
@@ -733,6 +736,7 @@ const uploadDemos = async () => {
                             skipped_frontend: 0,
                             retried_batches: totalRetriedBatches,
                             failed_batch_files: totalFailedBatchFiles,
+                            failed_file_names: [...failedFileNames],
                             duration: ((Date.now() - uploadStartTime) / 1000).toFixed(1),
                             batch_progress: `${i + 1}/${totalBatches}`,
                         };
@@ -760,6 +764,7 @@ const uploadDemos = async () => {
             skipped_frontend: skippedFrontend > 0 ? skippedFrontend : 0,
             retried_batches: totalRetriedBatches,
             failed_batch_files: totalFailedBatchFiles,
+            failed_file_names: [...failedFileNames],
             duration: uploadDuration,
         };
 
@@ -1267,7 +1272,7 @@ watch(selectedPhysics, () => {
                                     <span class="text-gray-300 mx-1">/</span>
                                     <span class="text-gray-300">{{ localDownloadLimitInfo.limit }}</span>
                                     <span class="text-gray-400 ml-1">downloads left today</span>
-                                    <div class="text-gray-400 mt-1"><a href="/donations" class="underline hover:text-white transition-colors">Donate</a> to get unlimited downloads.</div>
+                                    <div class="text-gray-400 mt-1">Downloads limited due to bandwidth costs. <a href="/donations" class="underline hover:text-white transition-colors">Donate</a> for unlimited.</div>
                                 </div>
                             </div>
                         </div>
@@ -1285,6 +1290,7 @@ watch(selectedPhysics, () => {
                                 <div v-else class="text-xs">
                                     <span class="text-green-400 font-semibold">Unlimited</span>
                                     <span class="text-gray-400 ml-1">uploads</span>
+                                    <div class="text-gray-500 mt-0.5">Uploads are free, no bandwidth cost.</div>
                                 </div>
                             </div>
                         </div>
@@ -1541,10 +1547,10 @@ watch(selectedPhysics, () => {
                                 <div class="text-amber-400 text-xs">Recovered</div>
                                 <div class="text-amber-300 font-bold text-lg">{{ uploadSummary.retried_batches }} {{ uploadSummary.retried_batches === 1 ? 'batch' : 'batches' }}</div>
                             </div>
-                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-2 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30">
+                            <div v-if="uploadSummary.failed_batch_files > 0" class="bg-red-900/40 rounded-lg px-2 py-2 text-center border-2 border-red-500/60 ring-1 ring-red-500/30 cursor-pointer" @click="showFailedFiles = !showFailedFiles" title="Click to show/hide file names">
                                 <div class="text-red-400 text-xs font-semibold">Not Uploaded</div>
                                 <div class="text-red-300 font-bold text-lg">{{ uploadSummary.failed_batch_files.toLocaleString() }} files</div>
-                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">re-upload needed</div>
+                                <div class="text-[10px] text-red-400 mt-0.5 font-medium">click to show files</div>
                             </div>
                             <div v-if="uploadSummary.batch_progress && uploading" class="bg-blue-900/30 rounded-lg px-2 py-2 text-center border border-blue-700/30">
                                 <div class="text-blue-400 text-xs">Batch</div>
@@ -1554,6 +1560,17 @@ watch(selectedPhysics, () => {
                                 <div class="text-gray-400 text-xs">Duration</div>
                                 <div class="text-white font-bold text-lg">{{ uploadSummary.duration }}s</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Not Uploaded Files List -->
+                    <div v-if="showFailedFiles && uploadSummary.failed_file_names && uploadSummary.failed_file_names.length > 0" class="mt-4 p-4 bg-red-900/20 rounded-xl border border-red-700/30">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-red-300 font-semibold text-sm">Not Uploaded Files (re-upload these)</span>
+                            <button @click="showFailedFiles = false" class="text-red-400 hover:text-white text-xs">close</button>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto space-y-0.5">
+                            <div v-for="name in uploadSummary.failed_file_names" :key="name" class="text-xs text-red-200/80 font-mono truncate">{{ name }}</div>
                         </div>
                     </div>
 
