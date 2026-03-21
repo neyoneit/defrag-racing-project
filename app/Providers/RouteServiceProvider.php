@@ -25,11 +25,6 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            // No rate limit for demome API (authenticated by token)
-            if ($request->bearerToken() && $request->is('api/demome/*')) {
-                return Limit::none();
-            }
-
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 

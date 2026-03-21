@@ -25,7 +25,7 @@ Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\Profile
 Route::get('/records/search', [\App\Http\Controllers\RecordsController::class, 'search']);
 
 // Demome renderer API
-Route::prefix('demome')->middleware('demome.token')->group(function () {
+Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle:api')->group(function () {
     Route::get('/queue', [\App\Http\Controllers\Api\DemomeController::class, 'queue']);
     Route::post('/claim/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'claim']);
     Route::post('/complete/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'complete']);
