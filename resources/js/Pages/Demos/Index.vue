@@ -641,7 +641,7 @@ const uploadDemos = async () => {
             console.log(`[Upload] Batch ${i + 1}/${totalBatches} sending ${batchFiles.length} files...`);
 
             const MAX_RETRIES = 2;
-            const RETRY_TIMEOUTS = [120000, 180000, 240000]; // 2min, 3min, 4min
+            const RETRY_TIMEOUTS = [300000, 420000, 600000]; // 5min, 7min, 10min
             let batchSuccess = false;
 
             for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
