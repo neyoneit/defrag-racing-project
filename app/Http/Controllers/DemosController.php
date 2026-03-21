@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Models\UploadedDemo;
+use App\Models\RenderedVideo;
 use App\Services\DemoProcessorService;
 use App\Jobs\ProcessDemoJob;
 
