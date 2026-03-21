@@ -64,7 +64,8 @@ class LinkYoutubeVideos extends Command
             }
 
             if ($dryRun) {
-                $this->line("  WOULD LINK: demo#{$demo->id} ({$demo->map_name} | {$demo->player_name}) -> yt={$youtubeVideoId}");
+                $timeStr = $demo->time_ms ? sprintf('%d:%02d.%03d', intdiv($demo->time_ms, 60000), intdiv($demo->time_ms % 60000, 1000), $demo->time_ms % 1000) : '?';
+                $this->line("  WOULD LINK: demo#{$demo->id} ({$demo->map_name} | {$demo->player_name} | {$timeStr} | {$demo->physics}) -> yt={$youtubeVideoId}");
                 $linked++;
                 continue;
             }
