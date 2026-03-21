@@ -249,7 +249,7 @@ class MapsController extends Controller
 
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', "CPM.{$ctfNumber}%")
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
@@ -261,7 +261,7 @@ class MapsController extends Controller
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', "VQ3.{$ctfNumber}%")
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
@@ -275,7 +275,7 @@ class MapsController extends Controller
                 // Show all offline fast caps records regardless of CTF mode
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'CPM%')
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
@@ -287,7 +287,7 @@ class MapsController extends Controller
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'VQ3%')
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
@@ -301,7 +301,7 @@ class MapsController extends Controller
                 // Use LIKE to match both
                 $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'CPM%')
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'cpmPage')
                     ->withQueryString();
@@ -313,7 +313,7 @@ class MapsController extends Controller
 
                 $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
                     ->where('physics', 'LIKE', 'VQ3%')
-                    ->with(['demo.suggestedUser', 'user'])
+                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->completed()->visible()->latest()])
                     ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
                     ->paginate(50, ['*'], 'vq3Page')
                     ->withQueryString();
@@ -414,6 +414,7 @@ class MapsController extends Controller
                 'rank' => $record->rank,
                 'is_online' => $record->gametype && str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
                 'verification_type' => $flagType, // ONLINE/OFFLINE or validity flag
+                'rendered_videos' => $record->renderedVideos,
             ];
         });
 
