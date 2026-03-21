@@ -55,6 +55,14 @@ class OfflineRecord extends Model
     }
 
     /**
+     * Rendered videos relationship (through demo_id)
+     */
+    public function renderedVideos()
+    {
+        return $this->hasMany(RenderedVideo::class, 'demo_id', 'demo_id');
+    }
+
+    /**
      * Get time attribute (alias for time_ms for frontend compatibility)
      */
     public function getTimeAttribute()
