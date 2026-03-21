@@ -1498,8 +1498,8 @@ class DemosController extends Controller
                 throw new \Exception('Archive type not supported on server (missing zip extension or 7z binary)');
             }
 
-            // Use -y to assume Yes on all queries; extract to tmpDir
-            $cmd = escapeshellcmd($seven) . ' x ' . escapeshellarg($origPath) . ' -o' . escapeshellarg($tmpDir) . ' -y';
+            // Use -y to assume Yes on all queries; -p"" to never wait for password input; extract to tmpDir
+            $cmd = escapeshellcmd($seven) . ' x ' . escapeshellarg($origPath) . ' -o' . escapeshellarg($tmpDir) . ' -y -p""';
             exec($cmd . ' 2>&1', $out, $rc);
             if ($rc !== 0) {
                 // cleanup
