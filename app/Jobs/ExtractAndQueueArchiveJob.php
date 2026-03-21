@@ -196,11 +196,15 @@ class ExtractAndQueueArchiveJob implements ShouldQueue
         $escapedArchive = escapeshellarg($archivePath);
         $escapedExtractDir = escapeshellarg($extractDir);
 
-        // Extract all files
-        exec("7z x -o{$escapedExtractDir} {$escapedArchive} 2>&1", $output, $returnCode);
+        // Extract all files (-p"" = empty password so 7z never waits for stdin on password-protected archives)
+        exec("7z x -o{$escapedExtractDir} -p\"\" -y {$escapedArchive} 2>&1", $output, $returnCode);
 
         if ($returnCode !== 0) {
-            throw new \Exception('Failed to extract archive with 7z: ' . implode("\n", $output));
+            $outputStr = implode("\n", $output);
+            if (str_contains($outputStr, 'Wrong password') || str_contains($outputStr, 'Data Error in encrypted')) {
+                throw new \Exception('Archive is password-protected, skipping.');
+            }
+            throw new \Exception('Failed to extract archive with 7z: ' . $outputStr);
         }
 
         // Find all .dm_* files recursively
