@@ -36,7 +36,13 @@ class LinkYoutubeByTitle extends Command
         $multiMatch = 0;
 
         foreach ($entries as $entry) {
-            $videoId = $entry['video_id'];
+            $videoId = $entry['video_id'] ?? null;
+            if (!$videoId && !empty($entry['youtube_url'])) {
+                if (preg_match('/[?&]v=([\w-]+)/', $entry['youtube_url'], $m)) {
+                    $videoId = $m[1];
+                }
+            }
+            if (!$videoId) continue;
             $title = $entry['title'];
 
             // Skip if this YouTube video is already linked
