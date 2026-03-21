@@ -189,7 +189,7 @@ class DemomeController extends Controller
             'record_id' => $recordId,
             'demo_id' => $validated['demo_id'] ?? null,
             'source' => $validated['source'],
-            'requested_by' => $validated['requested_by'],
+            'requested_by' => $validated['requested_by'] ?? null,
             'status' => 'completed',
             'priority' => 3,
             'demo_url' => $validated['demo_url'],
