@@ -611,7 +611,7 @@ class MapsController extends Controller
                 if (!$demo->time_ms || $demo->time_ms !== $record->time) continue;
 
                 $confidence = $nameMatcher->calculateConfidence($demo->player_name, $recordName);
-                if ($confidence >= 30) {
+                if ($confidence >= 20) {
                     $matches[$record->id][] = [
                         'demo_id' => $demo->id,
                         'player_name' => $demo->player_name,
