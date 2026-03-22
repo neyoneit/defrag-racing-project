@@ -555,7 +555,7 @@ class DemomeController extends Controller
             ->whereNull('published_at')
             ->whereNotNull('youtube_video_id')
             ->select('id', 'youtube_video_id', 'map_name', 'player_name')
-            ->limit(50)
+            ->limit(1000)
             ->get();
 
         return response()->json(['videos' => $videos]);
