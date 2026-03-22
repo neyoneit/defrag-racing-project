@@ -43,7 +43,8 @@ class ProfileController extends Controller {
                 ->with('isDonor', $user->isDonor())
                 ->with('donorTier', $user->getDonorTier())
                 ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
-                ->with('tagCount', $user->getTagCount());
+                ->with('tagCount', $user->getTagCount())
+                ->with('assignedDemoCounts', $user->getAssignedDemoCounts());
         }
 
         // Check which props Inertia is requesting (partial reload)
@@ -185,7 +186,8 @@ class ProfileController extends Controller {
             ->with('isDonor', $user->isDonor())
             ->with('donorTier', $user->getDonorTier())
             ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
-            ->with('tagCount', $user->getTagCount());
+            ->with('tagCount', $user->getTagCount())
+            ->with('assignedDemoCounts', $user->getAssignedDemoCounts());
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);

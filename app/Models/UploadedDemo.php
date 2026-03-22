@@ -19,6 +19,8 @@ class UploadedDemo extends Model
             Cache::forget('home:total_demos');
             if ($demo->user_id) {
                 Cache::forget("demo_counts_user_{$demo->user_id}");
+                Cache::forget("profile:assigned_demos:{$demo->user_id}");
+                Cache::forget("profile:demo_stats:{$demo->user_id}");
             }
         };
 

@@ -68,6 +68,10 @@
             type: Object,
             default: () => ({})
         },
+        assignedDemoCounts: {
+            type: Object,
+            default: () => ({ offline: 0, online: 0 })
+        },
         activity_data: {
             type: Object,
             default: () => ({})
@@ -761,6 +765,16 @@
                                 </div>
                             </div>
 
+                            <!-- Assigner Badge -->
+                            <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative">
+                                <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
+                                </div>
+                            </div>
+
                             <!-- Clan Badge -->
                             <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
@@ -1188,6 +1202,9 @@
                                 Highest download count on a single demo
                             </div>
                             <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.most_downloaded || 0 }}</span>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-white/5">
+                            <p class="text-[10px] text-gray-500 italic">Special thanks to Enter for his demo collection that helped populate this database.</p>
                         </div>
                     </div>
                 </div>
