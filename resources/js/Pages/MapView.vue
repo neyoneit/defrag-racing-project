@@ -421,6 +421,15 @@
                 tag_name: tagName
             });
             tags.value.push(response.data.tag);
+
+            // Also add parent tag if auto-added by backend
+            if (response.data.parent_tag_added) {
+                const parentTag = response.data.parent_tag_added;
+                if (!tags.value.some(t => t.id === parentTag.id)) {
+                    tags.value.push(parentTag);
+                }
+            }
+
             newTagInput.value = '';
             showTagSuggestions.value = false;
         } catch (error) {
@@ -434,21 +443,44 @@
         }
     };
 
-    const removeTag = async (tagId) => {
-        if (!page.props.auth.user) return;
+    // Tag removal confirmation
+    const tagToRemove = ref(null);
+    const tagRemoveChildren = ref([]);
+    const showTagRemoveConfirm = ref(false);
+
+    const confirmRemoveTag = (tag) => {
+        tagToRemove.value = tag;
+        // If this is a parent tag, find its children that are currently on this map
+        const children = tag.children || [];
+        tagRemoveChildren.value = children.filter(child => tags.value.some(t => t.id === child.id));
+        showTagRemoveConfirm.value = true;
+    };
+
+    const executeRemoveTag = async () => {
+        if (!tagToRemove.value) return;
+        const tagId = tagToRemove.value.id;
 
         try {
-            await axios.delete(`/api/maps/${props.map.id}/tags/${tagId}`);
-            tags.value = tags.value.filter(tag => tag.id !== tagId);
+            const response = await axios.delete(`/api/maps/${props.map.id}/tags/${tagId}`);
 
-            // Update suggested tags to reflect this tag is no longer adopted
-            const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
-            if (suggestedIndex !== -1) {
-                suggestedTags.value[suggestedIndex].already_adopted = false;
+            // Remove the tag and any child tags that were also removed
+            const removedIds = [tagId, ...(response.data.removed_child_ids || [])];
+            tags.value = tags.value.filter(tag => !removedIds.includes(tag.id));
+
+            // Update suggested tags
+            for (const id of removedIds) {
+                const suggestedIndex = suggestedTags.value.findIndex(t => t.id === id);
+                if (suggestedIndex !== -1) {
+                    suggestedTags.value[suggestedIndex].already_adopted = false;
+                }
             }
         } catch (error) {
             console.error('Error removing tag:', error);
             alert('Failed to remove tag');
+        } finally {
+            showTagRemoveConfirm.value = false;
+            tagToRemove.value = null;
+            tagRemoveChildren.value = [];
         }
     };
 
@@ -912,7 +944,7 @@
                                 {{ tag.display_name }}
                                 <button
                                     v-if="$page.props.auth.user"
-                                    @click="removeTag(tag.id)"
+                                    @click="confirmRemoveTag(tag)"
                                     class="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
                                     title="Remove tag"
                                 >
@@ -1495,6 +1527,47 @@
                 </div>
             </div>
         </div>
+        <!-- Tag Remove Confirmation Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showTagRemoveConfirm" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click.self="showTagRemoveConfirm = false">
+                    <div class="fixed inset-0 bg-black/60"></div>
+                    <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <h3 class="text-lg font-bold text-white mb-3">Remove Tag</h3>
+                        <p class="text-gray-300 mb-2">
+                            Remove <span class="font-semibold text-purple-400">{{ tagToRemove?.display_name }}</span> from this map?
+                        </p>
+                        <div v-if="tagRemoveChildren.length > 0" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                            <p class="text-yellow-400 text-sm font-semibold mb-1">This is a parent tag. The following child tags will also be removed:</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                <span v-for="child in tagRemoveChildren" :key="child.id" class="bg-purple-600/20 border border-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full text-xs">
+                                    {{ child.display_name }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button
+                                @click="executeRemoveTag"
+                                class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
+                            >
+                                Remove{{ tagRemoveChildren.length > 0 ? ' All' : '' }}
+                            </button>
+                            <button
+                                @click="showTagRemoveConfirm = false"
+                                class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 

@@ -12,6 +12,7 @@ class Tag extends Model
         'display_name',
         'category',
         'usage_count',
+        'parent_tag_id',
     ];
 
     /**
@@ -22,6 +23,22 @@ class Tag extends Model
         return $this->belongsToMany(Map::class, 'map_tag')
             ->withPivot('user_id')
             ->withTimestamps();
+    }
+
+    /**
+     * Parent tag (e.g. "Ground Boost" is parent of "PGB")
+     */
+    public function parent()
+    {
+        return $this->belongsTo(Tag::class, 'parent_tag_id');
+    }
+
+    /**
+     * Child tags (e.g. "PGB" and "RGB" are children of "Ground Boost")
+     */
+    public function children()
+    {
+        return $this->hasMany(Tag::class, 'parent_tag_id');
     }
 
     /**

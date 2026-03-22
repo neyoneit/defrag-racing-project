@@ -27,13 +27,35 @@ class TagResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasModeratorPermission('tags') ?? false;
     }
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
+                Forms\Components\Section::make('Tag Hierarchy')
+                    ->description('Tags can have a parent-child relationship. When a child tag (e.g. "PGB") is added to a map, the parent tag (e.g. "Ground Boost") is automatically added too. When a parent tag is removed, all its children are removed from that map.')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Forms\Components\Placeholder::make('hierarchy_info')
+                            ->content(new \Illuminate\Support\HtmlString(
+                                '<div class="text-sm space-y-2">' .
+                                '<p><strong>Example:</strong> "Ground Boost" is a parent tag. "PGB" (Plasma Ground Boost) and "RGB" (Rocket Ground Boost) are its children.</p>' .
+                                '<ul class="list-disc pl-5 space-y-1">' .
+                                '<li>Adding "PGB" to a map → "Ground Boost" is <strong>auto-added</strong></li>' .
+                                '<li>Adding "Ground Boost" to a map → nothing extra happens</li>' .
+                                '<li>Removing "PGB" from a map → only "PGB" is removed, "Ground Boost" stays</li>' .
+                                '<li>Removing "Ground Boost" from a map → "PGB" and "RGB" are <strong>also removed</strong></li>' .
+                                '<li>Setting a parent <strong>retroactively adds</strong> the parent tag to all maps that already have this child tag</li>' .
+                                '</ul>' .
+                                '</div>'
+                            ))
+                            ->hiddenLabel(),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
+
                 Forms\Components\TextInput::make('display_name')
                     ->required()
                     ->maxLength(255)
@@ -53,6 +75,27 @@ class TagResource extends Resource
                 Forms\Components\TextInput::make('category')
                     ->maxLength(255)
                     ->nullable(),
+                Forms\Components\Select::make('parent_tag_id')
+                    ->label('Parent Tag')
+                    ->helperText('If set, adding this tag to a map will also auto-add the parent tag. Only tags without a parent can be selected (no multi-level nesting).')
+                    ->relationship('parent', 'display_name')
+                    ->options(fn (?Tag $record) => Tag::whereNull('parent_tag_id')
+                        ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                        ->orderBy('display_name')
+                        ->pluck('display_name', 'id')
+                    )
+                    ->searchable()
+                    ->nullable()
+                    ->preload(),
+                Forms\Components\Placeholder::make('children_info')
+                    ->label('Child Tags')
+                    ->content(function (?Tag $record) {
+                        if (!$record) return 'Save tag first to see children.';
+                        $children = $record->children()->pluck('display_name')->toArray();
+                        if (empty($children)) return 'No child tags. Other tags can reference this tag as their parent.';
+                        return implode(', ', $children);
+                    })
+                    ->visibleOn('edit'),
                 Forms\Components\TextInput::make('usage_count')
                     ->numeric()
                     ->default(0)

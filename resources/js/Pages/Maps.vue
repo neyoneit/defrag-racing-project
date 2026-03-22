@@ -11,7 +11,7 @@
         queries: Object,
     });
 
-    const showFilters = ref(Object.keys(props.queries ?? {}).length > 0);
+    const showFilters = ref(Object.keys(props.queries ?? {}).filter(k => k !== 'tags').length > 0);
     const tagsWithUsage = ref([]);
     const selectedTags = ref([]);
 
@@ -40,9 +40,14 @@
             delete params.tags;
         }
 
-        router.get('/maps', params, {
+        const hasFilters = Object.keys(params).length > 0;
+        const url = hasFilters ? '/maps/filters' : '/maps';
+        mapsLoaded.value = false;
+        router.get(url, params, {
             preserveState: true,
-            preserveScroll: true
+            preserveScroll: true,
+            only: ['maps', 'queries'],
+            onFinish: () => { mapsLoaded.value = true; }
         });
     };
 
@@ -51,9 +56,14 @@
         const params = { ...props.queries };
         delete params.tags;
 
-        router.get('/maps', params, {
+        const hasFilters = Object.keys(params).length > 0;
+        const url = hasFilters ? '/maps/filters' : '/maps';
+        mapsLoaded.value = false;
+        router.get(url, params, {
             preserveState: true,
-            preserveScroll: true
+            preserveScroll: true,
+            only: ['maps', 'queries'],
+            onFinish: () => { mapsLoaded.value = true; }
         });
     };
 
@@ -100,7 +110,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <div class="flex items-center gap-4">
                         <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Maps</h1>
-                        <span class="text-sm text-gray-400">{{ maps.total }} total</span>
+                        <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
                     </div>
 
                     <button

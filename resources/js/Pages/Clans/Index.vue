@@ -85,9 +85,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         inviteForm.post(route('clans.manage.invite'), {
             errorBag: 'submitInviteForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showInvitePlayer.value = false;
                 inviteUserId.value = [];
+                router.reload({ only: ['clans', 'myClan', 'joinRequests', 'blockedUsers'] });
             }
         });
     };
@@ -109,9 +111,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         kickForm.post(route('clans.manage.kick'), {
             errorBag: 'submitKickForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showKickPlayer.value = false;
                 kickUserId.value = [];
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -134,10 +138,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     const finalTransferSubmit = () => {
         transferForm.post(route('clans.manage.transfer'), {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showTransferOwnership.value = false;
                 showTransferConfirm.value = false;
                 transferUserId.value = [];
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -151,8 +157,10 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         leaveForm.post(route('clans.manage.leave'), {
             errorBag: 'submitLeaveForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showLeaveClan.value = false;
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -166,8 +174,10 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         dismantleForm.post(route('clans.manage.dismantle'), {
             errorBag: 'submitDismantleForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showDismantleClan.value = false;
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -180,18 +190,24 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     const acceptRequest = (invitation) => {
         requestForm.post(route('clans.manage.request.accept', invitation.id), {
             preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['clans', 'myClan', 'joinRequests', 'blockedUsers'] }); }
         });
     };
 
     const rejectRequest = (invitation) => {
         requestForm.post(route('clans.manage.request.reject', invitation.id), {
             preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['joinRequests'] }); }
         });
     };
 
     const blockRequest = (invitation) => {
         requestForm.post(route('clans.manage.request.block', invitation.id), {
             preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['joinRequests', 'blockedUsers'] }); }
         });
     };
 
@@ -199,6 +215,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         if (!props.myClan) return;
         requestForm.delete(route('clans.manage.unblock', { clan: props.myClan.id, user: userId }), {
             preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['blockedUsers'] }); }
         });
     };
 
@@ -284,6 +302,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         form.post(route('clans.manage.update', props.myClan.id), {
             errorBag: 'submitForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: (page) => {
                 // Update form with fresh data from server
                 const updatedClan = page.props.myClan;
@@ -301,6 +320,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                 imagePreview.value = null;
                 backgroundPreview.value = null;
                 form.reset('image', 'background');
+
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };

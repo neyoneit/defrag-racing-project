@@ -142,3 +142,37 @@
 .q3c-z {
     color: gray;
 }
+
+/* Compact sidebar navigation */
+.fi-sidebar-nav .fi-sidebar-group {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0.125rem;
+    margin-bottom: 0.125rem;
+}
+
+.fi-sidebar-nav .fi-sidebar-group-button {
+    padding-top: 0.125rem;
+    padding-bottom: 0.125rem;
+}
+
+.fi-sidebar-nav .fi-sidebar-item a {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size: 0.8125rem;
+}
+
+.fi-sidebar-nav .fi-sidebar-item .fi-sidebar-item-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.fi-sidebar-nav .fi-sidebar-group-label {
+    font-size: 0.6875rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0;
+}
+
+.fi-sidebar-nav > ul {
+    gap: 0.125rem;
+}

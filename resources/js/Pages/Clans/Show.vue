@@ -59,7 +59,7 @@
 
 <template>
     <div class="min-h-screen">
-        <Head :title="clan.plain_name" />
+        <Head :title="clan.plain_name + ' - Clan'" />
 
         <!-- Hero Section with Background -->
         <div class="relative h-[400px] overflow-hidden">

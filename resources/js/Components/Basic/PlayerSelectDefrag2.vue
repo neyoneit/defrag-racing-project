@@ -71,6 +71,9 @@
 
     const selectSingleOption = (id) => {
         selectedOptions.value = [id]
+        recentlySelected.value = false;
+        isOpen.value = false;
+        search.value = '';
     }
 
     const clearOptions = () => {
