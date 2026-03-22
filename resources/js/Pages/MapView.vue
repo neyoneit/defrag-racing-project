@@ -479,7 +479,7 @@
             }
         } catch (error) {
             console.error('Error removing tag:', error);
-            alert('Failed to remove tag');
+            alert(error.response?.data?.error || 'Failed to remove tag');
         } finally {
             showTagRemoveConfirm.value = false;
             tagToRemove.value = null;
@@ -989,7 +989,7 @@
                             >
                                 {{ tag.display_name }}
                                 <button
-                                    v-if="$page.props.auth.user"
+                                    v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned"
                                     @click="confirmRemoveTag(tag)"
                                     class="opacity-0 group-hover:opacity-100 hover:text-red-300 transition-opacity"
                                     title="Remove tag"
@@ -1003,7 +1003,7 @@
                             <button
                                 v-for="suggestedTag in suggestedTags.filter(s => !s.already_adopted)"
                                 :key="'sug-' + suggestedTag.id"
-                                v-if="$page.props.auth.user"
+                                v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned"
                                 @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
                                 :disabled="adoptingTag"
                                 class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-600/20 text-green-300 border border-green-500/30 hover:bg-green-600/30 transition-all"
@@ -1013,11 +1013,19 @@
                                 {{ suggestedTag.display_name }}
                             </button>
                             <span v-if="tags.length === 0 && !$page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet</span>
-                            <span v-if="tags.length === 0 && $page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet - add below</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user && !$page.props.auth.user.tag_banned" class="text-gray-500 text-xs italic">No tags yet - add below</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user?.tag_banned" class="text-gray-500 text-xs italic">No tags yet</span>
+                        </div>
+
+                        <div v-if="$page.props.auth.user?.tag_banned" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-900/20 border border-red-500/20 text-red-400 text-xs">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            You have been banned from adding or removing tags.
                         </div>
 
                         <!-- Add tag bar (Maps page style with hover expand) -->
-                        <div v-if="$page.props.auth.user" class="relative" ref="tagInputContainer" @mouseenter="onTagBarEnter" @mouseleave="onTagBarLeave">
+                        <div v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned" class="relative" ref="tagInputContainer" @mouseenter="onTagBarEnter" @mouseleave="onTagBarLeave">
                             <div class="mapview-tags-bar" :class="{ 'mapview-tags-bar-focus': showAllTags }" @click="focusTagInput">
                                 <div class="flex items-center gap-2 min-h-[36px]">
                                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
