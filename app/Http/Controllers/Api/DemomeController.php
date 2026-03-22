@@ -323,21 +323,30 @@ class DemomeController extends Controller
             'source' => 'demome',
         ]);
 
-        // Store file locally
+        // Store file locally - use Storage::put with file contents (Octane/Swoole compatible)
         $tempDir = "demos/temp/{$demo->id}";
-        $storedPath = $file->storeAs($tempDir, $originalFilename);
+        $storedPath = $tempDir . '/' . $originalFilename;
+        $fileContents = file_get_contents($file->getRealPath());
 
-        if (!$storedPath) {
-            Log::error('Demome upload: storeAs failed', [
+        if ($fileContents === false) {
+            Log::error('Demome upload: failed to read uploaded file', [
                 'demo_id' => $demo->id,
                 'filename' => $originalFilename,
-                'temp_dir' => $tempDir,
                 'upload_tmp' => $file->getRealPath(),
-                'upload_tmp_exists' => file_exists($file->getRealPath()),
-                'storage_path' => storage_path('app/' . $tempDir),
-                'storage_writable' => is_writable(storage_path('app/demos/temp')),
             ]);
-            $demo->update(['status' => 'failed', 'processing_output' => 'File storage failed - storeAs returned false']);
+            $demo->update(['status' => 'failed', 'processing_output' => 'Failed to read uploaded file from temp']);
+            return response()->json(['success' => false, 'error' => 'Failed to read uploaded file'], 500);
+        }
+
+        $stored = Storage::disk('local')->put($storedPath, $fileContents);
+
+        if (!$stored) {
+            Log::error('Demome upload: Storage::put failed', [
+                'demo_id' => $demo->id,
+                'filename' => $originalFilename,
+                'stored_path' => $storedPath,
+            ]);
+            $demo->update(['status' => 'failed', 'processing_output' => 'File storage failed - Storage::put returned false']);
             return response()->json(['success' => false, 'error' => 'File storage failed'], 500);
         }
 
@@ -347,6 +356,7 @@ class DemomeController extends Controller
             'stored_path' => $storedPath,
             'full_path' => $fullStoredPath,
             'file_exists' => file_exists($fullStoredPath),
+            'file_size' => filesize($fullStoredPath),
         ]);
 
         $demo->update(['file_path' => $storedPath]);
