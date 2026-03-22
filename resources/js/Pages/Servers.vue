@@ -3,12 +3,10 @@ import { Head, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
 import { defineAsyncComponent, onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
-import { useClipboard } from '@/Composables/useClipboard';
+import CopyButton from '@/Components/Basic/CopyButton.vue';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
-const { copy } = useClipboard();
 const page = usePage();
-const copiedIP = ref(null);
 const showMaplistModal = ref(false);
 const selectedMapId = ref(null);
 
@@ -23,23 +21,7 @@ const localServers = ref([]);
 const serversLoading = ref(true);
 const serversLoaded = computed(() => localServers.value.length > 0);
 
-const copyServerIP = (serverIP) => {
-    copy(serverIP);
-    copiedIP.value = serverIP;
-    setTimeout(() => {
-        copiedIP.value = null;
-    }, 2000);
-};
-
-const copiedMap = ref(null);
 const hoveredMapServer = ref(null);
-const copyMapName = (mapName) => {
-    copy(mapName);
-    copiedMap.value = mapName;
-    setTimeout(() => {
-        copiedMap.value = null;
-    }, 2000);
-};
 
 const players = ref(0);
 const interval = ref(null);
@@ -390,18 +372,6 @@ const getFunctionName = (abbr) => {
                             <span class="text-gray-300 font-semibold">Active Servers</span>
                         </div>
 
-                        <!-- Layout Toggle -->
-                        <button @click="toggleLayout" class="group relative px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300">
-                            <div class="flex items-center gap-2">
-                                <svg v-if="layout === 'large'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-                                </svg>
-                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-purple-400">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                                </svg>
-                                <span class="text-sm font-bold text-white">{{ layout === 'large' ? 'Large Cards' : 'Compact List' }}</span>
-                            </div>
-                        </button>
                     </div>
                 </div>
 
@@ -475,11 +445,17 @@ const getFunctionName = (abbr) => {
                             </svg>
                             Hide Empty
                         </button>
-                        <button @click="filters.showDetails = !filters.showDetails" :class="filters.showDetails ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
+                        <button @click="filters.showDetails = !filters.showDetails" :class="!filters.showDetails ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
                             </svg>
-                            Show Details
+                            Hide Details
+                        </button>
+                        <button @click="toggleLayout" :class="layout !== 'large' ? 'bg-blue-600 text-white border-blue-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                            </svg>
+                            Compact
                         </button>
                     </div>
                 </div>
@@ -528,9 +504,7 @@ const getFunctionName = (abbr) => {
                             <div :class="['flex items-center gap-2 mb-3 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                                 <img :src="`/images/flags/${server.location}.png`" class="w-5 h-3.5 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 8px rgba(0,0,0,0.8));" :title="server.location" @error="$event.target.style.display='none'">
                                 <h3 class="text-xl font-bold text-white flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
-                                <button @click="copyServerIP(server.ip + ':' + server.port)" :class="copiedIP === server.ip + ':' + server.port ? 'bg-green-600 border-green-400 text-white' : 'bg-white/10 hover:bg-white/15 border-white/30 hover:border-white/40 text-gray-200 hover:text-blue-400'" class="px-2 py-1 border rounded-lg transition-all  text-xs font-bold">
-                                    {{ copiedIP === server.ip + ':' + server.port ? 'Copied!' : 'Copy IP' }}
-                                </button>
+                                <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
                             </div>
 
                             <!-- Map Info with hover group -->
@@ -543,24 +517,12 @@ const getFunctionName = (abbr) => {
                                                 <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
-                                            <button
-                                                @click.stop="copyMapName(server.map)"
-                                                :class="[copiedMap === server.map ? 'text-green-400' : 'text-gray-400 hover:text-blue-400', 'p-1 rounded transition-colors']"
-                                                style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1));"
-                                                :title="copiedMap === server.map ? 'Copied!' : 'Copy map name'"
-                                            >
-                                                <svg v-if="copiedMap === server.map" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                                </svg>
-                                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                                </svg>
-                                            </button>
+                                            <CopyButton :text="server.map" size="xs" />
                                             <!-- Add to Maplist button (only if logged in and map has ID) -->
                                             <button
                                                 v-if="page.props.auth.user && server.mapdata?.id"
                                                 @click.stop="openAddToMaplist(server.mapdata.id)"
-                                                class="p-1 text-gray-400 hover:text-purple-400 rounded transition-colors"
+                                                class="p-1 text-gray-200 hover:text-purple-400 rounded transition-colors"
                                                 style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1));"
                                                 title="Add to Maplist"
                                             >
@@ -758,9 +720,7 @@ const getFunctionName = (abbr) => {
                                         </svg>
                                         <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
                                     </a>
-                                    <button @click="copyServerIP(server.ip + ':' + server.port)" :class="copiedIP === server.ip + ':' + server.port ? 'bg-green-600 border-green-400 text-white' : 'bg-white/10 hover:bg-white/15 border-white/30 hover:border-white/40 text-gray-200 hover:text-blue-400'" class="px-2 py-1 border rounded-lg transition-all  text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">
-                                        {{ copiedIP === server.ip + ':' + server.port ? 'Copied!' : 'Copy IP' }}
-                                    </button>
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
                                 </div>
                             </div>
 
@@ -864,9 +824,7 @@ const getFunctionName = (abbr) => {
                                         </svg>
                                         <span class="text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">Play</span>
                                     </a>
-                                    <button @click="copyServerIP(server.ip + ':' + server.port)" :class="copiedIP === server.ip + ':' + server.port ? 'bg-green-600 border-green-400 text-white' : 'bg-white/10 hover:bg-white/15 border-white/30 hover:border-white/40 text-gray-200 hover:text-purple-400'" class="px-2 py-1 border rounded-lg transition-all  text-xs font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">
-                                        {{ copiedIP === server.ip + ':' + server.port ? 'Copied!' : 'Copy IP' }}
-                                    </button>
+                                    <CopyButton :text="server.ip + ':' + server.port" size="sm" label="Copy IP" />
                                 </div>
                             </div>
 

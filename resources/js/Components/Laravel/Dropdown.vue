@@ -85,7 +85,7 @@ const alignmentClasses = computed(() => {
 
         <!-- Backdrop -->
         <Teleport to="body">
-            <div v-show="open" class="fixed inset-0 z-[60] pointer-events-auto" @click="open = false"></div>
+            <div v-show="open" class="fixed inset-0 z-[210] pointer-events-auto" @click="open = false"></div>
         </Teleport>
 
         <!-- Dropdown -->
@@ -98,7 +98,7 @@ const alignmentClasses = computed(() => {
                 leave-from-class="transform opacity-100 scale-100"
                 leave-to-class="transform opacity-0 scale-95"
             >
-                <div v-show="open" class="fixed rounded-xl shadow-2xl z-[70]"
+                <div v-show="open" class="fixed rounded-xl shadow-2xl z-[220]"
                      :class="[widthClass, alignmentClasses]"
                      :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left !== 'auto' ? dropdownPosition.left + 'px' : 'auto', right: dropdownPosition.right !== 'auto' ? dropdownPosition.right + 'px' : 'auto' }"
                      @click.stop>

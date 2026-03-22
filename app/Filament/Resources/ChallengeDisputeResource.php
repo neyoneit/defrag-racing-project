@@ -22,7 +22,7 @@ class ChallengeDisputeResource extends Resource
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasModeratorPermission('challenge_disputes') ?? false;
     }
 
     public static function getNavigationBadge(): ?string

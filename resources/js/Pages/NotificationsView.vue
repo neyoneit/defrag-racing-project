@@ -1,6 +1,6 @@
 <script setup>
     import { Head, Link } from '@inertiajs/vue3';
-    import { ref, computed } from 'vue';
+    import { ref, computed, onMounted, nextTick } from 'vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import axios from 'axios';
 
@@ -10,6 +10,26 @@
         activeTab: {
             type: String,
             default: 'records'
+        }
+    });
+
+    // Highlight support - when navigating from header notification click
+    const highlightId = ref(null);
+
+    onMounted(() => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('highlight');
+        if (id) {
+            highlightId.value = parseInt(id);
+            // Auto-scroll to the highlighted notification
+            nextTick(() => {
+                const el = document.getElementById('notification-' + id);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+            // Clear highlight after a few seconds
+            setTimeout(() => { highlightId.value = null; }, 4000);
         }
     });
 
@@ -115,7 +135,7 @@
         } else if (activeSystemTab.value === 'announcements') {
             return notifications.filter(n => n.type === 'announcement');
         } else if (activeSystemTab.value === 'clan') {
-            return notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer'].includes(n.type));
+            return notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject'].includes(n.type));
         } else if (activeSystemTab.value === 'tournament') {
             return notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type));
         } else if (activeSystemTab.value === 'profile') {
@@ -131,7 +151,7 @@
         return {
             all: notifications.length,
             announcements: notifications.filter(n => n.type === 'announcement').length,
-            clan: notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer'].includes(n.type)).length,
+            clan: notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject'].includes(n.type)).length,
             tournament: notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type)).length,
             profile: notifications.filter(n => n.type === 'alias_suggestion').length
         };
@@ -181,6 +201,27 @@
                 bgColor: 'bg-yellow-500/20',
                 borderColor: 'border-yellow-500/30',
                 iconColor: 'text-yellow-400'
+            },
+            'clan_request': {
+                label: 'Clan Join Requests',
+                icon: 'M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z',
+                bgColor: 'bg-teal-500/20',
+                borderColor: 'border-teal-500/30',
+                iconColor: 'text-teal-400'
+            },
+            'clan_request_accept': {
+                label: 'Clan Request Accepted',
+                icon: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+                bgColor: 'bg-green-500/20',
+                borderColor: 'border-green-500/30',
+                iconColor: 'text-green-400'
+            },
+            'clan_request_reject': {
+                label: 'Clan Request Declined',
+                icon: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+                bgColor: 'bg-red-500/20',
+                borderColor: 'border-red-500/30',
+                iconColor: 'text-red-400'
             },
             'tournament_start': {
                 label: 'Tournament Starts',
@@ -373,7 +414,7 @@
 
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" @click="markNotificationAsRead(notification.id)" class="group p-2 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read}">
+                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="markNotificationAsRead(notification.id)" class="group p-2 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read && highlightId !== notification.id, 'ring-2 ring-orange-500/50 bg-orange-500/10 rounded-lg': highlightId === notification.id}">
                             <div class="flex items-center gap-3">
                                 <!-- Icon -->
                                 <div class="shrink-0">
@@ -544,7 +585,7 @@
 
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" @click="markSystemNotificationAsRead(notification.id)" class="group p-4 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read}">
+                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="markSystemNotificationAsRead(notification.id)" class="group p-4 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read && highlightId !== notification.id, 'ring-2 ring-blue-500/50 bg-blue-500/10 rounded-lg': highlightId === notification.id}">
                             <div class="flex items-center gap-4">
                                 <!-- Icon -->
                                 <div class="shrink-0">

@@ -35,7 +35,7 @@ class Clan extends Model
 
         static::saving(function ($clan) {
             // Automatically strip Quake 3 color codes from name to generate plain_name
-            $clan->plain_name = preg_replace('/\^[0-9]/', '', $clan->name);
+            $clan->plain_name = preg_replace('/\^./', '', $clan->name);
         });
     }
 
@@ -52,5 +52,15 @@ class Clan extends Model
     public function admin()
     {
         return $this->belongsTo(User::class, 'admin_id');
+    }
+
+    public function joinRequests()
+    {
+        return $this->hasMany(ClanInvitation::class)->where('type', 'request')->where('accepted', false);
+    }
+
+    public function blockedUsers()
+    {
+        return $this->hasMany(ClanBlockedUser::class);
     }
 }

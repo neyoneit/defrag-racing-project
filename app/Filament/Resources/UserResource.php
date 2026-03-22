@@ -83,6 +83,8 @@ class UserResource extends Resource
                                 'alias_reports' => 'Alias Reports',
                                 'mapper_claims' => 'Mapper Claim Reports',
                                 'models' => 'Models (approve/reject)',
+                                'tags' => 'Tags (manage/merge)',
+                                'challenge_disputes' => 'Challenge Disputes',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),
@@ -142,34 +144,52 @@ class UserResource extends Resource
             ->striped()
             ->columns([
                 Tables\Columns\TextColumn::make('username')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable()->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html(),
+                    ->searchable()
+                    ->sortable()
+                    ->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html(),
                 Tables\Columns\TextColumn::make('plain_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('email')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('email_verified_at')
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->dateTime()
                     ->sortable(),
                 Tables\Columns\ImageColumn::make('profile_photo_path')->defaultImageUrl(url('/images/null.jpg'))->circular(),
                 Tables\Columns\TextColumn::make('country')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('mdd_id')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\IconColumn::make('admin')
-                    ->boolean(),
+                    ->boolean()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('twitter_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('twitch_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('discord_name')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('notification_settings')
-                    ->searchable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('model')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('last_login_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->label('Last Login')
+                    ->since()
+                    ->tooltip(fn ($record) => $record->last_login_at?->format('Y-m-d H:i:s')),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

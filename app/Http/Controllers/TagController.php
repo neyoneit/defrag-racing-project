@@ -27,7 +27,8 @@ class TagController extends Controller
                   ->orWhere('display_name', 'LIKE', "%{$search}%");
         }
 
-        $tags = $query->orderBy('usage_count', 'desc')
+        $tags = $query->with(['parent:id,name,display_name', 'children:id,name,display_name,parent_tag_id'])
+                      ->orderBy('usage_count', 'desc')
                       ->orderBy('display_name')
                       ->get();
 
@@ -59,9 +60,21 @@ class TagController extends Controller
         $map->tags()->attach($tag->id, ['user_id' => Auth::id()]);
         $tag->incrementUsage();
 
+        // Auto-attach parent tag if this is a child tag
+        $parentTagAdded = null;
+        if ($tag->parent_tag_id) {
+            $parentTag = Tag::find($tag->parent_tag_id);
+            if ($parentTag && !$map->tags()->where('tag_id', $parentTag->id)->exists()) {
+                $map->tags()->attach($parentTag->id, ['user_id' => Auth::id()]);
+                $parentTag->incrementUsage();
+                $parentTagAdded = $parentTag;
+            }
+        }
+
         return response()->json([
             'message' => 'Tag added successfully',
-            'tag' => $tag,
+            'tag' => $tag->load('parent:id,name,display_name', 'children:id,name,display_name,parent_tag_id'),
+            'parent_tag_added' => $parentTagAdded,
         ]);
     }
 
@@ -80,7 +93,21 @@ class TagController extends Controller
         $map->tags()->detach($tagId);
         $tag->decrementUsage();
 
-        return response()->json(['message' => 'Tag removed successfully']);
+        // If removing a parent tag, also remove its children from this map
+        $removedChildIds = [];
+        $children = $tag->children;
+        foreach ($children as $child) {
+            if ($map->tags()->where('tag_id', $child->id)->exists()) {
+                $map->tags()->detach($child->id);
+                $child->decrementUsage();
+                $removedChildIds[] = $child->id;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Tag removed successfully',
+            'removed_child_ids' => $removedChildIds,
+        ]);
     }
 
     /**

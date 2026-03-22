@@ -184,7 +184,7 @@ function getPreviewGif(model) {
 }
 
 const applyFilters = (updates) => {
-    router.visit(route('models.index', {
+    router.get('/models', {
         category: updates.category !== undefined ? updates.category : props.category,
         sort: updates.sort !== undefined ? updates.sort : props.sort,
         base_model: updates.base_model !== undefined ? updates.base_model : props.baseModel,
@@ -193,9 +193,10 @@ const applyFilters = (updates) => {
         my_uploads: updates.my_uploads !== undefined ? updates.my_uploads : props.myUploads,
         approval_status: updates.approval_status !== undefined ? updates.approval_status : props.approvalStatus,
         per_page: updates.per_page !== undefined ? updates.per_page : props.perPage,
-    }), {
+    }, {
         preserveState: true,
         preserveScroll: true,
+        only: ['models', 'availableBaseModels', 'availableAuthors', 'category', 'sort', 'baseModel', 'authors', 'search', 'myUploads', 'approvalStatus', 'perPage'],
     });
 };
 

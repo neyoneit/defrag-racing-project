@@ -32,7 +32,7 @@ class ClanStatisticsController extends Controller
     {
         $memberIdsStr = implode(',', array_map('intval', $memberIds));
 
-        // Get all basic stats in a single query
+        // Get basic stats from records table (unique_maps, recent_activity, active_days)
         $stats = DB::select("
             SELECT
                 COUNT(*) as total_records,
@@ -44,23 +44,13 @@ class ClanStatisticsController extends Controller
             AND deleted_at IS NULL
         ")[0];
 
-        // Fast top1 count using pre-calculated rank column
-        $top1Count = DB::select("
-            SELECT COUNT(*) as count
-            FROM records
-            WHERE user_id IN ($memberIdsStr)
-            AND `rank` = 1
-            AND deleted_at IS NULL
-        ")[0]->count ?? 0;
-
-        // Fast top3 count using pre-calculated rank column
-        $top3Count = DB::select("
-            SELECT COUNT(*) as count
-            FROM records
-            WHERE user_id IN ($memberIdsStr)
-            AND `rank` <= 3
-            AND deleted_at IS NULL
-        ")[0]->count ?? 0;
+        // Use pre-calculated cached values from users table (same source as clan list page & rankings:cache)
+        $cachedCounts = DB::table('users')
+            ->whereIn('id', $memberIds)
+            ->selectRaw('COALESCE(SUM(cached_wr_count), 0) as top1_count, COALESCE(SUM(cached_top3_count), 0) as top3_count')
+            ->first();
+        $top1Count = $cachedCounts->top1_count;
+        $top3Count = $cachedCounts->top3_count;
 
         // Optimized streak calculation using SQL
         $longestStreak = DB::select("

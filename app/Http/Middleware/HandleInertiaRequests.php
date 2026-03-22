@@ -79,7 +79,7 @@ class HandleInertiaRequests extends Middleware
 
             if (in_array('clan', $previewSystem)) {
                 $allowedTypes = array_merge($allowedTypes, [
-                    'clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer'
+                    'clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject'
                 ]);
             }
 

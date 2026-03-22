@@ -20,13 +20,14 @@ use App\Services\NameMatcher;
 class MapsController extends Controller
 {
     public function index(Request $request) {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
         // If there are any filter parameters (except page), redirect to filters route
+        // But not for partial requests (tag filtering uses partial reload)
         $filterParams = $request->except(['page']);
-        if (!empty($filterParams)) {
+        if (!empty($filterParams) && !$isPartial) {
             return redirect()->route('maps.filters', $request->all());
         }
-
-        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
 
         if (!$isPartial) {
             return Inertia::render('Maps')->with('maps', null);
@@ -36,7 +37,7 @@ class MapsController extends Controller
             ->select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(20)
+            ->paginate(28)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
@@ -59,7 +60,7 @@ class MapsController extends Controller
         }
 
         $maps = $mapFilters['query'];
-        $maps = $maps->paginate(20)->withQueryString();
+        $maps = $maps->paginate(28)->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
             $paging = ['page' => $maps->lastPage()];
@@ -87,7 +88,7 @@ class MapsController extends Controller
         $column = $request->input('sort', 'time');
         $order = $request->input('order', 'ASC');
 
-        $map = Map::where('name', $mapname)->with('tags')->firstOrFail();
+        $map = Map::where('name', $mapname)->with(['tags.parent:id,name,display_name', 'tags.children:id,name,display_name,parent_tag_id'])->firstOrFail();
 
         // Auto-detect most populated gametype if not specified
         $gametype = $request->input('gametype');

@@ -71,26 +71,14 @@
 
 <template>
     <div class="items-selector">
-        <!-- Header with counts and bulk actions -->
+        <!-- Header with bulk actions -->
         <div class="selector-header">
-            <div class="flex items-center gap-2">
-                <span class="text-xs text-gray-400">{{ totalSelected }} selected</span>
-                <div class="flex items-center gap-1">
-                    <span class="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded">{{ includeOptions.length }}</span>
-                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-bold rounded">{{ excludeOptions.length }}</span>
-                </div>
+            <div class="flex items-center gap-1">
+                <span v-if="includeOptions.length > 0" class="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[11px] font-bold rounded">+{{ includeOptions.length }}</span>
+                <span v-if="excludeOptions.length > 0" class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[11px] font-bold rounded">-{{ excludeOptions.length }}</span>
+                <span v-if="totalSelected === 0" class="text-xs text-gray-500">None</span>
             </div>
             <div class="flex items-center gap-1">
-                <button
-                    @click="clearAll()"
-                    title="Clear All"
-                    class="bulk-btn bulk-neutral"
-                    :class="{'active': totalSelected === 0}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                </button>
                 <button
                     @click="includeAll()"
                     title="Include All"
@@ -106,7 +94,17 @@
                     class="bulk-btn bulk-exclude"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                </button>
+                <button
+                    @click="clearAll()"
+                    title="Clear All"
+                    class="bulk-btn bulk-neutral"
+                    :class="{'active': totalSelected === 0}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
                 </button>
             </div>
@@ -144,18 +142,18 @@
 <style scoped>
     .items-selector {
         background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0.75rem;
-        padding: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 0.5rem;
+        padding: 0.5rem;
     }
 
     .selector-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .bulk-btn {
@@ -200,8 +198,8 @@
 
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+        gap: 0.25rem;
     }
 
     .item-tile {
@@ -244,8 +242,8 @@
     }
 
     .item-sprite {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         flex-shrink: 0;
     }
 

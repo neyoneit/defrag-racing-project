@@ -46,9 +46,28 @@ class DemomeController extends Controller
                 ];
             });
 
+        // Find stale items stuck in 'rendering' status (crashed uploads)
+        $staleRendering = RenderedVideo::where('status', 'rendering')
+            ->where('updated_at', '<', now()->subMinutes(5))
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'demo_url' => $item->demo_url,
+                    'demo_filename' => $item->demo_filename,
+                    'map_name' => $item->map_name,
+                    'player_name' => $item->player_name,
+                    'physics' => $item->physics,
+                    'time_ms' => $item->time_ms,
+                    'source' => $item->source,
+                    'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
+                ];
+            });
+
         return response()->json([
             'paused' => $paused,
             'items' => $items,
+            'stale_rendering' => $staleRendering,
         ]);
     }
 
@@ -115,6 +134,22 @@ class DemomeController extends Controller
         Cache::forget('demome:current_video_id');
 
         return response()->json(['success' => true, 'will_retry' => $renderedVideo->retry_count < 3]);
+    }
+
+    public function resetToPending(RenderedVideo $renderedVideo)
+    {
+        if ($renderedVideo->status !== 'rendering') {
+            return response()->json(['error' => 'Can only reset items in rendering status'], 409);
+        }
+
+        $renderedVideo->update([
+            'status' => 'pending',
+        ]);
+
+        Cache::put('demome:current_status', 'idle', now()->addMinutes(30));
+        Cache::forget('demome:current_video_id');
+
+        return response()->json(['success' => true]);
     }
 
     public function heartbeat(Request $request)

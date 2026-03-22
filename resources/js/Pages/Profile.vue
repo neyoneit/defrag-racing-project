@@ -11,9 +11,8 @@
     import MapRecordsViewForm from '@/Pages/Profile/Partials/MapRecordsViewForm.vue';
     import PhysicsOrderForm from '@/Pages/Profile/Partials/PhysicsOrderForm.vue';
     import EffectsIntensityForm from '@/Pages/Profile/Partials/EffectsIntensityForm.vue';
-    import { useClipboard } from '@/Composables/useClipboard';
+    import CopyButton from '@/Components/Basic/CopyButton.vue';
 
-    const { copy, copyState } = useClipboard();
     const page = usePage();
     const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
@@ -764,6 +763,36 @@
                 <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-transparent"></div>
             </div>
 
+            <!-- Customize button (top-right, aligned to content max-width) -->
+            <div v-if="isOwnProfile" class="absolute top-4 right-0 left-0 z-20 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 lg:px-8 flex justify-end">
+            <div class="flex items-center shadow-xl pointer-events-auto">
+                <button @click="showQuickSettings = !showQuickSettings" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-l-lg transition-all backdrop-blur-sm flex items-center gap-1.5 border border-r-0">
+                    <svg class="w-4 h-4 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                    <span class="text-xs font-bold transition">CUSTOMIZE</span>
+                </button>
+                <button ref="customizeArrowBtn" @click="quickSettingsDropdown = !quickSettingsDropdown" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-1.5 py-1.5 rounded-r-lg transition-all backdrop-blur-sm border">
+                    <svg class="w-3.5 h-3.5 transition-transform" :class="quickSettingsDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </button>
+                <Teleport to="body">
+                    <div v-if="quickSettingsDropdown" @click="quickSettingsDropdown = false" class="fixed inset-0 z-[998]"></div>
+                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
+                        <button
+                            v-for="panel in quickSettingsPanels"
+                            :key="panel.id"
+                            @click="selectQuickPanel(panel.id)"
+                            :class="quickSettingsPanel === panel.id ? 'bg-blue-600/30 text-blue-300' : 'text-gray-300 hover:bg-white/10'"
+                            class="w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2"
+                        >
+                            <svg v-if="quickSettingsPanel === panel.id" class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                            <span :class="quickSettingsPanel !== panel.id ? 'ml-5' : ''">{{ panel.label }}</span>
+                        </button>
+                    </div>
+                </Teleport>
+            </div>
+            </div>
+            </div>
+
             <!-- Profile Content - Compact Design -->
             <div class="relative h-full flex items-center justify-center px-4 pt-2">
                 <div class="flex items-center gap-6">
@@ -946,8 +975,8 @@
                                 </a>
                             </template>
 
-                            <!-- Customize Profile (split button: toggle + dropdown) -->
-                            <div v-if="isOwnProfile" class="relative flex items-center shadow-xl">
+                            <!-- Customize Profile (moved to top-right) -->
+                            <div v-if="false && isOwnProfile" class="relative flex items-center shadow-xl">
                                 <button @click="showQuickSettings = !showQuickSettings" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-l-lg transition-all backdrop-blur-sm flex items-center gap-1.5 border border-r-0">
                                     <svg class="w-4 h-4 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                                     <span class="text-xs font-bold transition">CUSTOMIZE</span>
@@ -1627,12 +1656,17 @@
                                             <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
                                         </div>
 
-                                        <!-- Map Name -->
-                                        <div class="flex-1">
-                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
-                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                        <!-- Map Name + Copy -->
+                                        <div class="flex-1 flex items-center gap-1 min-w-0">
+                                            <div class="min-w-0">
+                                                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                                <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                    <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                    <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <CopyButton :text="record.mapname" size="xs" />
                                             </div>
                                         </div>
 
@@ -1698,12 +1732,17 @@
                                             <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
                                         </div>
 
-                                        <!-- Map Name -->
-                                        <div class="flex-1">
-                                            <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
-                                            <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                                <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
-                                                <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                        <!-- Map Name + Copy -->
+                                        <div class="flex-1 flex items-center gap-1 min-w-0">
+                                            <div class="min-w-0">
+                                                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.mapname }}</div>
+                                                <div v-if="(type === 'recentlybeaten' || type === 'tiedranks') && (record.user_plain_name || record.mdd_plain_name)" class="text-[9px] text-gray-500 group-hover:text-gray-400 truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                                    <span v-if="type === 'recentlybeaten'">by {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                    <span v-else-if="type === 'tiedranks'">tied with {{ record.user_plain_name || record.mdd_plain_name }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <CopyButton :text="record.mapname" size="xs" />
                                             </div>
                                         </div>
 

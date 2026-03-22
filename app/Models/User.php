@@ -90,6 +90,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'default_show_offline',
         'default_physics_order',
         'profile_layout',
+        'last_login_at',
     ];
 
     /**
@@ -112,6 +113,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
         'preview_system' => 'array',
         'nsfw_confirmed' => 'boolean',
         'default_show_oldtop' => 'boolean',

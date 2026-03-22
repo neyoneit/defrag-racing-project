@@ -84,7 +84,7 @@
                     <label class="flex items-center cursor-pointer">
                         <Checkbox v-model:checked="form.clan_notifications" name="clan_notifications" />
                         <span class="ms-2 text-xs text-gray-400">
-                            Clan Notifications (Clan invites, kicks, accepts, leaves, transfers)
+                            Clan Notifications (Invites, kicks, transfers, join requests)
                         </span>
                     </label>
 

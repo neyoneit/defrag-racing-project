@@ -31,6 +31,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         myClan: Object,
         users: Array,
         invitations: Array,
+        joinRequests: Array,
+        blockedUsers: Array,
         currentSort: String,
         currentDir: String
     });
@@ -83,9 +85,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         inviteForm.post(route('clans.manage.invite'), {
             errorBag: 'submitInviteForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showInvitePlayer.value = false;
                 inviteUserId.value = [];
+                router.reload({ only: ['clans', 'myClan', 'joinRequests', 'blockedUsers'] });
             }
         });
     };
@@ -107,9 +111,11 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         kickForm.post(route('clans.manage.kick'), {
             errorBag: 'submitKickForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showKickPlayer.value = false;
                 kickUserId.value = [];
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -132,10 +138,12 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
     const finalTransferSubmit = () => {
         transferForm.post(route('clans.manage.transfer'), {
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showTransferOwnership.value = false;
                 showTransferConfirm.value = false;
                 transferUserId.value = [];
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -149,8 +157,10 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         leaveForm.post(route('clans.manage.leave'), {
             errorBag: 'submitLeaveForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showLeaveClan.value = false;
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -164,11 +174,77 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         dismantleForm.post(route('clans.manage.dismantle'), {
             errorBag: 'submitDismantleForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 showDismantleClan.value = false;
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
+
+    // Join Requests Management
+    const showJoinRequests = ref(false);
+    const showBlockedUsers = ref(false);
+    const requestForm = useForm({ _method: 'POST' });
+
+    const acceptRequest = (invitation) => {
+        requestForm.post(route('clans.manage.request.accept', invitation.id), {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['clans', 'myClan', 'joinRequests', 'blockedUsers'] }); }
+        });
+    };
+
+    const rejectRequest = (invitation) => {
+        requestForm.post(route('clans.manage.request.reject', invitation.id), {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['joinRequests'] }); }
+        });
+    };
+
+    const blockRequest = (invitation) => {
+        requestForm.post(route('clans.manage.request.block', invitation.id), {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['joinRequests', 'blockedUsers'] }); }
+        });
+    };
+
+    const unblockUser = (userId) => {
+        if (!props.myClan) return;
+        requestForm.delete(route('clans.manage.unblock', { clan: props.myClan.id, user: userId }), {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => { router.reload({ only: ['blockedUsers'] }); }
+        });
+    };
+
+    // Request to Join from Index page
+    const showRequestJoinModal = ref(false);
+    const requestJoinClanId = ref([]);
+    const requestJoinForm = useForm({ _method: 'POST' });
+
+    const submitRequestJoin = () => {
+        if (requestJoinClanId.value.length === 0) return;
+
+        // We need to build the route with the selected clan ID
+        const clanId = requestJoinClanId.value[0];
+        requestJoinForm.post(`/clans/${clanId}/request-join`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                showRequestJoinModal.value = false;
+                requestJoinClanId.value = [];
+            }
+        });
+    };
+
+    // Build a list of clans available for requesting (from the paginated clans list)
+    const availableClansForRequest = computed(() => {
+        if (!props.clans?.data) return [];
+        return props.clans.data
+            .filter(c => !c.hidden && !c.banned);
+    });
 
     const showInvitations = () => {
         if (page.props.auth?.user) {
@@ -226,6 +302,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         form.post(route('clans.manage.update', props.myClan.id), {
             errorBag: 'submitForm',
             preserveScroll: true,
+            preserveState: true,
             onSuccess: (page) => {
                 // Update form with fresh data from server
                 const updatedClan = page.props.myClan;
@@ -243,6 +320,8 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                 imagePreview.value = null;
                 backgroundPreview.value = null;
                 form.reset('image', 'background');
+
+                router.reload({ only: ['clans', 'myClan'] });
             }
         });
     };
@@ -397,10 +476,21 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600/20 to-blue-800/20 hover:from-blue-600/30 hover:to-blue-800/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                                 </svg>
                                 <span>Invitations</span>
-                                <span class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
+                                <span v-if="invitations.length > 0" class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
+                            </button>
+
+                            <button
+                                v-if="! myClan"
+                                @click="showRequestJoinModal = true"
+                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600/20 to-green-800/20 hover:from-green-600/30 hover:to-green-800/30 border border-green-500/30 hover:border-green-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                </svg>
+                                <span>Request to Join</span>
                             </button>
 
                             <Link
@@ -445,13 +535,15 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             :clan="myClan"
                             manage
                             highlighted
-                            :InvitePlayer="() => { showInvitePlayer = !showInvitePlayer; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; }"
-                            :KickPlayer="() => { showKickPlayer = !showKickPlayer; showInvitePlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; }"
-                            :TransferOwnership="() => { showTransferOwnership = !showTransferOwnership; showInvitePlayer = false; showKickPlayer = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; }"
-                            :LeaveClan="() => { showLeaveClan = !showLeaveClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; }"
-                            :EditClan="() => { showEditClan = !showEditClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditMemberNotes = false; }"
-                            :DismantleClan="() => { showDismantleClan = !showDismantleClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showEditClan = false; showEditMemberNotes = false; }"
-                            :EditMemberNotes="() => { showEditMemberNotes = !showEditMemberNotes; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; }"
+                            :InvitePlayer="() => { showInvitePlayer = !showInvitePlayer; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :KickPlayer="() => { showKickPlayer = !showKickPlayer; showInvitePlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :TransferOwnership="() => { showTransferOwnership = !showTransferOwnership; showInvitePlayer = false; showKickPlayer = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :LeaveClan="() => { showLeaveClan = !showLeaveClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :EditClan="() => { showEditClan = !showEditClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :DismantleClan="() => { showDismantleClan = !showDismantleClan; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showEditClan = false; showEditMemberNotes = false; showJoinRequests = false; }"
+                            :EditMemberNotes="() => { showEditMemberNotes = !showEditMemberNotes; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showJoinRequests = false; }"
+                            :JoinRequests="() => { showJoinRequests = !showJoinRequests; showInvitePlayer = false; showKickPlayer = false; showTransferOwnership = false; showLeaveClan = false; showDismantleClan = false; showEditClan = false; showEditMemberNotes = false; showBlockedUsers = false; }"
+                            :joinRequestsCount="joinRequests ? joinRequests.length : 0"
                         />
 
                         <!-- Edit Clan Section -->
@@ -1174,6 +1266,119 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                             </div>
                         </div>
 
+                        <!-- Pending Join Requests Panel (admin only) -->
+                        <div v-if="showJoinRequests && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
+                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                                <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
+                                    <h3 class="text-lg font-medium text-white">Pending Join Requests</h3>
+                                    <button
+                                        @click="showBlockedUsers = !showBlockedUsers"
+                                        class="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
+                                    >
+                                        {{ showBlockedUsers ? 'Show Requests' : 'Blocked Users' }}
+                                        <span v-if="!showBlockedUsers && blockedUsers && blockedUsers.length > 0" class="ml-1 text-red-400">({{ blockedUsers.length }})</span>
+                                    </button>
+                                </div>
+
+                                <!-- Requests List -->
+                                <div v-if="!showBlockedUsers" class="p-6 space-y-3">
+                                    <div v-if="!joinRequests || joinRequests.length === 0" class="text-center py-8">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-600 mx-auto mb-2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                                        </svg>
+                                        <p class="text-gray-500 text-sm">No pending join requests</p>
+                                    </div>
+
+                                    <div v-for="request in joinRequests" :key="request.id" class="flex items-center justify-between bg-black/30 rounded-xl p-4 border border-white/5">
+                                        <Link :href="route('profile.index', request.user.id)" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                            <img
+                                                :src="request.user.profile_photo_path ? `/storage/${request.user.profile_photo_path}` : '/images/null.jpg'"
+                                                class="h-10 w-10 rounded-full object-cover border border-white/20"
+                                                :alt="request.user.plain_name"
+                                            />
+                                            <div>
+                                                <div class="text-white font-semibold" v-html="q3tohtml(request.user.name)"></div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <img
+                                                        v-if="request.user.country"
+                                                        :src="`/images/flags/${request.user.country}.png`"
+                                                        class="w-4 h-3 opacity-70"
+                                                        onerror="this.src='/images/flags/_404.png'"
+                                                    />
+                                                    <span class="text-xs text-gray-500">{{ new Date(request.created_at).toLocaleDateString() }}</span>
+                                                </div>
+                                            </div>
+                                        </Link>
+
+                                        <div class="flex items-center gap-2">
+                                            <button
+                                                @click="acceptRequest(request)"
+                                                :disabled="requestForm.processing"
+                                                title="Accept"
+                                                class="p-2 rounded-full bg-green-600/20 hover:bg-green-600/40 text-green-400 hover:text-green-300 border border-green-500/30 transition-all"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                @click="rejectRequest(request)"
+                                                :disabled="requestForm.processing"
+                                                title="Reject"
+                                                class="p-2 rounded-full bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 border border-red-500/30 transition-all"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                @click="blockRequest(request)"
+                                                :disabled="requestForm.processing"
+                                                title="Block - reject and permanently prevent future requests"
+                                                class="p-2 rounded-full bg-gray-600/20 hover:bg-gray-600/40 text-gray-400 hover:text-gray-300 border border-gray-500/30 transition-all"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Blocked Users List -->
+                                <div v-else class="p-6 space-y-3">
+                                    <div v-if="!blockedUsers || blockedUsers.length === 0" class="text-center py-8">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-600 mx-auto mb-2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                                        </svg>
+                                        <p class="text-gray-500 text-sm">No blocked users</p>
+                                    </div>
+
+                                    <div v-for="blocked in blockedUsers" :key="blocked.id" class="flex items-center justify-between bg-black/30 rounded-xl p-4 border border-white/5">
+                                        <Link :href="route('profile.index', blocked.user.id)" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                            <img
+                                                :src="blocked.user.profile_photo_path ? `/storage/${blocked.user.profile_photo_path}` : '/images/null.jpg'"
+                                                class="h-10 w-10 rounded-full object-cover border border-white/20 opacity-50"
+                                                :alt="blocked.user.plain_name"
+                                            />
+                                            <div>
+                                                <div class="text-gray-400 font-semibold" v-html="q3tohtml(blocked.user.name)"></div>
+                                                <div class="text-xs text-red-400/60">Blocked</div>
+                                            </div>
+                                        </Link>
+
+                                        <button
+                                            @click="unblockUser(blocked.user.id)"
+                                            :disabled="requestForm.processing"
+                                            class="px-3 py-1.5 text-sm rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
+                                        >
+                                            Unblock
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -1311,6 +1516,78 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
             :invitations="invitations"
             :myClan="myClan"
         />
+
+        <!-- Request to Join Clan Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showRequestJoinModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showRequestJoinModal = false">
+                    <div class="fixed inset-0 bg-black/60"></div>
+                    <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-lg w-full p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-bold text-white">Request to Join a Clan</h3>
+                            <button @click="showRequestJoinModal = false" class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <p class="text-gray-400 text-sm mb-4">Select a clan from the list to send a join request. The clan admin will be notified.</p>
+
+                        <div class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                            <div v-if="!clans || !clans.data || availableClansForRequest.length === 0" class="text-center py-8 text-gray-500">
+                                No clans available. Browse the list first.
+                            </div>
+
+                            <button
+                                v-for="clan in availableClansForRequest"
+                                :key="clan.id"
+                                @click="requestJoinClanId = [clan.id]"
+                                :class="[
+                                    'w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left',
+                                    requestJoinClanId.includes(clan.id)
+                                        ? 'bg-green-600/20 border-green-500/50 ring-1 ring-green-500/30'
+                                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                ]"
+                            >
+                                <img
+                                    :src="clan.image ? `/storage/${clan.image}` : '/images/null.jpg'"
+                                    class="h-10 w-10 rounded-full object-cover border border-white/20"
+                                />
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-white font-semibold truncate" v-html="q3tohtml(clan.name)"></div>
+                                    <div class="text-xs text-gray-500">{{ clan.players_count }} members</div>
+                                </div>
+                                <svg v-if="requestJoinClanId.includes(clan.id)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400 shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="flex gap-3 mt-5">
+                            <button
+                                @click="submitRequestJoin"
+                                :disabled="requestJoinClanId.length === 0 || requestJoinForm.processing"
+                                class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
+                            >
+                                {{ requestJoinForm.processing ? 'Sending...' : 'Send Request' }}
+                            </button>
+                            <button
+                                @click="showRequestJoinModal = false"
+                                class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 

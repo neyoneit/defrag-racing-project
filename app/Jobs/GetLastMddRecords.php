@@ -16,12 +16,18 @@ use App\Models\RecordHistory;
 use App\Models\MddProfile;
 
 use App\Jobs\ProcessNotificationsJob;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class GetLastMddRecords implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 1200;
+
+    private int $duplicateCount = 0;
+    private int $insertedCount = 0;
+    private int $updatedCount = 0;
 
     public function __construct() {}
 
@@ -32,11 +38,65 @@ class GetLastMddRecords implements ShouldQueue
 
         if (count($records) === 0) {
             echo ('No records found !') . PHP_EOL;
+            return;
         }
+
+        $this->duplicateCount = 0;
+        $this->insertedCount = 0;
+        $this->updatedCount = 0;
 
         $this->processRecords($records);
 
-        echo ("Finished Running the GetLastMddRecords.") . PHP_EOL;
+        echo ("Finished. Total: " . count($records) . ", New: {$this->insertedCount}, Updated: {$this->updatedCount}, Duplicates: {$this->duplicateCount}") . PHP_EOL;
+
+        // Anomaly detection: if we got a large batch with 0 duplicates, records were likely missed
+        $totalRecords = count($records);
+        if ($totalRecords >= 20 && $this->duplicateCount === 0) {
+            $this->sendGapAlert($totalRecords);
+        }
+    }
+
+    private function sendGapAlert(int $batchSize): void
+    {
+        // Find the last record before this batch (by created_at)
+        $lastRecord = Record::orderBy('created_at', 'desc')
+            ->skip($this->insertedCount)
+            ->first();
+
+        $lastRecordInfo = $lastRecord
+            ? "{$lastRecord->mapname} by {$lastRecord->name} ({$lastRecord->physics}) at {$lastRecord->date_set}"
+            : 'Unknown';
+
+        $message = "RECORD SCRAPER GAP DETECTED\n\n"
+            . "Batch of {$batchSize} records had 0 duplicates - this means records were likely missed between scraper runs.\n\n"
+            . "New records inserted: {$this->insertedCount}\n"
+            . "Updated records: {$this->updatedCount}\n"
+            . "Last known record before gap: {$lastRecordInfo}\n\n"
+            . "Action needed: Run the HTML scraper for the missing period to fill the gap.\n"
+            . "Time: " . now()->toDateTimeString();
+
+        Log::warning('Record scraper gap detected', [
+            'batch_size' => $batchSize,
+            'duplicates' => 0,
+            'inserted' => $this->insertedCount,
+            'last_record' => $lastRecordInfo,
+        ]);
+
+        // Email all admins
+        try {
+            $adminEmails = User::where('admin', true)->pluck('email')->toArray();
+
+            if (!empty($adminEmails)) {
+                Mail::raw($message, function ($mail) use ($adminEmails) {
+                    $mail->to($adminEmails)
+                        ->subject('[Defrag Racing] Record Scraper Gap Detected - Records May Be Missing');
+                });
+                echo "Gap alert email sent to: " . implode(', ', $adminEmails) . PHP_EOL;
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send gap alert email: ' . $e->getMessage());
+            echo "Failed to send gap alert email: " . $e->getMessage() . PHP_EOL;
+        }
     }
 
     private function processRecords($records) {
@@ -49,19 +109,23 @@ class GetLastMddRecords implements ShouldQueue
 
             if (! $find) {
                 $this->insertRecord($record);
+                $this->insertedCount++;
                 continue;
             }
 
             if ($find->time === $record['time']) {
+                $this->duplicateCount++;
                 echo ("Duplicate Found [" . $find->name . "] (" . $find->time . ") (" . $find->mapname . ") (" . $find->physics . ")") . PHP_EOL;
                 continue;
             }
 
             if ($find->time !== $record['time']) {
                 $this->insertHistoricRecord($find, $record);
+                $this->updatedCount++;
             }
 
             $this->insertRecord($record);
+            $this->insertedCount++;
         }
     }
 
