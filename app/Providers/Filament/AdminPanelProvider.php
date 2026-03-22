@@ -19,6 +19,7 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Enums\ThemeMode;
+use Filament\Navigation\NavigationGroup;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Assets\Css;
 use Illuminate\Support\Facades\Blade;
@@ -40,6 +41,16 @@ class AdminPanelProvider extends PanelProvider
             ->maxContentWidth(\Filament\Support\Enums\MaxWidth::Full)
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('15rem')
+            ->navigationGroups([
+                NavigationGroup::make('Admin'),
+                NavigationGroup::make('Content'),
+                NavigationGroup::make('Moderation'),
+                NavigationGroup::make('Community'),
+                NavigationGroup::make('Bundles'),
+                NavigationGroup::make('Finance'),
+                NavigationGroup::make('Demome'),
+                NavigationGroup::make('Tournaments'),
+            ])
             ->renderHook(
                 'panels::head.end',
                 fn () => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/filament/filament/q3.css\') }}">')

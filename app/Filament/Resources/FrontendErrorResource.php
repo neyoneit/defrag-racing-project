@@ -20,9 +20,9 @@ class FrontendErrorResource extends Resource
 
     protected static ?string $navigationLabel = 'Frontend Errors';
 
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Admin';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 1;
 
     public static function canAccess(): bool
     {

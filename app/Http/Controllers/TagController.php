@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Tag;
+use App\Models\TagActivity;
 use App\Models\Map;
 use App\Models\Maplist;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +45,10 @@ class TagController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        if (Auth::user()->tag_banned) {
+            return response()->json(['error' => 'You have been banned from adding or removing tags.'], 403);
+        }
+
         $validated = $request->validate([
             'tag_name' => 'required|string|max:50',
         ]);
@@ -59,6 +64,7 @@ class TagController extends Controller
         // Attach tag to map
         $map->tags()->attach($tag->id, ['user_id' => Auth::id()]);
         $tag->incrementUsage();
+        TagActivity::log('added', Auth::id(), $tag->id, Map::class, $map->id);
 
         // Auto-attach parent tag if this is a child tag
         $parentTagAdded = null;
@@ -67,6 +73,7 @@ class TagController extends Controller
             if ($parentTag && !$map->tags()->where('tag_id', $parentTag->id)->exists()) {
                 $map->tags()->attach($parentTag->id, ['user_id' => Auth::id()]);
                 $parentTag->incrementUsage();
+                TagActivity::log('added', Auth::id(), $parentTag->id, Map::class, $map->id, ['auto_parent' => true]);
                 $parentTagAdded = $parentTag;
             }
         }
@@ -87,11 +94,16 @@ class TagController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        if (Auth::user()->tag_banned) {
+            return response()->json(['error' => 'You have been banned from adding or removing tags.'], 403);
+        }
+
         $map = Map::findOrFail($mapId);
         $tag = Tag::findOrFail($tagId);
 
         $map->tags()->detach($tagId);
         $tag->decrementUsage();
+        TagActivity::log('removed', Auth::id(), $tag->id, Map::class, $map->id);
 
         // If removing a parent tag, also remove its children from this map
         $removedChildIds = [];
@@ -100,6 +112,7 @@ class TagController extends Controller
             if ($map->tags()->where('tag_id', $child->id)->exists()) {
                 $map->tags()->detach($child->id);
                 $child->decrementUsage();
+                TagActivity::log('removed', Auth::id(), $child->id, Map::class, $map->id, ['auto_child' => true]);
                 $removedChildIds[] = $child->id;
             }
         }
@@ -117,6 +130,10 @@ class TagController extends Controller
     {
         if (!Auth::check()) {
             return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        if (Auth::user()->tag_banned) {
+            return response()->json(['error' => 'You have been banned from adding or removing tags.'], 403);
         }
 
         $validated = $request->validate([
@@ -140,6 +157,7 @@ class TagController extends Controller
         // Attach tag to maplist
         $maplist->tags()->attach($tag->id, ['user_id' => Auth::id()]);
         $tag->incrementUsage();
+        TagActivity::log('added', Auth::id(), $tag->id, Maplist::class, $maplist->id);
 
         return response()->json([
             'message' => 'Tag added successfully',
@@ -156,6 +174,10 @@ class TagController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        if (Auth::user()->tag_banned) {
+            return response()->json(['error' => 'You have been banned from adding or removing tags.'], 403);
+        }
+
         $maplist = Maplist::findOrFail($maplistId);
 
         // Only owner can remove tags
@@ -167,6 +189,7 @@ class TagController extends Controller
 
         $maplist->tags()->detach($tagId);
         $tag->decrementUsage();
+        TagActivity::log('removed', Auth::id(), $tag->id, Maplist::class, $maplist->id);
 
         return response()->json(['message' => 'Tag removed successfully']);
     }

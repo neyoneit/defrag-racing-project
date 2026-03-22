@@ -20,9 +20,9 @@ class BotVisitResource extends Resource
 
     protected static ?string $navigationLabel = 'Bot Tracker';
 
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Admin';
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 2;
 
     protected static bool $shouldSkipAuthorization = true;
 

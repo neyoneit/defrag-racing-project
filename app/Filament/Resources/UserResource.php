@@ -89,6 +89,12 @@ class UserResource extends Resource
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),
                     ])->columns(1),
+                Forms\Components\Section::make('Restrictions')
+                    ->schema([
+                        Forms\Components\Toggle::make('tag_banned')
+                            ->label('Tag Banned')
+                            ->helperText('Prevents this user from adding or removing tags on maps.'),
+                    ])->columns(1),
                 Forms\Components\Section::make('Donations')
                     ->schema([
                         Forms\Components\TagsInput::make('donation_emails')
@@ -174,6 +180,12 @@ class UserResource extends Resource
                     ->label('Mod')
                     ->boolean()
                     ->sortable(),
+                Tables\Columns\IconColumn::make('tag_banned')
+                    ->label('Tag Ban')
+                    ->boolean()
+                    ->trueColor('danger')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('twitter_name')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),

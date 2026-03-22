@@ -5,6 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\TagResource\Pages;
 use App\Filament\Resources\TagResource\RelationManagers;
 use App\Models\Tag;
+use App\Models\TagActivity;
+use App\Models\Map;
+use App\Models\Maplist;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -22,6 +25,8 @@ class TagResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationGroup = 'Moderation';
+
+    protected static ?int $navigationSort = 4;
 
     protected static bool $shouldSkipAuthorization = true;
 
@@ -207,6 +212,13 @@ class TagResource extends Resource
                                 + DB::table('maplist_tag')->where('tag_id', $targetTag->id)->count(),
                         ]);
 
+                        // Log the merge
+                        TagActivity::log('merged', auth()->id(), $record->id, 'merge', 0, [
+                            'source_tag' => $record->display_name,
+                            'target_tag_id' => $targetTag->id,
+                            'target_tag' => $targetTag->display_name,
+                        ]);
+
                         // Delete source tag
                         $record->delete();
 
@@ -257,6 +269,13 @@ class TagResource extends Resource
 
                                 DB::table('map_tag')->where('tag_id', $record->id)->delete();
                                 DB::table('maplist_tag')->where('tag_id', $record->id)->delete();
+
+                                TagActivity::log('merged', auth()->id(), $record->id, 'merge', 0, [
+                                    'source_tag' => $record->display_name,
+                                    'target_tag_id' => $targetTag->id,
+                                    'target_tag' => $targetTag->display_name,
+                                ]);
+
                                 $record->delete();
                             }
 
