@@ -20,16 +20,25 @@ class YoutubeController extends Controller
             ];
         });
 
-        $videos = RenderedVideo::whereIn('status', ['completed', 'failed'])
+        $search = $request->input('search', '');
+
+        $videosQuery = RenderedVideo::whereIn('status', ['completed', 'failed'])
             ->visible()
             ->orderBy('created_at', 'desc')
             ->select([
                 'id', 'map_name', 'player_name', 'physics', 'time_ms', 'status',
                 'youtube_url', 'youtube_video_id', 'source', 'requested_by',
                 'render_duration_seconds', 'record_id', 'created_at',
-            ])
-            ->paginate(24)
-            ->withQueryString();
+            ]);
+
+        if ($search) {
+            $videosQuery->where(function ($q) use ($search) {
+                $q->where('map_name', 'LIKE', '%' . $search . '%')
+                  ->orWhere('player_name', 'LIKE', '%' . $search . '%');
+            });
+        }
+
+        $videos = $videosQuery->paginate(24)->withQueryString();
 
         // Live queue: currently rendering + pending
         $currentlyRendering = RenderedVideo::where('status', 'rendering')

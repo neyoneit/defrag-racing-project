@@ -169,7 +169,8 @@ class ProfileController extends Controller {
 
         // --- Unplayed maps (partial or full) ---
         if ($needs('unplayed_maps')) {
-            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1));
+            $completionistMode = $request->input('completionist_mode', 'all');
+            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1), $completionistMode);
             $totalMaps = DB::table('maps')->count();
         }
 
@@ -192,7 +193,6 @@ class ProfileController extends Controller {
             $response->with('unplayed_maps', $unplayedMaps ?? collect());
             $response->with('total_maps', $totalMaps ?? 0);
         }
-
         if (!$isPartial) {
             $response->with('cpm_world_records', $stats['cpm_world_records'])
                 ->with('vq3_world_records', $stats['vq3_world_records'])
@@ -287,7 +287,8 @@ class ProfileController extends Controller {
         $activityYears = $this->getActivityYears($user->id);
 
         // Get unplayed maps for completionist list
-        $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1));
+        $completionistMode = $request->input('completionist_mode', 'all');
+        $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1), $completionistMode);
         $totalMaps = DB::table('maps')->count();
 
         // For MDD profiles without a linked web account, create a minimal user object
@@ -971,11 +972,20 @@ class ProfileController extends Controller {
     /**
      * Get maps the user hasn't played yet (for completionist list)
      */
-    protected function getUnplayedMaps($mddId, $page = 1) {
-        // Get all map names the user has records on
-        $playedMaps = Record::where('mdd_id', $mddId)
-            ->whereNull('deleted_at')
-            ->distinct('mapname')
+    protected function getUnplayedMaps($mddId, $page = 1, $mode = 'all') {
+        // Get all map names the user has records on (filtered by mode)
+        $query = Record::where('mdd_id', $mddId)
+            ->whereNull('deleted_at');
+
+        if ($mode === 'run') {
+            $query->where('mode', 'run');
+        } elseif ($mode === 'ctf') {
+            $query->where('mode', 'LIKE', 'ctf%');
+        } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
+            $query->where('mode', $mode);
+        }
+
+        $playedMaps = $query->distinct('mapname')
             ->pluck('mapname')
             ->toArray();
 

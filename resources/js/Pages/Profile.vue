@@ -542,6 +542,8 @@
     });
 
     // Map Completionist progress calculation
+    const completionistMode = ref('all');
+
     const playedMapsCount = computed(() => {
         return props.total_maps - (props.unplayed_maps?.total || 0);
     });
@@ -550,6 +552,18 @@
         if (props.total_maps === 0) return 0;
         return ((playedMapsCount.value / props.total_maps) * 100).toFixed(3);
     });
+
+    const sortCompletionistMode = (newMode) => {
+        completionistMode.value = newMode;
+        router.reload({
+            data: {
+                completionist_mode: newMode,
+                unplayed_page: 1
+            },
+            only: ['unplayed_maps', 'total_maps'],
+            preserveScroll: true
+        });
+    };
 
     // Alias reporting
     const showReportModal = ref(false);
@@ -1979,6 +1993,24 @@
                         </div>
                     </div>
 
+                    <!-- Mode Filter -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <button @click="sortCompletionistMode('all')" :class="completionistMode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="px-3 py-1.5 rounded-lg transition-all text-xs font-bold">
+                            ALL
+                        </button>
+                        <button @click="sortCompletionistMode('run')" :class="completionistMode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="px-3 py-1.5 rounded-lg transition-all text-xs font-bold">
+                            RUN
+                        </button>
+                        <button @click="sortCompletionistMode('ctf')" :class="completionistMode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-3 py-1.5 rounded-lg transition-all text-xs font-bold">
+                            CTF
+                        </button>
+                        <div class="flex gap-1">
+                            <button v-for="i in 7" :key="'comp-ctf' + i" @click="sortCompletionistMode('ctf' + i)" :class="completionistMode === 'ctf' + i ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-2 py-1.5 rounded transition-all text-xs font-bold">
+                                {{ i }}
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Epic Progress Bar -->
                     <div class="relative">
                         <!-- Background track -->
@@ -2034,7 +2066,7 @@
                 <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
                     <!-- Previous Button -->
                     <button v-if="unplayed_maps.current_page > 1"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page - 1}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page - 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         ‹ Prev
                     </button>
@@ -2042,7 +2074,7 @@
                     <!-- Page Numbers -->
                     <template v-for="pg in unplayed_maps.last_page" :key="pg">
                         <button v-if="pg === 1 || pg === unplayed_maps.last_page || (pg >= unplayed_maps.current_page - 2 && pg <= unplayed_maps.current_page + 2)"
-                              @click="router.visit(profileRoute({unplayed_page: pg}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                              @click="router.visit(profileRoute({unplayed_page: pg, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
                               class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
                               :class="unplayed_maps.current_page === pg
                                 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
@@ -2055,7 +2087,7 @@
 
                     <!-- Next Button -->
                     <button v-if="unplayed_maps.current_page < unplayed_maps.last_page"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page + 1}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page + 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         Next ›
                     </button>
