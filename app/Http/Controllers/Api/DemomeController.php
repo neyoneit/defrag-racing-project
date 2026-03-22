@@ -183,8 +183,8 @@ class DemomeController extends Controller
         $video = RenderedVideo::create([
             'map_name' => $validated['map_name'],
             'player_name' => $validated['player_name'],
-            'physics' => $validated['physics'],
-            'time_ms' => $validated['time_ms'],
+            'physics' => $validated['physics'] ?? null,
+            'time_ms' => $validated['time_ms'] ?? null,
             'gametype' => $validated['gametype'] ?? null,
             'record_id' => $recordId,
             'demo_id' => $validated['demo_id'] ?? null,
@@ -201,6 +201,82 @@ class DemomeController extends Controller
             'is_visible' => true,
             'published_at' => $validated['published_at'] ?? now(),
             'publish_approved' => $validated['publish_approved'] ?? true,
+        ]);
+
+        return response()->json(['success' => true, 'id' => $video->id]);
+    }
+
+    /**
+     * Link a YouTube video to an uploaded demo by MD5 hash.
+     * Bot sends only: md5_hash, youtube_url, render_duration_seconds, video_file_size, requested_by
+     * Web finds the demo by hash and creates RenderedVideo with metadata from the processed demo.
+     */
+    public function reportByHash(Request $request)
+    {
+        $validated = $request->validate([
+            'md5_hash' => 'required|string|size:32',
+            'youtube_url' => 'required|string',
+            'render_duration_seconds' => 'nullable|integer',
+            'video_file_size' => 'nullable|integer',
+            'requested_by' => 'nullable|string',
+        ]);
+
+        // Extract youtube_video_id from URL
+        $youtubeVideoId = null;
+        if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/', $validated['youtube_url'], $matches)) {
+            $youtubeVideoId = $matches[1];
+        }
+
+        if (!$youtubeVideoId) {
+            return response()->json(['success' => false, 'error' => 'Invalid YouTube URL'], 422);
+        }
+
+        // Check for duplicate by youtube_video_id
+        $existing = RenderedVideo::where('youtube_video_id', $youtubeVideoId)->first();
+        if ($existing) {
+            return response()->json(['success' => true, 'id' => $existing->id, 'duplicate' => true]);
+        }
+
+        // Find the uploaded demo by MD5 hash
+        $demo = UploadedDemo::where('file_hash', $validated['md5_hash'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$demo) {
+            Log::warning('reportByHash: no demo found for hash', ['md5_hash' => $validated['md5_hash']]);
+            return response()->json(['success' => false, 'error' => 'No demo found for this hash'], 404);
+        }
+
+        // Use metadata from the processed demo
+        $recordId = $demo->record_id;
+
+        $video = RenderedVideo::create([
+            'map_name' => $demo->map_name,
+            'player_name' => $demo->player_name,
+            'physics' => $demo->physics,
+            'time_ms' => $demo->time_ms,
+            'gametype' => $demo->gametype,
+            'record_id' => $recordId,
+            'demo_id' => $demo->id,
+            'source' => 'discord',
+            'requested_by' => $validated['requested_by'] ?? null,
+            'status' => 'completed',
+            'priority' => 3,
+            'youtube_url' => $validated['youtube_url'],
+            'youtube_video_id' => $youtubeVideoId,
+            'render_duration_seconds' => $validated['render_duration_seconds'] ?? null,
+            'video_file_size' => $validated['video_file_size'] ?? null,
+            'is_visible' => true,
+            'published_at' => now(),
+            'publish_approved' => true,
+            'user_id' => $demo->user_id,
+        ]);
+
+        Log::info('reportByHash: created RenderedVideo', [
+            'video_id' => $video->id,
+            'demo_id' => $demo->id,
+            'record_id' => $recordId,
+            'map_name' => $demo->map_name,
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
@@ -250,6 +326,28 @@ class DemomeController extends Controller
         // Store file locally
         $tempDir = "demos/temp/{$demo->id}";
         $storedPath = $file->storeAs($tempDir, $originalFilename);
+
+        if (!$storedPath) {
+            Log::error('Demome upload: storeAs failed', [
+                'demo_id' => $demo->id,
+                'filename' => $originalFilename,
+                'temp_dir' => $tempDir,
+                'upload_tmp' => $file->getRealPath(),
+                'upload_tmp_exists' => file_exists($file->getRealPath()),
+                'storage_path' => storage_path('app/' . $tempDir),
+                'storage_writable' => is_writable(storage_path('app/demos/temp')),
+            ]);
+            $demo->update(['status' => 'failed', 'processing_output' => 'File storage failed - storeAs returned false']);
+            return response()->json(['success' => false, 'error' => 'File storage failed'], 500);
+        }
+
+        $fullStoredPath = storage_path('app/' . $storedPath);
+        Log::info('Demome upload: file stored', [
+            'demo_id' => $demo->id,
+            'stored_path' => $storedPath,
+            'full_path' => $fullStoredPath,
+            'file_exists' => file_exists($fullStoredPath),
+        ]);
 
         $demo->update(['file_path' => $storedPath]);
 
