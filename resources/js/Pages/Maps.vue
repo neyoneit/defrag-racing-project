@@ -25,11 +25,21 @@
         tagsExpanded.value = true;
     };
 
+    const tagSearchInput = ref(null);
+
     const onTagsLeave = () => {
         tagsCollapseTimeout = setTimeout(() => {
+            if (document.activeElement === tagSearchInput.value) return;
             tagsExpanded.value = false;
             tagSearch.value = '';
         }, 1000);
+    };
+
+    const onTagSearchBlur = () => {
+        setTimeout(() => {
+            tagsExpanded.value = false;
+            tagSearch.value = '';
+        }, 100);
     };
 
     const filteredTagsForOverlay = computed(() => {
@@ -162,24 +172,27 @@
                                         class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white ring-1 ring-blue-400 transition-all flex-shrink-0">
                                         {{ tag.display_name }}
                                     </button>
-                                    <!-- Input overlays ghost tags -->
+                                    <!-- Input with ghost tags behind -->
                                     <div class="flex-1 min-w-0 relative">
-                                        <!-- Ghost tags as background teaser -->
-                                        <div class="flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap" aria-hidden="true">
+                                        <!-- Ghost tags as background (hidden when typing) -->
+                                        <div v-show="!tagSearch" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-40 pl-[10px]" aria-hidden="true">
+                                            <span class="text-xs text-gray-400 flex-shrink-0 mr-1">{{ selectedTags.length > 0 ? `+${tagsWithUsage.length - selectedTags.length} more tags...` : `Filter ${tagsWithUsage.length} tags...` }}</span>
                                             <span
                                                 v-for="tag in tagsWithUsage.filter(t => !selectedTags.includes(t.name)).slice(0, 20)"
                                                 :key="'ghost-' + tag.id"
-                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-600 bg-white/[0.03] flex-shrink-0 whitespace-nowrap">
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-white/[0.04] flex-shrink-0 whitespace-nowrap">
                                                 {{ tag.display_name }}
                                             </span>
                                         </div>
-                                        <!-- Input stretches full width over ghost tags -->
+                                        <!-- Visible input full width -->
                                         <input
+                                            ref="tagSearchInput"
                                             v-model="tagSearch"
                                             type="text"
-                                            :placeholder="selectedTags.length > 0 ? `+${tagsWithUsage.length - selectedTags.length} more tags...` : `Filter ${tagsWithUsage.length} tags...`"
-                                            class="absolute inset-0 w-full bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none cursor-text"
+                                            placeholder=""
+                                            class="relative w-full bg-transparent border-none text-xs text-white focus:outline-none cursor-text"
                                             @focus="onTagsEnter"
+                                            @blur="onTagSearchBlur"
                                         />
                                     </div>
                                 </div>
@@ -336,9 +349,10 @@
 }
 .tags-expanded-overlay.tags-visible {
     opacity: 1;
-    max-height: 300px;
+    max-height: 500px;
     padding: 0.75rem;
     pointer-events: auto;
     transform: translateY(0);
+    overflow-y: auto;
 }
 </style>
