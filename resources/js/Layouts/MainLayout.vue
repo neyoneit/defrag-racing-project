@@ -608,9 +608,6 @@
                     <!-- Second Row: Navigation Links - ALWAYS VISIBLE -->
                     <div class="flex items-center gap-1 h-12 -ml-3">
                         <!-- Always visible -->
-                        <NavLink href="/announcements" :active="route().current('announcements.*')">
-                            News
-                        </NavLink>
                         <NavLink :href="route('maps')" :active="route().current('maps')">
                             Maps
                         </NavLink>

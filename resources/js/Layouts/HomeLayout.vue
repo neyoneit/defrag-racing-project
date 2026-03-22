@@ -183,9 +183,6 @@
                                     <DropdownLink :href="route('servers')" class="md:hidden">
                                         Servers
                                     </DropdownLink>
-                                    <DropdownLink href="/announcements" class="md:hidden">
-                                        News
-                                    </DropdownLink>
                                     <!-- Divider -->
                                     <div class="border-t border-white/5 my-1"></div>
                                     <!-- More items (always shown in mobile menu) -->
@@ -436,9 +433,6 @@
 
                     <!-- Second Row: Navigation Links -->
                     <div class="hidden md:flex items-center gap-1 h-12 px-2">
-                        <NavLink href="/announcements" :active="route().current('announcements.*')">
-                            News
-                        </NavLink>
                         <NavLink :href="route('servers')" :active="route().current('servers')">
                             Servers
                         </NavLink>
