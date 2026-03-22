@@ -1078,8 +1078,19 @@ const checkForProcessingDemos = async () => {
 
 // Lifecycle hooks
 // Lifecycle hooks are imported at the top of this <script setup>
+const demosLoading = ref(true);
+
 onMounted(() => {
     checkForProcessingDemos();
+
+    if (!props.userDemos && !props.publicDemos) {
+        router.reload({
+            only: ['userDemos', 'publicDemos', 'demoCounts', 'browseCounts'],
+            onFinish: () => { demosLoading.value = false; }
+        });
+    } else {
+        demosLoading.value = false;
+    }
 });
 
 onUnmounted(() => {
@@ -1217,17 +1228,15 @@ watch(selectedPhysics, () => {
         <Head title="Demo Upload" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
-            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
+        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Demos</h1>
-                        <div class="flex items-center gap-2 text-gray-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                            </svg>
-                            <span class="text-sm font-semibold">Upload and manage demo files</span>
+                        <div class="flex items-center gap-3 mb-1">
+                            <h1 class="text-4xl md:text-5xl font-black text-white">Demos</h1>
                         </div>
+                        <p class="text-sm text-gray-400">Upload and manage demo files</p>
+                        <p class="text-xs text-gray-500 mt-1">Special thanks to <Link href="/profile/549" class="text-gray-300 hover:text-white underline transition-colors">Enter</Link> for his demo collection that helped populate this database.</p>
                     </div>
 
                     <!-- Limits Info (Right Side) -->
@@ -1284,8 +1293,8 @@ watch(selectedPhysics, () => {
             </div>
         </div>
 
-        <div class="overflow-x-hidden" style="margin-top: -22rem;">
-            <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="overflow-x-hidden">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
                 <div class="bg-black/40 rounded-xl p-4 mb-6 shadow-2xl border border-white/5">
@@ -1771,8 +1780,29 @@ watch(selectedPhysics, () => {
                     </div>
                 </div>
 
+                <!-- Loading skeleton while demo lists load -->
+                <div v-if="demosLoading" class="space-y-6">
+                    <!-- Your Uploads skeleton -->
+                    <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse mb-8">
+                        <div class="h-6 bg-white/10 rounded w-48 mb-4"></div>
+                        <div class="flex gap-2 mb-4">
+                            <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
+                        </div>
+                        <div class="space-y-3">
+                            <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                    <!-- Browse All Demos skeleton -->
+                    <div class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse">
+                        <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
+                        <div class="space-y-3">
+                            <div v-for="i in 8" :key="'browse'+i" class="h-12 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Your Uploads Section (authenticated users only) -->
-                <div v-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1992,81 +2022,78 @@ watch(selectedPhysics, () => {
                         <table class="min-w-full divide-y divide-gray-600">
                             <thead class="bg-gray-700/50">
                                 <tr>
-                                    <th class="px-4 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('id')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('id')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>ID</span>
-                                            <svg v-if="sortBy === 'id'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'id'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('original_filename')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('original_filename')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Filename</span>
-                                            <svg v-if="sortBy === 'original_filename'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'original_filename'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('created_at')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('created_at')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Uploaded</span>
-                                            <svg v-if="sortBy === 'created_at'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'created_at'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('map_name')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('map_name')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Map</span>
-                                            <svg v-if="sortBy === 'map_name'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'map_name'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Type
                                     </th>
-                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Physics
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('time_ms')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('time_ms')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Time</span>
-                                            <svg v-if="sortBy === 'time_ms'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'time_ms'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortColumn('status')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortColumn('status')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Status</span>
-                                            <svg v-if="sortBy === 'status'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="sortBy === 'status'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="sortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-600">
+                            <tbody class="divide-y divide-gray-700/50">
                                 <tr v-for="demo in filteredDemos" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
-                                    <td class="px-4 py-4 text-sm text-gray-400 font-mono">
+                                    <td class="px-2 py-1.5 text-xs text-gray-500 font-mono">
                                         {{ demo.id }}
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <div class="flex items-center space-x-3">
-                                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                            </svg>
+                                    <td class="px-2 py-1.5 text-xs">
+                                        <div class="flex items-center gap-2">
                                             <div>
                                                 <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
 
@@ -2095,34 +2122,31 @@ watch(selectedPhysics, () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-400">
-                                        <div class="flex flex-col">
-                                            <span class="text-gray-300">{{ new Date(demo.created_at).toLocaleDateString() }}</span>
-                                            <span class="text-xs text-gray-500">{{ new Date(demo.created_at).toLocaleTimeString() }}</span>
-                                        </div>
+                                    <td class="px-2 py-1.5 text-xs text-gray-400">
+                                        <span class="text-gray-300">{{ new Date(demo.created_at).toLocaleDateString() }}</span>
                                     </td>
-                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                    <td class="px-2 py-1.5 text-xs text-gray-300">
                                         <Link v-if="demo.map_name" :href="`/maps/${encodeURIComponent(demo.map_name)}`" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200 truncate block max-w-[120px]" :title="demo.map_name">
                                             {{ demo.map_name }}
                                         </Link>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-2 py-4 text-xs text-gray-300">
-                                        <span v-if="demo.gametype" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
+                                    <td class="px-1 py-1.5 text-xs text-gray-300">
+                                        <span v-if="demo.gametype" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium uppercase" :class="demo.gametype.startsWith('m') ? 'bg-green-900/50 text-green-200' : 'bg-purple-900/50 text-purple-200'" :title="demo.gametype.startsWith('m') ? 'Online' : 'Offline'">
                                             {{ demo.gametype }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-2 py-4 text-xs text-gray-300">
-                                        <span v-if="demo.physics" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
+                                    <td class="px-1 py-1.5 text-xs text-gray-300">
+                                        <span v-if="demo.physics" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
                                             {{ demo.physics }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-4 py-4 text-sm text-gray-300 font-mono">
+                                    <td class="px-2 py-1.5 text-xs text-gray-300 font-mono">
                                         {{ formatTime(demo.time_ms) }}
                                     </td>
-                                    <td class="px-4 py-4 text-sm">
+                                    <td class="px-2 py-1.5 text-xs">
                                         <div class="flex flex-col space-y-2">
                                             <div class="flex items-center space-x-2">
                                                 <span
@@ -2157,7 +2181,7 @@ watch(selectedPhysics, () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="px-3 py-3 text-sm">
+                                    <td class="px-2 py-1.5 text-xs">
                                         <div class="flex flex-wrap gap-1">
                                             <button
                                                 @click.stop="downloadDemo(demo.id)"
@@ -2230,7 +2254,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Browse All Demos Section (for everyone) -->
-                <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <div v-if="!demosLoading && publicDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         Browse All Demos
                     </h3>
@@ -2366,84 +2390,79 @@ watch(selectedPhysics, () => {
                         <table class="min-w-full divide-y divide-gray-600">
                             <thead class="bg-gray-700/50">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('original_filename')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('original_filename')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Filename</span>
-                                            <svg v-if="browseSortBy === 'original_filename'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'original_filename'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Uploaded By
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('map_name')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('map_name')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Map</span>
-                                            <svg v-if="browseSortBy === 'map_name'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'map_name'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('gametype')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('gametype')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Type</span>
-                                            <svg v-if="browseSortBy === 'gametype'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'gametype'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-2 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('physics')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-1 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('physics')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Physics</span>
-                                            <svg v-if="browseSortBy === 'physics'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'physics'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('time_ms')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('time_ms')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Time</span>
-                                            <svg v-if="browseSortBy === 'time_ms'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'time_ms'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                                        <button @click="sortBrowseColumn('status')" class="flex items-center gap-2 hover:text-blue-400 transition-colors">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                        <button @click="sortBrowseColumn('status')" class="flex items-center gap-1 hover:text-blue-400 transition-colors">
                                             <span>Status</span>
-                                            <svg v-if="browseSortBy === 'status'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg v-if="browseSortBy === 'status'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path v-if="browseSortOrder === 'asc'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
                                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </button>
                                     </th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                                    <th class="px-2 py-2 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-600">
+                            <tbody class="divide-y divide-gray-700/50">
                                 <tr v-for="demo in publicDemos.data" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
-                                    <td class="px-6 py-4 text-sm">
-                                        <div class="flex items-center space-x-3">
-                                            <svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                            </svg>
-                                            <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
-                                        </div>
+                                    <td class="px-2 py-1.5 text-xs">
+                                        <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
                                     </td>
-                                    <td class="px-6 py-4 text-sm text-gray-300">
+                                    <td class="px-2 py-1.5 text-xs text-gray-300">
                                         <span v-if="demo.user" v-html="q3tohtml(demo.user.name)"></span>
                                         <span v-else-if="demo.source === 'demome'" class="text-cyan-400">Demome</span>
                                         <span v-else class="text-gray-500">Guest</span>
                                     </td>
-                                    <td class="px-3 py-4 text-xs text-gray-300">
+                                    <td class="px-2 py-1.5 text-xs text-gray-300">
                                         <Link v-if="demo.map_name" :href="`/maps/${encodeURIComponent(demo.map_name)}`" class="text-blue-400 hover:text-blue-300 underline transition-colors duration-200 truncate block max-w-[120px]" :title="demo.map_name">
                                             {{ demo.map_name }}
                                         </Link>
@@ -2455,17 +2474,17 @@ watch(selectedPhysics, () => {
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-2 py-4 text-xs text-gray-300">
-                                        <span v-if="demo.physics" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
+                                    <td class="px-1 py-1.5 text-xs text-gray-300">
+                                        <span v-if="demo.physics" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
                                             {{ demo.physics }}
                                         </span>
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
-                                    <td class="px-4 py-4 text-sm text-gray-300 font-mono">
+                                    <td class="px-2 py-1.5 text-xs text-gray-300 font-mono">
                                         {{ formatTime(demo.time_ms) }}
                                     </td>
-                                    <td class="px-6 py-4 text-sm">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium"
+                                    <td class="px-2 py-1.5 text-xs">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium"
                                             :class="{
                                                 'bg-yellow-900/50 text-yellow-200': demo.status === 'uploaded',
                                                 'bg-blue-900/50 text-blue-200': demo.status === 'processing',
@@ -2497,7 +2516,7 @@ watch(selectedPhysics, () => {
                                             </svg>
                                         </span>
                                     </td>
-                                    <td class="px-3 py-3 text-sm">
+                                    <td class="px-2 py-1.5 text-xs">
                                         <div class="flex items-center space-x-1">
                                             <button
                                                 @click.stop="downloadDemo(demo.id)"

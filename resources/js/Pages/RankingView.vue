@@ -54,11 +54,16 @@
     ];
 
     const reloadRankings = () => {
+        ratingsLoaded.value = false;
         router.reload({
+            only: ['vq3Ratings', 'cpmRatings', 'myVq3Rating', 'myCpmRating'],
             data: {
                 gametype: gametype.value,
                 rankingtype: rankingtype.value,
                 category: category.value,
+            },
+            onFinish: () => {
+                ratingsLoaded.value = true;
             }
         })
     }
@@ -117,7 +122,14 @@
 
         isRotating.value = true;
 
-        router.reload()
+        router.reload({
+            only: ['vq3Ratings', 'cpmRatings', 'myVq3Rating', 'myCpmRating'],
+            data: {
+                gametype: gametype.value,
+                rankingtype: rankingtype.value,
+                category: category.value,
+            },
+        })
 
         setTimeout(() => {
             isRotating.value = false;
@@ -128,9 +140,23 @@
         screenWidth.value = window.innerWidth
     }
 
+    const ratingsLoaded = ref(false);
+
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);
         startInterval();
+
+        // Lazy-load rating data (page renders immediately with header/filters)
+        if (!props.vq3Ratings && !props.cpmRatings) {
+            router.reload({
+                only: ['vq3Ratings', 'cpmRatings', 'myVq3Rating', 'myCpmRating'],
+                onFinish: () => {
+                    ratingsLoaded.value = true;
+                }
+            });
+        } else {
+            ratingsLoaded.value = true;
+        }
     });
 
     onUnmounted(() => {
@@ -297,14 +323,26 @@
                 </div>
             </div>
 
+            <!-- Loading skeleton while ratings load -->
+            <div v-if="!ratingsLoaded" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div v-for="i in 2" :key="i" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-pulse">
+                    <div class="bg-white/5 border-b border-white/10 px-4 py-3">
+                        <div class="h-6 bg-white/10 rounded w-40"></div>
+                    </div>
+                    <div class="px-4 py-2 space-y-3">
+                        <div v-for="j in 10" :key="j" class="h-10 bg-white/5 rounded"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- All Rankings Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Rankings -->
                 <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-lg font-bold text-blue-400">VQ3 Rankings <span class="text-sm font-normal text-gray-400">({{ vq3Ratings.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-blue-400">VQ3 Rankings <span v-if="vq3Ratings" class="text-sm font-normal text-gray-400">({{ vq3Ratings.total }})</span></h2>
                             </div>
                             <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
@@ -312,10 +350,10 @@
                         </div>
                     </div>
                     <div class="px-2 py-1">
-                        <div v-if="vq3Ratings.total > 0">
+                        <div v-if="vq3Ratings && vq3Ratings.total > 0">
                             <Rating v-for="rating in vq3Ratings.data" :key="rating.id" :rating="rating" :rank="rating.rank"/>
                         </div>
-                        <div v-else class="flex items-center justify-center py-16 text-gray-400">
+                        <div v-else class="flex items-center justify-center text-gray-400" style="min-height: 490px;">
                             <div class="text-center">
                                 <div class="flex items-center justify-center mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
@@ -326,7 +364,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="vq3Ratings.total > vq3Ratings.per_page" class="border-t border-blue-500/20 p-4">
+                    <div v-if="vq3Ratings && vq3Ratings.total > vq3Ratings.per_page" class="border-t border-blue-500/20 p-4">
                         <Pagination pageName="vq3Page" :last_page="vq3Ratings.last_page" :current_page="vq3Ratings.current_page" :link="vq3Ratings.first_page_url" :only="['vq3Ratings', 'cpmRatings']" />
                     </div>
                 </div>
@@ -336,7 +374,7 @@
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-lg font-bold text-purple-400">CPM Rankings <span class="text-sm font-normal text-gray-400">({{ cpmRatings.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-purple-400">CPM Rankings <span v-if="cpmRatings" class="text-sm font-normal text-gray-400">({{ cpmRatings.total }})</span></h2>
                             </div>
                             <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
@@ -344,10 +382,10 @@
                         </div>
                     </div>
                     <div class="px-2 py-1">
-                        <div v-if="cpmRatings.total > 0">
+                        <div v-if="cpmRatings && cpmRatings.total > 0">
                             <Rating v-for="rating in cpmRatings.data" :key="rating.id" :rating="rating" :rank="rating.rank"/>
                         </div>
-                        <div v-else class="flex items-center justify-center py-16 text-gray-400">
+                        <div v-else class="flex items-center justify-center text-gray-400" style="min-height: 490px;">
                             <div class="text-center">
                                 <div class="flex items-center justify-center mb-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12">
@@ -358,7 +396,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="cpmRatings.total > cpmRatings.per_page" class="border-t border-purple-500/20 p-4">
+                    <div v-if="cpmRatings && cpmRatings.total > cpmRatings.per_page" class="border-t border-purple-500/20 p-4">
                         <Pagination pageName="cpmPage" :last_page="cpmRatings.last_page" :current_page="cpmRatings.current_page" :link="cpmRatings.first_page_url" :only="['vq3Ratings', 'cpmRatings']" />
                     </div>
                 </div>

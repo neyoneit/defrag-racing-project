@@ -1,10 +1,23 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 const props = defineProps({
     challenges: Object,
     filters: Object,
+});
+
+const challengesLoaded = ref(false);
+
+onMounted(() => {
+    if (!props.challenges) {
+        router.reload({
+            only: ['challenges'],
+            onFinish: () => { challengesLoaded.value = true; }
+        });
+    } else {
+        challengesLoaded.value = true;
+    }
 });
 
 const search = ref(props.filters?.search || '');
@@ -148,8 +161,22 @@ const getStatusColor = (status) => {
                 </div>
             </div>
 
+            <!-- Loading skeleton -->
+            <div v-if="!challengesLoaded" class="space-y-4">
+                <div v-for="i in 6" :key="i" class="bg-black/40 rounded-xl p-6 border border-white/10 animate-pulse">
+                    <div class="flex gap-4">
+                        <div class="w-20 h-20 bg-white/10 rounded-lg flex-shrink-0 hidden sm:block"></div>
+                        <div class="flex-1 space-y-3">
+                            <div class="h-5 bg-white/10 rounded w-1/2"></div>
+                            <div class="h-4 bg-white/5 rounded w-3/4"></div>
+                            <div class="h-4 bg-white/5 rounded w-1/3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Challenges List -->
-            <div class="space-y-4">
+            <div v-else-if="challenges" class="space-y-4">
                 <div
                     v-for="challenge in challenges.data"
                     :key="challenge.id"
@@ -268,7 +295,7 @@ const getStatusColor = (status) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="challenges.data.length > 0" class="mt-6 flex justify-center">
+            <div v-if="challenges && challenges.data && challenges.data.length > 0" class="mt-6 flex justify-center">
                 <nav class="flex items-center gap-2">
                     <component
                         :is="link.url ? Link : 'span'"

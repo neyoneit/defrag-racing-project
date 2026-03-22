@@ -48,6 +48,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'discord_name',
         'model',
         'pinned_models',
+        'model_group_order',
         'donation_emails',
         'plain_name',
         'notification_settings',
@@ -122,6 +123,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'avatar_effects_speed' => 'integer',
         'name_effects_speed' => 'integer',
         'pinned_models' => 'array',
+        'model_group_order' => 'array',
         'donation_emails' => 'array',
         'moderator_permissions' => 'array',
     ];

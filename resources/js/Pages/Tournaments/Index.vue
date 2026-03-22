@@ -1,6 +1,6 @@
 <script setup>
-    import { Head, Link } from '@inertiajs/vue3';
-    import { ref } from 'vue';
+    import { Head, Link, router } from '@inertiajs/vue3';
+    import { ref, onMounted } from 'vue';
     import TournamentCard from '@/Components/TournamentCard.vue';
     import Tabs from '@/Components/Tabs.vue';
 
@@ -10,6 +10,19 @@
         upcomingTournaments: Object,
         pastTournaments: Object,
         records: Number
+    });
+
+    const tournamentsLoaded = ref(false);
+
+    onMounted(() => {
+        if (!props.tournaments) {
+            router.reload({
+                only: ['tournaments', 'activeTournaments', 'upcomingTournaments', 'pastTournaments'],
+                onFinish: () => { tournamentsLoaded.value = true; }
+            });
+        } else {
+            tournamentsLoaded.value = true;
+        }
     });
 
     const filteredTournaments = ref([]);
@@ -47,7 +60,7 @@
 
     const onSearchTournament = () => {
         if (searchInput.value.length > 0) {
-            filteredTournaments.value = props.tournaments.filter((tournament) => {
+            filteredTournaments.value = (props.tournaments || []).filter((tournament) => {
                 return tournament.name.toLowerCase().includes(searchInput.value.toLowerCase());
             });
         } else {
@@ -139,12 +152,21 @@
 
                 <!-- Tab Content -->
                 <div class="p-6">
+                    <!-- Loading skeleton -->
+                    <div v-if="!tournamentsLoaded" class="space-y-4">
+                        <div v-for="i in 3" :key="i" class="bg-black/40 rounded-xl p-6 border border-white/10 animate-pulse">
+                            <div class="h-6 bg-white/10 rounded w-1/3 mb-3"></div>
+                            <div class="h-4 bg-white/5 rounded w-2/3 mb-2"></div>
+                            <div class="h-4 bg-white/5 rounded w-1/2"></div>
+                        </div>
+                    </div>
+
                     <!-- Active Tournaments -->
-                    <div v-show="activeTab === 'Active Tournaments'" id="active-tab" class="space-y-4">
-                        <div v-for="(tournament, id) in activeTournaments" :key="id">
+                    <div v-show="tournamentsLoaded && activeTab === 'Active Tournaments'" id="active-tab" class="space-y-4">
+                        <div v-for="(tournament, id) in (activeTournaments || [])" :key="id">
                             <TournamentCard :tournament="tournament" />
                         </div>
-                        <div v-if="activeTournaments.length === 0" class="text-center py-12">
+                        <div v-if="activeTournaments && activeTournaments.length === 0" class="text-center py-12">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-600 mx-auto mb-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
                             </svg>
@@ -153,11 +175,11 @@
                     </div>
 
                     <!-- Upcoming Tournaments -->
-                    <div v-show="activeTab === 'Upcoming Tournaments'" id="upcoming-tab" class="space-y-4">
-                        <div v-for="(tournament, id) in upcomingTournaments" :key="id">
+                    <div v-show="tournamentsLoaded && activeTab === 'Upcoming Tournaments'" id="upcoming-tab" class="space-y-4">
+                        <div v-for="(tournament, id) in (upcomingTournaments || [])" :key="id">
                             <TournamentCard :tournament="tournament" />
                         </div>
-                        <div v-if="upcomingTournaments.length === 0" class="text-center py-12">
+                        <div v-if="upcomingTournaments && upcomingTournaments.length === 0" class="text-center py-12">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-600 mx-auto mb-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                             </svg>
@@ -173,10 +195,10 @@
                             </p>
                         </div>
 
-                        <div v-for="(tournament, id) in pastTournaments" :key="id">
+                        <div v-for="(tournament, id) in (pastTournaments || [])" :key="id">
                             <TournamentCard :tournament="tournament" />
                         </div>
-                        <div v-if="pastTournaments.length === 0" class="text-center py-12">
+                        <div v-if="pastTournaments && pastTournaments.length === 0" class="text-center py-12">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-gray-600 mx-auto mb-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                             </svg>

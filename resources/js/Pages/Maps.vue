@@ -57,8 +57,20 @@
         });
     };
 
+    const mapsLoaded = ref(false);
+
     onMounted(() => {
         fetchTags();
+
+        // Lazy load maps data
+        if (!props.maps) {
+            router.reload({
+                only: ['maps'],
+                onFinish: () => { mapsLoaded.value = true; }
+            });
+        } else {
+            mapsLoaded.value = true;
+        }
 
         // Initialize selected tags from query params
         if (props.queries?.tags) {
@@ -145,13 +157,24 @@
                 </div>
             </Transition>
 
+            <!-- Loading skeleton -->
+            <div v-if="!mapsLoaded" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div v-for="i in 20" :key="i" class="bg-black/40 rounded-xl border border-white/10 overflow-hidden animate-pulse">
+                    <div class="aspect-[4/3] bg-white/5"></div>
+                    <div class="p-2 space-y-1.5">
+                        <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                        <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Maps Grid - 5 columns for maximum density -->
-            <div v-if="maps.total > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div v-else-if="maps && maps.total > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 <MapCard v-for="map in maps.data" :map="map" :key="map.id" />
             </div>
 
             <!-- Empty State -->
-            <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">
+            <div v-else-if="maps" class="flex flex-col items-center justify-center py-20 text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-3 opacity-40">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" />
                 </svg>
@@ -160,7 +183,7 @@
             </div>
 
             <!-- Pagination -->
-            <div v-if="maps.total > maps.per_page" class="flex justify-center mt-8">
+            <div v-if="maps && maps.total > maps.per_page" class="flex justify-center mt-8">
                 <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" :only="['maps']" />
             </div>
         </div>

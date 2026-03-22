@@ -163,6 +163,79 @@ class DemosController extends Controller
             $sortOrder = 'desc';
         }
 
+        // Browse parameters (needed for both full and partial loads)
+        $browseTab = $request->input('browse_tab', 'all');
+        $browseStatus = $request->input('browse_status', 'all');
+        $browseSearch = $request->input('browse_search', '');
+        $browseSortBy = $request->input('browse_sort', 'created_at');
+        $browseSortOrder = $request->input('browse_order', 'desc');
+
+        if (!in_array($browseSortBy, $allowedColumns)) {
+            $browseSortBy = 'created_at';
+        }
+        if (!in_array($browseSortOrder, ['asc', 'desc'])) {
+            $browseSortOrder = 'desc';
+        }
+
+        // On full page load, return immediately with null data - frontend will partial reload
+        if (!$isPartial) {
+            $downloadLimitInfo = null;
+            $uploadLimitInfo = null;
+
+            if ($currentUser) {
+                $downloadLimitInfo = [
+                    'used' => Cache::get("demo_download_user_{$currentUser->id}", 0),
+                    'limit' => 50,
+                    'remaining' => max(0, 50 - Cache::get("demo_download_user_{$currentUser->id}", 0)),
+                    'isGuest' => false,
+                ];
+                $uploadLimitInfo = [
+                    'used' => Cache::get("demo_upload_rate_limit_{$currentUser->id}", 0),
+                    'limit' => 100000,
+                    'remaining' => max(0, 100000 - Cache::get("demo_upload_rate_limit_{$currentUser->id}", 0)),
+                    'isGuest' => false,
+                ];
+            } else {
+                $ip = request()->ip();
+                $downloadLimitInfo = [
+                    'used' => Cache::get("demo_download_ip_{$ip}", 0),
+                    'limit' => 1,
+                    'remaining' => max(0, 1 - Cache::get("demo_download_ip_{$ip}", 0)),
+                    'isGuest' => true,
+                ];
+                $uploadLimitInfo = [
+                    'used' => Cache::get("demo_upload_rate_limit_guest_{$ip}", 0),
+                    'limit' => 100,
+                    'remaining' => max(0, 100 - Cache::get("demo_upload_rate_limit_guest_{$ip}", 0)),
+                    'isGuest' => true,
+                ];
+            }
+
+            return Inertia::render('Demos/Index', [
+                'userDemos' => null,
+                'publicDemos' => null,
+                'demoCounts' => $isAdmin
+                    ? Cache::get('demo_counts_admin')
+                    : ($currentUser ? Cache::get("demo_counts_user_{$currentUser->id}") : null),
+                'browseCounts' => Cache::get('demo_counts_browse'),
+                'downloadLimitInfo' => $downloadLimitInfo,
+                'uploadLimitInfo' => $uploadLimitInfo,
+                'sortBy' => $sortBy,
+                'sortOrder' => $sortOrder,
+                'browseTab' => $browseTab,
+                'browseStatus' => $browseStatus,
+                'browseSearch' => $browseSearch,
+                'browseSortBy' => $browseSortBy,
+                'browseSortOrder' => $browseSortOrder,
+                'userSearch' => $searchQuery,
+                'confidenceFilter' => $confidenceFilter,
+                'showOtherUserMatches' => $showOtherUserMatches,
+                'uploadedBy' => $uploadedBy,
+            ]);
+        }
+
+        // --- Partial reload: fetch actual data ---
+
         // --- User's own uploads (only when needed) ---
         $userDemos = null;
         $demoCounts = null;
@@ -278,18 +351,6 @@ class DemosController extends Controller
         // --- Browse section (only when needed) ---
         $publicDemos = null;
         $browseCounts = null;
-        $browseTab = $request->input('browse_tab', 'all');
-        $browseStatus = $request->input('browse_status', 'all');
-        $browseSearch = $request->input('browse_search', '');
-        $browseSortBy = $request->input('browse_sort', 'created_at');
-        $browseSortOrder = $request->input('browse_order', 'desc');
-
-        if (!in_array($browseSortBy, $allowedColumns)) {
-            $browseSortBy = 'created_at';
-        }
-        if (!in_array($browseSortOrder, ['asc', 'desc'])) {
-            $browseSortOrder = 'desc';
-        }
 
         if ($needs('publicDemos') || $needs('browseCounts')) {
             if ($needs('publicDemos')) {
@@ -338,41 +399,6 @@ class DemosController extends Controller
             }
         }
 
-        // --- Download & Upload limits (only on full load) ---
-        $downloadLimitInfo = null;
-        $uploadLimitInfo = null;
-        if (!$isPartial) {
-            $rateLimitKey = $currentUser
-                ? "demo_download_user_{$currentUser->id}"
-                : "demo_download_ip_" . request()->ip();
-
-            $downloadsToday = Cache::get($rateLimitKey, 0);
-            $maxDownloads = $currentUser ? 50 : 1;
-            $remainingDownloads = max(0, $maxDownloads - $downloadsToday);
-
-            $downloadLimitInfo = [
-                'used' => $downloadsToday,
-                'limit' => $maxDownloads,
-                'remaining' => $remainingDownloads,
-                'isGuest' => !$currentUser,
-            ];
-
-            $uploadRateLimitKey = $currentUser
-                ? "demo_upload_rate_limit_{$currentUser->id}"
-                : "demo_upload_rate_limit_guest_" . request()->ip();
-
-            $uploadsUsed = Cache::get($uploadRateLimitKey, 0);
-            $maxUploads = $currentUser ? 100000 : 100;
-            $remainingUploads = max(0, $maxUploads - $uploadsUsed);
-
-            $uploadLimitInfo = [
-                'used' => $uploadsUsed,
-                'limit' => $maxUploads,
-                'remaining' => $remainingUploads,
-                'isGuest' => !$currentUser,
-            ];
-        }
-
         $data = [
             'sortBy' => $sortBy,
             'sortOrder' => $sortOrder,
@@ -391,8 +417,37 @@ class DemosController extends Controller
         if ($needs('demoCounts')) $data['demoCounts'] = $demoCounts;
         if ($needs('publicDemos')) $data['publicDemos'] = $publicDemos;
         if ($needs('browseCounts')) $data['browseCounts'] = $browseCounts;
-        if (!$isPartial) $data['downloadLimitInfo'] = $downloadLimitInfo;
-        if (!$isPartial) $data['uploadLimitInfo'] = $uploadLimitInfo;
+
+        // Download & Upload limits (only on full load)
+        if (!$isPartial) {
+            $rateLimitKey = $currentUser
+                ? "demo_download_user_{$currentUser->id}"
+                : "demo_download_ip_" . request()->ip();
+
+            $downloadsToday = Cache::get($rateLimitKey, 0);
+            $maxDownloads = $currentUser ? 50 : 1;
+
+            $data['downloadLimitInfo'] = [
+                'used' => $downloadsToday,
+                'limit' => $maxDownloads,
+                'remaining' => max(0, $maxDownloads - $downloadsToday),
+                'isGuest' => !$currentUser,
+            ];
+
+            $uploadRateLimitKey = $currentUser
+                ? "demo_upload_rate_limit_{$currentUser->id}"
+                : "demo_upload_rate_limit_guest_" . request()->ip();
+
+            $uploadsUsed = Cache::get($uploadRateLimitKey, 0);
+            $maxUploads = $currentUser ? 100000 : 100;
+
+            $data['uploadLimitInfo'] = [
+                'used' => $uploadsUsed,
+                'limit' => $maxUploads,
+                'remaining' => max(0, $maxUploads - $uploadsUsed),
+                'isGuest' => !$currentUser,
+            ];
+        }
 
         return Inertia::render('Demos/Index', $data);
     }

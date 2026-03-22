@@ -12,6 +12,7 @@ use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\PlayerRating;
+use App\Models\Map;
 
 class CalculateRatings implements ShouldQueue
 {
@@ -99,7 +100,56 @@ class CalculateRatings implements ShouldQueue
             ]);
         }
 
+        // Update is_ranked flags on maps table
+        $this->updateMapRankedFlags();
+
         Log::info('CalculateRatings job ended');
+    }
+
+    protected function updateMapRankedFlags(): void
+    {
+        $bannedMaps = self::BANNED_MAPS;
+
+        // For each physics, find maps that meet all ranking criteria:
+        // 1. >= MIN_MAP_TOTAL_PARTICIPATORS unique players
+        // 2. Top time >= MIN_TOP1_TIME
+        // 3. Top reltime spread >= MIN_TOP_RELTIME
+        // 4. Not in BANNED_MAPS
+        foreach (['vq3', 'cpm'] as $physics) {
+            // Subquery: per map, get participator count, top1 time, top2 time
+            $mapStats = DB::table('records')
+                ->whereNull('deleted_at')
+                ->where('gametype', 'like', '%_' . $physics)
+                ->when(!empty($bannedMaps), function ($q) use ($bannedMaps) {
+                    $q->whereNotIn('mapname', $bannedMaps);
+                })
+                ->select('mapname')
+                ->selectRaw('COUNT(DISTINCT mdd_id) as participators')
+                ->selectRaw('MIN(time) as top1_time')
+                ->selectRaw('COALESCE((SELECT MIN(r2.time) FROM records r2 WHERE r2.mapname = records.mapname AND r2.gametype LIKE ? AND r2.deleted_at IS NULL AND r2.time > MIN(records.time)), MIN(records.time)) as top2_time', ['%_' . $physics])
+                ->groupBy('mapname')
+                ->havingRaw('participators >= ?', [self::MIN_MAP_TOTAL_PARTICIPATORS])
+                ->havingRaw('top1_time >= ?', [self::MIN_TOP1_TIME])
+                ->get();
+
+            $rankedMapnames = $mapStats->filter(function ($row) {
+                // Check reltime spread: top1/top2 >= MIN_TOP_RELTIME
+                if ($row->top2_time <= 0) return false;
+                $topReltime = $row->top1_time / $row->top2_time;
+                return $topReltime >= self::MIN_TOP_RELTIME;
+            })->pluck('mapname')->toArray();
+
+            $column = 'is_ranked_' . $physics;
+
+            // Reset all to false, then set matched ones to true
+            Map::query()->update([$column => false]);
+
+            if (!empty($rankedMapnames)) {
+                Map::whereIn('name', $rankedMapnames)->update([$column => true]);
+            }
+
+            Log::info("Updated {$column}: " . count($rankedMapnames) . " maps ranked");
+        }
     }
     protected function addRanks($query)
     {

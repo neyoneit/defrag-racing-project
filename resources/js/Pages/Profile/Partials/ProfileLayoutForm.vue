@@ -20,6 +20,20 @@ const allStatBoxes = [
     { id: 'renders', label: 'YouTube Renders', color: 'red' },
 ];
 
+const allHeaderItems = [
+    { id: 'badges', label: 'Badges (Admin, Donor, Tagger, Assigner)' },
+    { id: 'clan', label: 'Clan Tag' },
+    { id: 'wr_counters', label: 'WR Counters (CPM / VQ3)' },
+    { id: 'socials', label: 'Social Links (Twitch, Discord, Twitter)' },
+];
+
+const defaultHeaderItems = [
+    { id: 'badges', visible: true, row: 1 },
+    { id: 'clan', visible: true, row: 1 },
+    { id: 'wr_counters', visible: true, row: 1 },
+    { id: 'socials', visible: true, row: 2 },
+];
+
 const allSections = [
     { id: 'activity_history', label: 'Activity History' },
     { id: 'records', label: 'VQ3 / CPM Records' },
@@ -60,6 +74,33 @@ for (const section of allSections) {
     }
 }
 
+// Header items
+const headerItems = ref(
+    (() => {
+        const saved = savedLayout?.header_items;
+        if (!saved) return defaultHeaderItems.map(h => ({ ...h }));
+        const items = saved.filter(h => allHeaderItems.find(a => a.id === h.id));
+        for (const def of defaultHeaderItems) {
+            if (!items.find(h => h.id === def.id)) {
+                items.push({ ...def });
+            }
+        }
+        return items;
+    })()
+);
+
+const toggleHeaderItem = (id) => {
+    const item = headerItems.value.find(h => h.id === id);
+    if (item) item.visible = !item.visible;
+};
+
+const toggleHeaderRow = (id) => {
+    const item = headerItems.value.find(h => h.id === id);
+    if (item) item.row = item.row === 1 ? 2 : 1;
+};
+
+const getHeaderLabel = (id) => allHeaderItems.find(h => h.id === id)?.label || id;
+
 const selectedCount = computed(() => statBoxItems.value.filter(b => b.selected).length);
 
 const toggleBox = (id) => {
@@ -83,6 +124,7 @@ const save = async () => {
         await axios.post(route('settings.profile-layout'), {
             stat_boxes: statBoxItems.value.filter(b => b.selected).map(b => b.id),
             sections: sections.value,
+            header_items: headerItems.value,
         });
         recentlySuccessful.value = true;
         setTimeout(() => {
@@ -102,6 +144,7 @@ const resetToDefaults = () => {
     const unselected = allStatBoxes.filter(b => !saved.includes(b.id));
     statBoxItems.value = [...selected, ...unselected].map(b => ({ ...b, selected: saved.includes(b.id) }));
     sections.value = defaultSections.map(s => ({ ...s }));
+    headerItems.value = defaultHeaderItems.map(h => ({ ...h }));
 };
 
 const colorMap = {
@@ -142,6 +185,65 @@ const colorMap = {
                         {{ saving ? 'Saving...' : 'Save' }}
                     </button>
                 </div>
+            </div>
+
+            <!-- Header Items -->
+            <div class="mb-3">
+                <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                    Header Items <span class="text-gray-600">(drag to reorder, toggle visibility &amp; row)</span>
+                </p>
+                <draggable
+                    v-model="headerItems"
+                    item-key="id"
+                    :handle="false"
+                    ghost-class="opacity-30"
+                    animation="150"
+                    class="space-y-1"
+                >
+                    <template #item="{ element }">
+                        <div
+                            :class="[
+                                'flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all',
+                                element.visible
+                                    ? 'bg-black/20 border-white/10'
+                                    : 'bg-black/10 border-white/5 opacity-40'
+                            ]"
+                        >
+                            <div class="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                                    <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                                    <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                                    <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                                </svg>
+                            </div>
+                            <span class="flex-1 text-xs font-medium" :class="element.visible ? 'text-gray-200' : 'text-gray-500'">
+                                {{ getHeaderLabel(element.id) }}
+                            </span>
+                            <button
+                                @click="toggleHeaderRow(element.id)"
+                                class="px-1.5 py-0.5 rounded text-[10px] font-bold transition-all border"
+                                :class="element.row === 1
+                                    ? 'bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30'
+                                    : 'bg-purple-500/20 border-purple-500/30 text-purple-400 hover:bg-purple-500/30'"
+                                :title="'Move to row ' + (element.row === 1 ? '2' : '1')"
+                            >
+                                Row {{ element.row }}
+                            </button>
+                            <button
+                                @click="toggleHeaderItem(element.id)"
+                                class="p-0.5 rounded hover:bg-white/10 transition-colors"
+                            >
+                                <svg v-if="element.visible" class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                </svg>
+                                <svg v-else class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+                </draggable>
             </div>
 
             <!-- Two columns: Stat Boxes left, Sections right -->

@@ -273,13 +273,23 @@ class SettingsController extends Controller
             'sections' => ['required', 'array'],
             'sections.*.id' => ['required', 'string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
             'sections.*.visible' => ['required', 'boolean'],
+            'header_items' => ['sometimes', 'array'],
+            'header_items.*.id' => ['required', 'string', 'in:badges,clan,wr_counters,socials'],
+            'header_items.*.visible' => ['required', 'boolean'],
+            'header_items.*.row' => ['required', 'integer', 'in:1,2'],
         ]);
 
         $user = $request->user();
-        $user->profile_layout = [
+        $layout = [
             'stat_boxes' => $request->stat_boxes,
             'sections' => $request->sections,
         ];
+        if ($request->has('header_items')) {
+            $layout['header_items'] = $request->header_items;
+        } else {
+            $layout['header_items'] = $user->profile_layout['header_items'] ?? null;
+        }
+        $user->profile_layout = $layout;
         $user->save();
 
         return back();

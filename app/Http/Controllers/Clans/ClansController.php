@@ -85,8 +85,10 @@ class ClansController extends Controller {
         }
         
 
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
         return Inertia::render('Clans/Index')
-            ->with('clans', $clans)
+            ->with('clans', $isPartial ? $clans : null)
             ->with('myClan', $myClan)
             ->with('users', $users)
             ->with('invitations', $invitations)

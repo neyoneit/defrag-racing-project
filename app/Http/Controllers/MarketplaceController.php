@@ -8,12 +8,33 @@ use App\Models\MarketplaceCreatorProfile;
 use App\Models\Record;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
 {
     public function index(Request $request)
     {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        $canPost = false;
+        $recordCount = 0;
+        if (auth()->check()) {
+            $recordCount = Cache::remember('marketplace:records:' . auth()->id(), 3600, function () {
+                return Record::where('user_id', auth()->id())->count();
+            });
+            $canPost = $recordCount >= 50;
+        }
+
+        if (!$isPartial) {
+            return Inertia::render('Marketplace/Index', [
+                'listings' => null,
+                'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
+                'canPost' => $canPost,
+                'recordCount' => $recordCount,
+            ]);
+        }
+
         $tab = $request->input('tab', 'requests');
 
         $query = MarketplaceListing::with(['user', 'assignedTo'])
@@ -29,13 +50,6 @@ class MarketplaceController extends Controller
         }
 
         $listings = $query->latest()->paginate(20)->withQueryString();
-
-        $canPost = false;
-        $recordCount = 0;
-        if (auth()->check()) {
-            $recordCount = Record::where('user_id', auth()->id())->count();
-            $canPost = $recordCount >= 50;
-        }
 
         return Inertia::render('Marketplace/Index', [
             'listings' => $listings,

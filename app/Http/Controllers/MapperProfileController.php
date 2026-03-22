@@ -604,7 +604,7 @@ class MapperProfileController extends Controller
         $totalViews = (clone $query)->sum('views');
 
         $models = $query->orderByDesc('downloads')
-            ->get(['id', 'name', 'base_model', 'base_model_file_path', 'model_type', 'author', 'file_path', 'thumbnail', 'idle_gif', 'rotate_gif', 'downloads', 'views', 'category', 'main_file', 'created_at']);
+            ->get(['id', 'name', 'base_model', 'base_model_file_path', 'model_type', 'author', 'file_path', 'thumbnail', 'idle_gif', 'rotate_gif', 'downloads', 'views', 'category', 'main_file', 'available_skins', 'created_at']);
 
         // Highlighted: most downloaded model
         $highlighted = $models->first();
@@ -651,6 +651,7 @@ class MapperProfileController extends Controller
             'highlighted' => $highlighted,
             'timeline' => $timeline,
             'pinned' => $pinnedModels,
+            'group_order' => $user->model_group_order,
         ];
     }
 
@@ -666,6 +667,22 @@ class MapperProfileController extends Controller
 
         $user = $request->user();
         $user->update(['pinned_models' => $request->pinned_models]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Save model group display order
+     */
+    public function saveModelGroupOrder(Request $request)
+    {
+        $request->validate([
+            'model_group_order' => 'array',
+            'model_group_order.*' => 'string',
+        ]);
+
+        $user = $request->user();
+        $user->update(['model_group_order' => $request->model_group_order]);
 
         return response()->json(['success' => true]);
     }

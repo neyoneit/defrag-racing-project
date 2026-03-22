@@ -144,7 +144,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-hidden" style="z-index: 10;">
+        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative" style="z-index: 10;">
             <!-- Modern Compact Header -->
             <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-50 shadow-2xl">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
@@ -182,9 +182,6 @@
                                     </DropdownLink>
                                     <DropdownLink :href="route('servers')" class="md:hidden">
                                         Servers
-                                    </DropdownLink>
-                                    <DropdownLink href="/announcements" class="md:hidden">
-                                        News
                                     </DropdownLink>
                                     <!-- Divider -->
                                     <div class="border-t border-white/5 my-1"></div>
@@ -436,9 +433,6 @@
 
                     <!-- Second Row: Navigation Links -->
                     <div class="hidden md:flex items-center gap-1 h-12 px-2">
-                        <NavLink href="/announcements" :active="route().current('announcements.*')">
-                            News
-                        </NavLink>
                         <NavLink :href="route('servers')" :active="route().current('servers')">
                             Servers
                         </NavLink>

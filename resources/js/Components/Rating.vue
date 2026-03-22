@@ -64,10 +64,8 @@
         <div class="relative flex items-center gap-2 sm:gap-3 w-full transition-all duration-300">
             <!-- Rank -->
             <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                <span v-if="rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                <span v-else-if="rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                <span v-else-if="rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-300 group-hover:text-white transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ rank }}</span>
+                <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)] transition-all"
+                    :class="rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-gray-300' : rank === 3 ? 'text-amber-600' : 'text-gray-400 group-hover:text-white'">{{ rank }}</span>
             </div>
 
             <!-- Profile Photo -->

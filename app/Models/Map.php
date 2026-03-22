@@ -51,11 +51,15 @@ class Map extends Model
         'date_added',
         'cpm_average',
         'vq3_average',
-        'is_nsfw'
+        'is_nsfw',
+        'is_ranked_vq3',
+        'is_ranked_cpm'
     ];
 
     protected $casts = [
         'is_nsfw' => 'boolean',
+        'is_ranked_vq3' => 'boolean',
+        'is_ranked_cpm' => 'boolean',
     ];
 
     public function generateSubstrings($name) {

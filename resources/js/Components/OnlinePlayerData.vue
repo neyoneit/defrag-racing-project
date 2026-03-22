@@ -19,6 +19,7 @@
 
         return route('profile.mdd', props.player.mdd_id);
     })
+
 </script>
 
 <template>

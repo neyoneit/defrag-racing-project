@@ -37,6 +37,19 @@ class DonationController extends Controller
 
     public function getProgress()
     {
+        $data = Cache::remember('donations:progress', 86400 * 30, function () {
+            return $this->calculateProgress();
+        });
+
+        return response()->json($data);
+    }
+
+    /**
+     * Calculate donation progress. Result is cached for 1 hour.
+     * Call Cache::forget('donations:progress') when donations change.
+     */
+    private function calculateProgress(): array
+    {
         $currentYear = now()->year;
         $currentMonth = now()->month;
 
@@ -91,7 +104,7 @@ class DonationController extends Controller
             $yearlyTotalEUR = $yearlyDonationsEUR + $yearlySelfRaisedEUR;
             $yearlyPercentage = min(($yearlyTotalEUR / $yearlyGoal) * 100, 100);
 
-            return response()->json([
+            return [
                 'total' => round($yearlyTotalEUR, 2),
                 'donations' => round($yearlyDonationsEUR, 2),
                 'selfRaised' => round($yearlySelfRaisedEUR, 2),
@@ -99,10 +112,10 @@ class DonationController extends Controller
                 'percentage' => round($yearlyPercentage, 1),
                 'currency' => 'EUR',
                 'mode' => 'yearly',
-            ]);
+            ];
         }
 
-        return response()->json([
+        return [
             'total' => round($totalEUR, 2),
             'donations' => round($donationsEUR, 2),
             'selfRaised' => round($selfRaisedEUR, 2),
@@ -110,7 +123,7 @@ class DonationController extends Controller
             'percentage' => round(min($monthlyPercentage, 100), 1),
             'currency' => 'EUR',
             'mode' => 'monthly',
-        ]);
+        ];
     }
 
     private function getExchangeRates()

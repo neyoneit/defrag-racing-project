@@ -171,8 +171,10 @@ class ProfileController extends Controller {
         // --- Unplayed maps (partial or full) ---
         if ($needs('unplayed_maps')) {
             $completionistMode = $request->input('completionist_mode', 'all');
-            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1), $completionistMode);
-            $totalMaps = DB::table('maps')->count();
+            $unplayedResult = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1), $completionistMode);
+            $unplayedMaps = $unplayedResult['paginator'];
+            $totalMaps = $unplayedResult['total_maps'];
+            $playedMapsCount = $unplayedResult['played_count'];
         }
 
         // Build response - only include what's needed
@@ -194,6 +196,7 @@ class ProfileController extends Controller {
         if ($needs('unplayed_maps')) {
             $response->with('unplayed_maps', $unplayedMaps ?? collect());
             $response->with('total_maps', $totalMaps ?? 0);
+            $response->with('played_maps_count', $playedMapsCount ?? 0);
         }
         if (!$isPartial) {
             $response->with('cpm_world_records', $stats['cpm_world_records'])
@@ -290,8 +293,10 @@ class ProfileController extends Controller {
 
         // Get unplayed maps for completionist list
         $completionistMode = $request->input('completionist_mode', 'all');
-        $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1), $completionistMode);
-        $totalMaps = DB::table('maps')->count();
+        $unplayedResult = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1), $completionistMode);
+        $unplayedMaps = $unplayedResult['paginator'];
+        $totalMaps = $unplayedResult['total_maps'];
+        $playedMapsCount = $unplayedResult['played_count'];
 
         // For MDD profiles without a linked web account, create a minimal user object
         $linkedUser = $user->user ?? (object) [
@@ -321,6 +326,7 @@ class ProfileController extends Controller {
             ->with('profile', $user)
             ->with('unplayed_maps', $unplayedMaps)
             ->with('total_maps', $totalMaps)
+            ->with('played_maps_count', $playedMapsCount)
             ->with('hasProfile', true)
             ->with('aliases', [])
             ->with('alias_suggestions', [])
@@ -976,28 +982,43 @@ class ProfileController extends Controller {
      */
     protected function getUnplayedMaps($mddId, $page = 1, $mode = 'all') {
         // Get all map names the user has records on (filtered by mode)
-        $query = Record::where('mdd_id', $mddId)
+        $recordQuery = Record::where('mdd_id', $mddId)
             ->whereNull('deleted_at');
 
         if ($mode === 'run') {
-            $query->where('mode', 'run');
+            $recordQuery->where('mode', 'run');
         } elseif ($mode === 'ctf') {
-            $query->where('mode', 'LIKE', 'ctf%');
+            $recordQuery->where('mode', 'LIKE', 'ctf%');
         } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
-            $query->where('mode', $mode);
+            $recordQuery->where('mode', $mode);
         }
 
-        $playedMaps = $query->distinct('mapname')
+        $playedMaps = $recordQuery->distinct('mapname')
             ->pluck('mapname')
             ->toArray();
 
-        // Get all maps from the maps table that user hasn't played
-        $unplayedMaps = DB::table('maps')
+        // Filter maps by gametype matching the mode
+        $mapsQuery = DB::table('maps');
+        if ($mode === 'run') {
+            $mapsQuery->where('gametype', 'run');
+        } elseif ($mode === 'ctf' || preg_match('/^ctf\d$/', $mode)) {
+            $mapsQuery->whereIn('gametype', ['fastcaps', 'team']);
+        }
+
+        $totalMaps = (clone $mapsQuery)->count();
+        $playedInMode = count($playedMaps);
+
+        // Unplayed = maps in this gametype that user hasn't played
+        $unplayedMaps = (clone $mapsQuery)
             ->whereNotIn('name', $playedMaps)
             ->orderBy('name', 'ASC')
             ->paginate(10, ['*'], 'unplayed_page', $page);
 
-        return $unplayedMaps;
+        return [
+            'paginator' => $unplayedMaps,
+            'total_maps' => $totalMaps,
+            'played_count' => $playedInMode,
+        ];
     }
 
     /**

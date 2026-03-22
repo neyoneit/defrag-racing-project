@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\RecordsController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -55,20 +56,27 @@ class Record extends Model
     protected static function boot() {
         parent::boot();
 
-        // Clear cache when record is saved (created or updated)
-        static::saved(function ($record) {
+        // Incrementally update records page cache when record is created
+        static::created(function ($record) {
             if ($record->mdd_id) {
                 self::clearProfileCache($record->mdd_id);
             }
-            self::clearRecordsCounts();
+            RecordsController::prependToCache($record);
         });
 
-        // Clear cache when record is deleted
+        // On update, just clear profile cache (record edits don't change page order)
+        static::updated(function ($record) {
+            if ($record->mdd_id) {
+                self::clearProfileCache($record->mdd_id);
+            }
+        });
+
+        // On delete, decrement counts and invalidate affected pages
         static::deleted(function ($record) {
             if ($record->mdd_id) {
                 self::clearProfileCache($record->mdd_id);
             }
-            self::clearRecordsCounts();
+            RecordsController::removeFromCache($record);
         });
     }
 
@@ -85,13 +93,4 @@ class Record extends Model
         \Log::info("Profile cache cleared for player {$mddId}");
     }
 
-    /**
-     * Clear records page count cache (all mode variants)
-     */
-    protected static function clearRecordsCounts()
-    {
-        foreach (['all', 'run', 'ctf', 'ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'] as $mode) {
-            Cache::forget('records_count_' . $mode);
-        }
-    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\RankingController;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -104,7 +105,6 @@ class CalculateRatingsRust extends Command
         $flushed = 0;
 
         foreach (self::RANKING_TYPES as $rankingtype) {
-            // Flush first 50 pages (covers virtually all traffic)
             for ($page = 1; $page <= 50; $page++) {
                 $key = "ranking:{$physics}:{$mode}:{$rankingtype}:{$category}:{$page}";
                 Cache::forget($key);
@@ -112,9 +112,20 @@ class CalculateRatingsRust extends Command
             }
         }
 
-        // Also flush the last recalculation timestamp
         Cache::forget('ranking:last_recalculation');
 
-        $this->line("  Cache flushed ({$flushed} keys + recalculation timestamp)");
+        $this->line("  Cache flushed ({$flushed} keys)");
+
+        // Rebuild first 3 pages for this physics/mode/category
+        $controller = new RankingController();
+        foreach (self::RANKING_TYPES as $rankingtype) {
+            for ($page = 1; $page <= RankingController::PREBUILT_PAGES; $page++) {
+                $cacheKey = "ranking:{$physics}:{$mode}:{$rankingtype}:{$category}:{$page}";
+                $data = $controller->fetchPageFromDb($physics, $mode, $rankingtype, $category, $page);
+                Cache::put($cacheKey, $data, RankingController::CACHE_TTL);
+            }
+        }
+
+        $this->line("  Cache rebuilt (first " . RankingController::PREBUILT_PAGES . " pages)");
     }
 }

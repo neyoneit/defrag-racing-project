@@ -65,6 +65,7 @@ const drafts = ref([]);
 
 // Search input
 const searchQuery = ref(props.search || '');
+const showMobileFilters = ref(false);
 let searchDebounce = null;
 
 // Author dropdown
@@ -163,6 +164,7 @@ const handleClickOutside = (e) => {
 };
 onMounted(() => document.addEventListener('click', handleClickOutside));
 onUnmounted(() => document.removeEventListener('click', handleClickOutside));
+
 
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
@@ -379,11 +381,21 @@ const createMaplist = async () => {
         </div>
 
         <!-- Main Content with Sidebar -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -6rem;">
-            <div class="flex gap-6">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6 -mt-24 relative z-10">
+            <div class="lg:flex lg:gap-6">
                 <!-- Left Sidebar - Filters -->
-                <aside class="w-64 flex-shrink-0 hidden lg:block">
-                    <div class="sticky top-6 space-y-4">
+                <!-- Mobile filter toggle -->
+                <button @click="showMobileFilters = !showMobileFilters"
+                    class="lg:hidden w-full flex items-center justify-between px-4 py-3 mb-4 bg-black/40 rounded-xl border border-white/5 text-sm font-bold text-gray-300 hover:text-white transition">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
+                        Filters
+                    </span>
+                    <svg class="w-4 h-4 transition-transform" :class="showMobileFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                <div :class="showMobileFilters ? 'block mb-4' : 'hidden'" class="lg:block lg:w-64 lg:mb-0 lg:sticky lg:top-[120px] lg:self-start" style="height: fit-content; max-height: calc(100vh - 136px); overflow-y: auto;">
+                    <div class="space-y-2">
                         <!-- Search -->
                         <div class="bg-black/40 rounded-xl p-4 border border-white/5">
                             <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
@@ -550,7 +562,7 @@ const createMaplist = async () => {
                             </div>
                         </div>
                     </div>
-                </aside>
+                </div>
 
                 <!-- Main Content Area -->
                 <main class="flex-1">
@@ -610,6 +622,7 @@ const createMaplist = async () => {
                     <div v-if="maplists.data && maplists.data.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         <MaplistCard v-for="maplist in maplists.data" :maplist="maplist" :key="maplist.id" />
                     </div>
+
 
                     <!-- Empty State -->
                     <div v-else class="flex flex-col items-center justify-center py-20 text-gray-400">

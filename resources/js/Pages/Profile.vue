@@ -40,6 +40,10 @@
             type: Number,
             default: 0
         },
+        played_maps_count: {
+            type: Number,
+            default: 0
+        },
         user_maplists: {
             type: Array,
             default: () => []
@@ -194,6 +198,38 @@
 
     const layout = computed(() => props.user?.profile_layout || {});
     const activeStatBoxes = computed(() => layout.value.stat_boxes || defaultStatBoxes);
+
+    // Header items layout
+    const defaultHeaderItems = [
+        { id: 'badges', visible: true, row: 1 },
+        { id: 'clan', visible: true, row: 1 },
+        { id: 'wr_counters', visible: true, row: 1 },
+        { id: 'socials', visible: true, row: 2 },
+    ];
+    const headerItems = computed(() => {
+        const saved = layout.value.header_items;
+        if (!saved || !saved.length) return defaultHeaderItems;
+        // Ensure all items exist
+        const items = [...saved];
+        for (const def of defaultHeaderItems) {
+            if (!items.find(h => h.id === def.id)) items.push({ ...def });
+        }
+        return items;
+    });
+    const showHeaderItem = (id) => {
+        const item = headerItems.value.find(h => h.id === id);
+        return item ? item.visible : true;
+    };
+    const headerItemRow = (id) => {
+        const item = headerItems.value.find(h => h.id === id);
+        return item ? item.row : 1;
+    };
+    const headerItemOrder = (id) => {
+        const idx = headerItems.value.findIndex(h => h.id === id);
+        return idx >= 0 ? idx : 99;
+    };
+    const hasRow1Items = computed(() => headerItems.value.some(h => h.visible && h.row === 1));
+    const hasRow2Items = computed(() => headerItems.value.some(h => h.visible && h.row === 2));
     const orderedSections = computed(() => {
         const saved = layout.value.sections;
         if (!saved || !saved.length) return defaultSections;
@@ -547,26 +583,67 @@
 
     // Map Completionist progress calculation
     const completionistMode = ref('all');
+    const localUnplayedMaps = ref(null);
+    const localTotalMaps = ref(null);
+    const localPlayedCount = ref(null);
+
+    const currentUnplayedMaps = computed(() => localUnplayedMaps.value ?? props.unplayed_maps);
+    const currentTotalMaps = computed(() => localTotalMaps.value ?? props.total_maps);
 
     const playedMapsCount = computed(() => {
-        return props.total_maps - (props.unplayed_maps?.total || 0);
+        if (localPlayedCount.value !== null) return localPlayedCount.value;
+        return props.played_maps_count || (props.total_maps - (props.unplayed_maps?.total || 0));
     });
 
     const completionPercentage = computed(() => {
-        if (props.total_maps === 0) return 0;
-        return ((playedMapsCount.value / props.total_maps) * 100).toFixed(3);
+        if (currentTotalMaps.value === 0) return 0;
+        return ((playedMapsCount.value / currentTotalMaps.value) * 100).toFixed(3);
     });
 
-    const sortCompletionistMode = (newMode) => {
+    const sortCompletionistMode = async (newMode) => {
         completionistMode.value = newMode;
-        router.reload({
-            data: {
-                completionist_mode: newMode,
-                unplayed_page: 1
-            },
-            only: ['unplayed_maps', 'total_maps'],
-            preserveScroll: true
-        });
+        try {
+            const url = profileRoute({ completionist_mode: newMode, unplayed_page: 1 });
+            const res = await fetch(url, {
+                headers: {
+                    'X-Inertia': 'true',
+                    'X-Inertia-Partial-Data': 'unplayed_maps,total_maps,played_maps_count',
+                    'X-Inertia-Partial-Component': 'Profile',
+                    'Accept': 'application/json',
+                }
+            });
+            const data = await res.json();
+            console.log('Completionist response:', newMode, 'played:', data.props?.played_maps_count, 'unplayed total:', data.props?.unplayed_maps?.total);
+            if (data.props) {
+                localUnplayedMaps.value = data.props.unplayed_maps ?? localUnplayedMaps.value;
+                localTotalMaps.value = data.props.total_maps ?? localTotalMaps.value;
+                localPlayedCount.value = data.props.played_maps_count ?? localPlayedCount.value;
+            }
+        } catch (e) {
+            console.error('Error fetching completionist data:', e);
+        }
+    };
+
+    const fetchCompletionistPage = async (page) => {
+        try {
+            const url = profileRoute({ completionist_mode: completionistMode.value, unplayed_page: page });
+            const res = await fetch(url, {
+                headers: {
+                    'X-Inertia': 'true',
+                    'X-Inertia-Partial-Data': 'unplayed_maps,total_maps,played_maps_count',
+                    'X-Inertia-Partial-Component': 'Profile',
+                    'Accept': 'application/json',
+                }
+            });
+            const data = await res.json();
+            if (data.props) {
+                localUnplayedMaps.value = data.props.unplayed_maps ?? localUnplayedMaps.value;
+                localTotalMaps.value = data.props.total_maps ?? localTotalMaps.value;
+                localPlayedCount.value = data.props.played_maps_count ?? localPlayedCount.value;
+            }
+        } catch (e) {
+            console.error('Error fetching completionist page:', e);
+        }
     };
 
     // Alias reporting
@@ -720,120 +797,154 @@
                             </a>
                         </div>
 
-                        <!-- Clan + Stats Row -->
-                        <div class="flex items-center gap-3 flex-wrap">
-                            <!-- Admin Badge -->
-                            <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm">
-                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
-                                <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
-                            </div>
-
-                            <!-- Moderator Badge -->
-                            <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm">
-                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
-                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
-                            </div>
-
-                            <!-- Donor Badge -->
-                            <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative"
-                                :class="{
-                                    'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter',
-                                    'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold',
-                                    'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond',
-                                }">
-                                <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
-                                <span class="text-xs font-bold uppercase tracking-wider"
-                                    :class="{
-                                        'text-pink-300': donorTier === 'supporter',
-                                        'text-amber-300': donorTier === 'gold',
-                                        'text-cyan-300': donorTier === 'diamond',
-                                    }">
-                                    {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
-                                </span>
-                                <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                    Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
+                        <!-- Header Row 1 -->
+                        <div v-if="hasRow1Items" class="flex items-center gap-3 flex-wrap">
+                            <!-- Badges -->
+                            <template v-if="showHeaderItem('badges') && headerItemRow('badges') === 1">
+                                <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                    <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
                                 </div>
-                            </div>
-
-                            <!-- Tagger Badge -->
-                            <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative">
-                                <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
-                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
-                                <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
-                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                    Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
+                                <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                    <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
                                 </div>
-                            </div>
-
-                            <!-- Assigner Badge -->
-                            <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative">
-                                <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-                                <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
-                                <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
-                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                    Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
+                                <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }"
+                                    :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
+                                    <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                    <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
+                                        {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                    </span>
+                                    <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
+                                    </div>
                                 </div>
-                            </div>
-
-                            <!-- Clan Badge -->
-                            <Link v-if="user?.clan" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group">
+                                <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                    <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                    <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
+                                    </div>
+                                </div>
+                                <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
+                                    <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                    <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                    <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
+                                    </div>
+                                </div>
+                            </template>
+                            <!-- Clan -->
+                            <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 1" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
                                 <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Clan</span>
                                 <span class="text-sm font-black text-white group-hover:text-blue-100 transition" v-html="q3tohtml(user.clan.name)"></span>
                             </Link>
-
-                            <!-- CPM WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-purple-950/70 border border-purple-400/40 shadow-xl backdrop-blur-sm">
-                                <div class="flex items-center gap-2">
-                                    <div>
-                                        <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</div>
-                                        <div class="text-lg font-black text-purple-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</div>
-                                    </div>
-                                    <svg class="w-4 h-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                            <!-- WR Counters -->
+                            <template v-if="showHeaderItem('wr_counters') && headerItemRow('wr_counters') === 1">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-950/70 border border-purple-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-purple-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</span>
+                                    <span class="text-sm font-black text-purple-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
-                            </div>
-
-                            <!-- VQ3 WR Count -->
-                            <div class="px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/40 shadow-xl backdrop-blur-sm">
-                                <div class="flex items-center gap-2">
-                                    <div>
-                                        <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider leading-none" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</div>
-                                        <div class="text-lg font-black text-blue-400 leading-tight" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</div>
-                                    </div>
-                                    <svg class="w-4 h-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-blue-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</span>
+                                    <span class="text-sm font-black text-blue-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
                                 </div>
-                            </div>
+                            </template>
+                            <!-- Socials -->
+                            <template v-if="showHeaderItem('socials') && headerItemRow('socials') === 1">
+                                <a v-if="user?.twitch_id" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/></g></svg>
+                                    <span class="text-xs font-bold text-purple-200 transition group-hover:text-white">TWITCH</span>
+                                </a>
+                                <a v-if="user?.discord_id" :href="`https://discordapp.com/users/${user.discord_id}`" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/></svg>
+                                    <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white">{{ user.discord_name }}</span>
+                                </a>
+                                <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/></g></svg>
+                                    <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
+                                </a>
+                            </template>
                         </div>
 
-                        <!-- Social Links -->
-                        <div class="flex items-center gap-2">
-                            <!-- Twitch -->
-                            <a v-if="user?.twitch_id" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg">
-                                    <g fill="currentColor">
-                                        <path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/>
-                                    </g>
-                                </svg>
-                                <span class="text-xs font-bold text-purple-200 transition group-hover:text-white">TWITCH</span>
-                            </a>
-
-                            <!-- Discord (linked via OAuth) -->
-                            <a v-if="user?.discord_id" :href="`https://discordapp.com/users/${user.discord_id}`" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/>
-                                </svg>
-                                <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white">{{ user.discord_name }}</span>
-                            </a>
-
-                            <!-- Twitter -->
-                            <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg">
-                                    <g fill="currentColor">
-                                        <path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/>
-                                    </g>
-                                </svg>
-                                <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
-                            </a>
+                        <!-- Header Row 2 -->
+                        <div v-if="hasRow2Items || isOwnProfile" class="flex items-center gap-2 flex-wrap">
+                            <!-- Badges -->
+                            <template v-if="showHeaderItem('badges') && headerItemRow('badges') === 2">
+                                <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                    <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                                </div>
+                                <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                    <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                                </div>
+                                <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }"
+                                    :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
+                                    <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                    <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
+                                        {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                    </span>
+                                    <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
+                                    </div>
+                                </div>
+                                <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
+                                    <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                    <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                    <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
+                                    </div>
+                                </div>
+                                <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
+                                    <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                    <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                    <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                        Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
+                                    </div>
+                                </div>
+                            </template>
+                            <!-- Clan -->
+                            <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 2" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
+                                <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
+                                <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Clan</span>
+                                <span class="text-sm font-black text-white group-hover:text-blue-100 transition" v-html="q3tohtml(user.clan.name)"></span>
+                            </Link>
+                            <!-- WR Counters -->
+                            <template v-if="showHeaderItem('wr_counters') && headerItemRow('wr_counters') === 2">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-950/70 border border-purple-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-purple-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</span>
+                                    <span class="text-sm font-black text-purple-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                </div>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-blue-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</span>
+                                    <span class="text-sm font-black text-blue-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                </div>
+                            </template>
+                            <!-- Socials -->
+                            <template v-if="showHeaderItem('socials') && headerItemRow('socials') === 2">
+                                <a v-if="user?.twitch_id" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/></g></svg>
+                                    <span class="text-xs font-bold text-purple-200 transition group-hover:text-white">TWITCH</span>
+                                </a>
+                                <a v-if="user?.discord_id" :href="`https://discordapp.com/users/${user.discord_id}`" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/></svg>
+                                    <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white">{{ user.discord_name }}</span>
+                                </a>
+                                <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/></g></svg>
+                                    <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
+                                </a>
+                            </template>
 
                             <!-- Customize Profile (split button: toggle + dropdown) -->
                             <div v-if="isOwnProfile" class="relative flex items-center shadow-xl">
@@ -919,7 +1030,7 @@
                     :href="route('profile.show') + '?tab=creator'"
                     class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 border border-white/20 hover:border-blue-400/50 hover:bg-blue-600/20 text-gray-400 hover:text-blue-300 transition-all text-xs font-bold backdrop-blur-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Customize Pinned Models
+                    Customize Pins & Order
                 </a>
             </div>
         </div>
@@ -1202,9 +1313,6 @@
                                 Highest download count on a single demo
                             </div>
                             <span class="text-sm font-bold text-pink-400 tabular-nums">{{ demoStats.most_downloaded || 0 }}</span>
-                        </div>
-                        <div class="mt-2 pt-2 border-t border-white/5">
-                            <p class="text-[10px] text-gray-500 italic">Special thanks to Enter for his demo collection that helped populate this database.</p>
                         </div>
                     </div>
                 </div>
@@ -1993,7 +2101,7 @@
             </div>
 
             <!-- Map Completionist List -->
-            <div v-if="showSection('map_completionist') && unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
+            <div v-if="showSection('map_completionist') && currentUnplayedMaps && currentUnplayedMaps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -2006,7 +2114,7 @@
                             <div class="text-3xl font-black text-white">
                                 {{ completionPercentage }}%
                             </div>
-                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ total_maps }} maps</div>
+                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ currentTotalMaps }} maps</div>
                         </div>
                     </div>
 
@@ -2057,7 +2165,7 @@
                         <!-- Percentage label overlay -->
                         <div class="absolute inset-0 flex items-center justify-center">
                             <span class="text-xs font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                {{ unplayed_maps.total }} maps remaining
+                                {{ currentUnplayedMaps.total }} maps remaining
                             </span>
                         </div>
                     </div>
@@ -2065,7 +2173,7 @@
 
                 <!-- Maps Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-                    <Link v-for="map in unplayed_maps.data" :key="map.name"
+                    <Link v-for="map in currentUnplayedMaps.data" :key="map.name"
                           :href="`/maps/${encodeURIComponent(map.name)}`"
                           class="group relative bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
                         <div class="relative overflow-hidden rounded-md mb-2">
@@ -2080,31 +2188,31 @@
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
+                <div v-if="currentUnplayedMaps.last_page > 1" class="flex items-center justify-center gap-2">
                     <!-- Previous Button -->
-                    <button v-if="unplayed_maps.current_page > 1"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page - 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <button v-if="currentUnplayedMaps.current_page > 1"
+                          @click="fetchCompletionistPage(currentUnplayedMaps.current_page - 1)"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         ‹ Prev
                     </button>
 
                     <!-- Page Numbers -->
-                    <template v-for="pg in unplayed_maps.last_page" :key="pg">
-                        <button v-if="pg === 1 || pg === unplayed_maps.last_page || (pg >= unplayed_maps.current_page - 2 && pg <= unplayed_maps.current_page + 2)"
-                              @click="router.visit(profileRoute({unplayed_page: pg, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <template v-for="pg in currentUnplayedMaps.last_page" :key="pg">
+                        <button v-if="pg === 1 || pg === currentUnplayedMaps.last_page || (pg >= currentUnplayedMaps.current_page - 2 && pg <= currentUnplayedMaps.current_page + 2)"
+                              @click="fetchCompletionistPage(pg)"
                               class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
-                              :class="unplayed_maps.current_page === pg
+                              :class="currentUnplayedMaps.current_page === pg
                                 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
                                 : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'">
                             {{ pg }}
                         </button>
-                        <span v-else-if="pg === unplayed_maps.current_page - 3 || pg === unplayed_maps.current_page + 3"
+                        <span v-else-if="pg === currentUnplayedMaps.current_page - 3 || pg === currentUnplayedMaps.current_page + 3"
                               class="px-2 text-gray-600">...</span>
                     </template>
 
                     <!-- Next Button -->
-                    <button v-if="unplayed_maps.current_page < unplayed_maps.last_page"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page + 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <button v-if="currentUnplayedMaps.current_page < currentUnplayedMaps.last_page"
+                          @click="fetchCompletionistPage(currentUnplayedMaps.current_page + 1)"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         Next ›
                     </button>
