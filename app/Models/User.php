@@ -265,6 +265,25 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
              + \DB::table('maplist_tag')->where('user_id', $this->id)->count();
     }
 
+    public function getAssignedDemoCounts(): array {
+        return \Illuminate\Support\Facades\Cache::remember("profile:assigned_demos:{$this->id}", 3600, function () {
+            $counts = \DB::table('uploaded_demos')
+                ->where('user_id', $this->id)
+                ->whereIn('status', ['assigned', 'fallback-assigned'])
+                ->where('manually_assigned', true)
+                ->selectRaw("
+                    SUM(CASE WHEN gametype NOT LIKE 'm%' THEN 1 ELSE 0 END) as offline,
+                    SUM(CASE WHEN gametype LIKE 'm%' THEN 1 ELSE 0 END) as online
+                ")
+                ->first();
+
+            return [
+                'offline' => (int) ($counts->offline ?? 0),
+                'online' => (int) ($counts->online ?? 0),
+            ];
+        });
+    }
+
     public function getFilamentAvatarUrl(): ?string {
         return $this->profile_photo_path;
     }
