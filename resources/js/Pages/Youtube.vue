@@ -13,6 +13,19 @@
     });
 
     const expandedVideo = ref(null);
+    const search = ref(new URL(window.location).searchParams.get('search') || '');
+    let searchTimeout = null;
+
+    const searchVideos = (value) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            router.get('/youtube', { search: value || undefined }, {
+                preserveState: true,
+                preserveScroll: true,
+                only: ['videos'],
+            });
+        }, 300);
+    };
 
     // Auto-refresh live status every 15 seconds
     let refreshInterval = null;
@@ -102,6 +115,25 @@
                         <span class="w-2 h-2 rounded-full bg-gray-500"></span>
                         <span class="text-xs font-medium text-gray-500">Renderer Offline</span>
                     </span>
+                </div>
+
+                <!-- Search -->
+                <div class="relative max-w-xs mb-6">
+                    <input
+                        v-model="search"
+                        @input="searchVideos($event.target.value)"
+                        type="text"
+                        placeholder="Search by map or player..."
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
+                    />
+                    <svg v-if="!search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                    </svg>
+                    <button v-else @click="search = ''; searchVideos('')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Stats -->

@@ -169,7 +169,8 @@ class ProfileController extends Controller {
 
         // --- Unplayed maps (partial or full) ---
         if ($needs('unplayed_maps')) {
-            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1));
+            $completionistMode = $request->input('completionist_mode', 'all');
+            $unplayedMaps = $this->getUnplayedMaps($mddId, $request->input('unplayed_page', 1), $completionistMode);
             $totalMaps = DB::table('maps')->count();
         }
 
@@ -192,7 +193,6 @@ class ProfileController extends Controller {
             $response->with('unplayed_maps', $unplayedMaps ?? collect());
             $response->with('total_maps', $totalMaps ?? 0);
         }
-
         if (!$isPartial) {
             $response->with('cpm_world_records', $stats['cpm_world_records'])
                 ->with('vq3_world_records', $stats['vq3_world_records'])
@@ -287,7 +287,8 @@ class ProfileController extends Controller {
         $activityYears = $this->getActivityYears($user->id);
 
         // Get unplayed maps for completionist list
-        $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1));
+        $completionistMode = $request->input('completionist_mode', 'all');
+        $unplayedMaps = $this->getUnplayedMaps($user->id, $request->input('unplayed_page', 1), $completionistMode);
         $totalMaps = DB::table('maps')->count();
 
         // For MDD profiles without a linked web account, create a minimal user object
@@ -897,8 +898,8 @@ class ProfileController extends Controller {
             $featureCpm = $featureStats->get('cpm');
             $featureVq3 = $featureStats->get('vq3');
 
-            // Query 3: Longest streak
-            $longestStreak = DB::select("SELECT MAX(streak) as longest_streak FROM (SELECT @streak := IF(@prev_date = DATE(date_set) - INTERVAL 1 DAY, @streak + 1, 1) as streak, @prev_date := DATE(date_set) as date_set FROM records, (SELECT @streak := 0, @prev_date := NULL) vars WHERE mdd_id = ? AND deleted_at IS NULL ORDER BY date_set) streaks", [$mddId]);
+            // Query 3: Longest streak (consecutive days with records)
+            $longestStreak = DB::select("WITH dates AS (SELECT DISTINCT DATE(date_set) as d FROM records WHERE mdd_id = ? AND deleted_at IS NULL), numbered AS (SELECT d, ROW_NUMBER() OVER (ORDER BY d) as rn FROM dates) SELECT MAX(streak_len) as longest_streak FROM (SELECT COUNT(*) as streak_len FROM (SELECT d, DATE_SUB(d, INTERVAL rn DAY) as grp FROM numbered) t GROUP BY grp) t2", [$mddId]);
 
             // Query 4: First record date
             $firstRecordDate = DB::table('records')->where('mdd_id', $mddId)->whereNull('deleted_at')->orderBy('date_set', 'ASC')->value('date_set');
@@ -934,8 +935,8 @@ class ProfileController extends Controller {
                 'cpm_teleporter' => (int) ($featureCpm->teleporter ?? 0),
                 'vq3_teleporter' => (int) ($featureVq3->teleporter ?? 0),
                 'longest_streak' => $longestStreak[0]->longest_streak ?? 0,
-                'cpm_dominance' => $uniqueMapsCpm > 0 ? round(($worldRecordsCpm / $uniqueMapsCpm) * 100, 1) : 0,
-                'vq3_dominance' => $uniqueMapsVq3 > 0 ? round(($worldRecordsVq3 / $uniqueMapsVq3) * 100, 1) : 0,
+                'cpm_dominance' => (int) ($cpm->total ?? 0) > 0 ? round(((int) ($cpm->top10 ?? 0) / (int) ($cpm->total ?? 0)) * 100, 1) : 0,
+                'vq3_dominance' => (int) ($vq3->total ?? 0) > 0 ? round(((int) ($vq3->top10 ?? 0) / (int) ($vq3->total ?? 0)) * 100, 1) : 0,
                 'first_record_date' => $firstRecordDate,
                 'most_active_month' => $mostActiveMonth[0] ?? null,
                 'marathon_record' => $marathonRecord,
@@ -971,11 +972,20 @@ class ProfileController extends Controller {
     /**
      * Get maps the user hasn't played yet (for completionist list)
      */
-    protected function getUnplayedMaps($mddId, $page = 1) {
-        // Get all map names the user has records on
-        $playedMaps = Record::where('mdd_id', $mddId)
-            ->whereNull('deleted_at')
-            ->distinct('mapname')
+    protected function getUnplayedMaps($mddId, $page = 1, $mode = 'all') {
+        // Get all map names the user has records on (filtered by mode)
+        $query = Record::where('mdd_id', $mddId)
+            ->whereNull('deleted_at');
+
+        if ($mode === 'run') {
+            $query->where('mode', 'run');
+        } elseif ($mode === 'ctf') {
+            $query->where('mode', 'LIKE', 'ctf%');
+        } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
+            $query->where('mode', $mode);
+        }
+
+        $playedMaps = $query->distinct('mapname')
             ->pluck('mapname')
             ->toArray();
 
