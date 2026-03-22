@@ -53,4 +53,14 @@ class Clan extends Model
     {
         return $this->belongsTo(User::class, 'admin_id');
     }
+
+    public function joinRequests()
+    {
+        return $this->hasMany(ClanInvitation::class)->where('type', 'request')->where('accepted', false);
+    }
+
+    public function blockedUsers()
+    {
+        return $this->hasMany(ClanBlockedUser::class);
+    }
 }

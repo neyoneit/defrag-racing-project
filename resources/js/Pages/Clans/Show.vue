@@ -1,12 +1,48 @@
 <script setup>
-    import { Head, Link } from '@inertiajs/vue3';
+    import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
     import ClanAchievements from './ClanAchievements.vue';
-    import { computed } from 'vue';
+    import { computed, ref } from 'vue';
+
+    const page = usePage();
 
     const props = defineProps({
         clan: Object,
         players: Array,
         statistics: Object,
+        userRequestStatus: String,
+        userIsMember: Boolean,
+        userIsInClan: Boolean,
+        pendingRequestId: Number,
+    });
+
+    const showJoinConfirm = ref(false);
+    const showCancelConfirm = ref(false);
+
+    const joinForm = useForm({ _method: 'POST' });
+    const cancelForm = useForm({ _method: 'POST' });
+
+    const submitJoinRequest = () => {
+        joinForm.post(route('clans.request.join', props.clan.id), {
+            preserveScroll: true,
+            onSuccess: () => { showJoinConfirm.value = false; }
+        });
+    };
+
+    const submitCancelRequest = () => {
+        cancelForm.post(route('clans.request.cancel', props.pendingRequestId), {
+            preserveScroll: true,
+            onSuccess: () => { showCancelConfirm.value = false; }
+        });
+    };
+
+    const canRequestJoin = computed(() => {
+        return page.props.auth?.user
+            && !props.userIsMember
+            && !props.userIsInClan
+            && props.userRequestStatus !== 'pending'
+            && props.userRequestStatus !== 'blocked'
+            && !props.clan.hidden
+            && !props.clan.banned;
     });
 
     const hexToRgba = (hex, alpha = 1) => {
@@ -198,13 +234,49 @@
                 </div>
 
                 <!-- Stats Bar -->
-                <div class="flex items-center gap-6 bg-black/40 rounded-full px-8 py-3 border border-white/20 shadow-2xl">
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-6 bg-black/40 rounded-full px-8 py-3 border border-white/20 shadow-2xl">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-blue-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                            </svg>
+                            <span class="text-white font-bold">{{ players.length }}</span>
+                            <span class="text-gray-300 text-sm">Members</span>
+                        </div>
+                    </div>
+
+                    <!-- Request to Join Button -->
+                    <button
+                        v-if="canRequestJoin"
+                        @click="showJoinConfirm = true"
+                        class="flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold px-6 py-3 rounded-full shadow-2xl border border-green-400/30 transition-all duration-300 hover:scale-105 hover:shadow-green-500/30"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
                         </svg>
-                        <span class="text-white font-bold">{{ players.length }}</span>
-                        <span class="text-gray-300 text-sm">Members</span>
+                        Request to Join
+                    </button>
+
+                    <!-- Pending Request Status -->
+                    <div
+                        v-else-if="userRequestStatus === 'pending'"
+                        class="flex items-center gap-2"
+                    >
+                        <div class="flex items-center gap-2 bg-yellow-600/20 text-yellow-400 font-semibold px-6 py-3 rounded-full border border-yellow-500/30">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            Request Pending
+                        </div>
+                        <button
+                            @click="showCancelConfirm = true"
+                            class="flex items-center gap-1 px-3 py-3 rounded-full bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all duration-300"
+                            title="Cancel request"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -373,6 +445,75 @@
                 </div>
             </div>
         </div>
+
+        <!-- Join Request Confirmation Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showJoinConfirm" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showJoinConfirm = false">
+                    <div class="fixed inset-0 bg-black/60"></div>
+                    <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <h3 class="text-xl font-bold text-white mb-3">Request to Join Clan</h3>
+                        <p class="text-gray-300 mb-2">
+                            Send a join request to <span class="font-semibold text-white" v-html="q3tohtml(clan.name)"></span>?
+                        </p>
+                        <p class="text-gray-500 text-sm mb-6">The clan admin will be notified and can accept or decline your request.</p>
+                        <div class="flex gap-3">
+                            <button
+                                @click="submitJoinRequest"
+                                :disabled="joinForm.processing"
+                                class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
+                            >
+                                {{ joinForm.processing ? 'Sending...' : 'Send Request' }}
+                            </button>
+                            <button
+                                @click="showJoinConfirm = false"
+                                class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- Cancel Request Confirmation Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-opacity duration-200"
+                leave-active-class="transition-opacity duration-150"
+                enter-from-class="opacity-0"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showCancelConfirm" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showCancelConfirm = false">
+                    <div class="fixed inset-0 bg-black/60"></div>
+                    <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <h3 class="text-xl font-bold text-white mb-3">Cancel Join Request</h3>
+                        <p class="text-gray-300 mb-6">Are you sure you want to cancel your request to join this clan?</p>
+                        <div class="flex gap-3">
+                            <button
+                                @click="submitCancelRequest"
+                                :disabled="cancelForm.processing"
+                                class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
+                            >
+                                {{ cancelForm.processing ? 'Cancelling...' : 'Cancel Request' }}
+                            </button>
+                            <button
+                                @click="showCancelConfirm = false"
+                                class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+                            >
+                                Go Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
     </div>
 </template>
 

@@ -2,18 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ClanInvitation extends Model
+class ClanBlockedUser extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'clan_id',
         'user_id',
-        'accepted',
-        'type',
     ];
 
     public function clan()

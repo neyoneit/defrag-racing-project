@@ -8,6 +8,7 @@ use App\Models\Clan;
 use App\Models\User;
 use App\Models\ClanInvitation;
 use App\Models\ClanPlayer;
+use App\Models\ClanBlockedUser;
 
 use App\Http\Controllers\Controller;
 
@@ -371,6 +372,93 @@ class ManageClanController extends Controller {
         $clanPlayer->save();
 
         return redirect()->back()->withSuccess('Member note updated successfully.');
+    }
+
+    public function acceptRequest(ClanInvitation $invitation, Request $request) {
+        $myClan = $request->user()->clan()->first();
+
+        if (! $myClan || $myClan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of a clan.');
+        }
+
+        if ($invitation->clan_id !== $myClan->id || $invitation->type !== 'request') {
+            return redirect()->back()->withDanger('Invalid request.');
+        }
+
+        $invitation->accepted = true;
+        $invitation->save();
+
+        // Remove user from any existing clan
+        ClanPlayer::where('user_id', $invitation->user_id)->delete();
+
+        // Add user to clan
+        ClanPlayer::create([
+            'clan_id' => $myClan->id,
+            'user_id' => $invitation->user_id,
+        ]);
+
+        // Notify user
+        $invitation->user->systemNotify('clan_request_accept', 'Your request to join ', $myClan->name, ' has been accepted! You are now a member.', route('clans.show', $myClan));
+
+        return redirect()->back()->withSuccess('The player has been accepted into the clan.');
+    }
+
+    public function rejectRequest(ClanInvitation $invitation, Request $request) {
+        $myClan = $request->user()->clan()->first();
+
+        if (! $myClan || $myClan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of a clan.');
+        }
+
+        if ($invitation->clan_id !== $myClan->id || $invitation->type !== 'request') {
+            return redirect()->back()->withDanger('Invalid request.');
+        }
+
+        $user = $invitation->user;
+        $invitation->delete();
+
+        // Notify user
+        $user->systemNotify('clan_request_reject', 'Your request to join ', $myClan->name, ' has been declined.', route('clans.show', $myClan));
+
+        return redirect()->back()->withSuccess('The request has been rejected.');
+    }
+
+    public function blockUser(ClanInvitation $invitation, Request $request) {
+        $myClan = $request->user()->clan()->first();
+
+        if (! $myClan || $myClan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of a clan.');
+        }
+
+        if ($invitation->clan_id !== $myClan->id || $invitation->type !== 'request') {
+            return redirect()->back()->withDanger('Invalid request.');
+        }
+
+        $user = $invitation->user;
+
+        // Block the user
+        ClanBlockedUser::firstOrCreate([
+            'clan_id' => $myClan->id,
+            'user_id' => $invitation->user_id,
+        ]);
+
+        // Delete the request
+        $invitation->delete();
+
+        // Notify user
+        $user->systemNotify('clan_request_reject', 'Your request to join ', $myClan->name, ' has been declined.', route('clans.show', $myClan));
+
+        return redirect()->back()->withSuccess('The player has been blocked from sending future requests.');
+    }
+
+    public function unblockUser(Clan $clan, User $user, Request $request) {
+        if ($clan->admin_id !== $request->user()->id) {
+            return redirect()->back()->withDanger('You are not the admin of the clan.');
+        }
+
+        ClanBlockedUser::where('clan_id', $clan->id)->where('user_id', $user->id)->delete();
+
+        return redirect()->back()->withSuccess('The player has been unblocked.');
     }
 
     public function deleteMemberConfig (Clan $clan, User $user, Request $request) {

@@ -1,6 +1,7 @@
 <script setup>
     import { ref, watch, nextTick, onMounted, onUnmounted, computed } from 'vue';
     import { Head, Link, router, usePage } from '@inertiajs/vue3';
+    import axios from 'axios';
     import ApplicationMark from '@/Components/Laravel/ApplicationMark.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import DropdownLink from '@/Components/Laravel/DropdownLink.vue';
@@ -189,13 +190,17 @@
     };
 
     // Cycling notification preview for record notifications
-    const notifications = computed(() => page.props.recordsNotifications || []);
+    const dismissedRecordIds = ref(new Set());
+    const notifications = computed(() => {
+        const all = page.props.recordsNotifications || [];
+        return all.filter(n => !dismissedRecordIds.value.has(n.id));
+    });
     const currentNotificationIndex = ref(0);
     let notificationInterval;
 
     const currentNotification = computed(() => {
         if (notifications.value.length === 0) return null;
-        return notifications.value[currentNotificationIndex.value];
+        return notifications.value[currentNotificationIndex.value % notifications.value.length];
     });
 
     const cycleNotification = () => {
@@ -204,20 +209,65 @@
         }
     };
 
+    const dismissRecordNotification = (navigate = false) => {
+        const notification = currentNotification.value;
+        if (!notification) return;
+
+        dismissedRecordIds.value = new Set([...dismissedRecordIds.value, notification.id]);
+
+        if (notifications.value.length > 0) {
+            currentNotificationIndex.value = currentNotificationIndex.value % notifications.value.length;
+        } else {
+            currentNotificationIndex.value = 0;
+        }
+
+        axios.post(route('notifications.toggle', notification.id)).finally(() => {
+            if (navigate) {
+                router.visit(route('notifications.index', { highlight: notification.id }));
+            }
+        });
+    };
+
     // Cycling notification preview for system notifications
-    const systemNotifications = computed(() => page.props.systemNotifications || []);
+    const dismissedSystemIds = ref(new Set());
+    const systemNotifications = computed(() => {
+        const all = page.props.systemNotifications || [];
+        return all.filter(n => !dismissedSystemIds.value.has(n.id));
+    });
     const currentSystemNotificationIndex = ref(0);
     let systemNotificationInterval;
 
     const currentSystemNotification = computed(() => {
         if (systemNotifications.value.length === 0) return null;
-        return systemNotifications.value[currentSystemNotificationIndex.value];
+        return systemNotifications.value[currentSystemNotificationIndex.value % systemNotifications.value.length];
     });
 
     const cycleSystemNotification = () => {
         if (systemNotifications.value.length > 0) {
             currentSystemNotificationIndex.value = (currentSystemNotificationIndex.value + 1) % systemNotifications.value.length;
         }
+    };
+
+    const dismissSystemNotification = (navigate = false) => {
+        const notification = currentSystemNotification.value;
+        if (!notification) return;
+
+        // Track dismissed ID immediately so it hides from UI
+        dismissedSystemIds.value = new Set([...dismissedSystemIds.value, notification.id]);
+
+        // Fix index if needed
+        if (systemNotifications.value.length > 0) {
+            currentSystemNotificationIndex.value = currentSystemNotificationIndex.value % systemNotifications.value.length;
+        } else {
+            currentSystemNotificationIndex.value = 0;
+        }
+
+        // Mark as read via API, then navigate if requested
+        axios.post(route('notifications.system.toggle', notification.id)).finally(() => {
+            if (navigate) {
+                router.visit(route('notifications.system.index', { highlight: notification.id }));
+            }
+        });
     };
 
     onMounted(() => {
@@ -502,32 +552,54 @@
                         <!-- Right: Notifications + Profile -->
                         <div class="flex items-center gap-3">
                             <!-- Record Notification Preview (visible on xl, hides to icon below) -->
-                            <Link v-if="$page.props.auth.user && currentNotification" :href="route('notifications.index')" class="hidden xl:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg transition-all hover:border-orange-500/40 cursor-pointer group">
-                                <div class="shrink-0 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                                <div class="flex items-center gap-1.5 min-w-0 text-xs">
-                                    <span class="font-bold text-white truncate" v-html="q3tohtml(currentNotification.name || '')"></span>
-                                    <span class="font-bold text-blue-400 truncate">{{ currentNotification.mapname }}</span>
-                                    <span class="font-bold text-green-400">{{ formatTime(timeDiff(currentNotification.user_time || 0, currentNotification.time || 0)) }}</span>
-                                </div>
-                                <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-xs font-bold rounded">
-                                    {{ notifications.length }}
-                                </div>
-                            </Link>
+                            <div v-if="$page.props.auth.user && currentNotification" class="hidden xl:flex items-center gap-1">
+                                <button @click="dismissRecordNotification(true)" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-l-lg transition-all hover:border-orange-500/40 cursor-pointer group">
+                                    <div class="shrink-0 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                                    <div class="flex items-center gap-1.5 min-w-0 text-xs">
+                                        <span class="font-bold text-white truncate" v-html="q3tohtml(currentNotification.name || '')"></span>
+                                        <span class="font-bold text-blue-400 truncate">{{ currentNotification.mapname }}</span>
+                                        <span class="font-bold text-green-400">{{ formatTime(timeDiff(currentNotification.user_time || 0, currentNotification.time || 0)) }}</span>
+                                    </div>
+                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-xs font-bold rounded">
+                                        {{ notifications.length }}
+                                    </div>
+                                </button>
+                                <button
+                                    @click.stop="dismissRecordNotification(false)"
+                                    class="flex items-center px-1.5 py-1.5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 border-l-0 rounded-r-lg transition-all hover:bg-red-500/20 hover:border-red-500/30 text-gray-500 hover:text-red-400"
+                                    title="Dismiss"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
 
                             <!-- System Notification Preview (visible on lg and above) -->
-                            <Link v-if="$page.props.auth.user && currentSystemNotification" :href="route('notifications.system.index')" class="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg transition-all hover:border-blue-500/40 cursor-pointer group">
-                                <div class="shrink-0 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                                <div class="flex items-center gap-1.5 min-w-0 text-xs">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                            <div v-if="$page.props.auth.user && currentSystemNotification" class="hidden lg:flex items-center gap-1">
+                                <button @click="dismissSystemNotification(true)" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-l-lg transition-all hover:border-blue-500/40 cursor-pointer group">
+                                    <div class="shrink-0 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                    <div class="flex items-center gap-1.5 min-w-0 text-xs">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                                        </svg>
+                                        <span class="text-gray-500">{{ currentSystemNotification.type?.startsWith('clan_') ? 'Clan:' : currentSystemNotification.type?.startsWith('tournament_') || currentSystemNotification.type?.startsWith('round_') ? 'Tournament:' : 'Announcement:' }}</span>
+                                        <span class="font-bold text-blue-400 truncate" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                    </div>
+                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-500 text-white text-xs font-bold rounded">
+                                        {{ systemNotifications.length }}
+                                    </div>
+                                </button>
+                                <button
+                                    @click.stop="dismissSystemNotification(false)"
+                                    class="flex items-center px-1.5 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 border-l-0 rounded-r-lg transition-all hover:bg-red-500/20 hover:border-red-500/30 text-gray-500 hover:text-red-400"
+                                    title="Dismiss"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                                     </svg>
-                                    <span class="text-gray-500">Announcement:</span>
-                                    <span class="font-bold text-blue-400 truncate" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
-                                </div>
-                                <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-500 text-white text-xs font-bold rounded">
-                                    {{ systemNotifications.length }}
-                                </div>
-                            </Link>
+                                </button>
+                            </div>
 
                             <!-- Notification Icons (show when previews are hidden) -->
                             <div v-if="$page.props.auth.user" class="flex items-center gap-1">
