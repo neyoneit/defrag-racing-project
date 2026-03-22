@@ -469,12 +469,12 @@ const getFunctionName = (abbr) => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
             <!-- Large Card Layout -->
             <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative  bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative cursor-default bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
-                    <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl" :class="hoveredMapServer === server.id ? 'pointer-events-auto' : 'pointer-events-none'">
+                    <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">
                             <a v-if="server.map" :href="`/maps/${server.map}`" class="block">
-                                <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
+                                <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top pointer-events-auto cursor-pointer" style="max-height: 450px;" />
                             </a>
                             <img v-else :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
                             <!-- Fade positioned at bottom of actual image -->
@@ -870,7 +870,7 @@ const getFunctionName = (abbr) => {
 <style scoped>
 /* Map features hover box styling */
 .map-features-hover-group {
-    cursor: pointer;
+    cursor: default;
 }
 
 .map-features-hover-group:hover {
