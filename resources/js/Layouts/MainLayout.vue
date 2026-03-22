@@ -334,7 +334,7 @@
 
         <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative">
             <!-- Modern Compact Header -->
-            <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-50 shadow-2xl" @click="handleNavClick">
+            <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-[200] shadow-2xl" @click="handleNavClick">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
                     <!-- First Row: Logo + Search + Profile -->
                     <div class="flex items-center justify-between gap-4 h-14 border-b border-white/5">
@@ -367,12 +367,12 @@
 
                                 <!-- Backdrop - positioned BELOW the nav (z-40) -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed inset-0 z-40" @click="closeSearch"></div>
+                                    <div v-if="showResultsSection" class="fixed inset-0 z-[201]" @click="closeSearch"></div>
                                 </Teleport>
 
                                 <!-- Search Results Dropdown -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl bg-gray-950 border border-white/10 overflow-hidden z-[60] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
+                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl bg-gray-950 border border-white/10 overflow-hidden z-[202] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
                                          :style="{ top: searchDropdownPosition.top + 'px', maxHeight: '70vh' }"
                                          @click.stop>
 

@@ -181,20 +181,21 @@ class TagResource extends Resource
                         if (!$targetTag) return;
 
                         // Move all map_tag relations to target (skip duplicates)
-                        DB::table('map_tag')
-                            ->where('tag_id', $record->id)
-                            ->whereNotIn('map_id', function ($q) use ($targetTag) {
-                                $q->select('map_id')->from('map_tag')->where('tag_id', $targetTag->id);
-                            })
-                            ->update(['tag_id' => $targetTag->id]);
+                        // MySQL can't UPDATE and SELECT from same table in subquery, so collect IDs first
+                        $existingMapIds = DB::table('map_tag')->where('tag_id', $targetTag->id)->pluck('map_id')->all();
+                        $query = DB::table('map_tag')->where('tag_id', $record->id);
+                        if (!empty($existingMapIds)) {
+                            $query->whereNotIn('map_id', $existingMapIds);
+                        }
+                        $query->update(['tag_id' => $targetTag->id]);
 
                         // Move all maplist_tag relations to target (skip duplicates)
-                        DB::table('maplist_tag')
-                            ->where('tag_id', $record->id)
-                            ->whereNotIn('maplist_id', function ($q) use ($targetTag) {
-                                $q->select('maplist_id')->from('maplist_tag')->where('tag_id', $targetTag->id);
-                            })
-                            ->update(['tag_id' => $targetTag->id]);
+                        $existingMaplistIds = DB::table('maplist_tag')->where('tag_id', $targetTag->id)->pluck('maplist_id')->all();
+                        $query = DB::table('maplist_tag')->where('tag_id', $record->id);
+                        if (!empty($existingMaplistIds)) {
+                            $query->whereNotIn('maplist_id', $existingMaplistIds);
+                        }
+                        $query->update(['tag_id' => $targetTag->id]);
 
                         // Delete remaining duplicate pivots for source tag
                         DB::table('map_tag')->where('tag_id', $record->id)->delete();

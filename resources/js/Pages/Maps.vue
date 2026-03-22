@@ -1,9 +1,9 @@
 <script setup>
-    import { ref, onMounted } from 'vue';
+    import { ref, computed, onMounted } from 'vue';
     import { Head, router } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import MapCard from '@/Components/MapCard.vue';
-    import MapFilters from '@/Components/MapFilters.vue';
+    import MapFiltersSidebar from '@/Components/MapFiltersSidebar.vue';
     import axios from 'axios';
 
     const props = defineProps({
@@ -11,9 +11,34 @@
         queries: Object,
     });
 
-    const showFilters = ref(Object.keys(props.queries ?? {}).filter(k => k !== 'tags').length > 0);
+    const tagsExpanded = ref(false);
+    let tagsCollapseTimeout = null;
     const tagsWithUsage = ref([]);
     const selectedTags = ref([]);
+    const tagSearch = ref('');
+
+    const onTagsEnter = () => {
+        if (tagsCollapseTimeout) {
+            clearTimeout(tagsCollapseTimeout);
+            tagsCollapseTimeout = null;
+        }
+        tagsExpanded.value = true;
+    };
+
+    const onTagsLeave = () => {
+        tagsCollapseTimeout = setTimeout(() => {
+            tagsExpanded.value = false;
+            tagSearch.value = '';
+        }, 1000);
+    };
+
+    const filteredTagsForOverlay = computed(() => {
+        if (!tagSearch.value) return tagsWithUsage.value;
+        const s = tagSearch.value.toLowerCase();
+        return tagsWithUsage.value.filter(tag =>
+            tag.name.toLowerCase().includes(s) || tag.display_name.toLowerCase().includes(s)
+        );
+    });
 
     const fetchTags = async () => {
         try {
@@ -107,95 +132,213 @@
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-4">
-                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Maps</h1>
-                        <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                <div class="flex gap-4">
+                    <!-- Spacer matching sidebar width -->
+                    <div class="hidden md:block flex-shrink-0 w-[300px]">
+                        <div class="flex items-center gap-4">
+                            <h1 class="text-4xl md:text-5xl font-black text-white">Maps</h1>
+                            <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                        </div>
                     </div>
+                    <!-- Tags on title level, aligned with maps grid -->
+                    <div class="flex-1 min-w-0">
+                        <!-- Mobile title -->
+                        <div class="md:hidden flex items-center gap-4 mb-2">
+                            <h1 class="text-4xl md:text-5xl font-black text-white">Maps</h1>
+                            <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                        </div>
+                        <!-- Tags bar (relative wrapper, expanded is absolute overlay) -->
+                        <div v-if="tagsWithUsage.length > 0" class="relative" @mouseenter="onTagsEnter" @mouseleave="onTagsLeave">
+                            <!-- Tag bar row with inline search -->
+                            <div class="tags-bar relative">
+                                <div class="flex items-center gap-2 min-h-[28px]">
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                                    </svg>
+                                    <button
+                                        v-for="tag in tagsWithUsage.filter(t => selectedTags.includes(t.name))"
+                                        :key="'sel-' + tag.id"
+                                        @click="toggleTag(tag.name)"
+                                        class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white ring-1 ring-blue-400 transition-all flex-shrink-0">
+                                        {{ tag.display_name }}
+                                    </button>
+                                    <!-- Input overlays ghost tags -->
+                                    <div class="flex-1 min-w-0 relative">
+                                        <!-- Ghost tags as background teaser -->
+                                        <div class="flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap" aria-hidden="true">
+                                            <span
+                                                v-for="tag in tagsWithUsage.filter(t => !selectedTags.includes(t.name)).slice(0, 20)"
+                                                :key="'ghost-' + tag.id"
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-600 bg-white/[0.03] flex-shrink-0 whitespace-nowrap">
+                                                {{ tag.display_name }}
+                                            </span>
+                                        </div>
+                                        <!-- Input stretches full width over ghost tags -->
+                                        <input
+                                            v-model="tagSearch"
+                                            type="text"
+                                            :placeholder="selectedTags.length > 0 ? `+${tagsWithUsage.length - selectedTags.length} more tags...` : `Filter ${tagsWithUsage.length} tags...`"
+                                            class="absolute inset-0 w-full bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none cursor-text"
+                                            @focus="onTagsEnter"
+                                        />
+                                    </div>
+                                </div>
+                                <!-- Expand indicator centered at bottom -->
+                                <div class="expand-tab" :class="{ 'expand-tab-active': tagsExpanded }">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                    </svg>
+                                </div>
+                            </div>
 
-                    <button
-                        @click="showFilters = !showFilters"
-                        class="flex items-center gap-2 px-3 py-1.5 text-sm bg-white/5 hover:bg-white/10 border border-white/10 rounded-md font-medium text-white transition-all"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 transition-transform duration-300" :class="{'rotate-180': showFilters}">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-                        </svg>
-                        Filters
-                    </button>
-                </div>
-
-                <!-- Tags Section -->
-                <div v-if="tagsWithUsage.length > 0" class="flex flex-wrap gap-1.5 items-center">
-                    <button
-                        v-for="tag in tagsWithUsage"
-                        :key="tag.id"
-                        @click="toggleTag(tag.name)"
-                        :class="[
-                            'px-2.5 py-1 rounded-full text-xs font-semibold transition-all',
-                            selectedTags.includes(tag.name)
-                                ? 'bg-blue-600 text-white ring-2 ring-blue-400'
-                                : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                        ]">
-                        {{ tag.display_name }}
-                        <span class="text-xs opacity-60 ml-1">({{ tag.usage_count }})</span>
-                    </button>
-                    <button
-                        v-if="selectedTags.length > 0"
-                        @click="clearAllTags"
-                        class="px-2.5 py-1 rounded-full text-xs text-gray-400 hover:text-white hover:bg-white/10 transition flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Clear
-                    </button>
+                            <!-- Expanded overlay (CSS-only animation, no DOM mount/unmount) -->
+                            <div class="tags-expanded-overlay" :class="{ 'tags-visible': tagsExpanded }">
+                                <div class="flex flex-wrap gap-1.5 items-center">
+                                    <button
+                                        v-for="tag in filteredTagsForOverlay"
+                                        :key="tag.id"
+                                        @click="toggleTag(tag.name)"
+                                        :class="[
+                                            'px-2 py-0.5 rounded-full text-xs font-semibold transition-all',
+                                            selectedTags.includes(tag.name)
+                                                ? 'bg-blue-600 text-white ring-1 ring-blue-400'
+                                                : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                                        ]">
+                                        {{ tag.display_name }}
+                                        <span class="opacity-50 ml-0.5">({{ tag.usage_count }})</span>
+                                    </button>
+                                    <span v-if="filteredTagsForOverlay.length === 0" class="text-xs text-gray-500">No tags match</span>
+                                    <button
+                                        v-if="selectedTags.length > 0"
+                                        @click="clearAllTags"
+                                        class="px-2 py-0.5 rounded-full text-xs text-gray-400 hover:text-white hover:bg-white/10 transition flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Content -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
-            <Transition
-                enter-active-class="transition-all duration-500 ease-out"
-                leave-active-class="transition-all duration-300 ease-in"
-                enter-from-class="opacity-0 max-h-0"
-                enter-to-class="opacity-100 max-h-[2000px]"
-                leave-from-class="opacity-100 max-h-[2000px]"
-                leave-to-class="opacity-0 max-h-0"
-            >
-                <div v-if="showFilters" class="overflow-hidden">
-                    <MapFilters :show="showFilters" :queries="queries ?? {}" />
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Sidebar Filters (side on md+, above maps on smaller) -->
+                <div class="hidden md:block flex-shrink-0 w-[300px]">
+                    <MapFiltersSidebar :queries="queries ?? {}" />
                 </div>
-            </Transition>
 
-            <!-- Loading skeleton -->
-            <div v-if="!mapsLoaded" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                <div v-for="i in 20" :key="i" class="bg-black/40 rounded-xl border border-white/10 overflow-hidden animate-pulse">
-                    <div class="aspect-[4/3] bg-white/5"></div>
-                    <div class="p-2 space-y-1.5">
-                        <div class="h-4 bg-white/10 rounded w-3/4"></div>
-                        <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                <!-- Main content -->
+                <div class="flex-1 min-w-0">
+                    <!-- Filters above maps on small screens -->
+                    <div class="md:hidden mb-4">
+                        <MapFiltersSidebar :queries="queries ?? {}" />
+                    </div>
+                    <!-- Loading skeleton -->
+                    <div v-if="!mapsLoaded" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <div v-for="i in 20" :key="i" class="bg-black/40 rounded-xl border border-white/10 overflow-hidden animate-pulse">
+                            <div class="aspect-[4/3] bg-white/5"></div>
+                            <div class="p-2 space-y-1.5">
+                                <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                                <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Maps Grid -->
+                    <div v-else-if="maps && maps.total > 0" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <MapCard v-for="map in maps.data" :map="map" :key="map.id" />
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-else-if="maps" class="flex flex-col items-center justify-center py-20 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-3 opacity-40">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" />
+                        </svg>
+                        <p class="font-semibold">No maps found</p>
+                        <p class="text-sm">Adjust your filters</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div v-if="maps && maps.total > maps.per_page" class="flex justify-center mt-8">
+                        <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" :only="['maps']" />
                     </div>
                 </div>
-            </div>
-
-            <!-- Maps Grid - 5 columns for maximum density -->
-            <div v-else-if="maps && maps.total > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                <MapCard v-for="map in maps.data" :map="map" :key="map.id" />
-            </div>
-
-            <!-- Empty State -->
-            <div v-else-if="maps" class="flex flex-col items-center justify-center py-20 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-3 opacity-40">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" />
-                </svg>
-                <p class="font-semibold">No maps found</p>
-                <p class="text-sm">Adjust your filters</p>
-            </div>
-
-            <!-- Pagination -->
-            <div v-if="maps && maps.total > maps.per_page" class="flex justify-center mt-8">
-                <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" :only="['maps']" />
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.tags-bar {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    cursor: text;
+    transition: border-color 0.2s;
+}
+.tags-bar:hover,
+.tags-bar:focus-within {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.expand-tab {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    padding: 0 0.5rem;
+    line-height: 0;
+    color: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    z-index: 5;
+}
+.tags-bar:hover .expand-tab {
+    color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.1);
+}
+.expand-tab-active {
+    transform: translateX(-50%) rotate(180deg);
+}
+.tags-expanded-overlay {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: rgba(30, 35, 50, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-top: 0.25rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+    /* Hidden state */
+    opacity: 0;
+    max-height: 0;
+    padding: 0 0.75rem;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.4s ease, max-height 0.4s ease, padding 0.4s ease, transform 0.4s ease;
+}
+.tags-expanded-overlay.tags-visible {
+    opacity: 1;
+    max-height: 300px;
+    padding: 0.75rem;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+</style>

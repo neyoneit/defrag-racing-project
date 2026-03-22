@@ -121,13 +121,13 @@
                 ref="searchInput"
                 @focus="isOpen = true"
                 @blur="onBlur"
-                class="w-full bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-lg px-4 py-2.5 transition-all outline-none"
+                class="w-full bg-white/5 border border-white/20 text-white text-sm placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-md px-3 py-1.5 transition-all outline-none"
                 v-model="search"
                 @input="filterOptions"
                 placeholder="Search players..."
                 autocomplete="off"
             />
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
         </div>
@@ -149,11 +149,11 @@
                     class="option-item"
                     :class="{'option-selected': selectedOptions.includes(user.id)}"
                 >
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-6 h-4 object-cover rounded flex-shrink-0">
-                        <span class="truncate text-sm" v-html="q3tohtml(getName(user))"></span>
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <img :src="`/images/flags/${getCountry(user)}.png`" onerror="this.src='/images/flags/_404.png'" class="w-5 h-3.5 object-cover rounded flex-shrink-0">
+                        <span class="truncate" v-html="q3tohtml(getName(user))"></span>
                     </div>
-                    <svg v-if="selectedOptions.includes(user.id)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-5 h-5 text-blue-400 flex-shrink-0">
+                    <svg v-if="selectedOptions.includes(user.id)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-400 flex-shrink-0">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                 </div>
@@ -171,14 +171,14 @@
         background: rgba(15, 23, 42, 0.95);
         backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0.75rem;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.5);
         z-index: 100;
         overflow: hidden;
     }
 
     .option-list {
-        max-height: 240px;
+        max-height: 200px;
         overflow-y: auto;
         padding: 0.25rem;
     }
@@ -204,13 +204,14 @@
     .option-item {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 0.625rem 0.75rem;
+        gap: 0.5rem;
+        padding: 0.375rem 0.625rem;
         margin-bottom: 0.125rem;
         cursor: pointer;
-        border-radius: 0.5rem;
+        border-radius: 0.375rem;
         color: rgba(255, 255, 255, 0.9);
         transition: all 0.15s ease;
+        font-size: 0.8125rem;
     }
 
     .option-item:hover {

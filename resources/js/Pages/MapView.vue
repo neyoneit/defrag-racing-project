@@ -8,9 +8,12 @@
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
+    import CopyButton from '@/Components/Basic/CopyButton.vue';
     import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
+    import { useClipboard } from '@/Composables/useClipboard';
     import axios from 'axios';
 
+    const { copy, copyState } = useClipboard();
     const showAddToMaplistModal = ref(false);
 
     // NSFW flagging
@@ -400,11 +403,11 @@
     });
 
     const filteredTags = computed(() => {
-        if (!newTagInput.value) return availableTags.value.slice(0, 20);
+        if (!newTagInput.value) return availableTags.value;
         const search = newTagInput.value.toLowerCase();
         return availableTags.value.filter(tag =>
             tag.name.includes(search) || tag.display_name.toLowerCase().includes(search)
-        ).slice(0, 20);
+        );
     });
 
     const addTag = async (tagName) => {
@@ -525,10 +528,29 @@
         }
     };
 
+    const tagBarInput = ref(null);
+    let tagBarCollapseTimeout = null;
+
     const handleTagInputBlur = () => {
-        setTimeout(() => {
+        // Handled by hover leave timeout instead
+    };
+
+    const onTagBarEnter = () => {
+        if (tagBarCollapseTimeout) {
+            clearTimeout(tagBarCollapseTimeout);
+            tagBarCollapseTimeout = null;
+        }
+        showAllTags.value = true;
+    };
+
+    const onTagBarLeave = () => {
+        tagBarCollapseTimeout = setTimeout(() => {
             showAllTags.value = false;
-        }, 200);
+        }, 30);
+    };
+
+    const focusTagInput = () => {
+        tagBarInput.value?.focus();
     };
 
     const mergeRecordSources = (onlineRecords, oldRecords, offlineRecords) => {
@@ -797,34 +819,54 @@
 
                     <!-- Content layer (on top of background) -->
                     <div class="relative z-10">
-                    <!-- Ranked/Unranked + NSFW badges (top-left corner) -->
-                    <div class="absolute top-3 left-3 z-20 flex gap-1.5">
-                        <span v-if="localIsNsfw" class="px-2.5 py-1 bg-red-600/80 rounded-md text-xs font-black text-white border border-red-500/50">NSFW</span>
-                        <div v-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative">
-                            <span class="px-2.5 py-1 bg-green-600/80 rounded-md text-xs font-black text-white border border-green-500/50 cursor-help inline-block">Ranked</span>
-                            <div class="absolute left-0 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Ranked in: {{ [map.is_ranked_vq3 ? 'VQ3' : '', map.is_ranked_cpm ? 'CPM' : ''].filter(Boolean).join(', ') }}</div>
-                                <div class="text-gray-400">Requires 5+ players, top time 500ms+</div>
-                            </div>
-                        </div>
-                        <div v-else class="group/badge relative">
-                            <span class="px-2.5 py-1 bg-gray-600/80 rounded-md text-xs font-black text-gray-300 border border-gray-500/50 cursor-help inline-block">Unranked</span>
-                            <div class="absolute left-0 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Not included in rankings</div>
-                                <div class="text-gray-400">Requires 5+ players, top time 500ms+</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Map Title + Author + Date -->
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-2">
+                    <!-- Map Title row: name + copy + badges -->
+                    <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-1">
                         <h1 class="text-4xl md:text-5xl font-bold text-white">
                             {{ map.name }}
                         </h1>
-                        <div class="text-gray-300 flex items-center gap-2 flex-shrink-0">
-                            <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
-                            <span v-if="map.date_added" class="text-gray-400">• {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                        <CopyButton :text="map.name" size="md" />
+                        <div v-if="localIsNsfw" class="group/badge relative">
+                            <span class="map-badge bg-red-600/80 border-red-500/50 cursor-help">NSFW</span>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Not Safe For Work</div>
+                                <div class="text-gray-400">This map contains adult or explicit content</div>
+                            </div>
                         </div>
+                        <!-- Both ranked -->
+                        <div v-if="map.is_ranked_vq3 && map.is_ranked_cpm" class="group/badge relative">
+                            <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked</span>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Ranked in VQ3 & CPM</div>
+                                <div class="text-gray-400">Records on this map count towards</div>
+                                <div class="text-gray-400">player rankings in both physics modes.</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">Criteria: 5+ unique players, best time over 500ms</div>
+                            </div>
+                        </div>
+                        <!-- Only one ranked -->
+                        <div v-else-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative">
+                            <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }}</span>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Ranked in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} only</div>
+                                <div class="text-gray-400">Records count towards player rankings</div>
+                                <div class="text-gray-400">in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} mode. {{ map.is_ranked_vq3 ? 'CPM' : 'VQ3' }} is unranked on this map.</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">Criteria: 5+ unique players, best time over 500ms</div>
+                            </div>
+                        </div>
+                        <!-- Both unranked -->
+                        <div v-else class="group/badge relative">
+                            <span class="map-badge bg-gray-600/80 border-gray-500/50 text-gray-300 cursor-help">Unranked</span>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Not included in rankings</div>
+                                <div class="text-gray-400">Records on this map do not affect</div>
+                                <div class="text-gray-400">player ranking positions.</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">Needs 5+ unique players and best time over 500ms to qualify</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Author + Date row -->
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors text-sm">{{ map.author }}</Link>
+                        <span v-if="map.date_added" class="text-gray-500 text-sm">{{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                     </div>
 
                     <!-- Map Features: Weapons, Items, Functions -->
@@ -934,18 +976,18 @@
 
                     <!-- Tags Section -->
                     <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
-                        <!-- Display existing tags -->
-                        <div class="flex flex-wrap gap-2 mb-4">
+                        <!-- Existing tags row -->
+                        <div class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
                             <span
                                 v-for="tag in tags"
                                 :key="tag.id"
-                                class="group flex items-center gap-1.5 bg-purple-600/20 border border-purple-500/30 text-purple-300 px-2.5 py-1 rounded-full text-xs font-medium hover:bg-purple-600/30 transition-colors"
+                                class="group flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white ring-1 ring-blue-400"
                             >
                                 {{ tag.display_name }}
                                 <button
                                     v-if="$page.props.auth.user"
                                     @click="confirmRemoveTag(tag)"
-                                    class="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-0.5"
+                                    class="opacity-0 group-hover:opacity-100 hover:text-red-300 transition-opacity"
                                     title="Remove tag"
                                 >
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -953,87 +995,86 @@
                                     </svg>
                                 </button>
                             </span>
-                            <span v-if="tags.length === 0 && $page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet - click tags below to add</span>
+                            <!-- Suggested tags -->
+                            <button
+                                v-for="suggestedTag in suggestedTags.filter(s => !s.already_adopted)"
+                                :key="'sug-' + suggestedTag.id"
+                                v-if="$page.props.auth.user"
+                                @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
+                                :disabled="adoptingTag"
+                                class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-600/20 text-green-300 border border-green-500/30 hover:bg-green-600/30 transition-all"
+                                :title="'Suggested from: ' + suggestedTag.maplist_names.join(', ')"
+                            >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                {{ suggestedTag.display_name }}
+                            </button>
+                            <span v-if="tags.length === 0 && !$page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet - add below</span>
                         </div>
 
-                        <!-- Suggested tags from maplists -->
-                        <div v-if="suggestedTags.length > 0" class="mb-4 pb-4 border-b border-white/10">
-                            <div class="text-xs text-gray-400 uppercase mb-2 font-bold">Suggested tags from maplists</div>
-                            <div class="flex flex-wrap gap-2">
-                                <span
-                                    v-for="suggestedTag in suggestedTags"
-                                    :key="suggestedTag.id"
-                                    :class="[
-                                        'group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors',
-                                        suggestedTag.already_adopted
-                                            ? 'bg-green-600/20 border border-green-500/30 text-green-300'
-                                            : 'bg-blue-600/20 border border-blue-500/30 text-blue-300 cursor-pointer hover:bg-blue-600/30'
-                                    ]"
-                                    :title="suggestedTag.already_adopted ? 'Already adopted' : 'From: ' + suggestedTag.maplist_names.join(', ')"
-                                >
-                                    {{ suggestedTag.display_name }}
-                                    <button
-                                        v-if="$page.props.auth.user && !suggestedTag.already_adopted"
-                                        @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
-                                        class="ml-0.5 hover:text-green-400 transition-colors"
-                                        title="Adopt this tag"
-                                        :disabled="adoptingTag"
-                                    >
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                                        </svg>
-                                    </button>
-                                    <svg v-else-if="suggestedTag.already_adopted" class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        <!-- Add tag bar (Maps page style with hover expand) -->
+                        <div v-if="$page.props.auth.user" class="relative" ref="tagInputContainer" @mouseenter="onTagBarEnter" @mouseleave="onTagBarLeave">
+                            <div class="mapview-tags-bar" :class="{ 'mapview-tags-bar-focus': showAllTags }" @click="focusTagInput">
+                                <div class="flex items-center gap-2 min-h-[28px]">
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                     </svg>
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Not logged in hint -->
-                        <div v-if="!$page.props.auth.user && tags.length === 0" class="bg-gradient-to-r from-purple-500/10 via-purple-500/15 to-purple-500/10 border border-purple-500/20 rounded-lg px-4 py-3 text-center">
-                            <div class="text-sm font-semibold text-purple-300">No tags on this map</div>
-                            <div class="text-xs text-purple-200/60 mt-1"><a href="/login" class="underline hover:text-white transition-colors">Login</a> or <a href="/register" class="underline hover:text-white transition-colors">register</a> to add them!</div>
-                        </div>
-
-                        <!-- Add tag input (for logged in users) -->
-                        <div v-if="$page.props.auth.user" ref="tagInputContainer" class="relative z-[70]">
-                            <div class="flex gap-2">
-                                <input
-                                    v-model="newTagInput"
-                                    @input="handleTagInput"
-                                    @keyup.enter="addCustomTag"
-                                    @focus="showAllTags = true"
-                                    @blur="handleTagInputBlur"
-                                    type="text"
-                                    placeholder="Add a tag..."
-                                    class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10"
-                                />
-                                <button
-                                    @click="addCustomTag"
-                                    :disabled="!newTagInput.trim() || addingTag"
-                                    class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                                >
-                                    {{ addingTag ? 'Adding...' : 'Add' }}
-                                </button>
+                                    <input
+                                        ref="tagBarInput"
+                                        v-model="newTagInput"
+                                        @input="handleTagInput"
+                                        @keyup.enter="addCustomTag"
+                                        @focus="showAllTags = true"
+                                        type="text"
+                                        placeholder="Search & add tags..."
+                                        class="w-[120px] bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none flex-shrink-0"
+                                    />
+                                    <!-- Ghost tags as background teaser -->
+                                    <div class="flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-1 min-w-0 flex-nowrap" aria-hidden="true">
+                                        <span
+                                            v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
+                                            :key="'ghost-' + tag.id"
+                                            class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-600 bg-white/[0.03] flex-shrink-0 whitespace-nowrap">
+                                            {{ tag.display_name }}
+                                        </span>
+                                    </div>
+                                    <button
+                                        @mousedown.prevent="addCustomTag"
+                                        :disabled="!newTagInput.trim() || addingTag"
+                                        class="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0"
+                                    >
+                                        {{ addingTag ? '...' : 'Add' }}
+                                    </button>
+                                </div>
                             </div>
 
-                            <!-- Available tags dropdown (teleported to body to avoid overflow clipping) -->
+                            <!-- Expandable tag picker overlay (teleported to body) -->
                             <Teleport to="body">
-                                <div v-if="$page.props.auth.user && availableTags.length > 0 && showAllTags" :style="tagDropdownStyle" class="bg-[#111827] border border-white/20 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] p-3 z-[9999]">
-                                    <div class="text-xs text-gray-500 uppercase mb-2">Click to add tag</div>
-                                    <div class="flex flex-wrap gap-1.5 max-h-64 overflow-y-auto scrollbar">
+                                <div
+                                    v-if="showAllTags && availableTags.length > 0"
+                                    :style="tagDropdownStyle"
+                                    class="mapview-tags-overlay-teleported"
+                                    @mouseenter="onTagBarEnter"
+                                    @mouseleave="onTagBarLeave"
+                                >
+                                    <div class="flex flex-wrap gap-1.5">
                                         <button
-                                            v-for="availableTag in availableTags.filter(t => !tags.some(tag => tag.id === t.id))"
+                                            v-for="availableTag in filteredTags.filter(t => !tags.some(tag => tag.id === t.id))"
                                             :key="availableTag.id"
                                             @mousedown.prevent="addTag(availableTag.display_name)"
-                                            class="px-2 py-1 rounded-md text-xs font-medium transition-all bg-gray-700/50 hover:bg-purple-600/30 text-gray-300 hover:text-purple-300 border border-transparent hover:border-purple-500/30"
+                                            class="px-2 py-0.5 rounded-full text-xs font-medium transition-all bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white"
                                         >
                                             {{ availableTag.display_name }}
+                                            <span class="opacity-40 ml-0.5">({{ availableTag.usage_count }})</span>
                                         </button>
                                     </div>
                                 </div>
                             </Teleport>
+                        </div>
+
+                        <!-- Not logged in hint -->
+                        <div v-if="!$page.props.auth.user && tags.length === 0" class="mt-2 text-center">
+                            <div class="text-xs text-gray-500"><a href="/login" class="underline hover:text-white transition-colors">Login</a> or <a href="/register" class="underline hover:text-white transition-colors">register</a> to add tags</div>
                         </div>
                     </div>
 
@@ -1571,5 +1612,46 @@
     </div>
 </template>
 
+<style>
+.mapview-tags-overlay-teleported {
+    z-index: 9999;
+    background: #1a1f2e;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+</style>
+
 <style scoped>
+.map-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: white;
+    border: 1px solid;
+    line-height: 1;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+.mapview-tags-bar {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    cursor: text;
+    transition: border-color 0.2s, background 0.2s;
+}
+.mapview-tags-bar:hover,
+.mapview-tags-bar-focus {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+}
+
 </style>

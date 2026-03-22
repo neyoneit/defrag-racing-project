@@ -2,10 +2,8 @@
     import moment from 'moment';
     import { computed, ref } from 'vue';
     import { Link, usePage } from '@inertiajs/vue3';
-    import { useClipboard } from '@/Composables/useClipboard';
+    import CopyButton from '@/Components/Basic/CopyButton.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
-
-    const { copy, copyState } = useClipboard();
     const page = usePage();
     const showMaplistModal = ref(false);
 
@@ -128,22 +126,7 @@
 
                     <div class="flex items-center gap-1 flex-shrink-0">
                         <!-- Copy Button -->
-                        <Popper :closeDelay="300" hover style="z-index: 100;">
-                            <button
-                                @click.prevent="copy(map.name)"
-                                class="p-0.5 text-gray-400 hover:text-green-400 rounded transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 8.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v8.25A2.25 2.25 0 0 0 6 16.5h2.25m8.25-8.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-7.5A2.25 2.25 0 0 1 8.25 18v-1.5m8.25-8.25h-6a2.25 2.25 0 0 0-2.25 2.25v6" />
-                                </svg>
-                            </button>
-                            <template #content>
-                                <div class="px-2 py-1 rounded bg-black/90 text-xs">
-                                    <span v-if="!copyState" class="text-gray-300">Copy</span>
-                                    <span v-else class="text-green-400">Copied!</span>
-                                </div>
-                            </template>
-                        </Popper>
+                        <CopyButton :text="map.name" size="xs" />
 
                         <!-- Add to Maplist Button (only if logged in) -->
                         <button

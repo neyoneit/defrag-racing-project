@@ -37,7 +37,7 @@ class MapsController extends Controller
             ->select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(20)
+            ->paginate(28)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
@@ -60,7 +60,7 @@ class MapsController extends Controller
         }
 
         $maps = $mapFilters['query'];
-        $maps = $maps->paginate(20)->withQueryString();
+        $maps = $maps->paginate(28)->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
             $paging = ['page' => $maps->lastPage()];
