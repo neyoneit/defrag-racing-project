@@ -170,6 +170,10 @@ class UserResource extends Resource
                 Tables\Columns\IconColumn::make('admin')
                     ->boolean()
                     ->sortable(),
+                Tables\Columns\IconColumn::make('is_moderator')
+                    ->label('Mod')
+                    ->boolean()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('twitter_name')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
