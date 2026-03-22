@@ -532,7 +532,9 @@
     let tagBarCollapseTimeout = null;
 
     const handleTagInputBlur = () => {
-        // Handled by hover leave timeout instead
+        setTimeout(() => {
+            showAllTags.value = false;
+        }, 100);
     };
 
     const onTagBarEnter = () => {
@@ -545,6 +547,8 @@
 
     const onTagBarLeave = () => {
         tagBarCollapseTimeout = setTimeout(() => {
+            // Don't collapse if input is focused
+            if (document.activeElement === tagBarInput.value) return;
             showAllTags.value = false;
         }, 30);
     };
@@ -1015,28 +1019,34 @@
                         <!-- Add tag bar (Maps page style with hover expand) -->
                         <div v-if="$page.props.auth.user" class="relative" ref="tagInputContainer" @mouseenter="onTagBarEnter" @mouseleave="onTagBarLeave">
                             <div class="mapview-tags-bar" :class="{ 'mapview-tags-bar-focus': showAllTags }" @click="focusTagInput">
-                                <div class="flex items-center gap-2 min-h-[28px]">
+                                <div class="flex items-center gap-2 min-h-[36px]">
                                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                     </svg>
-                                    <input
-                                        ref="tagBarInput"
-                                        v-model="newTagInput"
-                                        @input="handleTagInput"
-                                        @keyup.enter="addCustomTag"
-                                        @focus="showAllTags = true"
-                                        type="text"
-                                        placeholder="Search & add tags..."
-                                        class="w-[120px] bg-transparent border-none text-xs text-white placeholder-gray-500 focus:outline-none flex-shrink-0"
-                                    />
-                                    <!-- Ghost tags as background teaser -->
-                                    <div class="flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-1 min-w-0 flex-nowrap" aria-hidden="true">
-                                        <span
-                                            v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
-                                            :key="'ghost-' + tag.id"
-                                            class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-600 bg-white/[0.03] flex-shrink-0 whitespace-nowrap">
-                                            {{ tag.display_name }}
-                                        </span>
+                                    <!-- Input with ghost tags behind -->
+                                    <div class="flex-1 min-w-0 relative" @click="focusTagInput">
+                                        <!-- Ghost tags as background (hidden when typing) -->
+                                        <div v-show="!newTagInput" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-40 pl-[10px]" aria-hidden="true">
+                                            <span class="text-xs text-gray-400 flex-shrink-0 mr-1">Search & add tags...</span>
+                                            <span
+                                                v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
+                                                :key="'ghost-' + tag.id"
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-white/[0.04] flex-shrink-0 whitespace-nowrap">
+                                                {{ tag.display_name }}
+                                            </span>
+                                        </div>
+                                        <!-- Visible input full width -->
+                                        <input
+                                            ref="tagBarInput"
+                                            v-model="newTagInput"
+                                            @input="handleTagInput"
+                                            @keyup.enter="addCustomTag"
+                                            @focus="showAllTags = true"
+                                            @blur="handleTagInputBlur"
+                                            type="text"
+                                            placeholder=""
+                                            class="relative w-full bg-transparent border-none text-sm text-white focus:outline-none cursor-text"
+                                        />
                                     </div>
                                     <button
                                         @mousedown.prevent="addCustomTag"
@@ -1644,7 +1654,7 @@
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     cursor: text;
     transition: border-color 0.2s, background 0.2s;
 }
