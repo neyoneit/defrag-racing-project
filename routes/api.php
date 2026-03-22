@@ -30,6 +30,7 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
     Route::post('/claim/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'claim']);
     Route::post('/complete/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'complete']);
     Route::post('/fail/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'fail']);
+    Route::post('/reset/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'resetToPending']);
     Route::post('/heartbeat', [\App\Http\Controllers\Api\DemomeController::class, 'heartbeat']);
     Route::post('/report', [\App\Http\Controllers\Api\DemomeController::class, 'report']);
     Route::post('/report-by-hash', [\App\Http\Controllers\Api\DemomeController::class, 'reportByHash']);
