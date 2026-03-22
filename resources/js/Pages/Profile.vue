@@ -1504,7 +1504,7 @@
 
                                         <!-- Date -->
                                         <div class="w-20 sm:w-28 flex-shrink-0 text-right">
-                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                            <div class="text-xs text-gray-100 group-hover:text-white font-mono font-semibold transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
                                                 {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>
@@ -1575,7 +1575,7 @@
 
                                         <!-- Date -->
                                         <div class="w-20 sm:w-28 flex-shrink-0 text-right">
-                                            <div class="text-[8px] sm:text-[10px] text-gray-500 group-hover:text-gray-300 font-mono transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                                            <div class="text-xs text-gray-100 group-hover:text-white font-mono font-semibold transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
                                                 {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>

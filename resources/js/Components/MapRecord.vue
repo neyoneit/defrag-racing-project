@@ -36,6 +36,15 @@
     const youtubeLinkInput = ref('');
     const youtubeLinkSaving = ref(false);
     const youtubeLinkError = ref(null);
+    const actionsExpanded = ref(false);
+    let actionsTimeout = null;
+    const expandActions = () => {
+        clearTimeout(actionsTimeout);
+        actionsExpanded.value = true;
+    };
+    const collapseActions = () => {
+        actionsTimeout = setTimeout(() => { actionsExpanded.value = false; }, 500);
+    };
 
     const renderRequesting = ref(false);
     const renderRequested = ref(false);
@@ -345,7 +354,7 @@
 
 <template>
     <div
-        class="group relative flex items-center gap-2 pr-2 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-2"
+        class="group relative flex items-center gap-1.5 -mr-1 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-3"
         :class="{
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
             'border-l-2 border-green-500/50 hover:border-green-400': !isMyRecord && isVerified,
@@ -666,23 +675,8 @@
         </Teleport>
 
         <!-- Action Icons -->
-        <div class="flex items-center justify-end flex-shrink-0">
-            <a
-                v-if="false"
-                :href="demoDownloadUrl"
-                class="p-0.5 rounded transition-all hover:scale-110"
-                :class="{
-                    'bg-emerald-500/20 text-emerald-400': isMyRecord,
-                    'bg-gray-700/50 text-gray-400': !isMyRecord
-                }"
-                title="Download demo"
-                @click.stop
-            >
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
-                </svg>
-            </a>
-
+        <div class="flex items-center justify-end flex-shrink-0 gap-0.5 ml-auto">
+            <!-- Always visible: assign/match/reassign -->
             <button
                 v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
@@ -716,40 +710,50 @@
                 </svg>
             </button>
 
-            <button
-                v-if="canReportDemo && !record.oldtop"
-                @click.stop="showFlagModal = true"
-                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                title="Flag validity issue"
-            >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
-            </button>
+            <!-- Collapsed: report/flag/youtube-link (expand on hover with 500ms delay) -->
+            <div class="relative" @mouseenter="expandActions" @mouseleave="collapseActions">
+                <div v-if="!actionsExpanded" class="flex items-center text-gray-500 hover:text-gray-300 cursor-pointer p-0.5 rounded bg-gray-700/50">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                    </svg>
+                </div>
+                <div v-if="actionsExpanded" class="flex items-center gap-0.5">
+                    <button
+                        v-if="canReportDemo && !record.oldtop"
+                        @click.stop="showFlagModal = true"
+                        class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        title="Flag validity issue"
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                        </svg>
+                    </button>
 
-            <button
-                v-if="canReportDemo && getDemoForReport"
-                @click.stop="showReportModal = true"
-                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                title="Report demo"
-            >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-            </button>
+                    <button
+                        v-if="canReportDemo && getDemoForReport"
+                        @click.stop="showReportModal = true"
+                        class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        title="Report demo"
+                    >
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </button>
 
-            <button
-                v-if="isAdmin && demoIdForYoutubeLink"
-                @click.stop="showYoutubeLinkModal = true"
-                class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
-                title="Link YouTube video"
-            >
-                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
-            </button>
+                    <button
+                        v-if="isAdmin && demoIdForYoutubeLink"
+                        @click.stop="showYoutubeLinkModal = true"
+                        class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                        title="Link YouTube video"
+                    >
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Time - MASSIVE and eye-catching -->
-        <div class="text-right flex-shrink-0 min-w-[70px]">
+        <div class="text-right flex-shrink-0">
             <div
                 class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
