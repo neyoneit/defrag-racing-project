@@ -4,6 +4,7 @@
     import FormSection from '@/Components/Laravel/FormSection.vue';
     import InputError from '@/Components/Laravel/InputError.vue';
     import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
+    import { VColorPicker } from 'vuetify/components/VColorPicker';
     import { computed } from 'vue';
 
     const props = defineProps({

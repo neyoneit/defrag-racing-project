@@ -12,6 +12,8 @@ class YoutubeController extends Controller
 {
     public function index(Request $request)
     {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
         $stats = Cache::remember('youtube:stats', 600, function () {
             return [
                 'total_renders' => RenderedVideo::completed()->count(),
@@ -19,6 +21,20 @@ class YoutubeController extends Controller
                 'total_maps' => RenderedVideo::completed()->visible()->distinct('map_name')->count('map_name'),
             ];
         });
+
+        $lastHeartbeat = Cache::get('demome:last_heartbeat');
+        $demomeOnline = $lastHeartbeat && Carbon::parse($lastHeartbeat)->diffInMinutes(now()) < 5;
+
+        if (!$isPartial) {
+            return Inertia::render('Youtube', [
+                'stats' => $stats,
+                'videos' => null,
+                'currentlyRendering' => null,
+                'pendingQueue' => null,
+                'pendingTotal' => 0,
+                'demomeOnline' => $demomeOnline,
+            ]);
+        }
 
         $search = $request->input('search', '');
 
@@ -40,7 +56,6 @@ class YoutubeController extends Controller
 
         $videos = $videosQuery->paginate(24)->withQueryString();
 
-        // Live queue: currently rendering + pending
         $currentlyRendering = RenderedVideo::where('status', 'rendering')
             ->with(['record' => fn($q) => $q->select('id', 'rank')])
             ->select(['id', 'map_name', 'player_name', 'physics', 'time_ms', 'source', 'requested_by', 'record_id', 'updated_at'])
@@ -55,9 +70,6 @@ class YoutubeController extends Controller
             ->get();
 
         $pendingTotal = RenderedVideo::where('status', 'pending')->count();
-
-        $lastHeartbeat = Cache::get('demome:last_heartbeat');
-        $demomeOnline = $lastHeartbeat && Carbon::parse($lastHeartbeat)->diffInMinutes(now()) < 5;
 
         return Inertia::render('Youtube', [
             'stats' => $stats,

@@ -3,7 +3,7 @@
     import { Link } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ClanCard from './ClanCard.vue';
-    import { ref, computed } from 'vue';
+    import { ref, computed, onMounted } from 'vue';
     import InvitePlayerModal from './InvitePlayerModal.vue';
     import KickPlayerModal from './KickPlayerModal.vue';
     import LeaveClanModal from './LeaveClanModal.vue';
@@ -33,6 +33,19 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         invitations: Array,
         currentSort: String,
         currentDir: String
+    });
+
+    const clansLoaded = ref(false);
+
+    onMounted(() => {
+        if (!props.clans) {
+            router.reload({
+                only: ['clans'],
+                onFinish: () => { clansLoaded.value = true; }
+            });
+        } else {
+            clansLoaded.value = true;
+        }
     });
 
     const sortClans = (field) => {
@@ -1249,10 +1262,23 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4">
+                <!-- Loading skeleton -->
+                <div v-if="!clansLoaded" class="grid grid-cols-1 gap-4">
+                    <div v-for="i in 6" :key="i" class="bg-black/40 rounded-xl p-4 border border-white/10 animate-pulse">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/10 rounded-full"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-5 bg-white/10 rounded w-1/3"></div>
+                                <div class="h-4 bg-white/5 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else-if="clans" class="grid grid-cols-1 gap-4">
                     <ClanCard v-for="(clan, index) in clans.data" :key="clan.id" :clan="clan" :style="{ animationDelay: `${index * 50}ms` }" class="animate-slideInUp" />
 
-                    <div v-if="clans.total === 0" class="text-center py-20">
+                    <div v-if="clans && clans.total === 0" class="text-center py-20">
                         <div class="inline-flex items-center justify-center w-20 h-20 bg-white/5 rounded-full mb-4">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-gray-500">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
@@ -1262,7 +1288,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <p class="text-gray-500 text-sm mt-2">Be the first to create one!</p>
                     </div>
 
-                    <div class="border-t border-white/5 bg-transparent p-3" v-if="clans.total > clans.per_page">
+                    <div class="border-t border-white/5 bg-transparent p-3" v-if="clans && clans.total > clans.per_page">
                         <Pagination :current_page="clans.current_page" :last_page="clans.last_page" :link="clans.first_page_url" :only="['clans']" />
                     </div>
                 </div>

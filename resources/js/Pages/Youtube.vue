@@ -27,9 +27,21 @@
         }, 300);
     };
 
+    const videosLoaded = ref(false);
+
     // Auto-refresh live status every 15 seconds
     let refreshInterval = null;
     onMounted(() => {
+        // Lazy load video data
+        if (!props.videos) {
+            router.reload({
+                only: ['videos', 'currentlyRendering', 'pendingQueue', 'pendingTotal'],
+                onFinish: () => { videosLoaded.value = true; }
+            });
+        } else {
+            videosLoaded.value = true;
+        }
+
         if (props.currentlyRendering || (props.pendingQueue && props.pendingQueue.length > 0)) {
             refreshInterval = setInterval(() => {
                 router.reload({ only: ['currentlyRendering', 'pendingQueue', 'pendingTotal', 'demomeOnline', 'videos', 'stats'] });
@@ -105,20 +117,38 @@
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-                <div class="flex items-center gap-3 mb-6">
-                    <h1 class="text-4xl md:text-5xl font-black text-white">YouTube</h1>
-                    <span v-if="demomeOnline" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30">
-                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                        <span class="text-xs font-medium text-green-400">Renderer Online</span>
-                    </span>
-                    <span v-else class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-500/10 border border-gray-500/30">
-                        <span class="w-2 h-2 rounded-full bg-gray-500"></span>
-                        <span class="text-xs font-medium text-gray-500">Renderer Offline</span>
-                    </span>
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-4xl md:text-5xl font-black text-white">YouTube</h1>
+                        <span v-if="demomeOnline" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30">
+                            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                            <span class="text-xs font-medium text-green-400">Renderer Online</span>
+                        </span>
+                        <span v-else class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-500/10 border border-gray-500/30">
+                            <span class="w-2 h-2 rounded-full bg-gray-500"></span>
+                            <span class="text-xs font-medium text-gray-500">Renderer Offline</span>
+                        </span>
+                    </div>
+
+                    <!-- Stats (right side) -->
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                            <div class="text-lg font-bold text-white leading-tight">{{ stats.total_renders }}</div>
+                            <div class="text-[10px] text-gray-400">Videos</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                            <div class="text-lg font-bold text-white leading-tight">{{ stats.total_render_hours }}h</div>
+                            <div class="text-[10px] text-gray-400">Render Time</div>
+                        </div>
+                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                            <div class="text-lg font-bold text-white leading-tight">{{ stats.total_maps }}</div>
+                            <div class="text-[10px] text-gray-400">Maps</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Search -->
-                <div class="relative max-w-xs mb-6">
+                <div class="relative max-w-xs">
                     <input
                         v-model="search"
                         @input="searchVideos($event.target.value)"
@@ -134,22 +164,6 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                         </svg>
                     </button>
-                </div>
-
-                <!-- Stats -->
-                <div class="grid grid-cols-3 gap-4 max-w-xl">
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-white">{{ stats.total_renders }}</div>
-                        <div class="text-xs text-gray-400 mt-1">Videos Rendered</div>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-white">{{ stats.total_render_hours }}h</div>
-                        <div class="text-xs text-gray-400 mt-1">Render Time</div>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 rounded-lg p-4 text-center">
-                        <div class="text-2xl font-bold text-white">{{ stats.total_maps }}</div>
-                        <div class="text-xs text-gray-400 mt-1">Unique Maps</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -227,12 +241,23 @@
                 </div>
             </div>
 
+            <!-- Loading skeleton -->
+            <div v-if="!videosLoaded" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div v-for="i in 12" :key="i" class="bg-white/5 border border-white/10 rounded-lg overflow-hidden animate-pulse">
+                    <div class="aspect-video bg-white/5"></div>
+                    <div class="p-3 space-y-2">
+                        <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                        <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Video Grid -->
-            <div v-if="videos.data.length === 0 && !currentlyRendering && (!pendingQueue || pendingQueue.length === 0)" class="text-center py-20 text-gray-400">
+            <div v-else-if="videos && videos.data.length === 0 && !currentlyRendering && (!pendingQueue || pendingQueue.length === 0)" class="text-center py-20 text-gray-400">
                 No rendered videos yet.
             </div>
 
-            <div v-if="videos.data.length > 0">
+            <div v-else-if="videos && videos.data.length > 0">
                 <h2 v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="text-lg font-bold text-white mb-4">Completed</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div
@@ -336,7 +361,7 @@
             </div>
 
             <!-- Pagination -->
-            <div v-if="videos.last_page > 1" class="mt-8">
+            <div v-if="videos && videos.last_page > 1" class="mt-8">
                 <Pagination
                     :last_page="videos.last_page"
                     :current_page="videos.current_page"

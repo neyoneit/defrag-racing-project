@@ -1078,8 +1078,19 @@ const checkForProcessingDemos = async () => {
 
 // Lifecycle hooks
 // Lifecycle hooks are imported at the top of this <script setup>
+const demosLoading = ref(true);
+
 onMounted(() => {
     checkForProcessingDemos();
+
+    if (!props.userDemos && !props.publicDemos) {
+        router.reload({
+            only: ['userDemos', 'publicDemos', 'demoCounts', 'browseCounts'],
+            onFinish: () => { demosLoading.value = false; }
+        });
+    } else {
+        demosLoading.value = false;
+    }
 });
 
 onUnmounted(() => {
@@ -1769,8 +1780,29 @@ watch(selectedPhysics, () => {
                     </div>
                 </div>
 
+                <!-- Loading skeleton while demo lists load -->
+                <div v-if="demosLoading" class="space-y-6">
+                    <!-- Your Uploads skeleton -->
+                    <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse mb-8">
+                        <div class="h-6 bg-white/10 rounded w-48 mb-4"></div>
+                        <div class="flex gap-2 mb-4">
+                            <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
+                        </div>
+                        <div class="space-y-3">
+                            <div v-for="i in 8" :key="'row'+i" class="h-12 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                    <!-- Browse All Demos skeleton -->
+                    <div class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse">
+                        <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
+                        <div class="space-y-3">
+                            <div v-for="i in 8" :key="'browse'+i" class="h-12 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Your Uploads Section (authenticated users only) -->
-                <div v-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2222,7 +2254,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Browse All Demos Section (for everyone) -->
-                <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <div v-if="!demosLoading && publicDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         Browse All Demos
                     </h3>

@@ -765,15 +765,69 @@
 
                     <!-- Content layer (on top of background) -->
                     <div class="relative z-10">
-                    <!-- Map Title -->
-                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-2 text-center">
-                        {{ map.name }}
-                        <span v-if="localIsNsfw" class="inline-block align-middle ml-2 px-2 py-0.5 bg-red-600/80 rounded text-sm font-black text-white border border-red-500/50">NSFW</span>
-                    </h1>
-                    <p class="text-gray-300 text-center mb-4">
-                        <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
-                        <span v-if="map.date_added" class="text-gray-400"> • {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
-                    </p>
+                    <!-- Ranked/Unranked + NSFW badges (top-left corner) -->
+                    <div class="absolute top-3 left-3 z-20 flex gap-1.5">
+                        <span v-if="localIsNsfw" class="px-2.5 py-1 bg-red-600/80 rounded-md text-xs font-black text-white border border-red-500/50">NSFW</span>
+                        <div v-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative">
+                            <span class="px-2.5 py-1 bg-green-600/80 rounded-md text-xs font-black text-white border border-green-500/50 cursor-help inline-block">Ranked</span>
+                            <div class="absolute left-0 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Ranked in: {{ [map.is_ranked_vq3 ? 'VQ3' : '', map.is_ranked_cpm ? 'CPM' : ''].filter(Boolean).join(', ') }}</div>
+                                <div class="text-gray-400">Requires 5+ players, top time 500ms+</div>
+                            </div>
+                        </div>
+                        <div v-else class="group/badge relative">
+                            <span class="px-2.5 py-1 bg-gray-600/80 rounded-md text-xs font-black text-gray-300 border border-gray-500/50 cursor-help inline-block">Unranked</span>
+                            <div class="absolute left-0 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
+                                <div class="font-bold text-white mb-1">Not included in rankings</div>
+                                <div class="text-gray-400">Requires 5+ players, top time 500ms+</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Map Title + Author + Date -->
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-2">
+                        <h1 class="text-4xl md:text-5xl font-bold text-white">
+                            {{ map.name }}
+                        </h1>
+                        <div class="text-gray-300 flex items-center gap-2 flex-shrink-0">
+                            <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors">{{ map.author }}</Link>
+                            <span v-if="map.date_added" class="text-gray-400">• {{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Map Features: Weapons, Items, Functions -->
+                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap items-center justify-center gap-4 mb-4">
+                        <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-1.5">
+                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Weapons</span>
+                            <div class="flex gap-1">
+                                <img v-for="weapon in map.weapons.split(',')" :key="weapon"
+                                     :src="getWeaponIcon(weapon)"
+                                     :alt="getWeaponName(weapon)"
+                                     :title="getWeaponName(weapon)"
+                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
+                        </div>
+                        <div v-if="map.items && map.items.length > 0" class="flex items-center gap-1.5">
+                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Items</span>
+                            <div class="flex gap-1">
+                                <img v-for="item in map.items.split(',')" :key="item"
+                                     :src="getItemIcon(item)"
+                                     :alt="getItemName(item)"
+                                     :title="getItemName(item)"
+                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
+                        </div>
+                        <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-1.5">
+                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Functions</span>
+                            <div class="flex gap-1">
+                                <img v-for="func in map.functions.split(',')" :key="func"
+                                     :src="getFunctionIcon(func)"
+                                     :alt="getFunctionName(func)"
+                                     :title="getFunctionName(func)"
+                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Download & Servers -->
                     <div class="flex flex-wrap gap-2 justify-center mb-4">
@@ -848,10 +902,6 @@
 
                     <!-- Tags Section -->
                     <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
-                        <div v-if="$page.props.auth.user || tags.length > 0" class="flex items-center justify-between mb-3">
-                            <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Tags on this map</span>
-                        </div>
-
                         <!-- Display existing tags -->
                         <div class="flex flex-wrap gap-2 mb-4">
                             <span
@@ -952,47 +1002,6 @@
                                     </div>
                                 </div>
                             </Teleport>
-                        </div>
-                    </div>
-
-                    <!-- Map Features: Weapons, Items, Functions -->
-                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="mb-4 pt-3 border-t border-white/10">
-                        <div class="grid grid-cols-3 gap-4">
-                            <!-- Weapons Column (Left) -->
-                            <div v-if="map.weapons && map.weapons.length > 0" class="flex flex-col gap-2">
-                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Weapons</span>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <img v-for="weapon in map.weapons.split(',')" :key="weapon"
-                                         :src="getWeaponIcon(weapon)"
-                                         :alt="getWeaponName(weapon)"
-                                         :title="getWeaponName(weapon)"
-                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
-                                </div>
-                            </div>
-
-                            <!-- Items Column (Middle) -->
-                            <div v-if="map.items && map.items.length > 0" class="flex flex-col gap-2">
-                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Items</span>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <img v-for="item in map.items.split(',')" :key="item"
-                                         :src="getItemIcon(item)"
-                                         :alt="getItemName(item)"
-                                         :title="getItemName(item)"
-                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
-                                </div>
-                            </div>
-
-                            <!-- Functions Column (Right) -->
-                            <div v-if="map.functions && map.functions.length > 0" class="flex flex-col gap-2">
-                                <span class="text-gray-400 font-bold text-xs uppercase tracking-wide">Functions</span>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <img v-for="func in map.functions.split(',')" :key="func"
-                                         :src="getFunctionIcon(func)"
-                                         :alt="getFunctionName(func)"
-                                         :title="getFunctionName(func)"
-                                         class="w-7 h-7 opacity-90 hover:opacity-100 transition-opacity" />
-                                </div>
-                            </div>
                         </div>
                     </div>
 

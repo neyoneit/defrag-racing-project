@@ -178,7 +178,9 @@ class ScrapeServers extends Command
 
         if ($bestTime) {
             $server->besttime_name = $bestTime->user ? $bestTime->user->name : $bestTime->name;
-            $server->besttime_country = $bestTime->country;
+            $server->besttime_country = ($bestTime->user && $bestTime->user->country && $bestTime->user->country !== '_404' && $bestTime->user->country !== 'XX')
+                ? $bestTime->user->country
+                : $bestTime->country;
             $server->besttime_time = $bestTime->time;
             $server->besttime_url = $bestTime->user_id ?? $bestTime->mdd_id;
         } else {
@@ -257,7 +259,9 @@ class ScrapeServers extends Command
 
         if ($bestTime) {
             $server->besttime_name = $bestTime->user ? $bestTime->user->name : $bestTime->name;
-            $server->besttime_country = $bestTime->country;
+            $server->besttime_country = ($bestTime->user && $bestTime->user->country && $bestTime->user->country !== '_404' && $bestTime->user->country !== 'XX')
+                ? $bestTime->user->country
+                : $bestTime->country;
             $server->besttime_time = $bestTime->time;
             $server->besttime_url = $bestTime->user_id ?? $bestTime->mdd_id;
         } else {

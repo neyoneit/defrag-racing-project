@@ -57,6 +57,9 @@ class Kernel extends ConsoleKernel
 
         // Weekly auto-publish unlisted videos (every Sunday at 18:00)
         $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00');
+
+        // Rebuild records page cache every 12 hours (full consistency refresh)
+        $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
     }
 
     /**

@@ -282,7 +282,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-hidden">
+        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative">
             <!-- Modern Compact Header -->
             <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-50 shadow-2xl" @click="handleNavClick">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
@@ -563,6 +563,9 @@
                                         <DropdownLink :href="route('notifications.index')">
                                             Notification Center
                                         </DropdownLink>
+                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
+                                            Play Later
+                                        </DropdownLink>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <DropdownLink :href="route('profile.show')">
                                             Settings
@@ -575,10 +578,6 @@
                                             <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
                                             <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
-                                        <div class="mx-3 border-t border-white/10 mb-1" />
-                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
-                                            Play Later
-                                        </DropdownLink>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">

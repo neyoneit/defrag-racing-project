@@ -29,7 +29,7 @@ function saveBackUrl() {
     if (props.baseModel) params.set('base_model', props.baseModel);
     if (props.authors) params.set('authors', props.authors);
     if (props.myUploads) params.set('my_uploads', '1');
-    if (props.models.current_page > 1) params.set('page', props.models.current_page);
+    if (props.models?.current_page > 1) params.set('page', props.models.current_page);
     const query = params.toString();
     sessionStorage.setItem('models_back_url', '/models' + (query ? '?' + query : ''));
 }
@@ -39,6 +39,20 @@ const frontendTimings = ref({
     mount_to_ready: 0,
     total_page_load: 0,
     dom_content_loaded: 0,
+});
+
+const modelsLoaded = ref(false);
+
+// Lazy load model data
+onMounted(() => {
+    if (!props.models) {
+        router.reload({
+            only: ['models', 'availableBaseModels', 'availableAuthors'],
+            onFinish: () => { modelsLoaded.value = true; }
+        });
+    } else {
+        modelsLoaded.value = true;
+    }
 });
 
 // Calculate frontend load times
@@ -591,8 +605,19 @@ const getModelTypeBadgeClass = (type) => {
                         </div>
                     </div>
 
+                    <!-- Loading skeleton -->
+                    <div v-if="!modelsLoaded" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <div v-for="i in 12" :key="i" class="bg-black/40 rounded-xl border border-white/10 overflow-hidden animate-pulse">
+                            <div class="aspect-square bg-white/5"></div>
+                            <div class="p-3 space-y-2">
+                                <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                                <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Models Grid -->
-                    <div v-if="models.data.length > 0" class="grid" :class="{
+                    <div v-else-if="models && models.data.length > 0" class="grid" :class="{
                         'grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6': gridCols === 3,
                         'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4': gridCols === 4,
                         'grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3': gridCols === 6,
@@ -674,7 +699,7 @@ const getModelTypeBadgeClass = (type) => {
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="models.data.length > 0 && models.last_page > 1" class="mt-8">
+                    <div v-if="models && models.data.length > 0 && models.last_page > 1" class="mt-8">
                         <Pagination
                             :current_page="models.current_page"
                             :last_page="models.last_page"

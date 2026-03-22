@@ -12,10 +12,20 @@ use Carbon\Carbon;
 
 class TournamentsController extends Controller {
     public function index(Request $request) {
-        if (! $request->user()) {
-            $records = 0;
-        } else {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        $records = 0;
+        if ($request->user()) {
             $records = Record::where('user_id', $request->user()->id)->count();
+        }
+
+        if (!$isPartial) {
+            return Inertia::render('Tournaments/Index')
+                ->with('tournaments', null)
+                ->with('activeTournaments', null)
+                ->with('upcomingTournaments', null)
+                ->with('pastTournaments', null)
+                ->with('records', $records);
         }
 
         $tournaments = Tournament::query()

@@ -37,8 +37,6 @@ import moment from 'moment-timezone';
 import MainLayout from "@/Layouts/MainLayout.vue" 
 
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 
 import CKEditor from '@ckeditor/ckeditor5-vue';
 
@@ -143,10 +141,7 @@ const timeSince = (date) => {
     }
 }
 
-const vuetify = createVuetify({
-    components,
-    directives,
-})
+const vuetify = createVuetify({})
 
 // Frontend error logger - sends errors to backend for admin review
 const logFrontendError = (data) => {
@@ -230,6 +225,19 @@ createInertiaApp({
                 component: instance?.$options?.name || instance?.$options?.__name || info || null,
             });
         };
+
+        // Global image error handler: fallback for missing profile photos and thumbnails
+        document.addEventListener('error', (e) => {
+            if (e.target.tagName === 'IMG' && !e.target.dataset.fallbackApplied) {
+                const src = e.target.src || '';
+                e.target.dataset.fallbackApplied = 'true';
+                if (src.includes('/storage/profile-photos/')) {
+                    e.target.src = '/images/null.jpg';
+                } else if (src.includes('/storage/thumbs/')) {
+                    e.target.src = '/images/unknown.jpg';
+                }
+            }
+        }, true);
 
         app.mount(el);
 

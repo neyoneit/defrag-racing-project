@@ -144,7 +144,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-hidden" style="z-index: 10;">
+        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative" style="z-index: 10;">
             <!-- Modern Compact Header -->
             <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-50 shadow-2xl">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">

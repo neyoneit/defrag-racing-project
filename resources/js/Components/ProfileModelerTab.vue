@@ -9,7 +9,7 @@
 
     const modelsData = ref({
         models: [], total: 0, total_downloads: 0, total_views: 0,
-        highlighted: null, timeline: {}, pinned: [],
+        highlighted: null, timeline: {}, pinned: [], group_order: null,
     });
     const loading = ref(true);
 
@@ -48,15 +48,51 @@
             groups[base].push(model);
         }
         // Sort groups by total downloads desc
+        // Within each group: complete (base) models first, then by downloads
         return Object.entries(groups)
-            .map(([base, models]) => ({
-                base,
-                models: models.sort((a, b) => b.downloads - a.downloads),
-                totalDownloads: models.reduce((s, m) => s + m.downloads, 0),
-                totalViews: models.reduce((s, m) => s + (m.views || 0), 0),
-            }))
-            .sort((a, b) => b.totalDownloads - a.totalDownloads);
+            .map(([base, models]) => {
+                const sorted = models.sort((a, b) => {
+                    // Default skin first
+                    const aIsDefault = a.name.toLowerCase().includes('(default)') || (!a.name.includes('(') && !a.name.includes(')'));
+                    const bIsDefault = b.name.toLowerCase().includes('(default)') || (!b.name.includes('(') && !b.name.includes(')'));
+                    if (aIsDefault && !bIsDefault) return -1;
+                    if (!aIsDefault && bIsDefault) return 1;
+                    // Complete models before skins
+                    if (a.model_type === 'complete' && b.model_type !== 'complete') return -1;
+                    if (a.model_type !== 'complete' && b.model_type === 'complete') return 1;
+                    return b.downloads - a.downloads;
+                });
+                const hasCustomBase = sorted[0]?.model_type === 'complete';
+                const isBuiltOnExisting = !hasCustomBase && sorted.some(m => m.base_model);
+                return {
+                    base,
+                    models: sorted,
+                    totalDownloads: models.reduce((s, m) => s + m.downloads, 0),
+                    totalViews: models.reduce((s, m) => s + (m.views || 0), 0),
+                    hasCustomBase,
+                    isBuiltOnExisting,
+                };
+            })
+            .sort((a, b) => {
+                const order = modelsData.value.group_order;
+                if (order && Array.isArray(order)) {
+                    const aIdx = order.indexOf(a.base);
+                    const bIdx = order.indexOf(b.base);
+                    // Both in order: use saved order
+                    if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                    // Only one in order: it goes first
+                    if (aIdx !== -1) return -1;
+                    if (bIdx !== -1) return 1;
+                }
+                return b.totalDownloads - a.totalDownloads;
+            });
     });
+
+    // Find the first model in a group to link to (preferably complete/default)
+    const getGroupLinkId = (group) => {
+        const complete = group.models.find(m => m.model_type === 'complete');
+        return complete ? complete.id : group.models[0]?.id;
+    };
 
     // Timeline
     const timelineYears = computed(() => Object.keys(modelsData.value.timeline || {}).sort((a, b) => b - a));
@@ -95,14 +131,22 @@
         return `/storage/${model.file_path}/models/players/${modelName}/head.md3`;
     };
 
+    const getPinnedSkinName = (model) => {
+        const skins = model.available_skins;
+        if (!skins) return 'default';
+        const parsed = typeof skins === 'string' ? JSON.parse(skins) : skins;
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : 'default';
+    };
+
     // Exact same logic as Models/Show.vue skinFilePath computed
     const getPinnedSkinPath = (model) => {
         if (model.category === 'weapon') return null;
         if (!model.file_path) return null;
-        if (model.file_path.startsWith('baseq3/')) return `/${model.file_path}/head_default.skin`;
+        const skinName = getPinnedSkinName(model);
+        if (model.file_path.startsWith('baseq3/')) return `/${model.file_path}/head_${skinName}.skin`;
         const modelName = model.base_model || model.name;
-        if (model.file_path.toLowerCase().includes('/models/players/')) return `/storage/${model.file_path}/head_default.skin`;
-        return `/storage/${model.file_path}/models/players/${modelName}/head_default.skin`;
+        if (model.file_path.toLowerCase().includes('/models/players/')) return `/storage/${model.file_path}/head_${skinName}.skin`;
+        return `/storage/${model.file_path}/models/players/${modelName}/head_${skinName}.skin`;
     };
 
     // Exact same logic as Models/Show.vue skinPackBasePath computed
@@ -156,6 +200,7 @@
                                 :model-path="getPinnedModelPath(pinned)"
                                 :model-id="pinned.id"
                                 :skin-path="getPinnedSkinPath(pinned)"
+                                :skin-name="getPinnedSkinName(pinned)"
                                 :skin-pack-base-path="getPinnedSkinPackBasePath(pinned)"
                                 :base-model-name="pinned.base_model"
                                 :base-model-file-path="pinned.base_model_file_path"
@@ -270,7 +315,9 @@
                 <div v-for="group in groupedByBase" :key="group.base" class="bg-black/40 rounded-xl border border-white/5 overflow-hidden">
                     <div class="flex items-center justify-between px-4 pt-3 pb-2">
                         <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-black text-white uppercase tracking-wider">{{ group.base }}</h3>
+                            <Link :href="route('models.show', getGroupLinkId(group))" class="text-sm font-black text-white uppercase tracking-wider hover:text-blue-400 transition">{{ group.base }}</Link>
+                            <span v-if="group.hasCustomBase" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">CUSTOM BASE</span>
+                            <span v-else-if="group.isBuiltOnExisting" class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">SKIN PACK</span>
                             <span class="text-[10px] text-gray-500">({{ group.models.length }} {{ group.models.length === 1 ? 'model' : 'models' }})</span>
                         </div>
                         <div class="flex items-center gap-3 text-[10px] text-gray-500">
@@ -281,9 +328,15 @@
                     <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 p-3 pt-0">
                         <Link v-for="model in group.models" :key="model.id"
                             :href="route('models.show', model.id)"
-                            class="group bg-black/30 rounded-lg border border-white/5 hover:border-white/20 transition overflow-hidden">
-                            <div class="aspect-square flex items-center justify-center overflow-hidden"
+                            class="group rounded-lg transition overflow-hidden"
+                            :class="model.model_type === 'complete'
+                                ? 'bg-emerald-950/20 border border-emerald-500/20 hover:border-emerald-500/40'
+                                : 'bg-black/30 border border-white/5 hover:border-white/20'">
+                            <div class="aspect-square flex items-center justify-center overflow-hidden relative"
                                 :class="model.category === 'weapon' ? 'bg-gradient-to-br from-orange-500/10 to-red-500/10' : 'bg-gradient-to-br from-blue-500/10 to-purple-500/10'">
+                                <div v-if="model.model_type === 'complete'" class="absolute top-1 left-1 z-10">
+                                    <span class="text-[7px] font-black px-1 py-0.5 rounded bg-emerald-500/30 text-emerald-300">BASE</span>
+                                </div>
                                 <img v-if="model.idle_gif || model.thumbnail"
                                     :src="`/storage/${model.idle_gif || model.thumbnail}`"
                                     :alt="model.name"

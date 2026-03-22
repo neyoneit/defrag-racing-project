@@ -26,6 +26,12 @@ class MapsController extends Controller
             return redirect()->route('maps.filters', $request->all());
         }
 
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        if (!$isPartial) {
+            return Inertia::render('Maps')->with('maps', null);
+        }
+
         $maps = Map::query()
             ->select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at')
             ->orderBy('date_added', 'DESC')
@@ -41,17 +47,22 @@ class MapsController extends Controller
     }
 
     public function filters(Request $request) {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
         $mapFilters = (new MapFilters())->filter($request);
+        $queries = $mapFilters['data'];
+
+        if (!$isPartial) {
+            return Inertia::render('Maps')
+                ->with('maps', null)
+                ->with('queries', $queries);
+        }
 
         $maps = $mapFilters['query'];
-
         $maps = $maps->paginate(20)->withQueryString();
-
-        $queries = $mapFilters['data'];
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
             $paging = ['page' => $maps->lastPage()];
-
             return redirect()->route('maps.filters', array_merge($paging, $queries));
         }
 

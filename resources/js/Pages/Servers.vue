@@ -1,10 +1,10 @@
 <script setup>
 import { Head, usePage } from '@inertiajs/vue3';
 import { router } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
+import { defineAsyncComponent, onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import { useClipboard } from '@/Composables/useClipboard';
-import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
+const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const { copy } = useClipboard();
 const page = usePage();
@@ -13,8 +13,15 @@ const showMaplistModal = ref(false);
 const selectedMapId = ref(null);
 
 const props = defineProps({
-    servers: Array,
+    servers: {
+        type: Array,
+        default: () => []
+    },
 });
+
+const localServers = ref([]);
+const serversLoading = ref(true);
+const serversLoaded = computed(() => localServers.value.length > 0);
 
 const copyServerIP = (serverIP) => {
     copy(serverIP);
@@ -84,7 +91,7 @@ const updatePage = () => {
     }
 
     isRotating.value = true;
-    router.reload()
+    fetchServers()
 
     setTimeout(() => {
         isRotating.value = false;
@@ -93,13 +100,28 @@ const updatePage = () => {
 
 const countPlayers = () => {
     players.value = 0
-    props.servers.forEach(element => {
+    localServers.value.forEach(element => {
         players.value += element.online_players.length
     });
 }
 
+const fetchServers = async () => {
+    serversLoading.value = true;
+    try {
+        const response = await fetch('/api/servers/live');
+        if (response.ok) {
+            localServers.value = await response.json();
+            countPlayers();
+        }
+    } catch (error) {
+        console.error('Failed to load servers:', error);
+    } finally {
+        serversLoading.value = false;
+    }
+}
+
 onMounted(() => {
-    countPlayers()
+    fetchServers()
     startInterval()
 })
 
@@ -135,7 +157,8 @@ const toggleSort = (type) => {
 }
 
 const filteredAndSortedServers = computed(() => {
-    let result = [...props.servers];
+    if (!localServers.value || localServers.value.length === 0) return [];
+    let result = [...localServers.value];
 
     // Filter by gametype (using 'type' field + fallback to server name detection)
     if (filters.value.gametype !== 'all') {
@@ -467,8 +490,20 @@ const getFunctionName = (abbr) => {
 
         <!-- Servers Grid/List -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
+            <!-- Loading skeleton while deferred data loads -->
+            <div v-if="!serversLoaded" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div v-for="i in 6" :key="i" class="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 overflow-hidden animate-pulse">
+                    <div class="h-48 bg-white/5"></div>
+                    <div class="p-4 space-y-3">
+                        <div class="h-5 bg-white/10 rounded w-3/4"></div>
+                        <div class="h-4 bg-white/5 rounded w-1/2"></div>
+                        <div class="h-4 bg-white/5 rounded w-2/3"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Large Card Layout -->
-            <div v-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative cursor-default bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
@@ -656,6 +691,8 @@ const getFunctionName = (abbr) => {
                             <img
                                 :src="`/storage/${server.mapdata.thumbnail}`"
                                 @error="$event.target.src='/images/unknown.jpg'"
+                                loading="lazy"
+                                decoding="async"
                                 class="w-full h-full object-cover scale-105 group-hover:scale-110 opacity-100 transition-all duration-500"
                                 :alt="server.map"
                             />
@@ -761,6 +798,8 @@ const getFunctionName = (abbr) => {
                             <img
                                 :src="`/storage/${server.mapdata.thumbnail}`"
                                 @error="$event.target.src='/images/unknown.jpg'"
+                                loading="lazy"
+                                decoding="async"
                                 class="w-full h-full object-cover scale-105 group-hover:scale-110 opacity-100 transition-all duration-500"
                                 :alt="server.map"
                             />

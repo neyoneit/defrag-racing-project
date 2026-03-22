@@ -12,6 +12,20 @@ use Illuminate\Support\Facades\Cache;
 class ServersController extends Controller
 {
     public function index(Request $request) {
+        // Render page immediately with empty servers, frontend fetches via API
+        return Inertia::render('Servers')->with('servers', []);
+    }
+
+    /**
+     * API endpoint - fetch server data asynchronously
+     */
+    public function apiServers(Request $request)
+    {
+        return response()->json($this->loadServers($request));
+    }
+
+    private function loadServers(Request $request): array
+    {
         $servers = Server::where('online', true)
             ->where('visible', true)
             ->with(['onlinePlayers.spectators', 'mapdata'])
@@ -30,7 +44,6 @@ class ServersController extends Controller
                 'gametype' => str_contains(strtolower($s->defrag), 'cpm') ? 'cpm' : 'vq3',
             ])->unique(fn($item) => $item['map'] . ':' . $item['gametype']);
 
-            // Get user's best time for all maps in one query
             $myRecords = collect();
             if ($mapGameTypes->isNotEmpty()) {
                 $myRecords = Record::where('mdd_id', $mddId)
@@ -40,7 +53,6 @@ class ServersController extends Controller
                     ->groupBy(fn($r) => $r->mapname . ':' . (str_contains($r->gametype, 'cpm') ? 'cpm' : 'vq3'));
             }
 
-            // Get rank data for all relevant maps in one query
             $uniqueMaps = $mapGameTypes->pluck('map')->unique()->values()->all();
             $rankData = Cache::remember('servers:ranks:' . md5(implode(',', $uniqueMaps)), 60, function () use ($uniqueMaps) {
                 if (empty($uniqueMaps)) return collect();
@@ -82,25 +94,39 @@ class ServersController extends Controller
 
         $servers = $this->sortServers($servers);
 
-        // Convert to array and ensure mytime_time and rank fields are included
-        $servers = $servers->values()->map(function($server) {
+        // Fix besttime_country: prefer linked user's profile country over record country
+        $besttimeUrls = $servers->pluck('besttime_url')->filter()->unique()->values()->all();
+        if (!empty($besttimeUrls)) {
+            $userCountries = \App\Models\User::whereIn('id', $besttimeUrls)
+                ->pluck('country', 'id')
+                ->toArray();
+
+            $mddCountries = \App\Models\User::whereIn('mdd_id', $besttimeUrls)
+                ->pluck('country', 'mdd_id')
+                ->toArray();
+
+            $servers->each(function ($server) use ($userCountries, $mddCountries) {
+                if (!$server->besttime_url) return;
+
+                $userCountry = $userCountries[$server->besttime_url] ?? $mddCountries[$server->besttime_url] ?? null;
+                if ($userCountry && $userCountry !== '_404' && $userCountry !== 'XX') {
+                    $server->besttime_country = $userCountry;
+                }
+            });
+        }
+
+        return $servers->values()->map(function($server) {
             $array = $server->toArray();
             $array['mytime_time'] = $server->mytime_time ?? null;
             $array['myrank_position'] = $server->myrank_position ?? null;
             $array['myrank_total'] = $server->myrank_total ?? null;
             return $array;
         })->all();
-
-        return Inertia::render('Servers')->with('servers', $servers);
     }
 
     function sortServers($servers) {
-        $servers = $servers->sortByDesc(function ($server) {
+        return $servers->sortByDesc(function ($server) {
             return $server->onlinePlayers->count();
         });
-
-        return $servers;
     }
 }
-
-

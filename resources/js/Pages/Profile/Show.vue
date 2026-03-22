@@ -18,6 +18,7 @@ import TextInput from '@/Components/Laravel/TextInput.vue';
 import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
 import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
 import { Cropper } from 'vue-advanced-cropper';
+import draggable from 'vuedraggable';
 import 'vue-advanced-cropper/dist/style.css';
 
 const props = defineProps({
@@ -291,6 +292,36 @@ const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'notificati
 const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
 const activeTab = ref(initialTab);
 
+// Creator sub-sections (for left nav scroll)
+const creatorSections = [
+    { id: 'creator-names', label: 'Creator Names' },
+    { id: 'creator-maps', label: 'Map Selector' },
+    { id: 'creator-pinned', label: 'Pinned Models' },
+    { id: 'creator-order', label: 'Model Order' },
+];
+
+const customizeSections = [
+    { id: 'customize-effects', label: 'Effects' },
+    { id: 'customize-view', label: 'View Defaults' },
+    { id: 'customize-intensity', label: 'Intensity' },
+    { id: 'customize-layout', label: 'Profile Layout' },
+];
+
+const switchTab = (tabId) => {
+    activeTab.value = tabId;
+    nextTick(() => { globalThis.scrollTo({ top: 0, behavior: 'smooth' }); });
+};
+
+const scrollToSection = (sectionId) => {
+    nextTick(() => {
+        const el = document.getElementById(sectionId);
+        if (!el) return;
+        const navHeight = 120; // navbar height + padding
+        const y = el.getBoundingClientRect().top + globalThis.scrollY - navHeight;
+        globalThis.scrollTo({ top: y, behavior: 'smooth' });
+    });
+};
+
 // Mapper Claims
 const mapperClaims = ref([]);
 const loadingMapperClaims = ref(true);
@@ -495,6 +526,60 @@ const loadingCreatorModels = ref(false);
 const savingPinnedModels = ref(false);
 const pinnedModelsSaved = ref(false);
 
+const modelGroupOrder = ref([]);
+const savingGroupOrder = ref(false);
+const groupOrderSaved = ref(false);
+
+const draggableGroupList = ref([]);
+
+const buildGroupList = () => {
+    const groups = {};
+    for (const model of allCreatorModels.value) {
+        const base = model.base_model || model.name;
+        if (!groups[base]) groups[base] = 0;
+        groups[base]++;
+    }
+    const order = modelGroupOrder.value;
+    draggableGroupList.value = Object.entries(groups)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => {
+            if (order.length) {
+                const ai = order.indexOf(a.name);
+                const bi = order.indexOf(b.name);
+                if (ai !== -1 && bi !== -1) return ai - bi;
+                if (ai !== -1) return -1;
+                if (bi !== -1) return 1;
+            }
+            return b.count - a.count;
+        });
+};
+
+const onGroupDragEnd = async () => {
+    modelGroupOrder.value = draggableGroupList.value.map(g => g.name);
+    await saveModelGroupOrder();
+};
+
+const saveModelGroupOrder = async () => {
+    savingGroupOrder.value = true;
+    try {
+        await fetch('/settings/model-group-order', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ model_group_order: modelGroupOrder.value }),
+        });
+        groupOrderSaved.value = true;
+        setTimeout(() => { groupOrderSaved.value = false; }, 3000);
+    } catch (e) {
+        console.error('Error saving group order:', e);
+    } finally {
+        savingGroupOrder.value = false;
+    }
+};
+
 const loadPinnedModels = async () => {
     const claims = mapperClaims.value.filter(c => c.type === 'model');
     if (claims.length === 0) return;
@@ -505,6 +590,8 @@ const loadPinnedModels = async () => {
         const data = await res.json();
         allCreatorModels.value = data.models || [];
         pinnedModelIds.value = (data.pinned || []).map(m => m.id);
+        modelGroupOrder.value = data.group_order || [];
+        buildGroupList();
     } catch (e) {
         console.error('Error loading pinned models:', e);
     } finally {
@@ -512,17 +599,51 @@ const loadPinnedModels = async () => {
     }
 };
 
-const togglePinModel = async (modelId) => {
-    if (pinnedModelIds.value.includes(modelId)) {
-        pinnedModelIds.value = pinnedModelIds.value.filter(id => id !== modelId);
-    } else {
-        if (pinnedModelIds.value.length >= 2) return;
-        pinnedModelIds.value.push(modelId);
+const pinnedLeft = computed(() => pinnedModelIds.value[0] || null);
+const pinnedRight = computed(() => pinnedModelIds.value[1] || null);
+
+const pinModelAs = async (modelId, side) => {
+    // side: 'left' (index 0) or 'right' (index 1)
+    const idx = side === 'left' ? 0 : 1;
+    const current = [...pinnedModelIds.value];
+
+    // If already pinned on this side, unpin
+    if (current[idx] === modelId) {
+        current.splice(idx, 1);
+        pinnedModelIds.value = current;
+        await savePinnedModels();
+        return;
     }
+
+    // If pinned on the other side, remove from there first
+    const otherIdx = current.indexOf(modelId);
+    if (otherIdx !== -1) current.splice(otherIdx, 1);
+
+    // Set at position
+    if (idx === 0) {
+        current[0] = modelId;
+    } else {
+        // Ensure index 0 exists
+        if (current.length === 0) current.push(null);
+        current[1] = modelId;
+    }
+
+    // Clean nulls
+    pinnedModelIds.value = current.filter(id => id !== null);
+    await savePinnedModels();
+};
+
+const unpinModel = async (modelId) => {
+    pinnedModelIds.value = pinnedModelIds.value.filter(id => id !== modelId);
     await savePinnedModels();
 };
 
 const isModelPinned = (modelId) => pinnedModelIds.value.includes(modelId);
+const getPinSide = (modelId) => {
+    if (pinnedModelIds.value[0] === modelId) return 'L';
+    if (pinnedModelIds.value[1] === modelId) return 'R';
+    return null;
+};
 
 const savePinnedModels = async () => {
     savingPinnedModels.value = true;
@@ -689,24 +810,40 @@ const tabs = [
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 relative" style="z-index: 10;">
             <div class="flex gap-6">
                 <!-- Left Sidebar Navigation -->
-                <div class="w-48 shrink-0 sticky top-6 self-start">
+                <div class="w-48 shrink-0 sticky top-[120px] self-start overflow-y-auto" style="max-height: calc(100vh - 136px);">
                     <nav class="space-y-1">
-                        <button
-                            v-for="tab in tabs"
-                            :key="tab.id"
-                            @click="activeTab = tab.id"
-                            :class="[
-                                'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
-                                activeTab === tab.id
-                                    ? 'bg-white/10 text-white border border-white/10'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            ]"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
-                            </svg>
-                            {{ tab.label }}
-                        </button>
+                        <template v-for="tab in tabs" :key="tab.id">
+                            <button
+                                @click="switchTab(tab.id)"
+                                :class="[
+                                    'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                    activeTab === tab.id
+                                        ? 'bg-white/10 text-white border border-white/10'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                ]"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                                </svg>
+                                {{ tab.label }}
+                            </button>
+                            <!-- Creator sub-sections -->
+                            <template v-if="tab.id === 'creator' && activeTab === 'creator'">
+                                <button v-for="sub in creatorSections" :key="sub.id"
+                                    @click="scrollToSection(sub.id)"
+                                    class="w-full text-left pl-9 pr-3 py-1.5 rounded-md text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
+                                    {{ sub.label }}
+                                </button>
+                            </template>
+                            <!-- Customize sub-sections -->
+                            <template v-if="tab.id === 'customize' && activeTab === 'customize'">
+                                <button v-for="sub in customizeSections" :key="sub.id"
+                                    @click="scrollToSection(sub.id)"
+                                    class="w-full text-left pl-9 pr-3 py-1.5 rounded-md text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
+                                    {{ sub.label }}
+                                </button>
+                            </template>
+                        </template>
                     </nav>
                 </div>
 
@@ -908,7 +1045,7 @@ const tabs = [
                 <!-- ==================== CREATOR TAB ==================== -->
                 <template v-if="activeTab === 'creator'">
 
-            <!-- Intro / Explanation -->
+            <!-- Intro -->
             <div class="rounded-xl bg-gradient-to-br from-green-500/5 via-green-600/10 to-green-500/5 border border-green-500/20 mb-4">
                 <div class="p-5">
                     <div class="flex items-start gap-4">
@@ -945,178 +1082,15 @@ const tabs = [
                 </div>
             </div>
 
-            <!-- Claims Management -->
-            <div class="rounded-xl bg-black/60 border border-white/10">
-                <div class="p-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-bold text-white">Your Creator Names</h3>
-                        <div class="flex items-center gap-2">
-                            <div v-if="mapperClaimsSaved" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
-                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span class="text-xs font-medium text-green-400">Saved</span>
-                            </div>
-                            <PrimaryButton type="button" @click="saveMapperClaims" :disabled="savingMapperClaims">
-                                Save
-                            </PrimaryButton>
-                        </div>
-                    </div>
+            <!-- ===== YOUR CREATOR NAMES ===== -->
+            <div id="creator-names">
 
-                    <!-- Loading -->
-                    <div v-if="loadingMapperClaims" class="flex items-center justify-center py-4">
-                        <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
-                    </div>
-
-                    <div v-else>
-                        <!-- Existing Claims -->
-                        <div v-if="mapperClaims.length" class="space-y-3 mb-5">
-                            <div v-for="(claim, idx) in mapperClaims" :key="idx"
-                                class="bg-black/30 rounded-lg border border-white/5">
-                                <div class="flex items-center gap-3 px-4 py-3">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-sm font-bold text-white">{{ claim.name }}</span>
-                                            <span class="text-xs font-bold px-2 py-0.5 rounded"
-                                                :class="claim.type === 'map' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'">
-                                                {{ claim.type }}
-                                            </span>
-                                        </div>
-                                        <div v-if="claim.matching_count !== undefined" class="text-xs text-gray-500 mt-0.5">
-                                            <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> matching maps
-                                            <span v-if="claim.exclusions_count" class="text-yellow-400 ml-1">({{ claim.exclusions_count }} excluded)</span>
-                                            <span v-if="claim.matching_samples?.length" class="text-gray-600">
-                                                - {{ claim.matching_samples.slice(0, 3).join(', ') }}<span v-if="claim.matching_count > 3">...</span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <button @click="removeMapperClaim(idx)" class="text-red-400 hover:text-red-300 transition p-1.5 rounded hover:bg-red-500/10 flex-shrink-0">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                <!-- Maps for map claims -->
-                                <div v-if="claim.type === 'map' && claim.id && claimMapsById[claim.id]" class="px-4 pb-4">
-                                    <div class="flex items-center gap-2 mb-3">
-                                        <input v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" placeholder="Search maps..."
-                                            class="flex-1 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none">
-                                        <div class="text-xs text-gray-400 whitespace-nowrap">
-                                            <span class="text-green-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => !m.excluded).length }}</span> included,
-                                            <span class="text-red-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => m.excluded).length }}</span> excluded
-                                        </div>
-                                    </div>
-
-                                    <div v-if="loadingClaimMapsById[claim.id]" class="flex items-center justify-center py-8">
-                                        <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-                                    </div>
-
-                                    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[500px] overflow-y-auto pr-1">
-                                        <div v-for="map in claimMapsById[claim.id]" :key="map.id"
-                                            @click="toggleExclusion(claim.id, map.id)"
-                                            class="relative rounded-lg overflow-hidden cursor-pointer transition-all group"
-                                            :class="map.excluded
-                                                ? 'ring-2 ring-red-500/60 opacity-50 hover:opacity-70'
-                                                : 'ring-2 ring-green-500/40 hover:ring-green-400/60'">
-                                            <div class="h-20 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
-                                                <!-- Status indicator -->
-                                                <div class="absolute top-1.5 right-1.5">
-                                                    <div v-if="map.excluded" class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-                                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                                                    </div>
-                                                    <div v-else class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
-                                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                                                    </div>
-                                                </div>
-                                                <!-- Hover overlay -->
-                                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                                                    :class="map.excluded ? 'bg-green-900/60' : 'bg-red-900/60'">
-                                                    <span v-if="map.excluded" class="text-xs font-bold text-green-300 bg-black/50 px-3 py-1 rounded-full">Click to Include</span>
-                                                    <span v-else class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Click to Exclude</span>
-                                                </div>
-                                            </div>
-                                            <div class="px-2 py-1.5" :class="map.excluded ? 'bg-red-950/40' : 'bg-black/60'">
-                                                <div class="text-[11px] font-bold truncate" :class="map.excluded ? 'text-red-300 line-through' : 'text-white'">{{ map.name }}</div>
-                                                <div class="text-[10px] text-gray-500 truncate">{{ map.author }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div v-if="!loadingClaimMapsById[claim.id] && (claimMapsById[claim.id] || []).length === 0" class="text-center py-6 text-sm text-gray-500">
-                                        No maps found
-                                    </div>
-                                </div>
-
-                                <!-- Pin models for model claims -->
-                                <div v-if="claim.type === 'model'" class="px-4 pb-4">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <p class="text-xs text-gray-500">Pin up to 2 models for an interactive 3D viewer on your Modeler profile tab.</p>
-                                        <div class="flex items-center gap-2 flex-shrink-0">
-                                            <div v-if="pinnedModelsSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
-                                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                                <span class="text-[10px] text-green-400">Saved</span>
-                                            </div>
-                                            <span class="text-xs text-gray-400"><span class="text-blue-400 font-bold">{{ pinnedModelIds.length }}</span>/2 pinned</span>
-                                        </div>
-                                    </div>
-
-                                    <div v-if="loadingCreatorModels" class="flex items-center justify-center py-8">
-                                        <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
-                                    </div>
-
-                                    <div v-else-if="allCreatorModels.length > 0" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto pr-1">
-                                        <div v-for="model in allCreatorModels" :key="model.id"
-                                            @click="togglePinModel(model.id)"
-                                            class="relative rounded-lg overflow-hidden transition-all group"
-                                            :class="[
-                                                isModelPinned(model.id)
-                                                    ? 'ring-2 ring-blue-500/60 cursor-pointer'
-                                                    : pinnedModelIds.length >= 2
-                                                        ? 'opacity-40 cursor-not-allowed'
-                                                        : 'ring-1 ring-white/5 hover:ring-white/20 cursor-pointer'
-                                            ]">
-                                            <div class="aspect-square bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden">
-                                                <img v-if="model.idle_gif || model.thumbnail"
-                                                    :src="`/storage/${model.idle_gif || model.thumbnail}`"
-                                                    :alt="model.name"
-                                                    class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-                                                    loading="lazy">
-                                                <span v-else class="text-2xl">{{ model.category === 'player' ? '&#x1F3C3;' : '&#x1F52B;' }}</span>
-                                            </div>
-                                            <div class="absolute top-1.5 right-1.5">
-                                                <div v-if="isModelPinned(model.id)" class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow-lg">
-                                                    <svg class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
-                                                </div>
-                                            </div>
-                                            <div v-if="isModelPinned(model.id) || pinnedModelIds.length < 2"
-                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                                                :class="isModelPinned(model.id) ? 'bg-red-900/60' : 'bg-blue-900/60'">
-                                                <span v-if="isModelPinned(model.id)" class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Unpin</span>
-                                                <span v-else class="text-xs font-bold text-blue-300 bg-black/50 px-3 py-1 rounded-full">Pin</span>
-                                            </div>
-                                            <div class="px-1.5 py-1" :class="isModelPinned(model.id) ? 'bg-blue-950/40' : 'bg-black/60'">
-                                                <div class="text-[10px] font-bold truncate" :class="isModelPinned(model.id) ? 'text-blue-300' : 'text-white'">{{ model.name }}</div>
-                                                <div class="text-[9px] text-gray-600">{{ model.downloads }} dl</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div v-else class="text-center py-6 text-sm text-gray-500">No models found</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-else class="text-center py-6 mb-4">
-                            <div class="text-gray-600 text-sm">No creator names claimed yet</div>
-                            <div class="text-gray-700 text-xs mt-1">Add your mapper name below to get started</div>
-                        </div>
-
-                        <!-- Add New Claim -->
-                        <div class="bg-black/20 rounded-lg border border-white/5 p-4">
+                <!-- Claims list + Add form -->
+                <div class="rounded-xl bg-black/60 border border-white/10">
+                    <div class="p-4">
+                        <!-- Add New Claim (at the top) -->
+                        <div class="bg-black/20 rounded-lg border border-white/5 p-4 mb-4">
                             <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Add Creator Name</div>
-
-                            <!-- Type toggle -->
                             <div class="flex items-center gap-1 mb-3">
                                 <button @click="newClaimType = 'map'; previewClaim()" type="button"
                                     class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
@@ -1129,8 +1103,6 @@ const tabs = [
                                     Model Author
                                 </button>
                             </div>
-
-                            <!-- Name input -->
                             <div class="flex items-center gap-2">
                                 <input v-model="newClaimName" type="text" placeholder="Type author name to search..."
                                     @input="previewClaim"
@@ -1143,15 +1115,11 @@ const tabs = [
                                     Add
                                 </button>
                             </div>
-
-                            <!-- Live Preview -->
                             <div v-if="loadingPreview" class="mt-3 flex items-center gap-2 text-xs text-gray-500">
                                 <div class="animate-spin rounded-full h-3 w-3 border-t border-b border-green-500"></div>
                                 Searching...
                             </div>
-
                             <div v-else-if="claimPreview" class="mt-3">
-                                <!-- Already claimed warning -->
                                 <div v-if="claimPreview.claimed_by" class="mb-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2 text-sm text-yellow-400">
@@ -1166,10 +1134,9 @@ const tabs = [
                                         </button>
                                         <span v-else class="text-xs text-green-400 font-medium shrink-0">Reported</span>
                                     </div>
-                                    <!-- Report form -->
                                     <div v-if="showReportForm && !reportSent" class="mt-3 pt-3 border-t border-yellow-500/20">
                                         <p class="text-xs text-gray-400 mb-2">If you believe this name was claimed incorrectly, describe why you are the rightful author:</p>
-                                        <textarea v-model="reportReason" rows="2" placeholder="e.g. I am the original author of these maps, I go by this name on q3df.org..."
+                                        <textarea v-model="reportReason" rows="2" placeholder="e.g. I am the original author..."
                                             class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-red-500 placeholder-gray-500 mb-2"></textarea>
                                         <div v-if="reportError" class="text-xs text-red-400 mb-2">{{ reportError }}</div>
                                         <div class="flex items-center gap-2">
@@ -1177,13 +1144,10 @@ const tabs = [
                                                 class="px-3 py-1.5 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 text-white text-xs font-medium rounded-lg transition">
                                                 {{ reportingClaim ? 'Submitting...' : 'Submit Dispute' }}
                                             </button>
-                                            <button @click="showReportForm = false" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs rounded-lg transition">
-                                                Cancel
-                                            </button>
+                                            <button @click="showReportForm = false" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 text-xs rounded-lg transition">Cancel</button>
                                         </div>
                                     </div>
                                 </div>
-
                                 <div v-if="claimPreview.count === 0" class="text-xs text-red-400 flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     No {{ newClaimType === 'model' ? 'models' : 'maps' }} found with this author name
@@ -1220,6 +1184,251 @@ const tabs = [
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Existing Claims -->
+                        <div v-if="loadingMapperClaims" class="flex items-center justify-center py-4">
+                            <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-green-500"></div>
+                        </div>
+                        <div v-else-if="mapperClaims.length" class="space-y-2 mt-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Claims</h4>
+                                <div class="flex items-center gap-2">
+                                    <div v-if="mapperClaimsSaved" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                        <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        <span class="text-xs font-medium text-green-400">Saved</span>
+                                    </div>
+                                    <PrimaryButton type="button" @click="saveMapperClaims" :disabled="savingMapperClaims" class="text-xs">Save</PrimaryButton>
+                                </div>
+                            </div>
+                            <div v-for="(claim, idx) in mapperClaims" :key="idx"
+                                class="flex items-center gap-3 px-4 py-3 bg-black/30 rounded-lg border border-white/5">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm font-bold text-white">{{ claim.name }}</span>
+                                        <span class="text-xs font-bold px-2 py-0.5 rounded"
+                                            :class="claim.type === 'map' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'">
+                                            {{ claim.type }}
+                                        </span>
+                                    </div>
+                                    <div v-if="claim.matching_count !== undefined" class="text-xs text-gray-500 mt-0.5">
+                                        <span class="text-green-400 font-bold">{{ claim.matching_count }}</span> matching {{ claim.type === 'model' ? 'models' : 'maps' }}
+                                        <span v-if="claim.exclusions_count" class="text-yellow-400 ml-1">({{ claim.exclusions_count }} excluded)</span>
+                                    </div>
+                                </div>
+                                <button @click="removeMapperClaim(idx)" class="text-red-400 hover:text-red-300 transition p-1.5 rounded hover:bg-red-500/10 flex-shrink-0">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div v-else-if="!loadingMapperClaims" class="text-center py-4 text-sm text-gray-500 mt-4">
+                            No creator names claimed yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MAP SELECTOR ===== -->
+            <div id="creator-maps" class="mt-4">
+                <div class="rounded-xl bg-black/60 border border-white/10">
+                    <div class="p-4">
+                        <h3 class="text-sm font-bold text-white mb-1">Map Selector</h3>
+                        <p class="text-xs text-gray-500 mb-4">Include or exclude specific maps from your Mapper profile tab. Click a map to toggle it.</p>
+
+                        <div v-if="!mapperClaims.filter(c => c.type === 'map').length" class="text-center py-8 text-sm text-gray-500">
+                            No map author claims yet. Add one in the "Your Creator Names" tab first.
+                        </div>
+
+                        <div v-for="(claim, idx) in mapperClaims.filter(c => c.type === 'map')" :key="idx" class="mb-4 last:mb-0">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span class="text-xs font-bold text-green-400">{{ claim.name }}</span>
+                                <div v-if="claim.id && claimMapsById[claim.id]" class="text-xs text-gray-400">
+                                    <span class="text-green-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => !m.excluded).length }}</span> included,
+                                    <span class="text-red-400 font-bold">{{ (claimMapsById[claim.id] || []).filter(m => m.excluded).length }}</span> excluded
+                                </div>
+                                <input v-if="claim.id" v-model="claimSearches[claim.id]" @input="searchClaimMaps(claim.id)" type="text" placeholder="Search..."
+                                    class="ml-auto px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs text-white placeholder-gray-500 focus:border-blue-500/50 focus:outline-none w-48">
+                            </div>
+
+                            <div v-if="claim.id && loadingClaimMapsById[claim.id]" class="flex items-center justify-center py-8">
+                                <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                            </div>
+
+                            <div v-else-if="claim.id && claimMapsById[claim.id]" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-[500px] overflow-y-auto pr-1">
+                                <div v-for="map in claimMapsById[claim.id]" :key="map.id"
+                                    @click="toggleExclusion(claim.id, map.id)"
+                                    class="relative rounded-lg overflow-hidden cursor-pointer transition-all group"
+                                    :class="map.excluded
+                                        ? 'ring-2 ring-red-500/60 opacity-50 hover:opacity-70'
+                                        : 'ring-2 ring-green-500/40 hover:ring-green-400/60'">
+                                    <div class="h-20 bg-cover bg-center" :style="`background-image: url('/storage/${map.thumbnail}')`">
+                                        <div class="absolute top-1.5 right-1.5">
+                                            <div v-if="map.excluded" class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                                                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </div>
+                                            <div v-else class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
+                                                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                        </div>
+                                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                            :class="map.excluded ? 'bg-green-900/60' : 'bg-red-900/60'">
+                                            <span v-if="map.excluded" class="text-xs font-bold text-green-300 bg-black/50 px-3 py-1 rounded-full">Click to Include</span>
+                                            <span v-else class="text-xs font-bold text-red-300 bg-black/50 px-3 py-1 rounded-full">Click to Exclude</span>
+                                        </div>
+                                    </div>
+                                    <div class="px-2 py-1.5" :class="map.excluded ? 'bg-red-950/40' : 'bg-black/60'">
+                                        <div class="text-[11px] font-bold truncate" :class="map.excluded ? 'text-red-300 line-through' : 'text-white'">{{ map.name }}</div>
+                                        <div class="text-[10px] text-gray-500 truncate">{{ map.author }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PINNED MODELS ===== -->
+            <div id="creator-pinned" class="mt-4">
+                <div class="rounded-xl bg-black/60 border border-white/10">
+                    <div class="p-4">
+                        <div class="mb-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-white">Pinned Models</h3>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <div v-if="pinnedModelsSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                                        <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        <span class="text-[10px] text-green-400">Saved</span>
+                                    </div>
+                                    <span class="text-xs text-gray-400"><span class="text-blue-400 font-bold">{{ pinnedModelIds.length }}</span>/2 pinned</span>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Select up to 2 models to feature in an interactive 3D viewer at the top of your Modeler profile tab. The first pinned model appears on the left, the second on the right.</p>
+                        </div>
+
+                        <div v-if="!mapperClaims.some(c => c.type === 'model')" class="text-center py-8 text-sm text-gray-500">
+                            No model author claims yet. Add one in the "Your Creator Names" tab first.
+                        </div>
+
+                        <template v-else-if="allCreatorModels.length > 0">
+                            <!-- Current pins summary -->
+                            <div class="flex items-center gap-4 mb-3 p-2 rounded-lg bg-blue-950/20 border border-blue-500/10" style="min-height: 36px;">
+                                <span v-if="pinnedModelIds.length === 0" class="text-[10px] text-gray-600 mx-auto">No models pinned yet. Hover left/right on a model to pin it.</span>
+                                <div v-for="(id, idx) in pinnedModelIds" :key="id" class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-bold uppercase" :class="idx === 0 ? 'text-cyan-400' : 'text-orange-400'">{{ idx === 0 ? 'Left' : 'Right' }}:</span>
+                                    <span class="text-[10px] font-bold text-blue-300">{{ allCreatorModels.find(m => m.id === id)?.name || '?' }}</span>
+                                    <button @click.stop="unpinModel(id)" class="text-red-400 hover:text-red-300 ml-0.5" title="Unpin">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                                <button v-if="pinnedModelIds.length === 2" @click.stop="pinnedModelIds.reverse(); savePinnedModels()" class="text-gray-400 hover:text-white ml-auto text-[10px] font-bold flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition" title="Swap positions">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                    Swap
+                                </button>
+                            </div>
+
+                            <!-- Single grid with split-hover per model -->
+                            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto pr-1">
+                                <div v-for="model in allCreatorModels" :key="model.id"
+                                    class="relative rounded-lg overflow-hidden transition-all"
+                                    :class="[
+                                        getPinSide(model.id) === 'L' ? 'ring-2 ring-cyan-500/60' :
+                                        getPinSide(model.id) === 'R' ? 'ring-2 ring-orange-500/60' :
+                                        'ring-1 ring-white/5'
+                                    ]">
+                                    <div class="aspect-square bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center overflow-hidden relative">
+                                        <img v-if="model.idle_gif || model.thumbnail"
+                                            :src="`/storage/${model.idle_gif || model.thumbnail}`"
+                                            :alt="model.name"
+                                            class="w-full h-full object-cover"
+                                            loading="lazy">
+                                        <span v-else class="text-2xl">{{ model.category === 'player' ? '&#x1F3C3;' : '&#x1F52B;' }}</span>
+
+                                        <!-- Left half hover zone -->
+                                        <div @click="pinModelAs(model.id, 'left')"
+                                            class="absolute inset-y-0 left-0 w-1/2 cursor-pointer group/left z-10">
+                                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/left:opacity-100 transition"
+                                                :class="getPinSide(model.id) === 'L' ? 'bg-red-900/60' : 'bg-cyan-900/60'">
+                                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-black/50"
+                                                    :class="getPinSide(model.id) === 'L' ? 'text-red-300' : 'text-cyan-300'">
+                                                    {{ getPinSide(model.id) === 'L' ? 'UNPIN' : 'LEFT' }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Right half hover zone -->
+                                        <div @click="pinModelAs(model.id, 'right')"
+                                            class="absolute inset-y-0 right-0 w-1/2 cursor-pointer group/right z-10">
+                                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover/right:opacity-100 transition"
+                                                :class="getPinSide(model.id) === 'R' ? 'bg-red-900/60' : 'bg-orange-900/60'">
+                                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-black/50"
+                                                    :class="getPinSide(model.id) === 'R' ? 'text-red-300' : 'text-orange-300'">
+                                                    {{ getPinSide(model.id) === 'R' ? 'UNPIN' : 'RIGHT' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pin badge -->
+                                    <div v-if="getPinSide(model.id)" class="absolute top-1 right-1 z-20">
+                                        <div class="w-5 h-5 rounded-full flex items-center justify-center shadow-lg text-[9px] font-black text-white"
+                                            :class="getPinSide(model.id) === 'L' ? 'bg-cyan-500' : 'bg-orange-500'">
+                                            {{ getPinSide(model.id) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="px-1.5 py-1" :class="getPinSide(model.id) === 'L' ? 'bg-cyan-950/40' : getPinSide(model.id) === 'R' ? 'bg-orange-950/40' : 'bg-black/60'">
+                                        <div class="text-[10px] font-bold truncate" :class="getPinSide(model.id) === 'L' ? 'text-cyan-300' : getPinSide(model.id) === 'R' ? 'text-orange-300' : 'text-white'">{{ model.name }}</div>
+                                        <div class="text-[9px] text-gray-600">{{ model.downloads }} dl</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div v-else-if="loadingCreatorModels" class="flex items-center justify-center py-8">
+                            <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MODEL ORDER ===== -->
+            <div id="creator-order" class="mt-4">
+                <div class="rounded-xl bg-black/60 border border-white/10">
+                    <div class="p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-bold text-white mb-1">Model Group Order</h3>
+                                <p class="text-xs text-gray-500">Drag to reorder how model groups appear on your Modeler profile tab. Groups are organized by base model name.</p>
+                            </div>
+                            <div v-if="groupOrderSaved" class="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                <span class="text-[10px] text-green-400">Saved</span>
+                            </div>
+                        </div>
+
+                        <div v-if="!mapperClaims.some(c => c.type === 'model')" class="text-center py-8 text-sm text-gray-500">
+                            No model author claims yet. Add one in the "Your Creator Names" tab first.
+                        </div>
+
+                        <div v-else-if="draggableGroupList.length > 0">
+                            <draggable v-model="draggableGroupList" item-key="name" handle=".drag-handle" @end="onGroupDragEnd" class="space-y-1">
+                                <template #item="{ element, index }">
+                                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/30 border border-white/5 hover:border-white/15 transition">
+                                        <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" /></svg>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-gray-600 w-4 text-right">{{ index + 1 }}</span>
+                                        <span class="text-xs font-bold text-white flex-1">{{ element.name }}</span>
+                                        <span class="text-[10px] text-gray-500">{{ element.count }} models</span>
+                                    </div>
+                                </template>
+                            </draggable>
+                        </div>
+
+                        <div v-else-if="loadingCreatorModels" class="flex items-center justify-center py-8">
+                            <div class="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500"></div>
                         </div>
                     </div>
                 </div>
@@ -1413,7 +1622,7 @@ const tabs = [
                 <!-- ==================== CUSTOMIZE TAB ==================== -->
                 <template v-if="activeTab === 'customize'">
             <!-- Preferences Card -->
-            <div class="rounded-xl bg-black/60 border border-white/10">
+            <div id="customize-effects" class="rounded-xl bg-black/60 border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1520,7 +1729,7 @@ const tabs = [
             </div>
 
             <!-- View Preferences Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="customize-view" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Map View Defaults Card -->
             <div id="map-view-defaults" class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
                 <div class="p-4">
@@ -1624,10 +1833,14 @@ const tabs = [
             </div> <!-- Close View Preferences Grid -->
 
             <!-- Effects Intensity -->
-            <EffectsIntensityForm />
+            <div id="customize-intensity">
+                <EffectsIntensityForm />
+            </div>
 
             <!-- Profile Layout Customization -->
-            <ProfileLayoutForm />
+            <div id="customize-layout">
+                <ProfileLayoutForm />
+            </div>
 
                 </template>
 

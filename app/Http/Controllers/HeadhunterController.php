@@ -17,6 +17,15 @@ class HeadhunterController extends Controller
 {
     public function index(Request $request)
     {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        if (!$isPartial) {
+            return Inertia::render('Headhunter/Index', [
+                'challenges' => null,
+                'filters' => $request->only(['status', 'search']),
+            ]);
+        }
+
         $challenges = HeadhunterChallenge::with(['creator', 'participants.user', 'map:name,thumbnail'])
             ->withCount(['participants', 'approvedParticipants'])
             ->when($request->status, function ($query) use ($request) {

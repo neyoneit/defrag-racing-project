@@ -40,6 +40,10 @@
             type: Number,
             default: 0
         },
+        played_maps_count: {
+            type: Number,
+            default: 0
+        },
         user_maplists: {
             type: Array,
             default: () => []
@@ -579,26 +583,67 @@
 
     // Map Completionist progress calculation
     const completionistMode = ref('all');
+    const localUnplayedMaps = ref(null);
+    const localTotalMaps = ref(null);
+    const localPlayedCount = ref(null);
+
+    const currentUnplayedMaps = computed(() => localUnplayedMaps.value ?? props.unplayed_maps);
+    const currentTotalMaps = computed(() => localTotalMaps.value ?? props.total_maps);
 
     const playedMapsCount = computed(() => {
-        return props.total_maps - (props.unplayed_maps?.total || 0);
+        if (localPlayedCount.value !== null) return localPlayedCount.value;
+        return props.played_maps_count || (props.total_maps - (props.unplayed_maps?.total || 0));
     });
 
     const completionPercentage = computed(() => {
-        if (props.total_maps === 0) return 0;
-        return ((playedMapsCount.value / props.total_maps) * 100).toFixed(3);
+        if (currentTotalMaps.value === 0) return 0;
+        return ((playedMapsCount.value / currentTotalMaps.value) * 100).toFixed(3);
     });
 
-    const sortCompletionistMode = (newMode) => {
+    const sortCompletionistMode = async (newMode) => {
         completionistMode.value = newMode;
-        router.reload({
-            data: {
-                completionist_mode: newMode,
-                unplayed_page: 1
-            },
-            only: ['unplayed_maps', 'total_maps'],
-            preserveScroll: true
-        });
+        try {
+            const url = profileRoute({ completionist_mode: newMode, unplayed_page: 1 });
+            const res = await fetch(url, {
+                headers: {
+                    'X-Inertia': 'true',
+                    'X-Inertia-Partial-Data': 'unplayed_maps,total_maps,played_maps_count',
+                    'X-Inertia-Partial-Component': 'Profile',
+                    'Accept': 'application/json',
+                }
+            });
+            const data = await res.json();
+            console.log('Completionist response:', newMode, 'played:', data.props?.played_maps_count, 'unplayed total:', data.props?.unplayed_maps?.total);
+            if (data.props) {
+                localUnplayedMaps.value = data.props.unplayed_maps ?? localUnplayedMaps.value;
+                localTotalMaps.value = data.props.total_maps ?? localTotalMaps.value;
+                localPlayedCount.value = data.props.played_maps_count ?? localPlayedCount.value;
+            }
+        } catch (e) {
+            console.error('Error fetching completionist data:', e);
+        }
+    };
+
+    const fetchCompletionistPage = async (page) => {
+        try {
+            const url = profileRoute({ completionist_mode: completionistMode.value, unplayed_page: page });
+            const res = await fetch(url, {
+                headers: {
+                    'X-Inertia': 'true',
+                    'X-Inertia-Partial-Data': 'unplayed_maps,total_maps,played_maps_count',
+                    'X-Inertia-Partial-Component': 'Profile',
+                    'Accept': 'application/json',
+                }
+            });
+            const data = await res.json();
+            if (data.props) {
+                localUnplayedMaps.value = data.props.unplayed_maps ?? localUnplayedMaps.value;
+                localTotalMaps.value = data.props.total_maps ?? localTotalMaps.value;
+                localPlayedCount.value = data.props.played_maps_count ?? localPlayedCount.value;
+            }
+        } catch (e) {
+            console.error('Error fetching completionist page:', e);
+        }
     };
 
     // Alias reporting
@@ -985,7 +1030,7 @@
                     :href="route('profile.show') + '?tab=creator'"
                     class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 border border-white/20 hover:border-blue-400/50 hover:bg-blue-600/20 text-gray-400 hover:text-blue-300 transition-all text-xs font-bold backdrop-blur-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Customize Pinned Models
+                    Customize Pins & Order
                 </a>
             </div>
         </div>
@@ -2056,7 +2101,7 @@
             </div>
 
             <!-- Map Completionist List -->
-            <div v-if="showSection('map_completionist') && unplayed_maps && unplayed_maps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
+            <div v-if="showSection('map_completionist') && currentUnplayedMaps && currentUnplayedMaps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -2069,7 +2114,7 @@
                             <div class="text-3xl font-black text-white">
                                 {{ completionPercentage }}%
                             </div>
-                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ total_maps }} maps</div>
+                            <div class="text-xs text-gray-400">{{ playedMapsCount }} / {{ currentTotalMaps }} maps</div>
                         </div>
                     </div>
 
@@ -2120,7 +2165,7 @@
                         <!-- Percentage label overlay -->
                         <div class="absolute inset-0 flex items-center justify-center">
                             <span class="text-xs font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                {{ unplayed_maps.total }} maps remaining
+                                {{ currentUnplayedMaps.total }} maps remaining
                             </span>
                         </div>
                     </div>
@@ -2128,7 +2173,7 @@
 
                 <!-- Maps Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-                    <Link v-for="map in unplayed_maps.data" :key="map.name"
+                    <Link v-for="map in currentUnplayedMaps.data" :key="map.name"
                           :href="`/maps/${encodeURIComponent(map.name)}`"
                           class="group relative bg-white/5 rounded-lg p-3 shadow-lg border border-white/10 hover:border-yellow-500/50 transition-all hover:bg-yellow-500/10">
                         <div class="relative overflow-hidden rounded-md mb-2">
@@ -2143,31 +2188,31 @@
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="unplayed_maps.last_page > 1" class="flex items-center justify-center gap-2">
+                <div v-if="currentUnplayedMaps.last_page > 1" class="flex items-center justify-center gap-2">
                     <!-- Previous Button -->
-                    <button v-if="unplayed_maps.current_page > 1"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page - 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <button v-if="currentUnplayedMaps.current_page > 1"
+                          @click="fetchCompletionistPage(currentUnplayedMaps.current_page - 1)"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         ‹ Prev
                     </button>
 
                     <!-- Page Numbers -->
-                    <template v-for="pg in unplayed_maps.last_page" :key="pg">
-                        <button v-if="pg === 1 || pg === unplayed_maps.last_page || (pg >= unplayed_maps.current_page - 2 && pg <= unplayed_maps.current_page + 2)"
-                              @click="router.visit(profileRoute({unplayed_page: pg, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <template v-for="pg in currentUnplayedMaps.last_page" :key="pg">
+                        <button v-if="pg === 1 || pg === currentUnplayedMaps.last_page || (pg >= currentUnplayedMaps.current_page - 2 && pg <= currentUnplayedMaps.current_page + 2)"
+                              @click="fetchCompletionistPage(pg)"
                               class="px-3 py-1 rounded-lg text-sm font-medium transition-all"
-                              :class="unplayed_maps.current_page === pg
+                              :class="currentUnplayedMaps.current_page === pg
                                 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
                                 : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10'">
                             {{ pg }}
                         </button>
-                        <span v-else-if="pg === unplayed_maps.current_page - 3 || pg === unplayed_maps.current_page + 3"
+                        <span v-else-if="pg === currentUnplayedMaps.current_page - 3 || pg === currentUnplayedMaps.current_page + 3"
                               class="px-2 text-gray-600">...</span>
                     </template>
 
                     <!-- Next Button -->
-                    <button v-if="unplayed_maps.current_page < unplayed_maps.last_page"
-                          @click="router.visit(profileRoute({unplayed_page: unplayed_maps.current_page + 1, completionist_mode: completionistMode}), { preserveScroll: true, only: ['unplayed_maps'] })"
+                    <button v-if="currentUnplayedMaps.current_page < currentUnplayedMaps.last_page"
+                          @click="fetchCompletionistPage(currentUnplayedMaps.current_page + 1)"
                           class="px-3 py-1 rounded-lg text-sm font-medium transition-all bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/10">
                         Next ›
                     </button>

@@ -44,6 +44,7 @@ Route::get('/getting-started', [WebController::class, 'gettingstarted'])->name('
 Route::post('/search', [SearchController::class, 'search'])->name('search');
 
 Route::get('/servers', [ServersController::class, 'index'])->name('servers');
+Route::get('/api/servers/live', [ServersController::class, 'apiServers'])->name('servers.api');
 Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers.json');
 
 Route::get('/maps', [MapsController::class, 'index'])->name('maps');
@@ -229,6 +230,7 @@ Route::get('/api/profile/{userId}/mapper/heatmap', [\App\Http\Controllers\Mapper
 Route::get('/api/profile/{userId}/mapper/highlighted-map', [\App\Http\Controllers\MapperProfileController::class, 'highlightedMap'])->name('mapper.highlightedMap');
 Route::get('/api/profile/{userId}/mapper/models', [\App\Http\Controllers\MapperProfileController::class, 'models'])->name('mapper.models');
 Route::post('/settings/pinned-models', [\App\Http\Controllers\MapperProfileController::class, 'savePinnedModels'])->middleware('auth')->name('settings.pinned-models');
+Route::post('/settings/model-group-order', [\App\Http\Controllers\MapperProfileController::class, 'saveModelGroupOrder'])->middleware('auth')->name('settings.model-group-order');
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/api/profile/{mddId}/activity', [ProfileController::class, 'activityData'])->name('profile.activity');

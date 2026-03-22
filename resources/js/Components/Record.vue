@@ -32,7 +32,7 @@
 <template>
     <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px] hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
         <!-- Background Map Thumbnail (always visible, blurred) - extends to edges with overflow-hidden -->
-        <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
+        <div v-if="record.map?.thumbnail" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
             <img
                 :src="`/storage/${record.map.thumbnail}`"
                 loading="lazy"
@@ -48,10 +48,10 @@
         <div class="relative flex items-center gap-2 sm:gap-3 w-full transition-all duration-300">
             <!-- Rank -->
             <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-300 group-hover:text-white transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.rank }}</span>
+                <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)] transition-all"
+                    :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-400 group-hover:text-white'">
+                    {{ record.rank }}
+                </span>
             </div>
 
             <!-- Map Name -->
@@ -78,6 +78,7 @@
                             class="h-5 w-5 sm:h-6 sm:w-6 rounded-full object-cover border-2 transition-all drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] relative"
                             :style="`border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
                             :alt="record.user?.name ?? record.name"
+                            onerror="this.src='/images/null.jpg'"
                         />
                     </div>
                 </div>
@@ -88,21 +89,15 @@
             </component>
 
 
-            <!-- Time -->
-            <div class="w-12 sm:w-20 flex-shrink-0 text-right">
-                <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
-            </div>
-
-            <!-- Physics Icon -->
-            <!-- <div class="w-5 sm:w-6 flex-shrink-0 text-center">
-                <img v-if="record.physics.includes('cpm')" src="/images/modes/cpm-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="CPM" />
-                <img v-else src="/images/modes/vq3-icon.svg" class="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block opacity-90 group-hover:opacity-100 transition-opacity drop-shadow-[0_3px_8px_rgba(0,0,0,1)] filter brightness-110" alt="VQ3" />
-            </div> -->
-
-            <!-- Date -->
-            <div class="w-20 sm:w-28 flex-shrink-0 text-right">
-                <div class="text-[8px] sm:text-[10px] text-gray-300 group-hover:text-white font-mono transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]" :title="record.date_set">
-                    {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+            <!-- Time + Date -->
+            <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0 ml-auto">
+                <div class="text-right">
+                    <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
+                </div>
+                <div class="text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div class="text-[10px] sm:text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
+                        {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                    </div>
                 </div>
             </div>
         </div>

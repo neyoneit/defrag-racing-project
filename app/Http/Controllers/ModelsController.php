@@ -17,9 +17,39 @@ class ModelsController extends Controller
      */
     public function index(Request $request)
     {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        $category = $request->get('category', 'all');
+        $sort = $request->get('sort', 'newest');
+        $baseModel = $request->get('base_model');
+        $authors = $request->get('authors');
+        $search = $request->get('search');
+        $myUploads = filter_var($request->get('my_uploads', false), FILTER_VALIDATE_BOOLEAN);
+        $approvalStatus = $request->get('approval_status');
+        $perPage = in_array((int) $request->input('per_page'), [12, 24, 48]) ? (int) $request->input('per_page') : 12;
+
+        if (!$isPartial) {
+            return Inertia::render('Models/Index', [
+                'models' => null,
+                'category' => $category,
+                'sort' => $sort,
+                'baseModel' => $baseModel,
+                'authors' => $authors,
+                'search' => $search,
+                'myUploads' => $myUploads,
+                'approvalStatus' => $approvalStatus,
+                'perPage' => $perPage,
+                'load_times' => [],
+                'availableBaseModels' => null,
+                'availableAuthors' => null,
+                'hasUploads' => auth()->check() ? \App\Models\PlayerModel::where('user_id', auth()->id())->exists() : false,
+            ]);
+        }
+
         $totalStart = microtime(true);
         $timings = [];
 
+        // Variables already parsed above, remove duplicates
         $category = $request->get('category', 'all');
         $sort = $request->get('sort', 'newest'); // newest or oldest
         $baseModel = $request->get('base_model'); // Filter by base model (comma-separated for multiple)
