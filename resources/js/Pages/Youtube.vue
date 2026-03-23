@@ -115,11 +115,11 @@
         <Head title="YouTube - Rendered Demos" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div class="flex items-center gap-3">
-                        <h1 class="text-4xl md:text-5xl font-black text-white">YouTube</h1>
+                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">YouTube</h1>
                         <span v-if="demomeOnline" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30">
                             <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
                             <span class="text-xs font-medium text-green-400">Renderer Online</span>

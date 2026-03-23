@@ -81,7 +81,7 @@
                 <!-- Fade image to transparent at bottom -->
                 <div v-if="clan.background" class="absolute inset-0 bg-gradient-to-b from-transparent from-0% via-transparent via-60% to-gray-900 to-100%"></div>
                 <!-- Dark overlay on top -->
-                <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent"></div>
             </div>
 
             <!-- Member avatars scattered across hero (avoiding center) - positioned relative to 1920px background -->

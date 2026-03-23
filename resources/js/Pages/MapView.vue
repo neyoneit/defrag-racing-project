@@ -806,7 +806,7 @@
         <!-- Cleaner page with card background -->
         <div class="relative pb-10">
             <!-- Fade shadow at top -->
-            <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 400px; z-index: 0;"></div>
+            <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent pointer-events-none" style="height: 400px; z-index: 0;"></div>
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">

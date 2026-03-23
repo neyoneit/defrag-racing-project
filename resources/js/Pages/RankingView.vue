@@ -170,12 +170,12 @@
         <Head title="Ranking" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     <!-- Left: Title + Info -->
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Player Rankings</h1>
+                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Player Rankings</h1>
                         <div class="flex items-center gap-3 text-gray-500">
                             <div class="relative group">
                                 <button class="flex items-center gap-1.5 text-xs hover:text-gray-300 transition-colors">

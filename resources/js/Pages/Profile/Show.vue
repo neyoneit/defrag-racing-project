@@ -795,13 +795,13 @@ const tabs = [
         <Head title="Settings" />
 
         <!-- Fade shadow at top (absolute positioned behind everything) -->
-        <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
+        <div class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
 
         <!-- Header Section -->
         <div class="relative pt-6 pb-8" style="z-index: 10;">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-white mb-2">Settings</h1>
+                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Settings</h1>
                     <p class="text-sm text-gray-400">Customize your profile and preferences</p>
                 </div>
             </div>

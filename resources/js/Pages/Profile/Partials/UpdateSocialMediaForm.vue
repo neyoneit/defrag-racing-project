@@ -141,6 +141,26 @@
             </div>
 
             <div>
+                <InputLabel for="twitter" value="Twitter / X" />
+                <div v-if="user.twitter_id" class="mt-1 flex items-center gap-2">
+                    <div class="flex-1 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-md text-green-400 text-sm">
+                        ✓ Connected as {{ user.twitter_name }}
+                    </div>
+                    <button type="button" @click="disconnectTwitter" class="px-3 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-md transition">
+                        Disconnect
+                    </button>
+                </div>
+                <div v-else class="mt-1">
+                    <a :href="route('oauth.twitter')" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-md transition border border-gray-600">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        Connect X
+                    </a>
+                </div>
+            </div>
+
+            <div>
                 <InputLabel value="MDD Profile" />
                 <div v-if="user.mdd_id && !isNaN(parseInt(user.mdd_id))" class="mt-1 flex items-center gap-2">
                     <div class="flex-1 px-3 py-2 bg-green-500/10 border border-green-500/30 rounded-md text-green-400 text-sm">

@@ -49,7 +49,7 @@
         <Head title="Home" />
 
         <!-- Hero Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-16">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-8">
                     <h1 class="text-3xl md:text-4xl lg:text-5xl font-black text-white mb-4 leading-tight">

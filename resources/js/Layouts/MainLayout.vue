@@ -24,6 +24,33 @@
 
     const page = usePage();
 
+    // Reactive nav active states (re-evaluate on every page change)
+    const navActive = computed(() => {
+        const url = page.url; // dependency for reactivity
+        return {
+            servers: route().current('servers'),
+            players: route().current('records') || route().current('clans.*'),
+            rankings: route().current('ranking') || route().current('community'),
+            mapsmodels: route().current('maps') || route().current('maplists.*') || route().current('models.*'),
+            demos: route().current('demos.*') || route().current('youtube'),
+            challenges: route().current('headhunter.*') || route().current('marketplace.*'),
+            tournaments: route().current('tournaments.*'),
+            bundles: route().current('bundles'),
+            // Sub-items
+            records: route().current('records'),
+            clans: route().current('clans.*'),
+            ranking: route().current('ranking'),
+            community: route().current('community'),
+            maps: route().current('maps'),
+            maplists: route().current('maplists.*'),
+            models: route().current('models.*'),
+            demosIndex: route().current('demos.*'),
+            youtube: route().current('youtube'),
+            headhunter: route().current('headhunter.*'),
+            marketplace: route().current('marketplace.*'),
+        };
+    });
+
     // NEW badge tracking - hide after user visits a section
     const seenSections = ref(JSON.parse(localStorage.getItem('seen_sections') || '[]'));
 
@@ -334,7 +361,7 @@
 
         <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative">
             <!-- Modern Compact Header -->
-            <nav class="bg-gray-950/95 border-b border-white/5 sticky top-0 z-[200] shadow-2xl" @click="handleNavClick">
+            <nav class="bg-white/[0.025] border-b border-white/[0.04] sticky top-0 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md" @click="handleNavClick">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
                     <!-- First Row: Logo + Search + Profile -->
                     <div class="flex items-center justify-between gap-4 h-14 border-b border-white/5">
@@ -347,14 +374,14 @@
                             <!-- Search Bar (visible on all screens with SAME sizing) -->
                             <div ref="searchSection" class="relative flex-1 max-w-[180px] sm:max-w-xs md:max-w-xs lg:max-w-xs xl:max-w-xs 2xl:max-w-xs">
                                 <div class="relative">
-                                    <svg class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 sm:h-4 w-3.5 sm:w-4 text-gray-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg class="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 h-3.5 sm:h-4 w-3.5 sm:w-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                     <TextInput
                                         v-model="search"
                                         @focus="onSearchFocus"
                                         type="text"
-                                        class="h-8 sm:h-9 pl-8 sm:pl-9 pr-7 sm:pr-8 w-full bg-white/5 border-white/10 text-xs sm:text-sm placeholder:text-gray-500 focus:bg-white/10 focus:border-white/20 transition-all"
+                                        class="h-8 sm:h-9 pl-8 sm:pl-9 pr-7 sm:pr-8 w-full bg-white/[0.08] border-white/[0.12] text-xs sm:text-sm placeholder:text-gray-400 focus:bg-white/[0.12] focus:border-white/25 transition-all"
                                         placeholder="Search..."
                                         @input="performSearch"
                                     />
@@ -372,7 +399,7 @@
 
                                 <!-- Search Results Dropdown -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-2xl bg-gray-950 border border-white/10 overflow-hidden z-[202] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
+                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] bg-gray-800/90 backdrop-blur-xl border border-white/15 overflow-hidden z-[202] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
                                          :style="{ top: searchDropdownPosition.top + 'px', maxHeight: '70vh' }"
                                          @click.stop>
 
@@ -617,7 +644,7 @@
                             <div v-if="$page.props.auth.user">
                                 <Dropdown align="right" width="56">
                                     <template #trigger>
-                                        <button class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/5 transition-all group">
+                                        <button class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition-all group">
                                             <!-- Avatar always visible -->
                                             <img class="h-7 w-7 rounded-full object-cover ring-2 ring-white/10 group-hover:ring-white/20 transition-all" :src="$page.props.auth.user.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" :alt="$page.props.auth.user.name">
                                             <!-- Name and arrow hidden on small screens -->
@@ -676,115 +703,105 @@
                         </div>
                     </div>
 
-                    <!-- Second Row: Navigation Links - ALWAYS VISIBLE -->
-                    <div class="flex items-center gap-1 h-12 -ml-3">
-                        <!-- Always visible -->
-                        <NavLink :href="route('maps')" :active="route().current('maps')">
-                            Maps
-                        </NavLink>
-                        <NavLink :href="route('maplists.index')" :active="route().current('maplists.*')">
-                            Maplists
-                        </NavLink>
-                        <NavLink href="/models" :active="route().current('models.*')">
-                            Models
-                        </NavLink>
-                        <NavLink :href="route('servers')" :active="route().current('servers')">
+                    <!-- Second Row: Navigation Links -->
+                    <div class="flex items-center gap-1 h-12 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 border-t border-white/[0.08]">
+
+                        <!-- 1. Servers -->
+                        <NavLink :href="route('servers')" :active="navActive.servers">
                             Servers
                         </NavLink>
-                        <!-- Hidden below sm -->
-                        <NavLink :href="route('records')" :active="route().current('records')" class="hidden sm:inline-flex">
-                            Records
-                        </NavLink>
-                        <NavLink :href="route('ranking')" :active="route().current('ranking')" class="hidden sm:inline-flex">
-                            Ranking
-                        </NavLink>
-                        <!-- Hidden below md -->
-                        <NavLink :href="route('clans.index')" :active="route().current('clans.*')" class="hidden md:inline-flex">
-                            Clans
-                        </NavLink>
-                        <NavLink :href="route('tournaments.index')" :active="route().current('tournaments.*')" class="hidden md:inline-flex">
-                            Tournaments
-                        </NavLink>
-                        <!-- Hidden below lg -->
-                        <NavLink :href="route('headhunter.index')" :active="route().current('headhunter.*')" class="hidden lg:inline-flex">
-                            Headhunter
-                        </NavLink>
-                        <NavLink :href="route('marketplace.index')" :active="route().current('marketplace.*')" class="hidden lg:inline-flex">
-                            Marketplace
-                        </NavLink>
-                        <!-- Hidden below xl -->
-                        <NavLink :href="route('demos.index')" :active="route().current('demos.*')" class="hidden xl:inline-flex">
-                            Demos
-                        </NavLink>
-                        <NavLink :href="route('youtube')" :active="route().current('youtube')" class="hidden xl:inline-flex">
-                            YouTube
-                        </NavLink>
-                        <NavLink :href="route('bundles')" :active="route().current('bundles')" class="hidden xl:inline-flex">
-                            Bundles
-                        </NavLink>
 
-                        <!-- More Dropdown - always visible -->
-                        <div>
-                        <Dropdown align="left" width="48">
-                            <template #trigger>
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all">
-                                    <span>More</span>
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
+                        <!-- 2. Players -->
+                        <Dropdown align="left" width="48" :hoverable="true">
+                            <template #trigger="{ open }">
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                    :class="navActive.players ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                    <span>Players</span>
+                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                 </button>
                             </template>
                             <template #content>
-                                <!-- Always visible in More -->
-                                <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">
-                                    Beta
-                                </DropdownLink>
-
-                                <!-- Items hidden below xl -->
-                                <div class="xl:hidden">
-                                    <DropdownLink :href="route('demos.index')">
-                                        Demos
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('youtube')">
-                                        YouTube
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('bundles')">
-                                        Bundles
-                                    </DropdownLink>
-                                </div>
-
-                                <!-- Items hidden below lg -->
-                                <div class="lg:hidden">
-                                    <DropdownLink :href="route('headhunter.index')">
-                                        Headhunter
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('marketplace.index')">
-                                        Marketplace
-                                    </DropdownLink>
-                                </div>
-
-                                <!-- Items hidden below md -->
-                                <div class="md:hidden">
-                                    <DropdownLink :href="route('clans.index')">
-                                        Clans
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('tournaments.index')">
-                                        Tournaments
-                                    </DropdownLink>
-                                </div>
-
-                                <!-- Items hidden below sm -->
-                                <div class="sm:hidden">
-                                    <DropdownLink :href="route('records')">
-                                        Records
-                                    </DropdownLink>
-                                    <DropdownLink :href="route('ranking')">
-                                        Ranking
-                                    </DropdownLink>
-                                </div>
+                                <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
+                                <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
                             </template>
                         </Dropdown>
-                        </div>
+
+                        <!-- 3. Rankings -->
+                        <Dropdown align="left" width="56" :hoverable="true">
+                            <template #trigger="{ open }">
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                    :class="navActive.rankings ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                    <span>Rankings</span>
+                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
+                                <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
+                            </template>
+                        </Dropdown>
+
+                        <!-- 4. Maps & Models -->
+                        <Dropdown align="left" width="48" :hoverable="true">
+                            <template #trigger="{ open }">
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                    :class="navActive.mapsmodels ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                    <span>Maps & Models</span>
+                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
+                                <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
+                                <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
+                            </template>
+                        </Dropdown>
+
+                        <!-- 5. Demos -->
+                        <Dropdown align="left" width="48" :hoverable="true">
+                            <template #trigger="{ open }">
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                    :class="navActive.demos ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                    <span>Demos</span>
+                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
+                                <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
+                            </template>
+                        </Dropdown>
+
+                        <!-- 6. Challenges -->
+                        <Dropdown align="left" width="48" :hoverable="true">
+                            <template #trigger="{ open }">
+                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                    :class="navActive.challenges ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                    <span>Challenges</span>
+                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </button>
+                            </template>
+                            <template #content>
+                                <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
+                                <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
+                            </template>
+                        </Dropdown>
+
+                        <!-- 7. Tournaments -->
+                        <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
+                            Tournaments
+                        </NavLink>
+
+                        <!-- 8. Downloads -->
+                        <NavLink :href="route('bundles')" :active="navActive.bundles">
+                            Downloads
+                        </NavLink>
+
+                        <!-- 9. Beta -->
+                        <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
+                            Beta
+                        </NavLink>
+
                     </div>
                 </div>
             </nav>

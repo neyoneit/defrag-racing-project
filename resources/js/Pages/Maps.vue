@@ -140,13 +140,13 @@
         <Head title="Maps" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex gap-4">
                     <!-- Spacer matching sidebar width -->
                     <div class="hidden md:block flex-shrink-0 w-[300px]">
                         <div class="flex items-center gap-4">
-                            <h1 class="text-4xl md:text-5xl font-black text-white">Maps</h1>
+                            <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
                         </div>
                     </div>
@@ -154,7 +154,7 @@
                     <div class="flex-1 min-w-0">
                         <!-- Mobile title -->
                         <div class="md:hidden flex items-center gap-4 mb-2">
-                            <h1 class="text-4xl md:text-5xl font-black text-white">Maps</h1>
+                            <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
                         </div>
                         <!-- Tags bar (relative wrapper, expanded is absolute overlay) -->
