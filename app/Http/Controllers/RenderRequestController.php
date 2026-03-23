@@ -112,8 +112,16 @@ class RenderRequestController extends Controller
             ? sprintf('%02d.%06.3f', floor($video->time_ms / 60000), fmod($video->time_ms / 1000, 60))
             : '-';
 
+        $profileUrl = config('app.url') . "/profile/{$user->id}";
+
         Mail::raw(
-            "Failed render report from {$user->plain_name} (ID: {$user->id})\n\n" .
+            "Failed render report\n\n" .
+            "--- Reporter ---\n" .
+            "Name: {$user->plain_name}\n" .
+            "Email: {$user->email}\n" .
+            "Profile: {$profileUrl}\n" .
+            ($message ? "Message: {$message}\n" : '') .
+            "\n--- Video ---\n" .
             "Video ID: {$video->id}\n" .
             "Map: {$video->map_name}\n" .
             "Player: {$video->player_name}\n" .
@@ -123,7 +131,6 @@ class RenderRequestController extends Controller
             "Date: " . ($video->created_at?->format('Y-m-d H:i') ?? '-') . "\n" .
             ($recordId ? "Record ID: {$recordId}\n" : '') .
             "Failure reason: {$video->failure_reason}\n\n" .
-            ($message ? "User message: {$message}\n\n" : '') .
             "Map page: {$mapUrl}\n" .
             "Admin edit: {$editUrl}",
             function ($mail) use ($adminEmail, $video) {
