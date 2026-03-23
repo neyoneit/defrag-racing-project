@@ -53,7 +53,6 @@ Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filt
 Route::get('/maps/{mapname}/demo-matches', [MapsController::class, 'getDemoMatches'])->name('maps.demoMatches');
 Route::post('/maps/{id}/flag-nsfw', [MapsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.flag-nsfw');
 Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.unflag-nsfw');
-Route::get('/maps/{name}/download', [WebController::class, 'map'])->name('maps.download');
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');

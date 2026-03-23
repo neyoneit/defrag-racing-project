@@ -911,7 +911,7 @@
                     <div class="flex flex-wrap gap-2 justify-center mb-4">
                         <!-- Download Button -->
                         <a
-                            :href="`/maps/${map.name}/download`"
+                            :href="`/maps/download/${map.name}`"
                             class="flex items-center gap-1.5 bg-gray-600/80 hover:bg-gray-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
                         >
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
