@@ -436,6 +436,7 @@
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
@@ -462,6 +463,7 @@
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
@@ -495,6 +497,7 @@
                     </a>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
@@ -556,6 +559,7 @@
                     </a>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
@@ -583,6 +587,7 @@
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
@@ -610,6 +615,7 @@
                     </component>
                     <DemoRenderButton
                         :renderedVideo="renderedVideo"
+                        :record="record"
                         :canRequestRender="canRequestRender"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"

@@ -30,6 +30,8 @@ return [
 
     'demo_compression_format' => env('DEMO_COMPRESSION_FORMAT', '7z'),
 
+    'admin_email' => env('ADMIN_EMAIL', 'neyoneit@gmail.com'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
