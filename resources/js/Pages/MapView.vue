@@ -542,15 +542,13 @@
             clearTimeout(tagBarCollapseTimeout);
             tagBarCollapseTimeout = null;
         }
-        showAllTags.value = true;
     };
 
     const onTagBarLeave = () => {
         tagBarCollapseTimeout = setTimeout(() => {
-            // Don't collapse if input is focused
             if (document.activeElement === tagBarInput.value) return;
             showAllTags.value = false;
-        }, 30);
+        }, 100);
     };
 
     const focusTagInput = () => {
@@ -1035,7 +1033,7 @@
                                     <div class="flex-1 min-w-0 relative" @click="focusTagInput">
                                         <!-- Ghost tags as background (hidden when typing) -->
                                         <div v-show="!newTagInput" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-40 pl-[10px]" aria-hidden="true">
-                                            <span class="text-xs text-gray-400 flex-shrink-0 mr-1">Search & add tags...</span>
+                                            <span class="text-sm text-gray-300 flex-shrink-0 mr-1">Click to browse & search tags...</span>
                                             <span
                                                 v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
                                                 :key="'ghost-' + tag.id"

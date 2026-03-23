@@ -59,6 +59,7 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 
 Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube');
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware('auth')->name('render.request');
+Route::post('/api/rendered-videos/{id}/report', [RenderRequestController::class, 'reportFailed'])->middleware('auth')->name('render.report');
 
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 
