@@ -92,6 +92,11 @@ class RenderedVideoResource extends Resource
 
                 Forms\Components\Section::make('Details')
                     ->schema([
+                        Forms\Components\TextInput::make('demo_url')
+                            ->label('Demo URL')
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('demo_filename')
+                            ->label('Demo Filename'),
                         Forms\Components\TextInput::make('record_id')
                             ->numeric(),
                         Forms\Components\TextInput::make('demo_id')
