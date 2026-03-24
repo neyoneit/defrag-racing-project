@@ -852,7 +852,7 @@
                                         Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                     </div>
                                 </div>
-                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '80', backgroundColor: communityTier.color + '15' }">
+                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
                                     <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
                                     <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
                                     <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
@@ -938,7 +938,7 @@
                                         Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                     </div>
                                 </div>
-                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '80', backgroundColor: communityTier.color + '15' }">
+                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
                                     <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
                                     <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
                                     <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
