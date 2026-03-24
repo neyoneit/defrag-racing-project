@@ -155,7 +155,7 @@
         <div class="mb-6 flex flex-wrap items-center gap-3">
             <div v-for="tier in tiers" :key="tier.key"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm"
-                :style="{ borderColor: tier.color + '50', backgroundColor: tier.color + '15' }">
+                :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
                 <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${tier.color})` }">
                 <span class="font-bold" :style="{ color: tier.color }">{{ tier.name }}</span>
                 <span class="text-xs" :style="{ color: tier.color + '99' }">{{ tier.min_score }}+</span>
