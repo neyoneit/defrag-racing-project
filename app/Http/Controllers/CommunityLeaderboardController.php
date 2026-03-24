@@ -34,7 +34,7 @@ class CommunityLeaderboardController extends Controller
 
         $cacheKey = "community:leaderboard:page:{$page}";
         $scores = Cache::remember($cacheKey, self::CACHE_TTL, function () use ($page) {
-            return CommunityHelperScore::with('user:id,name,profile_photo_path,country')
+            return CommunityHelperScore::with('user:id,name,profile_photo_path,country,avatar_effect,name_effect,color,avatar_border_color')
                 ->where('total_score', '>', 0)
                 ->orderBy('rank')
                 ->paginate(self::PAGINATION_LIMIT, ['*'], 'page', $page);
