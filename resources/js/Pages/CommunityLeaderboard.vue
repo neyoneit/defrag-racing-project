@@ -40,7 +40,7 @@
         { key: 'demos_uploaded', label: 'Demos Uploaded', icon: '📁', desc: 'Demos uploaded and processed on the site' },
         { key: 'tags_added', label: 'Tags Added', icon: '🏷', desc: 'Tags added to maps to help others find them' },
         { key: 'alias_reports', label: 'Alias Reports', icon: '🔍', desc: 'Player alias reports that were resolved' },
-        { key: 'demo_assignment_reports', label: 'Demo Reports', icon: '📋', desc: 'Demo assignment reports that were approved' },
+        { key: 'demo_assignment_reports', label: 'Demo Assigns', icon: '📋', desc: 'Demo assignment correction reports submitted' },
         { key: 'maplists_created', label: 'Maplists Created', icon: '📝', desc: 'Public maplists created for the community' },
         { key: 'maplist_maps_added', label: 'Maplist Maps', icon: '🗺', desc: 'Maps added to public maplists' },
         { key: 'maplist_likes_received', label: 'Maplist Likes', icon: '👍', desc: 'Likes received on your maplists' },
