@@ -207,20 +207,23 @@
                 <tbody>
                     <template v-for="score in scores.data" :key="score.id">
                         <tr @click="toggleExpand(score.id)"
-                            class="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer transition-colors"
-                            :class="{ 'bg-gray-700/20': expandedRow === score.id }"
+                            class="border-b border-gray-700/50 hover:bg-blue-500/10 cursor-pointer transition-colors"
+                            :class="expandedRow === score.id ? 'bg-blue-500/15 border-blue-500/30 !border-b-blue-500/30' : ''"
                             :style="getTier(score.community_badge_score) ? { borderLeft: `4px solid ${getTier(score.community_badge_score).color}` } : { borderLeft: '4px solid transparent' }">
                             <td class="py-3 px-4">
                                 <span class="font-mono font-bold" :style="getTier(score.community_badge_score) ? { color: getTier(score.community_badge_score).color } : { color: '#9ca3af' }">{{ score.rank }}</span>
                             </td>
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-3">
-                                    <img v-if="score.user?.profile_photo_path" :src="score.user.profile_photo_path" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display='none'">
-                                    <div v-else class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-500 text-xs">?</div>
+                                    <div :class="score.user?.avatar_effect ? 'avatar-effect-' + score.user.avatar_effect : ''" :style="score.user?.color ? `--effect-color: ${score.user.color}; --border-color: ${score.user.avatar_border_color || score.user.color}` : ''">
+                                        <img :src="score.user?.profile_photo_path ? '/storage/' + score.user.profile_photo_path : '/images/null.jpg'" class="w-8 h-8 rounded-full object-cover" :style="score.user?.avatar_border_color ? `border: 2px solid ${score.user.avatar_border_color}` : ''">
+                                    </div>
                                     <div class="flex items-center gap-2">
                                         <img v-if="score.user?.country" :src="`/images/flags/${score.user.country}.png`" class="w-5 h-3.5" onerror="this.style.display='none'">
                                         <Link :href="`/profile/${score.user?.id}`" class="hover:text-blue-400 transition" :style="getTier(score.community_badge_score) ? { color: getTier(score.community_badge_score).color } : { color: 'white' }" @click.stop>
-                                            <span v-html="q3tohtml(score.user?.name)"></span>
+                                            <span :class="score.user?.name_effect ? 'name-effect-' + score.user.name_effect : ''" :style="score.user?.color ? `--effect-color: ${score.user.color}` : ''">
+                                                <span v-html="q3tohtml(score.user?.name)"></span>
+                                            </span>
                                         </Link>
                                     </div>
                                 </div>
@@ -239,7 +242,7 @@
 
                         <!-- Expanded Row -->
                         <tr v-if="expandedRow === score.id">
-                            <td colspan="4" class="bg-gray-800/50 px-4 py-4 border-b border-gray-700/50">
+                            <td colspan="4" class="bg-black/40 px-4 py-4 border-b border-white/10 border-t border-t-white/10">
                                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                                     <div v-for="cat in categories" :key="cat.key"
                                         class="group/cat relative flex items-center gap-2 px-2 py-1.5 rounded"

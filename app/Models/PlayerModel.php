@@ -11,6 +11,20 @@ class PlayerModel extends Model
 
     protected $table = 'models';
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Track who flagged NSFW
+        static::saving(function ($model) {
+            if ($model->isDirty('is_nsfw') && $model->is_nsfw && auth()->check()) {
+                $model->nsfw_flagged_by_user_id = auth()->id();
+            } elseif ($model->isDirty('is_nsfw') && !$model->is_nsfw) {
+                $model->nsfw_flagged_by_user_id = null;
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'name',

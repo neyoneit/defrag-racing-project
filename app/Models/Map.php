@@ -26,6 +26,15 @@ class Map extends Model
 
         static::saved($clearHomeCache);
         static::deleted($clearHomeCache);
+
+        // Track who flagged NSFW
+        static::saving(function ($map) {
+            if ($map->isDirty('is_nsfw') && $map->is_nsfw && auth()->check()) {
+                $map->nsfw_flagged_by_user_id = auth()->id();
+            } elseif ($map->isDirty('is_nsfw') && !$map->is_nsfw) {
+                $map->nsfw_flagged_by_user_id = null;
+            }
+        });
     }
 
     /**

@@ -61,8 +61,8 @@ class Kernel extends ConsoleKernel
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
 
-        // Calculate community helper leaderboard scores daily at 4am
-        $schedule->command('community:calculate-scores')->withoutOverlapping()->dailyAt('04:00');
+        // Calculate community helper leaderboard scores every 30 minutes
+        $schedule->command('community:calculate-scores')->withoutOverlapping()->everyThirtyMinutes();
     }
 
     /**

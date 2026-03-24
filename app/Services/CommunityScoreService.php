@@ -344,16 +344,31 @@ class CommunityScoreService
 
     private function addNsfwFlags(Collection &$scores): void
     {
-        if (!DB::getSchemaBuilder()->hasTable('map_nsfw_flags')) {
-            return;
-        }
-
-        $counts = DB::table('map_nsfw_flags')
-            ->groupBy('user_id')
-            ->select('user_id', DB::raw('COUNT(*) as cnt'))
+        // Count NSFW-flagged maps per user
+        $mapCounts = DB::table('maps')
+            ->where('is_nsfw', true)
+            ->whereNotNull('nsfw_flagged_by_user_id')
+            ->groupBy('nsfw_flagged_by_user_id')
+            ->select('nsfw_flagged_by_user_id as user_id', DB::raw('COUNT(*) as cnt'))
             ->get();
 
-        $this->mergeGroupedCounts($scores, 'nsfw_flags', $counts);
+        $this->mergeGroupedCounts($scores, 'nsfw_flags', $mapCounts);
+
+        // Add NSFW-flagged models per user
+        $modelCounts = DB::table('models')
+            ->where('is_nsfw', true)
+            ->whereNotNull('nsfw_flagged_by_user_id')
+            ->groupBy('nsfw_flagged_by_user_id')
+            ->select('nsfw_flagged_by_user_id as user_id', DB::raw('COUNT(*) as cnt'))
+            ->get();
+
+        foreach ($modelCounts as $row) {
+            if ($scores->has($row->user_id)) {
+                $data = $scores->get($row->user_id);
+                $data['nsfw_flags'] += $row->cnt;
+                $scores->put($row->user_id, $data);
+            }
+        }
     }
 
     private function addRecordsCount(Collection &$scores): void
