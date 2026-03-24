@@ -120,6 +120,7 @@ class CommunityScoreService
         $counts = DB::table('uploaded_demos')
             ->whereNotNull('user_id')
             ->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'unsupported-version', 'failed', 'failed-validity'])
+            ->where('created_at', '>=', config('community-scores.demos_uploaded_after', '2026-03-14'))
             ->groupBy('user_id')
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
             ->get();
@@ -295,6 +296,7 @@ class CommunityScoreService
     {
         $counts = DB::table('models')
             ->where('approval_status', 'approved')
+            ->where('created_at', '>=', config('community-scores.demos_uploaded_after', '2026-03-14'))
             ->groupBy('user_id')
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
             ->get();

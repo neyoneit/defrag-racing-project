@@ -2,7 +2,7 @@
 
 return [
     'weights' => [
-        'demos_uploaded' => 5,
+        'demos_uploaded' => 2,
         'tags_added' => 1,
         'alias_reports' => 3,
         'demo_assignment_reports' => 3,
@@ -43,6 +43,8 @@ return [
         ['name' => 'Defragger', 'key' => 'epic', 'min_score' => 500, 'color' => '#a335ee'],         // Purple (Epic)
         ['name' => 'Defragger', 'key' => 'legendary', 'min_score' => 1500, 'color' => '#ff8000'],   // Orange (Legendary)
     ],
+
+    'demos_uploaded_after' => '2026-03-14', // Only count demos uploaded after this date (excludes initial bulk imports)
 
     'cache_ttl' => 43200, // 12 hours
 ];

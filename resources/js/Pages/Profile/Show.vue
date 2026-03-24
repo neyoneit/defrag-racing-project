@@ -302,7 +302,6 @@ const creatorSections = [
 
 const customizeSections = [
     { id: 'customize-effects', label: 'Effects' },
-    { id: 'customize-view', label: 'View Defaults' },
     { id: 'customize-intensity', label: 'Intensity' },
     { id: 'customize-layout', label: 'Profile Layout' },
 ];
@@ -782,12 +781,18 @@ onMounted(() => {
 
 const tabs = [
     { id: 'profile', label: 'Profile', icon: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' },
-    { id: 'creator', label: 'Creator', icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
+    { id: 'global-customize', label: 'Global Customize', icon: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75' },
     { id: 'marketplace', label: 'Marketplace', icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z' },
-    { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
     { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
     { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
 ];
+
+const profileSubTabs = [
+    { id: 'creator', label: 'Creator', icon: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z' },
+    { id: 'customize', label: 'Customize', icon: 'M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42' },
+];
+
+const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(tabId);
 </script>
 
 <template>
@@ -813,34 +818,83 @@ const tabs = [
                 <div class="w-48 shrink-0 sticky top-[120px] self-start overflow-y-auto" style="max-height: calc(100vh - 136px);">
                     <nav class="space-y-1">
                         <template v-for="tab in tabs" :key="tab.id">
-                            <button
-                                @click="switchTab(tab.id)"
-                                :class="[
-                                    'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
-                                    activeTab === tab.id
-                                        ? 'bg-white/10 text-white border border-white/10'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                ]"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
-                                </svg>
-                                {{ tab.label }}
-                            </button>
-                            <!-- Creator sub-sections -->
-                            <template v-if="tab.id === 'creator' && activeTab === 'creator'">
-                                <button v-for="sub in creatorSections" :key="sub.id"
-                                    @click="scrollToSection(sub.id)"
-                                    class="w-full text-left pl-9 pr-3 py-1.5 rounded-md text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
-                                    {{ sub.label }}
+                            <!-- Profile tab with nested Creator & Customize -->
+                            <template v-if="tab.id === 'profile'">
+                                <button
+                                    @click="switchTab('profile')"
+                                    :class="[
+                                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                        activeTab === 'profile'
+                                            ? 'bg-white/10 text-white border border-white/10'
+                                            : isProfileGroup(activeTab)
+                                                ? 'text-white'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    ]"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                                    </svg>
+                                    {{ tab.label }}
                                 </button>
+
+                                <!-- Profile sub-tabs: Creator & Customize (always expanded) -->
+                                <div class="ml-3 pl-3 border-l border-white/15 space-y-0.5">
+                                    <template v-for="subTab in profileSubTabs" :key="subTab.id">
+                                        <button
+                                            @click="switchTab(subTab.id)"
+                                            :class="[
+                                                'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all text-left',
+                                                activeTab === subTab.id
+                                                    ? 'bg-white/10 text-white'
+                                                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                                            ]"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" :d="subTab.icon" />
+                                            </svg>
+                                            {{ subTab.label }}
+                                        </button>
+                                        <!-- Creator sub-sections (always visible) -->
+                                        <template v-if="subTab.id === 'creator'">
+                                            <button v-for="sub in creatorSections" :key="sub.id"
+                                                @click="switchTab('creator'); nextTick(() => scrollToSection(sub.id))"
+                                                :class="[
+                                                    'w-full text-left pl-8 pr-3 py-1 rounded-md text-xs transition-all',
+                                                    activeTab === 'creator' ? 'text-gray-300 hover:text-white hover:bg-white/5' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                                ]">
+                                                {{ sub.label }}
+                                            </button>
+                                        </template>
+                                        <!-- Customize sub-sections (always visible) -->
+                                        <template v-if="subTab.id === 'customize'">
+                                            <button v-for="sub in customizeSections" :key="sub.id"
+                                                @click="switchTab('customize'); nextTick(() => scrollToSection(sub.id))"
+                                                :class="[
+                                                    'w-full text-left pl-8 pr-3 py-1 rounded-md text-xs transition-all',
+                                                    activeTab === 'customize' ? 'text-gray-300 hover:text-white hover:bg-white/5' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                                                ]">
+                                                {{ sub.label }}
+                                            </button>
+                                        </template>
+                                    </template>
+                                </div>
                             </template>
-                            <!-- Customize sub-sections -->
-                            <template v-if="tab.id === 'customize' && activeTab === 'customize'">
-                                <button v-for="sub in customizeSections" :key="sub.id"
-                                    @click="scrollToSection(sub.id)"
-                                    class="w-full text-left pl-9 pr-3 py-1.5 rounded-md text-xs text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
-                                    {{ sub.label }}
+
+                            <!-- Regular tabs (Marketplace, Notifications, Security) -->
+                            <template v-else>
+                                <button
+                                    @click="switchTab(tab.id)"
+                                    :class="[
+                                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                        activeTab === tab.id
+                                            ? 'bg-white/10 text-white border border-white/10'
+                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    ]"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                                    </svg>
+                                    {{ tab.label }}
                                 </button>
                             </template>
                         </template>
@@ -1728,10 +1782,25 @@ const tabs = [
                 </div>
             </div>
 
-            <!-- View Preferences Grid -->
-            <div id="customize-view" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Effects Intensity -->
+            <div id="customize-intensity">
+                <EffectsIntensityForm />
+            </div>
+
+            <!-- Profile Layout Customization -->
+            <div id="customize-layout">
+                <ProfileLayoutForm />
+            </div>
+
+                </template>
+
+                <!-- ==================== GLOBAL CUSTOMIZE TAB ==================== -->
+                <template v-if="activeTab === 'global-customize'">
+            <p class="text-sm text-gray-400 mb-4">These settings affect how content is displayed across the entire site.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Map View Defaults Card -->
-            <div id="map-view-defaults" class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+            <div class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1784,7 +1853,7 @@ const tabs = [
             </div>
 
             <!-- Physics Column Order Card -->
-            <div id="physics-order" class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+            <div class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1830,18 +1899,7 @@ const tabs = [
                     </div>
                 </div>
             </div>
-            </div> <!-- Close View Preferences Grid -->
-
-            <!-- Effects Intensity -->
-            <div id="customize-intensity">
-                <EffectsIntensityForm />
             </div>
-
-            <!-- Profile Layout Customization -->
-            <div id="customize-layout">
-                <ProfileLayoutForm />
-            </div>
-
                 </template>
 
                 <!-- ==================== NOTIFICATIONS TAB ==================== -->
