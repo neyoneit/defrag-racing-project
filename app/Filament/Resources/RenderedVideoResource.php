@@ -108,6 +108,10 @@ class RenderedVideoResource extends Resource
                             ->numeric(),
                         Forms\Components\Textarea::make('failure_reason')
                             ->rows(2),
+                        Forms\Components\Textarea::make('admin_notes')
+                            ->label('Admin Notes')
+                            ->rows(3)
+                            ->columnSpanFull(),
                     ])->columns(2),
             ]);
     }

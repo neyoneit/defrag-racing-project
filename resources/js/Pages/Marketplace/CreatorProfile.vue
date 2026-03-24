@@ -38,7 +38,7 @@ const workTypeLabels = {
     <div class="min-h-screen pb-20">
         <Head :title="(user.plain_name || user.name) + ' - Creator Profile'" />
 
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <Link :href="route('marketplace.creators')" class="text-gray-400 hover:text-white text-sm transition mb-4 inline-flex items-center gap-1">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>

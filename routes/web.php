@@ -25,6 +25,7 @@ use App\Http\Controllers\AliasReportController;
 use App\Http\Controllers\DemoReportController;
 use App\Http\Controllers\YoutubeController;
 use App\Http\Controllers\RenderRequestController;
+use App\Http\Controllers\CommunityLeaderboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,8 @@ Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->wh
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
+
+Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
 
 Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube');
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware('auth')->name('render.request');

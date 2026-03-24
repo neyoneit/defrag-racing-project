@@ -10,6 +10,7 @@ use App\Models\Record;
 use App\Models\Map;
 use App\Models\MddProfile;
 use App\Models\RenderedVideo;
+use App\Models\CommunityHelperScore;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -44,7 +45,15 @@ class ProfileController extends Controller {
                 ->with('donorTier', $user->getDonorTier())
                 ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
                 ->with('tagCount', $user->getTagCount())
-                ->with('assignedDemoCounts', $user->getAssignedDemoCounts());
+                ->with('assignedDemoCounts', $user->getAssignedDemoCounts())
+                ->with('communityTier', (function () use ($user) {
+                    $score = CommunityHelperScore::where('user_id', $user->id)->first();
+                    if (!$score || !$score->community_tier) return null;
+                    return array_merge($score->community_tier, [
+                        'score' => round((float) $score->community_badge_score, 1),
+                        'rank' => $score->rank,
+                    ]);
+                })());
         }
 
         // Check which props Inertia is requesting (partial reload)
@@ -189,7 +198,15 @@ class ProfileController extends Controller {
             ->with('donorTier', $user->getDonorTier())
             ->with('donationTotal', $user->isDonor() ? $user->getDonationTotal() : [])
             ->with('tagCount', $user->getTagCount())
-            ->with('assignedDemoCounts', $user->getAssignedDemoCounts());
+            ->with('assignedDemoCounts', $user->getAssignedDemoCounts())
+            ->with('communityTier', (function () use ($user) {
+                    $score = CommunityHelperScore::where('user_id', $user->id)->first();
+                    if (!$score || !$score->community_tier) return null;
+                    return array_merge($score->community_tier, [
+                        'score' => round((float) $score->community_badge_score, 1),
+                        'rank' => $score->rank,
+                    ]);
+                })());
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -343,7 +360,8 @@ class ProfileController extends Controller {
             ->with('isDonor', false)
             ->with('donorTier', null)
             ->with('donationTotal', [])
-            ->with('tagCount', 0);
+            ->with('tagCount', 0)
+            ->with('communityTier', null);
     }
 
     public function latestRecords($mddId) {

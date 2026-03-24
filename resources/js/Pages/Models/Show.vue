@@ -1446,7 +1446,7 @@ const confirmNsfw = () => {
 
     <div :class="isThumbnailMode ? 'w-screen h-screen' : 'min-h-screen relative'" :style="isThumbnailMode ? 'width: 100vw; height: 100vh; margin: 0; padding: 0;' : ''">
         <!-- Fade shadow at top (absolute positioned behind everything) -->
-        <div v-if="!isThumbnailMode" class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
+        <div v-if="!isThumbnailMode" class="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent pointer-events-none" style="height: 600px; z-index: 0;"></div>
 
         <!-- Header Section -->
         <div v-if="!isThumbnailMode" class="relative pt-6 pb-8" style="z-index: 10;">

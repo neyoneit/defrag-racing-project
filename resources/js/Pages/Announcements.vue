@@ -16,7 +16,7 @@
         <Head title="Announcements" />
 
         <!-- Hero Section with Shadow Gradient -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
                 <h1 class="text-4xl font-black text-white mb-2 flex items-center gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-10 h-10 text-blue-400">

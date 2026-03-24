@@ -116,6 +116,10 @@
             type: Number,
             default: 0
         },
+        communityTier: {
+            type: Object,
+            default: null
+        },
         load_times: Object,
         renderStats: {
             type: Object,
@@ -848,6 +852,17 @@
                                         Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                     </div>
                                 </div>
+                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '80', backgroundColor: communityTier.color + '15' }">
+                                    <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
+                                    <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
+                                    <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                        <div class="font-bold text-white mb-1">Defragger Score</div>
+                                        <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                        <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
+                                        <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
+                                    </div>
+                                </Link>
                                 <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
                                     <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
                                     <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
@@ -923,6 +938,17 @@
                                         Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                     </div>
                                 </div>
+                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '80', backgroundColor: communityTier.color + '15' }">
+                                    <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
+                                    <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
+                                    <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                        <div class="font-bold text-white mb-1">Defragger Score</div>
+                                        <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                        <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
+                                        <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
+                                    </div>
+                                </Link>
                                 <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
                                     <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
                                     <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>

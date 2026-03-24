@@ -19,47 +19,6 @@ class ClansController extends Controller {
         $sortBy = $request->get('sort', 'wrs');
         $sortDir = $request->get('dir', 'desc');
 
-        $query = Clan::with('admin:id,name')
-            ->with(['players.user' => function ($q) {
-                $q->select('id', 'name', 'profile_photo_path', 'cached_wr_count', 'cached_top3_count');
-            }])
-            ->withCount('players');
-
-        // Add calculated stats using subqueries (exclude soft-deleted members)
-        $query->selectRaw('clans.*,
-            (SELECT COUNT(DISTINCT records.id)
-             FROM clan_players
-             JOIN records ON clan_players.user_id = records.user_id
-             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL AND records.deleted_at IS NULL) as total_records,
-            (SELECT COALESCE(SUM(users.cached_wr_count), 0)
-             FROM clan_players
-             JOIN users ON clan_players.user_id = users.id
-             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_wrs,
-            (SELECT COALESCE(SUM(users.cached_top3_count), 0)
-             FROM clan_players
-             JOIN users ON clan_players.user_id = users.id
-             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_top3
-        ');
-
-        // Sorting
-        switch ($sortBy) {
-            case 'members':
-                $query->orderBy('players_count', $sortDir);
-                break;
-            case 'wrs':
-                $query->orderByRaw("total_wrs {$sortDir}");
-                break;
-            case 'top3':
-                $query->orderByRaw("total_top3 {$sortDir}");
-                break;
-            case 'name':
-            default:
-                $query->orderBy('name', $sortDir);
-                break;
-        }
-
-        $clans = $query->paginate(20)->appends(['sort' => $sortBy, 'dir' => $sortDir]);
-
         if ($request->user()) {
             $myClan = $request->user()
                 ->clan()
@@ -104,12 +63,48 @@ class ClansController extends Controller {
             $joinRequests = [];
             $blockedUsers = [];
         }
-        
-
-        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
 
         return Inertia::render('Clans/Index')
-            ->with('clans', $isPartial ? $clans : null)
+            ->with('clans', Inertia::lazy(function () use ($sortBy, $sortDir) {
+                $query = Clan::with('admin:id,name')
+                    ->with(['players.user' => function ($q) {
+                        $q->select('id', 'name', 'profile_photo_path', 'cached_wr_count', 'cached_top3_count');
+                    }])
+                    ->withCount('players');
+
+                $query->selectRaw('clans.*,
+                    (SELECT COUNT(DISTINCT records.id)
+                     FROM clan_players
+                     JOIN records ON clan_players.user_id = records.user_id
+                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL AND records.deleted_at IS NULL) as total_records,
+                    (SELECT COALESCE(SUM(users.cached_wr_count), 0)
+                     FROM clan_players
+                     JOIN users ON clan_players.user_id = users.id
+                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_wrs,
+                    (SELECT COALESCE(SUM(users.cached_top3_count), 0)
+                     FROM clan_players
+                     JOIN users ON clan_players.user_id = users.id
+                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_top3
+                ');
+
+                switch ($sortBy) {
+                    case 'members':
+                        $query->orderBy('players_count', $sortDir);
+                        break;
+                    case 'wrs':
+                        $query->orderByRaw("total_wrs {$sortDir}");
+                        break;
+                    case 'top3':
+                        $query->orderByRaw("total_top3 {$sortDir}");
+                        break;
+                    case 'name':
+                    default:
+                        $query->orderBy('name', $sortDir);
+                        break;
+                }
+
+                return $query->paginate(20)->appends(['sort' => $sortBy, 'dir' => $sortDir]);
+            }))
             ->with('myClan', $myClan)
             ->with('users', $users)
             ->with('invitations', $invitations)

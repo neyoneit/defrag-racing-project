@@ -121,7 +121,7 @@ const submit = () => {
         <Head title="Create Challenge" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pointer-events-auto">
                 <!-- Back Button -->
                 <Link :href="route('headhunter.index')" class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 mb-6 transition-colors">

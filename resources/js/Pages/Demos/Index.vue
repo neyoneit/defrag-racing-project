@@ -1228,12 +1228,12 @@ watch(selectedPhysics, () => {
         <Head title="Demo Upload" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/60 via-black/30 to-transparent pt-6 pb-8">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-4xl md:text-5xl font-black text-white">Demos</h1>
+                            <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Demos</h1>
                         </div>
                         <p class="text-sm text-gray-400">Upload and manage demo files</p>
                         <p class="text-xs text-gray-500 mt-1">Special thanks to <Link href="/profile/549" class="text-gray-300 hover:text-white underline transition-colors">Enter</Link> for his demo collection that helped populate this database.</p>

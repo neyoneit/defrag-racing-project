@@ -12,13 +12,45 @@ const props = defineProps({
     },
     contentClasses: {
         type: Array,
-        default: () => ['p-2', 'bg-gray-950', 'border', 'border-white/10'],
+        default: () => ['p-1.5', 'bg-gray-800/90', 'backdrop-blur-xl', 'border', 'border-white/15'],
+    },
+    hoverable: {
+        type: Boolean,
+        default: false,
     },
 });
 
 let open = ref(false);
 const triggerRef = ref(null);
 const dropdownPosition = ref({ top: 0, left: 0, right: 'auto' });
+let hoverTimeout = null;
+
+// Global registry - close other hoverable dropdowns when one opens
+if (!window.__hoverableDropdowns) window.__hoverableDropdowns = new Set();
+const instanceId = Symbol();
+
+const isTouchDevice = () => window.matchMedia('(pointer: coarse)').matches;
+
+const closeOtherHoverables = () => {
+    window.__hoverableDropdowns.forEach(closer => {
+        if (closer.id !== instanceId) closer.close();
+    });
+};
+
+const onMouseEnter = () => {
+    if (!props.hoverable || isTouchDevice()) return;
+    clearTimeout(hoverTimeout);
+    closeOtherHoverables();
+    open.value = true;
+};
+
+const onMouseLeave = () => {
+    if (!props.hoverable || isTouchDevice()) return;
+    hoverTimeout = setTimeout(() => { open.value = false; }, 300);
+};
+
+const hoverEntry = props.hoverable ? { id: instanceId, close: () => { clearTimeout(hoverTimeout); open.value = false; } } : null;
+if (hoverEntry) window.__hoverableDropdowns.add(hoverEntry);
 
 const closeOnEscape = (e) => {
     if (open.value && e.key === 'Escape') {
@@ -30,8 +62,9 @@ const updatePosition = () => {
     if (triggerRef.value && open.value) {
         nextTick(() => {
             const rect = triggerRef.value.getBoundingClientRect();
+            const gap = props.hoverable ? 0 : 8;
             dropdownPosition.value = {
-                top: rect.bottom + 8,
+                top: rect.bottom + gap,
                 left: props.align === 'left' ? rect.left : 'auto',
                 right: props.align === 'right' ? window.innerWidth - rect.right : 'auto',
             };
@@ -55,6 +88,7 @@ onUnmounted(() => {
     document.removeEventListener('keydown', closeOnEscape);
     window.removeEventListener('resize', updatePosition);
     window.removeEventListener('scroll', updatePosition, true);
+    if (hoverEntry) window.__hoverableDropdowns.delete(hoverEntry);
 });
 
 const widthClass = computed(() => {
@@ -78,14 +112,14 @@ const alignmentClasses = computed(() => {
 </script>
 
 <template>
-    <div class="relative">
+    <div class="relative" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
         <div ref="triggerRef" @click="open = ! open">
-            <slot name="trigger" />
+            <slot name="trigger" :open="open" />
         </div>
 
-        <!-- Backdrop -->
+        <!-- Backdrop (disabled for hoverable - closing handled by mouseleave) -->
         <Teleport to="body">
-            <div v-show="open" class="fixed inset-0 z-[210] pointer-events-auto" @click="open = false"></div>
+            <div v-show="open && !hoverable" class="fixed inset-0 z-[210] pointer-events-auto" @click="open = false"></div>
         </Teleport>
 
         <!-- Dropdown -->
@@ -98,12 +132,16 @@ const alignmentClasses = computed(() => {
                 leave-from-class="transform opacity-100 scale-100"
                 leave-to-class="transform opacity-0 scale-95"
             >
-                <div v-show="open" class="fixed rounded-xl shadow-2xl z-[220]"
+                <div v-show="open" class="fixed z-[220]"
                      :class="[widthClass, alignmentClasses]"
                      :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left !== 'auto' ? dropdownPosition.left + 'px' : 'auto', right: dropdownPosition.right !== 'auto' ? dropdownPosition.right + 'px' : 'auto' }"
-                     @click.stop>
-                    <div class="rounded-xl ring-1 ring-white/10" :class="contentClasses">
-                        <slot name="content" />
+                     @click.stop
+                     @mouseenter="onMouseEnter"
+                     @mouseleave="onMouseLeave">
+                    <div :class="hoverable ? 'pt-2' : ''">
+                        <div class="rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] ring-1 ring-white/15" :class="contentClasses">
+                            <slot name="content" />
+                        </div>
                     </div>
                 </div>
             </transition>
