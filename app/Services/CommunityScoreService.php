@@ -153,7 +153,6 @@ class CommunityScoreService
     private function addDemoAssignmentReports(Collection &$scores): void
     {
         $counts = DB::table('demo_assignment_reports')
-            ->where('status', 'approved')
             ->groupBy('reported_by_user_id')
             ->select('reported_by_user_id as user_id', DB::raw('COUNT(*) as cnt'))
             ->get();
