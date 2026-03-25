@@ -10,7 +10,7 @@ use Inertia\Inertia;
 class CommunityLeaderboardController extends Controller
 {
     const PAGINATION_LIMIT = 50;
-    const CACHE_TTL = 43200; // 12 hours
+    const CACHE_TTL = 2100; // 35 minutes (scores recalculate every 30 min)
 
     public function index(Request $request)
     {

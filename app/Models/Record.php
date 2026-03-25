@@ -56,12 +56,13 @@ class Record extends Model
     protected static function boot() {
         parent::boot();
 
-        // Incrementally update records page cache when record is created
+        // Clear profile cache when record is created
+        // Note: prependToCache is called AFTER processRanks() in the scraper jobs,
+        // so the rank is available when the record enters the page cache.
         static::created(function ($record) {
             if ($record->mdd_id) {
                 self::clearProfileCache($record->mdd_id);
             }
-            RecordsController::prependToCache($record);
         });
 
         // On update, just clear profile cache (record edits don't change page order)

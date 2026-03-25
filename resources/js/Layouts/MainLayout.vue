@@ -31,7 +31,7 @@
             servers: route().current('servers'),
             players: route().current('records') || route().current('clans.*'),
             rankings: route().current('ranking') || route().current('community'),
-            mapsmodels: route().current('maps') || route().current('maplists.*') || route().current('models.*'),
+            mapsmodels: route().current('maps') || route().current('models.*'),
             demos: route().current('demos.*') || route().current('youtube'),
             challenges: route().current('headhunter.*') || route().current('marketplace.*'),
             tournaments: route().current('tournaments.*'),
@@ -753,10 +753,16 @@
                             </template>
                             <template #content>
                                 <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
-                                <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
                                 <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
                             </template>
                         </Dropdown>
+
+                        <!-- 4b. Maplists -->
+                        <Link :href="route('maplists.index')"
+                            class="inline-flex items-center px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                            :class="navActive.maplists ? 'text-white bg-blue-600/30 border border-blue-500/40' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                            Maplists
+                        </Link>
 
                         <!-- 5. Demos -->
                         <Dropdown align="left" width="48" :hoverable="true">

@@ -16,6 +16,7 @@ use App\Models\RecordHistory;
 use App\Models\MddProfile;
 
 use App\Jobs\ProcessNotificationsJob;
+use App\Http\Controllers\RecordsController;
 
 class ScrapeRecords implements ShouldQueue
 {
@@ -125,6 +126,9 @@ class ScrapeRecords implements ShouldQueue
         if ($serverMap) {
             $serverMap->processRanks();
             $serverMap->processAverageTime();
+
+            $newrecord->refresh();
+            RecordsController::prependToCache($newrecord);
         }
 
         $mdd_profile = MddProfile::where('id', $newrecord->mdd_id)->first();
