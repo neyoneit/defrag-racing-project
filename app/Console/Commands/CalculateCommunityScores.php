@@ -18,7 +18,16 @@ class CalculateCommunityScores extends Command
 
         $service->calculateAll();
 
-        Cache::forget('community:leaderboard');
+        // Clear all paginated leaderboard cache pages
+        $page = 1;
+        while (Cache::has("community:leaderboard:page:{$page}")) {
+            Cache::forget("community:leaderboard:page:{$page}");
+            $page++;
+        }
+        // Always clear at least first 5 pages in case cache check is unreliable
+        for ($i = 1; $i <= max(5, $page); $i++) {
+            Cache::forget("community:leaderboard:page:{$i}");
+        }
 
         $this->info('Community scores calculated successfully.');
 

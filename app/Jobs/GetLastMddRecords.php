@@ -16,6 +16,8 @@ use App\Models\RecordHistory;
 use App\Models\MddProfile;
 
 use App\Jobs\ProcessNotificationsJob;
+use App\Http\Controllers\RecordsController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -45,6 +47,7 @@ class GetLastMddRecords implements ShouldQueue
         $this->insertedCount = 0;
         $this->updatedCount = 0;
 
+        $this->logApiRecords($records);
         $this->processRecords($records);
 
         echo ("Finished. Total: " . count($records) . ", New: {$this->insertedCount}, Updated: {$this->updatedCount}, Duplicates: {$this->duplicateCount}") . PHP_EOL;
@@ -96,6 +99,30 @@ class GetLastMddRecords implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('Failed to send gap alert email: ' . $e->getMessage());
             echo "Failed to send gap alert email: " . $e->getMessage() . PHP_EOL;
+        }
+    }
+
+    private function logApiRecords(array $records): void
+    {
+        foreach ($records as $record) {
+            try {
+                DB::table('api_records_log')->updateOrInsert(
+                    [
+                        'mdd_id' => $record['mdd_id'],
+                        'mapname' => strtolower($record['map']),
+                        'physics' => $record['physics'],
+                        'mode' => $record['mode'],
+                    ],
+                    [
+                        'time' => $record['time'],
+                        'name' => $record['name'],
+                        'date_set' => $record['date'],
+                    ]
+                );
+            } catch (\Exception $e) {
+                // Don't let logging break the main job
+                Log::warning('Failed to log API record: ' . $e->getMessage());
+            }
         }
     }
 
@@ -168,6 +195,10 @@ class GetLastMddRecords implements ShouldQueue
         if ($serverMap) {
             $serverMap->processRanks();
             $serverMap->processAverageTime();
+
+            // Refresh rank from DB and update the cached records page
+            $newrecord->refresh();
+            RecordsController::prependToCache($newrecord);
         }
 
         $mdd_profile = MddProfile::where('id', $newrecord->mdd_id)->first();

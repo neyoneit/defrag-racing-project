@@ -154,6 +154,7 @@ class CommunityScoreService
     {
         $counts = DB::table('uploaded_demos')
             ->where('manually_assigned', true)
+            ->whereNotNull('user_id')
             ->groupBy('user_id')
             ->select('user_id', DB::raw('COUNT(*) as cnt'))
             ->get();
