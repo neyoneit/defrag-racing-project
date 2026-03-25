@@ -113,7 +113,6 @@ class Map extends Model
 
         foreach($records as $group => $data) {
             $i = 1;
-            $last_time = -1;
             $besttime = -1;
 
             if (count($data) > 0) {
@@ -121,31 +120,10 @@ class Map extends Model
             }
 
             foreach($data as $record) {
-                if ($last_time === -1) {
-                    $record->rank = $i;
-                    $record->besttime = $besttime;
-                    $last_time = $record->time;
-                    $i++;
-                    $record->save();
-                    continue;
-                }
-
-                if ($last_time === $record->time) {
-                    $i--;
-                    $record->rank = $i;
-                    $record->besttime = $besttime;
-                    $last_time = $record->time;
-                    $i++;
-                    $record->save();
-                    continue;
-                }
-
                 $record->rank = $i;
                 $record->besttime = $besttime;
-                $last_time = $record->time;
-
-                $i++;
                 $record->save();
+                $i++;
             }
         }
 
