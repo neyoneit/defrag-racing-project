@@ -8,6 +8,22 @@
     display: none;
 }
 
+/* Animated background dots */
+.dot-layer-1 {
+    animation: dotDrift1 120s linear infinite;
+}
+.dot-layer-2 {
+    animation: dotDrift2 180s linear infinite;
+}
+@keyframes dotDrift1 {
+    from { transform: translate(0, 0); }
+    to { transform: translate(60px, 60px); }
+}
+@keyframes dotDrift2 {
+    from { transform: translate(0, 0); }
+    to { transform: translate(-90px, 45px); }
+}
+
 /* Make black Q3 text (^0 color code) visible on dark backgrounds */
 .q3c-0 {
     color: #888 !important;

@@ -94,8 +94,72 @@
         else if (nameSpeed <= 50) document.body.classList.add('name-speed-reduced');
     };
 
+    const dotsCanvas = ref(null);
+    let dotsAnimId = null;
+
+    const initDots = () => {
+        const canvas = dotsCanvas.value;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        const resize = () => {
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.scale(dpr, dpr);
+        };
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Particles matching original blue dots style (#3B82F6, r~3, opacity 0.8)
+        const particles = [];
+        for (let i = 0; i < 30; i++) {
+            particles.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 2,
+                r: Math.random() * 0.8 + 1,
+                a: Math.random() * 0.4 + 0.4,
+                color: [59, 130, 246],
+            });
+        }
+
+        let lastFrame = 0;
+        const fps = 20;
+        const interval = 1000 / fps;
+
+        const draw = (time) => {
+            dotsAnimId = requestAnimationFrame(draw);
+            if (time - lastFrame < interval) return;
+            lastFrame = time;
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            ctx.clearRect(0, 0, w, h);
+
+            for (const p of particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < -10) p.x = w + 10;
+                if (p.x > w + 10) p.x = -10;
+                if (p.y < -10) p.y = h + 10;
+                if (p.y > h + 10) p.y = -10;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${p.a})`;
+                ctx.fill();
+            }
+        };
+        dotsAnimId = requestAnimationFrame(draw);
+    };
+
     onMounted(() => {
         applyEffectsIntensity();
+        initDots();
 
         const currentRoute = route().current() || '';
         for (const [prefix, section] of Object.entries(routeSectionMap)) {
@@ -307,6 +371,7 @@
     });
 
     onUnmounted(() => {
+        if (dotsAnimId) cancelAnimationFrame(dotsAnimId);
         if (notificationInterval) {
             clearInterval(notificationInterval);
         }
@@ -360,6 +425,7 @@
         </div>
 
         <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative">
+            <canvas ref="dotsCanvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 0;"></canvas>
             <!-- Modern Compact Header -->
             <nav class="bg-white/[0.025] border-b border-white/[0.04] sticky top-0 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md" @click="handleNavClick">
                 <div class="max-w-8xl mx-auto px-4 lg:px-8">
@@ -898,4 +964,5 @@
             stroke-dashoffset: -59;
         }
     }
+
 </style>
