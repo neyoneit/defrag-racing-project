@@ -13,13 +13,17 @@
     });
 
     const expandedVideo = ref(null);
-    const search = ref(new URL(window.location).searchParams.get('search') || '');
+    const searchMap = ref(new URL(window.location).searchParams.get('search_map') || '');
+    const searchPlayer = ref(new URL(window.location).searchParams.get('search_player') || '');
     let searchTimeout = null;
 
-    const searchVideos = (value) => {
+    const doSearch = () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
-            router.get('/youtube', { search: value || undefined }, {
+            const params = {};
+            if (searchMap.value) params.search_map = searchMap.value;
+            if (searchPlayer.value) params.search_player = searchPlayer.value;
+            router.get('/youtube', params, {
                 preserveState: true,
                 preserveScroll: true,
                 only: ['videos'],
@@ -148,22 +152,33 @@
                 </div>
 
                 <!-- Search -->
-                <div class="relative max-w-xs">
-                    <input
-                        v-model="search"
-                        @input="searchVideos($event.target.value)"
-                        type="text"
-                        placeholder="Search by map or player..."
-                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
-                    />
-                    <svg v-if="!search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                    </svg>
-                    <button v-else @click="search = ''; searchVideos('')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                <div class="flex gap-2">
+                    <div class="relative">
+                        <input
+                            v-model="searchMap"
+                            @input="doSearch()"
+                            type="text"
+                            placeholder="Map name..."
+                            class="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
+                        />
+                        <button v-if="searchMap" @click="searchMap = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                        </button>
+                        <svg v-else class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </div>
+                    <div class="relative">
+                        <input
+                            v-model="searchPlayer"
+                            @input="doSearch()"
+                            type="text"
+                            placeholder="Player name..."
+                            class="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
+                        />
+                        <button v-if="searchPlayer" @click="searchPlayer = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                        </button>
+                        <svg v-else class="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                    </div>
                 </div>
             </div>
         </div>

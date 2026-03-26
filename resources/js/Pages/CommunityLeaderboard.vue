@@ -66,6 +66,7 @@
         { key: 'profile_layout_customized', label: 'Custom Layout', icon: '📐', desc: 'Customized your profile layout' },
         { key: 'name_effect_set', label: 'Name Effect', icon: '✨', desc: 'Set a name effect on your profile' },
         { key: 'avatar_effect_set', label: 'Avatar Effect', icon: '💫', desc: 'Set an avatar effect on your profile' },
+        { key: 'difficulty_ratings', label: 'Difficulty Votes', icon: '📊', desc: 'Map difficulty ratings submitted' },
         { key: 'donation_total_eur', label: 'Donations (EUR)', icon: '💰', desc: 'Donated to support the site' },
     ];
 

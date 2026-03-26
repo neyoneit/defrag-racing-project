@@ -8,29 +8,16 @@ use App\Jobs\CalculateRatings as CalculateRatingsJob;
 
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Use `ratings:calculate` (Rust) instead. Kept for reference only.
+ */
 class CalculateRatings extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'run:calculate-ratings';
-
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Calculate players ratings';
-
-    /**
-     * Execute the console command.
-     *
-     * @return int
-     */
+    protected $description = '[DEPRECATED] Calculate players ratings - use ratings:calculate instead';
 
     public function handle() {
-        dispatch(new CalculateRatingsJob());
+        $this->error('This command is deprecated. Use `ratings:calculate --physics=vq3` and `ratings:calculate --physics=cpm` instead.');
+        return 1;
     }
 }

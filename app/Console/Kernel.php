@@ -61,6 +61,9 @@ class Kernel extends ConsoleKernel
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
 
+        // Update map ranked flags hourly
+        $schedule->command('maps:update-ranked-flags')->withoutOverlapping()->hourly();
+
         // Calculate community helper leaderboard scores every 30 minutes
         $schedule->command('community:calculate-scores')->withoutOverlapping()->everyThirtyMinutes();
     }

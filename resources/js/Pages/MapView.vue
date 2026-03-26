@@ -20,6 +20,7 @@
     const flaggingNsfw = ref(false);
     const localIsNsfw = ref(false);
 
+
     // Assign demo to online record
     const showAssignModal = ref(false);
     const assigningRecord = ref(null);
@@ -216,11 +217,42 @@
         showOffline: {
             type: Boolean,
             default: false
+        },
+        difficultyRating: {
+            type: Object,
+            default: () => ({ average: null, total: 0, distribution: {}, user_rating: null })
         }
     });
 
     const page = usePage();
     localIsNsfw.value = props.map.is_nsfw;
+
+    // Difficulty rating
+    const difficultyData = ref({ ...props.difficultyRating });
+    const submittingDifficulty = ref(false);
+    const difficultyLabels = [
+        { level: 1, label: 'Beginner', color: 'bg-green-600', hoverColor: 'hover:bg-green-500', borderColor: 'border-green-400', activeRing: 'ring-green-400', desc: 'Basic movement, no special techniques needed' },
+        { level: 2, label: 'Easy', color: 'bg-lime-600', hoverColor: 'hover:bg-lime-500', borderColor: 'border-lime-400', activeRing: 'ring-lime-400', desc: 'Simple tricks like circle jumps or ramp jumps' },
+        { level: 3, label: 'Medium', color: 'bg-yellow-600', hoverColor: 'hover:bg-yellow-500', borderColor: 'border-yellow-400', activeRing: 'ring-yellow-400', desc: 'Weapon boosts or precise strafing required' },
+        { level: 4, label: 'Hard', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-500', borderColor: 'border-orange-400', activeRing: 'ring-orange-400', desc: 'Advanced technique combinations, requires practice' },
+        { level: 5, label: 'Extreme', color: 'bg-red-600', hoverColor: 'hover:bg-red-500', borderColor: 'border-red-400', activeRing: 'ring-red-400', desc: 'Top-level techniques, very few can finish' },
+    ];
+    const communityDifficultyLevel = computed(() => {
+        if (!difficultyData.value.average) return null;
+        return Math.round(difficultyData.value.average);
+    });
+    const rateDifficulty = async (level) => {
+        if (!page.props.auth?.user || submittingDifficulty.value) return;
+        submittingDifficulty.value = true;
+        try {
+            const response = await axios.post(`/maps/${props.map.id}/rate-difficulty`, { rating: level });
+            difficultyData.value = response.data;
+        } catch (error) {
+            console.error('Error rating difficulty:', error);
+        } finally {
+            submittingDifficulty.value = false;
+        }
+    };
 
     const needsNsfwGate = computed(() => {
         return localIsNsfw.value && !page.props.auth.user?.nsfw_confirmed;
@@ -734,6 +766,8 @@
             'door': '/images/functions/door.svg',
             'button': '/images/functions/button.svg',
             'push': '/images/functions/push.svg',
+            'jumppad': '/images/functions/push.svg',
+            'launchramp': '/images/functions/push.svg',
             'break': '/images/functions/break.svg',
             'slime': '/images/functions/slime.svg',
             'shootergl': '/images/functions/shootergl.svg',
@@ -756,6 +790,8 @@
             'door': 'Doors',
             'button': 'Buttons',
             'push': 'Push Trigger',
+            'jumppad': 'Jumppad',
+            'launchramp': 'Launch Ramp',
             'break': 'Breakable',
             'slime': 'Slime',
             'shootergl': 'Grenade Shooter',
@@ -822,7 +858,7 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl p-6 shadow-2xl relative border border-white/10 group">
+                <div class="w-full max-w-4xl mx-auto rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
@@ -848,7 +884,7 @@
                         </div>
                         <!-- Both ranked -->
                         <div v-if="map.is_ranked_vq3 && map.is_ranked_cpm" class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked</span>
+                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">Ranked</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Ranked in VQ3 & CPM</div>
                                 <div class="text-gray-400">Records on this map count towards</div>
@@ -858,7 +894,7 @@
                         </div>
                         <!-- Only one ranked -->
                         <div v-else-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }}</span>
+                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">Ranked {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }}</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Ranked in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} only</div>
                                 <div class="text-gray-400">Records count towards player rankings</div>
@@ -868,7 +904,7 @@
                         </div>
                         <!-- Both unranked -->
                         <div v-else class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-gray-600/80 border-gray-500/50 text-gray-300 cursor-help">Unranked</span>
+                            <span class="map-badge bg-gray-600/80 border-gray-500/30 shadow-lg shadow-gray-500/10 text-gray-300 cursor-help">Unranked</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Not included in rankings</div>
                                 <div class="text-gray-400">Records on this map do not affect</div>
@@ -880,13 +916,13 @@
                     <!-- Author + Date row -->
                     <div class="flex items-center justify-center gap-3 mb-2">
                         <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors text-sm">{{ map.author }}</Link>
-                        <span v-if="map.date_added" class="text-gray-500 text-sm">{{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                        <span v-if="map.date_added" class="text-gray-200 group-hover:text-white text-sm transition-colors">{{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                     </div>
 
                     <!-- Map Features: Weapons, Items, Functions -->
                     <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap items-center justify-center gap-4 mb-4">
                         <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-1.5">
-                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Weapons</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Weapons</span>
                             <div class="flex gap-1">
                                 <img v-for="weapon in map.weapons.split(',')" :key="weapon"
                                      :src="getWeaponIcon(weapon)"
@@ -896,7 +932,7 @@
                             </div>
                         </div>
                         <div v-if="map.items && map.items.length > 0" class="flex items-center gap-1.5">
-                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Items</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Items</span>
                             <div class="flex gap-1">
                                 <img v-for="item in map.items.split(',')" :key="item"
                                      :src="getItemIcon(item)"
@@ -906,7 +942,7 @@
                             </div>
                         </div>
                         <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-1.5">
-                            <span class="text-gray-500 font-bold text-[10px] uppercase tracking-wide">Functions</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Functions</span>
                             <div class="flex gap-1">
                                 <img v-for="func in map.functions.split(',')" :key="func"
                                      :src="getFunctionIcon(func)"
@@ -1141,50 +1177,88 @@
                     </div>
 
                     <!-- Public Maplists featuring this map -->
-                    <div v-if="publicMaplists && publicMaplists.length > 0" class="mb-4 pt-3 border-t border-white/10">
-                        <h3 class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
-                            </svg>
-                            Featured in {{ publicMaplists.length }} Public Maplist{{ publicMaplists.length !== 1 ? 's' : '' }}
-                        </h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div v-if="publicMaplists && publicMaplists.length > 0" class="mb-3 pt-2 border-t border-white/10">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors">Maplists</span>
                             <Link
                                 v-for="maplist in publicMaplists"
                                 :key="maplist.id"
                                 :href="`/maplists/${maplist.id}`"
-                                class="bg-white/5 hover:bg-white/10 rounded-lg p-3 border border-white/10 hover:border-blue-500/50 transition group"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-200 border border-blue-500/30 hover:bg-blue-600/40 hover:text-white hover:border-blue-400/50 transition-all"
                             >
-                                <div class="flex items-start justify-between mb-1">
-                                    <h4 class="text-white font-semibold text-sm group-hover:text-blue-400 transition">{{ maplist.name }}</h4>
-                                    <div class="text-xs text-green-400 px-2 py-0.5 bg-green-400/10 rounded shrink-0">Public</div>
-                                </div>
-                                <div class="flex items-center gap-3 text-xs text-gray-400">
-                                    <div class="flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                        </svg>
-                                        <span>{{ maplist.maps_count || 0 }} maps</span>
-                                    </div>
-                                    <div v-if="maplist.user" class="flex items-center gap-1">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                        <span>by {{ maplist.user.name }}</span>
-                                    </div>
-                                    <div v-if="maplist.favorites_count > 0" class="flex items-center gap-1 text-yellow-400">
-                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                        </svg>
-                                        <span>{{ maplist.favorites_count }}</span>
-                                    </div>
-                                </div>
+                                {{ maplist.name }}
+                                <span class="text-[10px] text-blue-400">({{ maplist.maps_count || 0 }} maps)</span>
                             </Link>
                         </div>
                     </div>
 
+                    <!-- Difficulty Rating + Controls Row -->
+                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                        <!-- Difficulty Rating -->
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors">Difficulty</span>
+                            <button
+                                v-for="d in difficultyLabels"
+                                :key="d.level"
+                                @click="rateDifficulty(d.level)"
+                                :disabled="!$page.props.auth?.user || submittingDifficulty"
+                                :class="[
+                                    'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all',
+                                    difficultyData.user_rating === d.level
+                                        ? d.color + ' text-white ' + d.borderColor + ' ring-1 ' + d.activeRing + ' shadow-lg'
+                                        : communityDifficultyLevel === d.level && difficultyData.total > 0
+                                            ? d.color + '/40 text-white ' + d.borderColor + '/50'
+                                            : 'bg-white/5 text-gray-400 border-white/10 ' + ($page.props.auth?.user ? d.hoverColor + '/20 hover:text-white hover:border-white/30 cursor-pointer' : 'cursor-default'),
+                                ]"
+                                :title="d.desc + (difficultyData.distribution[d.level] ? '\n' + difficultyData.distribution[d.level] + ' vote' + (difficultyData.distribution[d.level] > 1 ? 's' : '') : '')"
+                            >
+                                {{ d.label }}
+                            </button>
+                            <span v-if="difficultyData.total > 0" class="text-[10px] text-gray-500 group-hover:text-gray-300 ml-1 transition-colors">
+                                {{ difficultyData.average }} avg
+                                <span class="text-gray-600 group-hover:text-gray-400 transition-colors">({{ difficultyData.total }})</span>
+                            </span>
+                            <span v-else class="text-[10px] text-gray-600 group-hover:text-gray-400 ml-1 transition-colors">No votes yet</span>
+                        </div>
+
+                        <div class="flex-1"></div>
+
+                        <!-- Toggle Buttons -->
+                        <div class="flex flex-wrap gap-2 items-center text-sm">
+                            <button
+                                @click="sortByTime"
+                                :class="column !== 'time' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                                class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                            >
+                                {{ column === 'time' ? 'Fastest' : 'Newest' }}
+                            </button>
+                            <button
+                                @click="onChangeOldtop(!showOldtopLocal)"
+                                :class="showOldtopLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                                class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                            >
+                                Old Top
+                            </button>
+                            <button
+                                @click="onChangeOffline(!showOfflineLocal)"
+                                :class="showOfflineLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                                class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                            >
+                                Demos Top
+                            </button>
+                            <div class="text-xs text-gray-500">
+                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    Set your defaults
+                                </Link>
+                                <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
+                                    <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to save defaults
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Gametype Tabs (only show if more than one gametype has records) -->
-                    <div v-if="Object.values(gametypeStats).filter(count => count > 0).length > 1" class="flex gap-2 flex-wrap justify-center mb-4">
+                    <div v-if="Object.values(gametypeStats).filter(count => count > 0).length > 1" class="flex gap-2 flex-wrap justify-center mb-1">
                         <button
                             v-for="gt in gametypes"
                             :key="gt"
@@ -1200,39 +1274,6 @@
                             <span class="uppercase">{{ gt }}</span>
                             <span class="ml-2 text-xs opacity-75">({{ gametypeStats[gt] }})</span>
                         </button>
-                    </div>
-
-                    <!-- Physics & Controls -->
-                    <div class="flex flex-wrap gap-2 justify-end items-center text-sm">
-                        <button
-                            @click="sortByTime"
-                            :class="column !== 'time' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
-                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
-                        >
-                            {{ column === 'time' ? 'Fastest' : 'Newest' }}
-                        </button>
-                        <button
-                            @click="onChangeOldtop(!showOldtopLocal)"
-                            :class="showOldtopLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
-                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
-                        >
-                            Old Top
-                        </button>
-                        <button
-                            @click="onChangeOffline(!showOfflineLocal)"
-                            :class="showOfflineLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
-                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
-                        >
-                            Demos Top
-                        </button>
-                        <div class="text-xs text-gray-500">
-                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
-                                Set your defaults
-                            </Link>
-                            <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
-                                <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to save defaults
-                            </span>
-                        </div>
                     </div>
 
 </div> <!-- Close content layer -->
@@ -1694,7 +1735,6 @@
     font-size: 0.75rem;
     font-weight: 800;
     color: white;
-    border: 1px solid;
     line-height: 1;
     white-space: nowrap;
     letter-spacing: 0.02em;

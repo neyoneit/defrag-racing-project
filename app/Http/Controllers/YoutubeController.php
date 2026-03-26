@@ -36,7 +36,8 @@ class YoutubeController extends Controller
             ]);
         }
 
-        $search = $request->input('search', '');
+        $searchMap = $request->input('search_map', '');
+        $searchPlayer = $request->input('search_player', '');
 
         $videosQuery = RenderedVideo::whereIn('status', ['completed', 'failed'])
             ->visible()
@@ -47,11 +48,12 @@ class YoutubeController extends Controller
                 'render_duration_seconds', 'record_id', 'created_at',
             ]);
 
-        if ($search) {
-            $videosQuery->where(function ($q) use ($search) {
-                $q->where('map_name', 'LIKE', '%' . $search . '%')
-                  ->orWhere('player_name', 'LIKE', '%' . $search . '%');
-            });
+        if ($searchMap) {
+            $videosQuery->where('map_name', 'LIKE', '%' . $searchMap . '%');
+        }
+
+        if ($searchPlayer) {
+            $videosQuery->where('player_name', 'LIKE', '%' . $searchPlayer . '%');
         }
 
         $videos = $videosQuery->paginate(24)->withQueryString();

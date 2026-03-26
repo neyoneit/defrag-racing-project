@@ -101,14 +101,22 @@ class ProfileController extends Controller {
             $vq3Records = clone $baseRecords;
             $vq3Records = $vq3Records->where($tablePrefix . '.physics', 'vq3');
             if ($tablePrefix === 'records') {
-                $vq3Records = $vq3Records->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
+                $vq3Records = $vq3Records->with([
+                    'map' => fn($q) => $q->select('name', 'thumbnail'),
+                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                    'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
+                ]);
             }
             $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
 
             $cpmRecords = clone $baseRecords;
             $cpmRecords = $cpmRecords->where($tablePrefix . '.physics', 'cpm');
             if ($tablePrefix === 'records') {
-                $cpmRecords = $cpmRecords->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
+                $cpmRecords = $cpmRecords->with([
+                    'map' => fn($q) => $q->select('name', 'thumbnail'),
+                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                    'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
+                ]);
             }
             $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
         }
@@ -284,7 +292,11 @@ class ProfileController extends Controller {
 
         // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
         if ($tablePrefix === 'records') {
-            $vq3Records = $vq3Records->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
+            $vq3Records = $vq3Records->with([
+                'map' => fn($q) => $q->select('name', 'thumbnail'),
+                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
+            ]);
         }
         $vq3Records = $vq3Records->paginate(20, ['*'], 'vq3_page')->withQueryString();
 
@@ -294,7 +306,11 @@ class ProfileController extends Controller {
 
         // Only eager load 'map' if not using table aliases (to avoid soft delete conflicts)
         if ($tablePrefix === 'records') {
-            $cpmRecords = $cpmRecords->with(['map' => fn($q) => $q->select('name', 'thumbnail')]);
+            $cpmRecords = $cpmRecords->with([
+                'map' => fn($q) => $q->select('name', 'thumbnail'),
+                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
+            ]);
         }
         $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
 
