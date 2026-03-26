@@ -110,6 +110,31 @@ class HandleInertiaRequests extends Middleware
             'canUploadDemos'            =>      $request->user() ? $request->user()->canUploadDemos() : true,
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
             'physicsOrder'              =>      $request->user()?->default_physics_order ?? 'vq3_first',
+            'availableBadges'           =>      $request->user() ? $this->getAvailableBadges($request->user()) : [],
         ]);
+    }
+
+    private function getAvailableBadges($user): array
+    {
+        $badges = [];
+
+        if ($user->admin) $badges[] = 'badge_admin';
+        if ($user->is_moderator && !$user->admin) $badges[] = 'badge_moderator';
+        if ($user->isDonor()) $badges[] = 'badge_donor';
+
+        $communityScore = \App\Models\CommunityHelperScore::where('user_id', $user->id)->first();
+        if ($communityScore && $communityScore->total_score > 0) $badges[] = 'badge_community';
+
+        if ($user->getTagCount() > 0) $badges[] = 'badge_tagger';
+
+        $demoCounts = $user->getAssignedDemoCounts();
+        if (($demoCounts['offline'] + $demoCounts['online']) > 0) $badges[] = 'badge_assigner';
+
+        // Always available
+        $badges[] = 'clan';
+        $badges[] = 'wr_counters';
+        $badges[] = 'socials';
+
+        return $badges;
     }
 }

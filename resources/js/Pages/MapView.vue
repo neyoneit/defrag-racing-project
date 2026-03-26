@@ -169,13 +169,23 @@
     const newTagInput = ref('');
     const showTagSuggestions = ref(false);
     const showAllTags = ref(false);
+    const showTagInfo = ref(false);
+    const tagInfoBtn = ref(null);
+    const tagInfoStyle = computed(() => {
+        if (!tagInfoBtn.value) return {};
+        const rect = tagInfoBtn.value.getBoundingClientRect();
+        return {
+            top: rect.bottom + 2 + 'px',
+            right: (window.innerWidth - rect.right) + 'px',
+        };
+    });
     const tagInputContainer = ref(null);
     const tagDropdownStyle = computed(() => {
         if (!tagInputContainer.value) return {};
         const rect = tagInputContainer.value.getBoundingClientRect();
         return {
             position: 'fixed',
-            top: rect.bottom + 8 + 'px',
+            top: rect.bottom + 2 + 'px',
             left: rect.left + 'px',
             width: rect.width + 'px',
         };
@@ -378,7 +388,7 @@
     // Initialize tags from map data
     onMounted(async () => {
         if (props.map.tags) {
-            tags.value = props.map.tags;
+            tags.value = [...props.map.tags].sort((a, b) => a.display_name.localeCompare(b.display_name));
         }
         // Fetch all tags and sort alphabetically
         try {
@@ -433,6 +443,7 @@
                 }
             }
 
+            tags.value.sort((a, b) => a.display_name.localeCompare(b.display_name));
             newTagInput.value = '';
             showTagSuggestions.value = false;
         } catch (error) {
@@ -501,6 +512,7 @@
                 tag_name: tagDisplayName
             });
             tags.value.push(response.data.tag);
+            tags.value.sort((a, b) => a.display_name.localeCompare(b.display_name));
 
             // Update suggested tags to mark as adopted
             const suggestedIndex = suggestedTags.value.findIndex(t => t.id === tagId);
@@ -835,7 +847,7 @@
                             </div>
                         </div>
                         <!-- Both ranked -->
-                        <div v-if="map.is_ranked_vq3 && map.is_ranked_cpm" class="group/badge relative">
+                        <div v-if="map.is_ranked_vq3 && map.is_ranked_cpm" class="group/badge relative" style="order: -1">
                             <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Ranked in VQ3 & CPM</div>
@@ -845,7 +857,7 @@
                             </div>
                         </div>
                         <!-- Only one ranked -->
-                        <div v-else-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative">
+                        <div v-else-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative" style="order: -1">
                             <span class="map-badge bg-green-600/80 border-green-500/50 cursor-help">Ranked {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }}</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Ranked in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} only</div>
@@ -855,7 +867,7 @@
                             </div>
                         </div>
                         <!-- Both unranked -->
-                        <div v-else class="group/badge relative">
+                        <div v-else class="group/badge relative" style="order: -1">
                             <span class="map-badge bg-gray-600/80 border-gray-500/50 text-gray-300 cursor-help">Unranked</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
                                 <div class="font-bold text-white mb-1">Not included in rankings</div>
@@ -979,24 +991,58 @@
                     <!-- Tags Section -->
                     <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
                         <!-- Existing tags row -->
-                        <div class="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2 min-h-[24px]">
                             <span
                                 v-for="tag in tags"
                                 :key="tag.id"
-                                class="group flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white ring-1 ring-blue-400"
+                                class="group/tag relative flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white ring-1 ring-blue-400"
                             >
                                 {{ tag.display_name }}
                                 <button
                                     v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned"
                                     @click="confirmRemoveTag(tag)"
-                                    class="opacity-0 group-hover:opacity-100 hover:text-red-300 transition-opacity"
+                                    class="opacity-0 group-hover/tag:opacity-100 hover:text-red-300 transition-opacity"
                                     title="Remove tag"
                                 >
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
                                 </button>
+                                <div v-if="tag.note" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1 rounded-lg bg-black/90 border border-white/10 text-[11px] text-gray-300 whitespace-nowrap opacity-0 group-hover/tag:opacity-100 transition pointer-events-none shadow-xl z-50">
+                                    {{ tag.note }}
+                                </div>
                             </span>
+                            <!-- Tag Info -->
+                            <span
+                                v-if="tags.length > 0"
+                                ref="tagInfoBtn"
+                                @mouseenter="showTagInfo = true"
+                                @mouseleave="showTagInfo = false"
+                                class="flex items-center gap-1 ml-auto px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-gray-300 hover:text-white hover:bg-white/20 hover:border-white/30 cursor-help transition-all text-[11px] font-semibold shadow-sm"
+                                style="order: 999"
+                            >
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" /></svg>
+                                Tag Info
+                            </span>
+                            <Teleport to="body">
+                                <div
+                                    v-if="showTagInfo && tags.length > 0"
+                                    :style="tagInfoStyle"
+                                    @mouseenter="showTagInfo = true"
+                                    @mouseleave="showTagInfo = false"
+                                    class="fixed w-72 rounded-lg border border-white/20 shadow-2xl p-2.5"
+                                    style="background: #0f1219; z-index: 9999;"
+                                >
+                                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Tag Info</div>
+                                    <div class="space-y-1.5">
+                                        <div v-for="t in tags" :key="'legend-' + t.id" class="flex items-center gap-2">
+                                            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white whitespace-nowrap flex-shrink-0 leading-none">{{ t.display_name }}</span>
+                                            <span class="text-[11px] text-gray-400 leading-none">{{ t.note || 'No description yet' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Teleport>
+
                             <!-- Suggested tags -->
                             <button
                                 v-for="suggestedTag in suggestedTags.filter(s => !s.already_adopted)"
@@ -1025,19 +1071,19 @@
                         <!-- Add tag bar (Maps page style with hover expand) -->
                         <div v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned" class="relative" ref="tagInputContainer" @mouseenter="onTagBarEnter" @mouseleave="onTagBarLeave">
                             <div class="mapview-tags-bar" :class="{ 'mapview-tags-bar-focus': showAllTags }" @click="focusTagInput">
-                                <div class="flex items-center gap-2 min-h-[36px]">
+                                <div class="flex items-center gap-2 min-h-[28px]">
                                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                     </svg>
                                     <!-- Input with ghost tags behind -->
                                     <div class="flex-1 min-w-0 relative" @click="focusTagInput">
                                         <!-- Ghost tags as background (hidden when typing) -->
-                                        <div v-show="!newTagInput" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-40 pl-[10px]" aria-hidden="true">
-                                            <span class="text-sm text-gray-300 flex-shrink-0 mr-1">Click to browse & search tags...</span>
+                                        <div v-show="!newTagInput" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-70 pl-[10px]" aria-hidden="true">
+                                            <span class="text-sm text-gray-200 flex-shrink-0 mr-1">Click to browse & search tags...</span>
                                             <span
                                                 v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
                                                 :key="'ghost-' + tag.id"
-                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-white/[0.04] flex-shrink-0 whitespace-nowrap">
+                                                class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-300 bg-white/[0.08] flex-shrink-0 whitespace-nowrap">
                                                 {{ tag.display_name }}
                                             </span>
                                         </div>
@@ -1157,30 +1203,28 @@
                     </div>
 
                     <!-- Physics & Controls -->
-                    <div class="flex flex-wrap gap-4 justify-center items-center text-sm">
+                    <div class="flex flex-wrap gap-2 justify-end items-center text-sm">
                         <button
                             @click="sortByTime"
-                            class="flex items-center gap-2 bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-gray-300 transition-all"
-                            :title="column === 'time' ? 'Currently sorting by fastest time' : 'Currently sorting by date set'"
+                            :class="column !== 'time' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
                         >
-                            <img v-if="column === 'time'" src="/images/powerups/haste.svg" class="w-5 h-5" alt="Fastest" />
-                            <span v-if="column === 'time'">Fastest</span>
-                            <span v-else>📅 Newest</span>
-                            <svg v-if="order === 'ASC'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                            </svg>
-                            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                            </svg>
+                            {{ column === 'time' ? 'Fastest' : 'Newest' }}
                         </button>
-                        <div class="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
-                            <span class="text-gray-300">Old Top:</span>
-                            <ToggleButton :options="{ isActive: showOldtopLocal }" @setIsActive="onChangeOldtop" />
-                        </div>
-                        <div class="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
-                            <span class="text-gray-300">Demos Top:</span>
-                            <ToggleButton :options="{ isActive: showOfflineLocal }" @setIsActive="onChangeOffline" />
-                        </div>
+                        <button
+                            @click="onChangeOldtop(!showOldtopLocal)"
+                            :class="showOldtopLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                        >
+                            Old Top
+                        </button>
+                        <button
+                            @click="onChangeOffline(!showOfflineLocal)"
+                            :class="showOfflineLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                            class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                        >
+                            Demos Top
+                        </button>
                         <div class="text-xs text-gray-500">
                             <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Set your defaults
@@ -1660,14 +1704,15 @@
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.1rem 0.75rem;
     cursor: text;
     transition: border-color 0.2s, background 0.2s;
 }
 .mapview-tags-bar:hover,
 .mapview-tags-bar-focus {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 </style>

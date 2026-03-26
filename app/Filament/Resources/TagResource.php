@@ -80,6 +80,10 @@ class TagResource extends Resource
                 Forms\Components\TextInput::make('category')
                     ->maxLength(255)
                     ->nullable(),
+                Forms\Components\TextInput::make('note')
+                    ->maxLength(255)
+                    ->nullable()
+                    ->helperText('Short description shown as tooltip when hovering the tag on map detail'),
                 Forms\Components\Select::make('parent_tag_id')
                     ->label('Parent Tag')
                     ->helperText('If set, adding this tag to a map will also auto-add the parent tag. Only tags without a parent can be selected (no multi-level nesting).')
