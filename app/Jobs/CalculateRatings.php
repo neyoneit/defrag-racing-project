@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 use App\Models\PlayerRating;
 use App\Models\Map;
 
+/**
+ * @deprecated Replaced by Rust command `ratings:calculate` and `maps:update-ranked-flags`.
+ * Kept only because CalculateRatingsFast references its helper methods.
+ */
 class CalculateRatings implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -99,9 +103,6 @@ class CalculateRatings implements ShouldQueue
                 'player_rating' => $row->player_rating,
             ]);
         }
-
-        // Update is_ranked flags on maps table
-        $this->updateMapRankedFlags();
 
         Log::info('CalculateRatings job ended');
     }

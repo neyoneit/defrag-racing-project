@@ -22,6 +22,7 @@ return [
         'clan_created' => 3,
         'clan_membership' => 1,
         'nsfw_flags' => 2,
+        'difficulty_ratings' => 1,
         'records_count' => 0.1,
         'maps_authored' => 5,
         'models_authored' => 5,

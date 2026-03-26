@@ -32,6 +32,7 @@ const props = defineProps({
     confidenceFilter: String,
     showOtherUserMatches: Boolean,
     uploadedBy: String,
+    browseUploadedBy: String,
 });
 const fileInput = ref(null);
 const selectedFiles = ref([]);
@@ -191,6 +192,63 @@ const confidenceFilterValue = ref(props.confidenceFilter || '');
 const confidenceDropdownOpen = ref(false);
 const showOtherUserMatchesValue = ref(props.showOtherUserMatches || false);
 const uploadedByValue = ref(props.uploadedBy || '');
+
+// Browse uploaded by filter with autocomplete
+const browseUploadedByValue = ref(props.browseUploadedBy || '');
+const browseUploadedBySuggestions = ref([]);
+const browseUploadedByOpen = ref(false);
+let browseUploadedBySearchTimeout = null;
+let browseUploadedBySkipSearch = false;
+
+const searchUploaders = async (query) => {
+    if (query.length < 2) {
+        browseUploadedBySuggestions.value = [];
+        browseUploadedByOpen.value = false;
+        return;
+    }
+    try {
+        const response = await axios.get('/demos/search-uploaders', { params: { q: query } });
+        browseUploadedBySuggestions.value = response.data;
+        browseUploadedByOpen.value = response.data.length > 0;
+    } catch (e) {
+        browseUploadedBySuggestions.value = [];
+        browseUploadedByOpen.value = false;
+    }
+};
+
+watch(browseUploadedByValue, (val) => {
+    if (browseUploadedBySkipSearch) {
+        browseUploadedBySkipSearch = false;
+        return;
+    }
+    clearTimeout(browseUploadedBySearchTimeout);
+    browseUploadedBySearchTimeout = setTimeout(() => searchUploaders(val), 300);
+});
+
+const selectUploader = (name) => {
+    browseUploadedBySkipSearch = true;
+    browseUploadedByValue.value = name;
+    browseUploadedByOpen.value = false;
+    browseUploadedBySuggestions.value = [];
+    applyBrowseUploadedBy();
+};
+
+const applyBrowseUploadedBy = () => {
+    const currentUrl = new URL(window.location.href);
+    if (browseUploadedByValue.value.trim() === '') {
+        currentUrl.searchParams.delete('browse_uploaded_by');
+    } else {
+        currentUrl.searchParams.set('browse_uploaded_by', browseUploadedByValue.value.trim());
+    }
+    currentUrl.searchParams.delete('browsePage');
+    router.visit(currentUrl.toString(), { preserveState: true, preserveScroll: true, only: ['publicDemos'] });
+};
+
+const clearBrowseUploadedBy = () => {
+    browseUploadedByValue.value = '';
+    browseUploadedByOpen.value = false;
+    applyBrowseUploadedBy();
+};
 
 const confidenceOptions = [
     { value: '', label: 'All Confidence Levels' },
@@ -2358,7 +2416,7 @@ watch(selectedPhysics, () => {
                             </button>
                         </div>
 
-                        <!-- Row 2: Search Bar -->
+                        <!-- Row 2: Search Bar + Uploaded By -->
                         <div class="flex flex-wrap gap-2 items-center">
                             <div class="flex-grow max-w-md">
                                 <div class="relative">
@@ -2376,6 +2434,35 @@ watch(selectedPhysics, () => {
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                         </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="relative max-w-xs">
+                                <input
+                                    v-model="browseUploadedByValue"
+                                    @keyup.enter="applyBrowseUploadedBy"
+                                    @focus="browseUploadedBySuggestions.length > 0 && (browseUploadedByOpen = true)"
+                                    @blur="setTimeout(() => browseUploadedByOpen = false, 200)"
+                                    type="text"
+                                    placeholder="Uploaded by..."
+                                    class="w-full px-4 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <button
+                                    v-if="browseUploadedByValue"
+                                    @click="clearBrowseUploadedBy"
+                                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                                <!-- Autocomplete dropdown -->
+                                <div v-if="browseUploadedByOpen && browseUploadedBySuggestions.length > 0" class="absolute z-50 mt-1 w-full bg-gray-800 border border-gray-600 rounded-lg shadow-xl overflow-hidden">
+                                    <button
+                                        v-for="name in browseUploadedBySuggestions"
+                                        :key="name"
+                                        @mousedown.prevent="selectUploader(name)"
+                                        class="w-full px-3 py-1.5 text-sm text-left text-gray-200 hover:bg-blue-500/20 hover:text-white transition-colors"
+                                    >
+                                        {{ name }}
                                     </button>
                                 </div>
                             </div>
@@ -2458,7 +2545,8 @@ watch(selectedPhysics, () => {
                                         <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
                                     </td>
                                     <td class="px-2 py-1.5 text-xs text-gray-300">
-                                        <span v-if="demo.user" v-html="q3tohtml(demo.user.name)"></span>
+                                        <Link v-if="demo.user && demo.user.mdd_id" :href="`/profile/mdd/${demo.user.mdd_id}`" class="text-blue-400 hover:text-blue-300 transition-colors duration-200" v-html="q3tohtml(demo.user.name)"></Link>
+                                        <span v-else-if="demo.user" v-html="q3tohtml(demo.user.name)"></span>
                                         <span v-else-if="demo.source === 'demome'" class="text-cyan-400">Demome</span>
                                         <span v-else class="text-gray-500">Guest</span>
                                     </td>

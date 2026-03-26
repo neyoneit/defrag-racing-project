@@ -84,6 +84,28 @@ class DemoProcessorService
             $format = config('app.demo_compression_format', '7z');
             $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.' . $format;
 
+            // Block non-defrag demos (CPMA, OSP, Q3A, etc.)
+            $blockedGametypes = ['osp', 'q3a', 'cpma', 'q3uft', 'ra3', 'q3xp', 'q3w'];
+            $detectedGametype = $metadata['gametype'] ?? null;
+            if ($detectedGametype && in_array(strtolower($detectedGametype), $blockedGametypes)) {
+                // Clean up temp files
+                $originalTempDir = storage_path("app/demos/temp/{$demo->id}");
+                if (is_dir($originalTempDir)) {
+                    \Illuminate\Support\Facades\File::deleteDirectory($originalTempDir);
+                }
+                if (isset($compressedLocalPath) && file_exists($compressedLocalPath)) {
+                    unlink($compressedLocalPath);
+                }
+
+                $demo->update([
+                    'status' => 'failed',
+                    'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Rejected: not a Defrag demo (gametype: ' . $detectedGametype . ')',
+                ]);
+
+                Log::info("Rejected non-defrag demo", ['demo_id' => $demo->id, 'gametype' => $detectedGametype]);
+                return;
+            }
+
             // Determine status based on validity
             // If demo has ANY validity issues, mark as failed-validity
             Log::info('Checking validity for demo', [

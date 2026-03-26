@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
 use App\Models\RecordFlag;
+use App\Models\MapDifficultyRating;
 
 use App\Filters\MapFilters;
 use App\Services\NameMatcher;
@@ -371,6 +372,20 @@ class MapsController extends Controller
             ->limit(10)
             ->get();
 
+        // Difficulty rating
+        $difficultyRatings = MapDifficultyRating::where('map_id', $map->id)
+            ->selectRaw('rating, COUNT(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating')
+            ->toArray();
+        $difficultyTotal = array_sum($difficultyRatings);
+        $difficultyAvg = $difficultyTotal > 0
+            ? round(array_sum(array_map(fn($r, $c) => $r * $c, array_keys($difficultyRatings), array_values($difficultyRatings))) / $difficultyTotal, 1)
+            : null;
+        $userDifficultyRating = $request->user()
+            ? MapDifficultyRating::where('map_id', $map->id)->where('user_id', $request->user()->id)->value('rating')
+            : null;
+
         return Inertia::render('MapView')
             ->with('map', $map)
             ->with('cpmRecords', $cpmRecords)
@@ -385,7 +400,13 @@ class MapsController extends Controller
             ->with('showOldtop', ($showOldtop === 'true'))
             ->with('showOffline', ($showOffline === 'true'))
             ->with('servers', $servers)
-            ->with('publicMaplists', $publicMaplists);
+            ->with('publicMaplists', $publicMaplists)
+            ->with('difficultyRating', [
+                'average' => $difficultyAvg,
+                'total' => $difficultyTotal,
+                'distribution' => $difficultyRatings,
+                'user_rating' => $userDifficultyRating,
+            ]);
 
     }
 
@@ -673,6 +694,38 @@ class MapsController extends Controller
         $map->save();
 
         return response()->json(['success' => true, 'message' => "Map \"{$map->name}\" NSFW flag removed."]);
+    }
+
+    public function rateDifficulty(Request $request, $id)
+    {
+        $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+        ]);
+
+        $map = Map::findOrFail($id);
+
+        MapDifficultyRating::updateOrCreate(
+            ['map_id' => $map->id, 'user_id' => $request->user()->id],
+            ['rating' => $request->rating]
+        );
+
+        // Return updated stats
+        $ratings = MapDifficultyRating::where('map_id', $map->id)
+            ->selectRaw('rating, COUNT(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating')
+            ->toArray();
+        $total = array_sum($ratings);
+        $avg = $total > 0
+            ? round(array_sum(array_map(fn($r, $c) => $r * $c, array_keys($ratings), array_values($ratings))) / $total, 1)
+            : null;
+
+        return response()->json([
+            'average' => $avg,
+            'total' => $total,
+            'distribution' => $ratings,
+            'user_rating' => (int) $request->rating,
+        ]);
     }
 
     /**

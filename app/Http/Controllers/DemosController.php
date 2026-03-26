@@ -383,6 +383,16 @@ class DemosController extends Controller
                     });
                 }
 
+                $browseUploadedBy = $request->input('browse_uploaded_by');
+                if ($browseUploadedBy) {
+                    $uploaderUser = \App\Models\User::where('plain_name', $browseUploadedBy)->first();
+                    if ($uploaderUser) {
+                        $query->where('user_id', $uploaderUser->id);
+                    } else {
+                        $query->whereRaw('1 = 0'); // no match
+                    }
+                }
+
                 if ($browseSortBy === 'status') {
                     $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed')");
                 } else {
@@ -411,6 +421,7 @@ class DemosController extends Controller
             'confidenceFilter' => $confidenceFilter,
             'showOtherUserMatches' => $showOtherUserMatches,
             'uploadedBy' => $uploadedBy,
+            'browseUploadedBy' => $request->input('browse_uploaded_by', ''),
         ];
 
         if ($needs('userDemos')) $data['userDemos'] = $userDemos;
@@ -450,6 +461,23 @@ class DemosController extends Controller
         }
 
         return Inertia::render('Demos/Index', $data);
+    }
+
+    /**
+     * Autocomplete search for demo uploaders
+     */
+    public function searchUploaders(Request $request)
+    {
+        $q = $request->input('q', '');
+        if (strlen($q) < 2) return response()->json([]);
+
+        $users = \App\Models\User::where('plain_name', 'LIKE', "%{$q}%")
+            ->whereHas('uploadedDemos')
+            ->select('plain_name')
+            ->limit(10)
+            ->pluck('plain_name');
+
+        return response()->json($users);
     }
 
     /**

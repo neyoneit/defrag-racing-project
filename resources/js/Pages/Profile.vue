@@ -12,6 +12,9 @@
     import PhysicsOrderForm from '@/Pages/Profile/Partials/PhysicsOrderForm.vue';
     import EffectsIntensityForm from '@/Pages/Profile/Partials/EffectsIntensityForm.vue';
     import CopyButton from '@/Components/Basic/CopyButton.vue';
+    import DemoRenderButton from '@/Components/DemoRenderButton.vue';
+    import DemoFlagModal from '@/Components/DemoFlagModal.vue';
+    import axios from 'axios';
 
     const page = usePage();
     const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
@@ -756,6 +759,50 @@
         router.post(route('alias-suggestions.reject', suggestion.id), {}, {
             preserveScroll: true,
         });
+    };
+
+    // Demo render/flag state for profile records
+    const renderStates = ref({});
+    const showFlagModal = ref(false);
+    const flagRecordId = ref(null);
+    const flagDemoId = ref(null);
+
+    const getRenderedVideo = (record) => {
+        return record.rendered_videos?.[0] || null;
+    };
+
+    const canRequestRender = (record) => {
+        if (!page.props.auth?.user) return false;
+        if (getRenderedVideo(record)) return false;
+        if (renderStates.value[record.id]?.requested) return false;
+        return record.uploaded_demos?.length > 0;
+    };
+
+    const confirmRender = async (record) => {
+        const state = renderStates.value[record.id] || {};
+        if (state.requesting) return;
+        renderStates.value[record.id] = { ...state, requesting: true, error: null };
+        try {
+            const demoId = record.uploaded_demos[0].id;
+            await axios.post('/render/request', { record_id: record.id, demo_id: demoId });
+            renderStates.value[record.id] = { ...state, requesting: false, requested: true };
+            setTimeout(() => { window.location.href = '/youtube'; }, 500);
+        } catch (e) {
+            renderStates.value[record.id] = { ...state, requesting: false, error: e.response?.data?.error || 'Failed' };
+        }
+    };
+
+    const openFlagModal = (record) => {
+        flagRecordId.value = record.id;
+        flagDemoId.value = record.uploaded_demos?.[0]?.id || null;
+        showFlagModal.value = true;
+    };
+
+    const toggleYoutube = (record) => {
+        const video = getRenderedVideo(record);
+        if (video?.youtube_video_id) {
+            window.open(`https://www.youtube.com/watch?v=${video.youtube_video_id}`, '_blank');
+        }
     };
 
 </script>
@@ -1717,6 +1764,33 @@
                                             </div>
                                         </div>
 
+                                        <!-- Demo buttons -->
+                                        <div v-if="record.uploaded_demos?.length > 0" class="flex-shrink-0 flex items-center" @click.stop.prevent>
+                                            <span class="inline-flex items-center rounded text-xs font-medium overflow-hidden border border-blue-500/30">
+                                                <a :href="`/demos/${record.uploaded_demos[0].id}/download`" class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors" title="Download demo">
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                                                </a>
+                                                <DemoRenderButton
+                                                    :renderedVideo="getRenderedVideo(record)"
+                                                    :record="record"
+                                                    :canRequestRender="canRequestRender(record)"
+                                                    :renderRequesting="renderStates[record.id]?.requesting || false"
+                                                    :renderRequested="renderStates[record.id]?.requested || false"
+                                                    :renderError="renderStates[record.id]?.error || null"
+                                                    borderColor="border-blue-500/30"
+                                                    @toggle-youtube="toggleYoutube(record)"
+                                                    @confirm-render="confirmRender(record)"
+                                                />
+                                            </span>
+                                        </div>
+
+                                        <!-- Flag button -->
+                                        <div v-if="page.props.canReportDemos" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
+                                            <button @click="openFlagModal(record)" class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10" title="Flag record">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                                            </button>
+                                        </div>
+
                                         <!-- Time -->
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-right">
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
@@ -1729,6 +1803,7 @@
                                             </div>
                                         </div>
                                     </div>
+
                                 </Link>
                             </div>
 
@@ -1793,6 +1868,33 @@
                                             </div>
                                         </div>
 
+                                        <!-- Demo buttons -->
+                                        <div v-if="record.uploaded_demos?.length > 0" class="flex-shrink-0 flex items-center" @click.stop.prevent>
+                                            <span class="inline-flex items-center rounded text-xs font-medium overflow-hidden border border-purple-500/30">
+                                                <a :href="`/demos/${record.uploaded_demos[0].id}/download`" class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 hover:text-purple-200 transition-colors" title="Download demo">
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                                                </a>
+                                                <DemoRenderButton
+                                                    :renderedVideo="getRenderedVideo(record)"
+                                                    :record="record"
+                                                    :canRequestRender="canRequestRender(record)"
+                                                    :renderRequesting="renderStates[record.id]?.requesting || false"
+                                                    :renderRequested="renderStates[record.id]?.requested || false"
+                                                    :renderError="renderStates[record.id]?.error || null"
+                                                    borderColor="border-purple-500/30"
+                                                    @toggle-youtube="toggleYoutube(record)"
+                                                    @confirm-render="confirmRender(record)"
+                                                />
+                                            </span>
+                                        </div>
+
+                                        <!-- Flag button -->
+                                        <div v-if="page.props.canReportDemos" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
+                                            <button @click="openFlagModal(record)" class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10" title="Flag record">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                                            </button>
+                                        </div>
+
                                         <!-- Time -->
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-right">
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
@@ -1805,6 +1907,7 @@
                                             </div>
                                         </div>
                                     </div>
+
                                 </Link>
                             </div>
 
@@ -2450,6 +2553,14 @@
                 </div>
             </div>
         </Teleport>
+
+        <!-- Flag Modal -->
+        <DemoFlagModal
+            :show="showFlagModal"
+            :recordId="flagRecordId"
+            :demoId="flagDemoId"
+            @close="showFlagModal = false"
+        />
     </div>
 </template>
 

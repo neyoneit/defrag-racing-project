@@ -54,6 +54,7 @@ Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filt
 Route::get('/maps/{mapname}/demo-matches', [MapsController::class, 'getDemoMatches'])->name('maps.demoMatches');
 Route::post('/maps/{id}/flag-nsfw', [MapsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.flag-nsfw');
 Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.unflag-nsfw');
+Route::post('/maps/{id}/rate-difficulty', [MapsController::class, 'rateDifficulty'])->where('id', '[0-9]+')->middleware('auth')->name('maps.rate-difficulty');
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
@@ -95,6 +96,7 @@ Route::post('/models/batch-generate-still-thumbnails', [ModelsController::class,
 
 // Demo routes
 Route::get('/demos', [DemosController::class, 'index'])->name('demos.index');
+Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'])->name('demos.search-uploaders');
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 
 // Demo upload routes (requires authentication)
