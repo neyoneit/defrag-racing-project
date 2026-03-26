@@ -11,6 +11,7 @@ class Tag extends Model
         'name',
         'display_name',
         'category',
+        'note',
         'usage_count',
         'parent_tag_id',
     ];

@@ -204,14 +204,29 @@
 
     // Header items layout
     const defaultHeaderItems = [
-        { id: 'badges', visible: true, row: 1 },
+        { id: 'badge_admin', visible: true, row: 1 },
+        { id: 'badge_moderator', visible: true, row: 1 },
+        { id: 'badge_donor', visible: true, row: 1 },
+        { id: 'badge_community', visible: true, row: 1 },
+        { id: 'badge_tagger', visible: true, row: 1 },
+        { id: 'badge_assigner', visible: true, row: 1 },
         { id: 'clan', visible: true, row: 1 },
         { id: 'wr_counters', visible: true, row: 1 },
         { id: 'socials', visible: true, row: 2 },
     ];
     const headerItems = computed(() => {
-        const saved = layout.value.header_items;
+        let saved = layout.value.header_items;
         if (!saved || !saved.length) return defaultHeaderItems;
+
+        // Migrate old 'badges' group to individual items
+        if (saved.find(h => h.id === 'badges')) {
+            const oldBadges = saved.find(h => h.id === 'badges');
+            const badgeIds = ['badge_admin', 'badge_moderator', 'badge_donor', 'badge_community', 'badge_tagger', 'badge_assigner'];
+            const idx = saved.indexOf(oldBadges);
+            const newBadgeItems = badgeIds.map(id => ({ id, visible: oldBadges.visible, row: oldBadges.row }));
+            saved = [...saved.slice(0, idx), ...newBadgeItems, ...saved.slice(idx + 1)];
+        }
+
         // Ensure all items exist
         const items = [...saved];
         for (const def of defaultHeaderItems) {
@@ -832,54 +847,57 @@
 
                         <!-- Header Row 1 -->
                         <div v-if="hasRow1Items" class="flex items-center gap-3 flex-wrap">
-                            <!-- Badges -->
-                            <template v-if="showHeaderItem('badges') && headerItemRow('badges') === 1">
-                                <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
-                                    <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            <!-- Admin Badge -->
+                            <div v-if="user?.admin && showHeaderItem('badge_admin') && headerItemRow('badge_admin') === 1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_admin') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            </div>
+                            <!-- Moderator Badge -->
+                            <div v-if="user?.is_moderator && !user?.admin && showHeaderItem('badge_moderator') && headerItemRow('badge_moderator') === 1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_moderator') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+                            <!-- Donor Badge -->
+                            <div v-if="donorTier && showHeaderItem('badge_donor') && headerItemRow('badge_donor') === 1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_donor') }"
+                                :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
+                                <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
+                                    {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                </span>
+                                <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                 </div>
-                                <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
-                                    <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+                            <!-- Community/Defragger Badge -->
+                            <Link v-if="communityTier && showHeaderItem('badge_community') && headerItemRow('badge_community') === 1" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badge_community'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
+                                <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
+                                <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
+                                <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Defragger Score</div>
+                                    <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
                                 </div>
-                                <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }"
-                                    :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
-                                    <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
-                                    <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
-                                        {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
-                                    </span>
-                                    <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
-                                    </div>
+                            </Link>
+                            <!-- Tagger Badge -->
+                            <div v-if="tagCount > 0 && showHeaderItem('badge_tagger') && headerItemRow('badge_tagger') === 1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_tagger') }">
+                                <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
                                 </div>
-                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
-                                    <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
-                                    <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
-                                    <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
-                                        <div class="font-bold text-white mb-1">Defragger Score</div>
-                                        <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
-                                        <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
-                                        <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
-                                    </div>
-                                </Link>
-                                <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
-                                    <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
-                                    <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
-                                    </div>
+                            </div>
+                            <!-- Assigner Badge -->
+                            <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0 && showHeaderItem('badge_assigner') && headerItemRow('badge_assigner') === 1" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_assigner') }">
+                                <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
-                                <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
-                                    <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-                                    <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
-                                    <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
-                                    </div>
-                                </div>
-                            </template>
+                            </div>
                             <!-- Clan -->
                             <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 1" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
@@ -918,54 +936,57 @@
 
                         <!-- Header Row 2 -->
                         <div v-if="hasRow2Items || isOwnProfile" class="flex items-center gap-2 flex-wrap">
-                            <!-- Badges -->
-                            <template v-if="showHeaderItem('badges') && headerItemRow('badges') === 2">
-                                <div v-if="user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
-                                    <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            <!-- Admin Badge -->
+                            <div v-if="user?.admin && showHeaderItem('badge_admin') && headerItemRow('badge_admin') === 2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_admin') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            </div>
+                            <!-- Moderator Badge -->
+                            <div v-if="user?.is_moderator && !user?.admin && showHeaderItem('badge_moderator') && headerItemRow('badge_moderator') === 2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_moderator') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+                            <!-- Donor Badge -->
+                            <div v-if="donorTier && showHeaderItem('badge_donor') && headerItemRow('badge_donor') === 2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_donor') }"
+                                :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
+                                <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
+                                    {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                </span>
+                                <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
                                 </div>
-                                <div v-if="user?.is_moderator && !user?.admin" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
-                                    <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+                            <!-- Community/Defragger Badge -->
+                            <Link v-if="communityTier && showHeaderItem('badge_community') && headerItemRow('badge_community') === 2" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badge_community'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
+                                <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
+                                <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
+                                <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Defragger Score</div>
+                                    <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
                                 </div>
-                                <div v-if="donorTier" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }"
-                                    :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
-                                    <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
-                                    <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
-                                        {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
-                                    </span>
-                                    <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
-                                    </div>
+                            </Link>
+                            <!-- Tagger Badge -->
+                            <div v-if="tagCount > 0 && showHeaderItem('badge_tagger') && headerItemRow('badge_tagger') === 2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_tagger') }">
+                                <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
                                 </div>
-                                <Link v-if="communityTier" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badges'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
-                                    <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
-                                    <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
-                                    <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
-                                        <div class="font-bold text-white mb-1">Defragger Score</div>
-                                        <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
-                                        <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
-                                        <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
-                                    </div>
-                                </Link>
-                                <div v-if="tagCount > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
-                                    <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
-                                    <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
-                                    <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
-                                    </div>
+                            </div>
+                            <!-- Assigner Badge -->
+                            <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0 && showHeaderItem('badge_assigner') && headerItemRow('badge_assigner') === 2" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_assigner') }">
+                                <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
-                                <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badges') }">
-                                    <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
-                                    <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
-                                    <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
-                                        Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
-                                    </div>
-                                </div>
-                            </template>
+                            </div>
                             <!-- Clan -->
                             <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 2" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
@@ -1676,10 +1697,10 @@
                                     <div class="relative flex items-center gap-2 sm:gap-3 w-full">
                                         <!-- Rank -->
                                         <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                            <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-all"
+                                                :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-500 group-hover:text-white'">
+                                                {{ record.rank }}
+                                            </span>
                                         </div>
 
                                         <!-- Map Name + Copy -->
@@ -1752,10 +1773,10 @@
                                     <div class="relative flex items-center gap-2 sm:gap-3 w-full">
                                         <!-- Rank -->
                                         <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span v-if="record.rank === 1" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥇</span>
-                                            <span v-else-if="record.rank === 2" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥈</span>
-                                            <span v-else-if="record.rank === 3" class="text-sm sm:text-base leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">🥉</span>
-                                            <span v-else class="text-[10px] sm:text-xs font-bold tabular-nums text-gray-500 group-hover:text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ record.rank }}</span>
+                                            <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-all"
+                                                :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-500 group-hover:text-white'">
+                                                {{ record.rank }}
+                                            </span>
                                         </div>
 
                                         <!-- Map Name + Copy -->
