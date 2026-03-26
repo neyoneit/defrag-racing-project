@@ -82,7 +82,7 @@
             })
             .filter(c => c.points > 0)
             .sort((a, b) => b.points - a.points)
-            .slice(0, 5);
+            .slice(0, 12);
     };
 
     const getCategoryPoints = (score, cat) => {
@@ -91,6 +91,17 @@
         if (val === true) val = 1;
         if (val === false) val = 0;
         return Math.round(val * (props.weights[cat.key] || 0) * 100) / 100;
+    };
+
+    const hoveredRow = ref(null);
+    let hoverTimeout = null;
+    const onRowEnter = (id) => {
+        clearTimeout(hoverTimeout);
+        hoverTimeout = setTimeout(() => { hoveredRow.value = id; }, 100);
+    };
+    const onRowLeave = () => {
+        clearTimeout(hoverTimeout);
+        hoveredRow.value = null;
     };
 
     const loadData = (page = 1) => {
@@ -118,52 +129,47 @@
     <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
             <div class="mb-8">
-                <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Defragger Leaderboard</h1>
-                <p class="text-gray-400">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
+                <div class="flex justify-between gap-8">
+                    <div class="flex-1">
+                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Defragger Leaderboard</h1>
+                        <p class="text-gray-400">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
+                    </div>
+                    <div class="flex-shrink-0 flex flex-col items-end gap-3">
+                        <div v-if="myScore" class="flex items-center gap-3 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-2">
+                            <div class="text-xl font-bold text-gray-400">#{{ myScore.rank }}</div>
+                            <div>
+                                <div class="text-white font-semibold text-sm">Your Score</div>
+                                <div class="text-gray-400 text-xs">
+                                    {{ parseFloat(myScore.total_score).toFixed(1) }} pts
+                                    <span v-if="myTier" :style="{ color: myTier.color }" class="ml-1 font-semibold">
+                                        <img src="/images/svg/badge-defragger.png" class="w-3 h-3 inline" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
+                                        {{ myTier.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <div v-for="tier in tiers" :key="tier.key"
+                                class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"
+                                :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
+                                <img src="/images/svg/badge-defragger.png" class="w-3 h-3" :style="{ filter: `drop-shadow(0 0 2px ${tier.color})` }">
+                                <span class="font-bold" :style="{ color: tier.color }">{{ tier.name }}</span>
+                                <span class="text-[10px]" :style="{ color: tier.color + '99' }">{{ tier.min_score }}+</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-[22rem] relative z-10 pb-12">
+    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-[25rem] relative z-10 pb-12">
 
-        <!-- My Score Card -->
-        <div v-if="myScore" class="mb-6 bg-gray-800/50 border border-gray-700 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="text-2xl font-bold text-gray-400">#{{ myScore.rank }}</div>
-                    <div>
-                        <div class="text-white font-semibold">Your Score</div>
-                        <div class="text-gray-400 text-sm">
-                            {{ parseFloat(myScore.total_score).toFixed(1) }} points
-                            <span v-if="myTier" :style="{ color: myTier.color }" class="ml-2 font-semibold">
-                                <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5 inline" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
-                                {{ myTier.name }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <div v-for="cat in getTopCategories(myScore)" :key="cat.key"
-                        class="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300"
-                        :title="cat.desc">
-                        {{ cat.icon }} {{ cat.points }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tier Legend + How it works -->
-        <div class="mb-6 flex flex-wrap items-center gap-3">
-            <div v-for="tier in tiers" :key="tier.key"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm"
-                :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
-                <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${tier.color})` }">
-                <span class="font-bold" :style="{ color: tier.color }">{{ tier.name }}</span>
-                <span class="text-xs" :style="{ color: tier.color + '99' }">{{ tier.min_score }}+</span>
-            </div>
+        <!-- How it works - right aligned above table -->
+        <div class="flex justify-end mb-2">
             <div class="group/how relative">
                 <span class="text-xs text-gray-500 hover:text-gray-300 cursor-help transition border-b border-dashed border-gray-600">How it works</span>
-                <div class="absolute left-0 top-full mt-2 hidden group-hover/how:block bg-gray-900/95 border border-white/20 rounded-lg px-4 py-3 text-xs text-gray-200 shadow-xl z-50 pointer-events-none w-80">
+                <div class="absolute right-0 top-full mt-2 hidden group-hover/how:block bg-gray-900/95 border border-white/20 rounded-lg px-4 py-3 text-xs text-gray-200 shadow-xl z-50 pointer-events-none w-80">
                     <div class="font-bold text-white mb-2">How scoring works</div>
                     <div class="text-gray-400 mb-2">Points are earned by contributing to the community. Each action has a different weight:</div>
                     <div class="text-gray-300 space-y-0.5">
@@ -174,6 +180,7 @@
                         <div>+ Models uploaded & approved</div>
                         <div>+ Marketplace listings & reviews</div>
                         <div>+ Record flags (only approved)</div>
+                        <div>+ Map difficulty ratings</div>
                         <div>+ Video render requests (completed)</div>
                         <div>+ Clan creation & membership</div>
                         <div>+ Profile customization, social connections</div>
@@ -199,25 +206,27 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-700 text-gray-400 text-sm">
-                        <th class="text-left py-3 px-4 w-16">Rank</th>
-                        <th class="text-left py-3 px-4">Player</th>
-                        <th class="text-left py-3 px-4 hidden md:table-cell">Top Contributions</th>
-                        <th class="text-right py-3 px-4 w-24">Score</th>
+                        <th class="text-left py-3 px-4" style="width: 60px;">Rank</th>
+                        <th class="text-left py-3 px-4" style="width: 200px;">Player</th>
+                        <th class="text-left py-3 pr-4 hidden md:table-cell" style="padding-left: 160px;">Top Contributions</th>
+                        <th class="text-right py-3 px-4" style="width: 90px;">Score</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template v-for="score in scores.data" :key="score.id">
                         <tr @click="toggleExpand(score.id)"
+                            @mouseenter="onRowEnter(score.id)"
+                            @mouseleave="onRowLeave()"
                             class="border-b border-gray-700/50 hover:bg-blue-500/10 cursor-pointer transition-colors"
                             :class="expandedRow === score.id ? 'bg-blue-500/15 border-blue-500/30 !border-b-blue-500/30' : ''"
                             :style="getTier(score.community_badge_score) ? { borderLeft: `4px solid ${getTier(score.community_badge_score).color}` } : { borderLeft: '4px solid transparent' }">
-                            <td class="py-3 px-4">
+                            <td class="py-1.5 px-4">
                                 <span class="font-mono font-bold" :style="getTier(score.community_badge_score) ? { color: getTier(score.community_badge_score).color } : { color: '#9ca3af' }">{{ score.rank }}</span>
                             </td>
-                            <td class="py-3 px-4">
-                                <div class="flex items-center gap-3">
+                            <td class="py-1.5 px-4">
+                                <div class="flex items-center gap-2">
                                     <div :class="score.user?.avatar_effect ? 'avatar-effect-' + score.user.avatar_effect : ''" :style="score.user?.color ? `--effect-color: ${score.user.color}; --border-color: ${score.user.avatar_border_color || score.user.color}` : ''">
-                                        <img :src="score.user?.profile_photo_path ? '/storage/' + score.user.profile_photo_path : '/images/null.jpg'" class="w-8 h-8 rounded-full object-cover" :style="score.user?.avatar_border_color ? `border: 2px solid ${score.user.avatar_border_color}` : ''">
+                                        <img :src="score.user?.profile_photo_path ? '/storage/' + score.user.profile_photo_path : '/images/null.jpg'" class="w-6 h-6 rounded-full object-cover" :style="score.user?.avatar_border_color ? `border: 2px solid ${score.user.avatar_border_color}` : ''">
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <img v-if="score.user?.country" :src="`/images/flags/${score.user.country}.png`" class="w-5 h-3.5" onerror="this.style.display='none'">
@@ -229,15 +238,64 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-3 px-4 hidden md:table-cell">
+                            <td class="py-1.5 pr-4 hidden md:table-cell" style="padding-left: 160px;">
                                 <div class="flex gap-1.5 flex-wrap">
-                                    <span v-for="cat in getTopCategories(score)" :key="cat.key" class="px-1.5 py-0.5 bg-gray-700/50 rounded text-xs text-gray-400" :title="cat.desc">
+                                    <span v-for="cat in getTopCategories(score)" :key="cat.key"
+                                        class="group/chip relative px-1.5 py-0.5 bg-gray-700/50 rounded text-xs text-gray-400 hover:bg-blue-500/20 hover:text-blue-300 transition-colors cursor-help">
                                         {{ cat.icon }} {{ cat.value }}
+                                        <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover/chip:block bg-gray-900/95 border border-white/20 rounded-lg px-2.5 py-1.5 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                                            <div class="font-bold text-white">{{ cat.label }}</div>
+                                            <div class="text-green-400 text-[10px]">+{{ cat.points }} pts</div>
+                                        </div>
                                     </span>
                                 </div>
                             </td>
-                            <td class="py-3 px-4 text-right">
-                                <span class="font-semibold" :style="getTier(score.community_badge_score) ? { color: getTier(score.community_badge_score).color } : { color: 'white' }">{{ parseFloat(score.total_score).toFixed(1) }}</span>
+                            <td class="py-1.5 px-4 text-right relative">
+                                <div class="flex items-center justify-end gap-2">
+                                    <span class="font-semibold" :style="getTier(score.community_badge_score) ? { color: getTier(score.community_badge_score).color } : { color: 'white' }">{{ parseFloat(score.total_score).toFixed(1) }}</span>
+                                    <svg class="w-4 h-4 text-gray-600 group-hover:text-blue-400 transition-all duration-200" :class="expandedRow === score.id ? 'rotate-180 !text-blue-400' : 'animate-bounce'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Hover Peek Row -->
+                        <tr v-if="hoveredRow === score.id && expandedRow !== score.id" class="pointer-events-none">
+                            <td colspan="4" class="!p-0 border-0 overflow-hidden">
+                                <div class="peek-reveal" style="position: relative; z-index: 10;">
+                                    <div class="peek-content">
+                                        <div class="bg-black/40 px-4 pt-3 pb-4">
+                                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                                <div v-for="cat in categories" :key="cat.key"
+                                                    class="flex items-center gap-2 px-2 py-1.5 rounded"
+                                                    :class="getCategoryPoints(score, cat) > 0 ? 'bg-gray-700/50 text-gray-200' : 'text-gray-600'">
+                                                    <span class="text-sm">{{ cat.icon }}</span>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="text-xs truncate">{{ cat.label }}</div>
+                                                        <div class="text-xs font-mono">
+                                                            <span>{{ score[cat.key] === true ? 'Yes' : score[cat.key] === false ? 'No' : score[cat.key] }}</span>
+                                                            <span v-if="getCategoryPoints(score, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(score, cat) }})</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3 pt-3 border-t border-gray-700/50 flex items-center gap-4 text-sm">
+                                                <span class="text-gray-400">Total: <span class="text-white font-bold">{{ parseFloat(score.total_score).toFixed(1) }}</span></span>
+                                                <span class="text-gray-400">Community: <span class="text-white font-bold">{{ parseFloat(score.community_badge_score).toFixed(1) }}</span></span>
+                                                <span v-if="getTier(score.community_badge_score)" class="inline-flex items-center gap-1 font-semibold" :style="{ color: getTier(score.community_badge_score)?.color }">
+                                                    <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${getTier(score.community_badge_score).color})` }">
+                                                    {{ getTier(score.community_badge_score)?.name }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="peek-fade">
+                                        <div class="absolute inset-0 flex items-center justify-around pointer-events-none px-8">
+                                            <div v-for="i in 9" :key="i" class="peek-chevron" :style="{ animationDelay: (i * 0.08) + 's' }">
+                                                <svg class="w-3.5 h-3.5 text-blue-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
 
@@ -279,7 +337,7 @@
 
             <!-- Pagination -->
             <div v-if="scores.last_page > 1" class="p-4 border-t border-gray-700">
-                <Pagination :data="scores" @page-changed="loadData" />
+                <Pagination :last_page="scores.last_page" :current_page="scores.current_page" :link="scores.first_page_url" :only="['scores']" />
             </div>
         </div>
 
@@ -290,3 +348,42 @@
         </div>
     </div>
 </template>
+
+<style scoped>
+.peek-reveal {
+    position: relative;
+    max-height: 0;
+    overflow: hidden;
+    animation: peekOpen 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.peek-fade {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, transparent, rgb(17 24 39 / 0.95));
+    pointer-events: none;
+}
+
+.peek-chevron {
+    animation: chevronBounce 1s ease-in-out infinite;
+}
+
+@keyframes chevronBounce {
+    0%, 100% { transform: translateY(-3px); opacity: 0.4; }
+    50% { transform: translateY(3px); opacity: 1; }
+}
+
+@keyframes peekOpen {
+    from {
+        max-height: 0;
+        opacity: 0;
+    }
+    to {
+        max-height: 16px;
+        opacity: 1;
+    }
+}
+</style>
