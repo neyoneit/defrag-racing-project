@@ -11,6 +11,7 @@ use App\Models\Server;
 use App\Models\Tournament;
 use App\Models\MddProfile;
 use App\Models\UploadedDemo;
+use App\Models\Record;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
@@ -59,8 +60,10 @@ class WebController extends Controller
         });
 
         $activePlayers = Cache::remember('home:active_players', 3600, function () {
-            return MddProfile::where('updated_at', '>=', now()->subDays(30))->count();
+            return Record::where('created_at', '>=', now()->subDays(30))->distinct('mdd_id')->count('mdd_id');
         });
+
+        $totalRecords = Cache::remember('home:total_records', 3600, fn () => Record::count());
 
         return Inertia::render('Home')
             ->with('latestAnnouncement', $announcements['latest'])
@@ -71,7 +74,8 @@ class WebController extends Controller
             ->with('totalMaps', $totalMaps)
             ->with('totalDemos', $totalDemos)
             ->with('activeServers', $serverData['activeServers'])
-            ->with('activePlayers', $activePlayers);
+            ->with('activePlayers', $activePlayers)
+            ->with('totalRecords', $totalRecords);
     }
 
     function sortServers($servers) {

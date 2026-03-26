@@ -20,6 +20,14 @@ class RecordsController extends Controller
 
     public function index(Request $request) {
         $mode = $request->input('mode', 'all');
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        if (!$isPartial) {
+            return Inertia::render('RecordsView')
+                ->with('vq3Records', null)
+                ->with('cpmRecords', null);
+        }
+
         $vq3Page = max(1, (int) $request->input('vq3_page', 1));
         $cpmPage = max(1, (int) $request->input('cpm_page', 1));
 

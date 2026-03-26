@@ -3,7 +3,7 @@
     import { Link } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import ClanCard from './ClanCard.vue';
-    import { ref, computed, onMounted } from 'vue';
+    import { ref, computed, onMounted, watch } from 'vue';
     import InvitePlayerModal from './InvitePlayerModal.vue';
     import KickPlayerModal from './KickPlayerModal.vue';
     import LeaveClanModal from './LeaveClanModal.vue';
@@ -41,26 +41,44 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
     onMounted(() => {
         if (!props.clans) {
+            const start = Date.now();
             router.reload({
                 only: ['clans'],
-                onFinish: () => { clansLoaded.value = true; }
+                onFinish: () => {
+                    const remaining = 600 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { clansLoaded.value = true; }, remaining);
+                    } else {
+                        clansLoaded.value = true;
+                    }
+                }
             });
         } else {
             clansLoaded.value = true;
         }
     });
 
+    const sortLoading = ref(false);
     const sortClans = (field) => {
         const newDir = props.currentSort === field && props.currentDir === 'desc' ? 'asc' : 'desc';
+        sortLoading.value = true;
         router.get(route('clans.index'), { sort: field, dir: newDir }, {
             preserveState: true,
-            preserveScroll: true
+            preserveScroll: true,
+            only: ['clans', 'currentSort', 'currentDir'],
+            onFinish: () => { sortLoading.value = false; },
         });
     };
 
     const showInvitiationsModal = ref(false);
 
     const showInvitePlayer = ref(false);
+    const usersLoaded = ref(!!props.users);
+    watch(() => showInvitePlayer.value, (val) => {
+        if (val && !usersLoaded.value) {
+            router.reload({ only: ['users'], onFinish: () => { usersLoaded.value = true; } });
+        }
+    });
     const showKickPlayer = ref(false);
     const showTransferOwnership = ref(false);
     const showLeaveClan = ref(false);
@@ -473,7 +491,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                         <template v-if="$page.props.auth.user">
                             <button
                                 @click="showInvitations"
-                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600/20 to-blue-800/20 hover:from-blue-600/30 hover:to-blue-800/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
+                                class="flex items-center gap-2 px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-gray-900/60 border border-blue-500/30 hover:border-blue-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
@@ -521,7 +539,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- My Clan Section -->
-            <div v-if="myClan" class="mb-12">
+            <div v-if="myClan" class="mb-12 bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 p-6">
                 <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
@@ -548,7 +566,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Edit Clan Section -->
                         <div v-if="showEditClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
                                     <h3 class="text-lg font-medium text-white">Edit Clan</h3>
                                     <PrimaryButton @click="submitForm" type="button">
@@ -677,7 +695,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             </div>
 
                                             <!-- Effect Preview Column -->
-                                            <div class="bg-black/40 rounded-lg py-12 px-4 relative overflow-hidden border border-white/10">
+                                            <div class="bg-black/40 backdrop-blur-sm rounded-lg py-12 px-4 relative overflow-hidden border border-white/10">
                                                 <div class="relative py-6 px-8">
                                                     <!-- Particles Effect Preview -->
                                                     <div v-if="form.name_effect === 'particles'" class="absolute inset-0 -inset-x-24 -inset-y-12 pointer-events-none">
@@ -856,7 +874,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                             </div>
 
                                             <!-- Avatar Preview -->
-                                            <div class="bg-black/40 rounded-lg p-6 flex items-center justify-center border border-white/10">
+                                            <div class="bg-black/40 backdrop-blur-sm rounded-lg p-6 flex items-center justify-center border border-white/10">
                                                 <div class="relative">
                                                     <!-- Glow Effect -->
                                                     <div v-if="form.avatar_effect === 'glow'" class="absolute inset-0 rounded-full opacity-50" :style="`box-shadow: 0 0 20px ${previewAvatarEffectColor};`"></div>
@@ -1118,7 +1136,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Member Notes Section -->
                         <div v-if="showEditMemberNotes && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Member Details</h3>
                                 </div>
@@ -1136,7 +1154,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Invite Player Panel -->
                         <div v-if="showInvitePlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Invite Player</h3>
                                 </div>
@@ -1166,7 +1184,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Kick Player Panel -->
                         <div v-if="showKickPlayer && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Kick Player</h3>
                                 </div>
@@ -1196,7 +1214,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Transfer Ownership Panel -->
                         <div v-if="showTransferOwnership && myClan.admin_id === $page.props.auth.user.id" class="mt-6 relative z-50">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Transfer Ownership</h3>
                                 </div>
@@ -1226,7 +1244,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Leave Clan Panel -->
                         <div v-if="showLeaveClan && myClan.admin_id !== $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Leave Clan</h3>
                                 </div>
@@ -1247,7 +1265,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Dismantle Clan Panel -->
                         <div v-if="showDismantleClan && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5">
                                     <h3 class="text-lg font-medium text-white">Dismantle Clan</h3>
                                 </div>
@@ -1268,7 +1286,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 
                         <!-- Pending Join Requests Panel (admin only) -->
                         <div v-if="showJoinRequests && myClan.admin_id === $page.props.auth.user.id" class="mt-6">
-                            <div class="bg-white/5 rounded-2xl border border-white/10">
+                            <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
                                 <div class="px-6 py-4 bg-white/5 flex items-center justify-between">
                                     <h3 class="text-lg font-medium text-white">Pending Join Requests</h3>
                                     <button
@@ -1392,7 +1410,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                     <h2 class="text-2xl font-bold text-white">All Clans</h2>
 
                     <!-- Sorting Controls -->
-                    <div class="flex flex-wrap gap-2 relative z-10">
+                    <div class="flex flex-wrap gap-2 relative z-10 bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 p-2">
                         <button
                             @click="sortClans('name')"
                             :class="[
@@ -1468,13 +1486,18 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                 </div>
 
                 <!-- Loading skeleton -->
-                <div v-if="!clansLoaded" class="grid grid-cols-1 gap-4">
-                    <div v-for="i in 6" :key="i" class="bg-black/40 rounded-xl p-4 border border-white/10 animate-pulse">
+                <div v-if="!clansLoaded || sortLoading" class="grid grid-cols-1 gap-4">
+                    <div v-for="i in 6" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 animate-pulse">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-white/10 rounded-full"></div>
-                            <div class="flex-1 space-y-2">
-                                <div class="h-5 bg-white/10 rounded w-1/3"></div>
-                                <div class="h-4 bg-white/5 rounded w-1/2"></div>
+                            <div class="w-14 h-14 bg-white/10 rounded-full"></div>
+                            <div class="flex-1 space-y-3">
+                                <div class="h-5 bg-white/15 rounded w-1/3"></div>
+                                <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                            </div>
+                            <div class="hidden sm:flex gap-3">
+                                <div class="w-24 h-16 bg-white/10 rounded-xl"></div>
+                                <div class="w-24 h-16 bg-white/10 rounded-xl"></div>
+                                <div class="w-24 h-16 bg-white/10 rounded-xl"></div>
                             </div>
                         </div>
                     </div>

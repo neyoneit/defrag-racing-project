@@ -193,7 +193,7 @@
             <div v-if="modelsData.pinned?.length > 0 && viewerLoaded" class="mb-6">
                 <div :class="modelsData.pinned.length === 1 ? 'grid grid-cols-1 max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-4'">
                     <div v-for="pinned in modelsData.pinned" :key="pinned.id"
-                        class="bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                        class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 overflow-hidden">
                         <div class="relative overflow-hidden" style="height: 400px;">
                             <component :is="ModelViewerComponent"
                                 v-if="getPinnedModelPath(pinned)"
@@ -227,23 +227,23 @@
 
             <!-- Stats Row -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-center">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-blue-400">{{ modelsData.total }}</div>
                     <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Models</div>
                 </div>
-                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-center">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-purple-400">{{ formatNumber(modelsData.total_downloads) }}</div>
                     <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Downloads</div>
                 </div>
-                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-center">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-cyan-400">{{ formatNumber(modelsData.total_views) }}</div>
                     <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Views</div>
                 </div>
-                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-center">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-emerald-400">{{ playerModels.length }}</div>
                     <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Player</div>
                 </div>
-                <div class="bg-black/40 rounded-xl p-4 border border-white/5 text-center">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 text-center">
                     <div class="text-2xl font-black text-orange-400">{{ weaponModels.length }}</div>
                     <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">Weapon</div>
                 </div>
@@ -252,7 +252,7 @@
             <!-- Highlighted Model + Timeline -->
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
                 <!-- Most Popular Model (3/5) -->
-                <div v-if="modelsData.highlighted" class="lg:col-span-3 bg-gradient-to-br from-blue-500/5 via-purple-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl p-4 relative overflow-hidden">
+                <div v-if="modelsData.highlighted" class="lg:col-span-3 bg-gradient-to-br from-blue-500/5 via-purple-500/10 to-blue-500/5 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 relative overflow-hidden">
                     <div class="absolute top-3 right-3">
                         <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400">MOST POPULAR</span>
                     </div>
@@ -293,7 +293,7 @@
                 </div>
 
                 <!-- Models Timeline (2/5) -->
-                <div class="lg:col-span-2 bg-black/40 rounded-xl p-4 border border-white/5">
+                <div class="lg:col-span-2 bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5">
                     <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">Models Timeline</h3>
                     <div v-if="timelineYears.length > 0" class="space-y-1.5">
                         <div v-for="year in timelineYears" :key="year" class="flex items-center gap-2">
@@ -312,7 +312,7 @@
 
             <!-- Models by Base Model -->
             <div v-if="groupedByBase.length > 0" class="space-y-4 mb-6">
-                <div v-for="group in groupedByBase" :key="group.base" class="bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                <div v-for="group in groupedByBase" :key="group.base" class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 overflow-hidden">
                     <div class="flex items-center justify-between px-4 pt-3 pb-2">
                         <div class="flex items-center gap-2">
                             <Link :href="route('models.show', getGroupLinkId(group))" class="text-sm font-black text-white uppercase tracking-wider hover:text-blue-400 transition">{{ group.base }}</Link>

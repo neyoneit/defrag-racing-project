@@ -197,7 +197,7 @@ const colorMap = {
 </script>
 
 <template>
-    <div class="rounded-xl bg-black/60 border border-white/10">
+    <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
         <div class="p-4">
             <!-- Header -->
             <div class="flex items-center justify-between mb-3">

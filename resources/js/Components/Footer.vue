@@ -30,7 +30,7 @@
 </script>
 
 <template>
-    <footer class="border-t border-grayop-700">
+    <footer class="border-t border-gray-700 bg-gray-900/60 backdrop-blur-sm">
         <div class="max-w-8xl mt-5 pb-5 flex flex-col items-center mx-auto">
             <!-- media bottom -->
             <div class="flex space-x-4 flex-grow sm:flex-grow-0 mx-auto">
@@ -80,6 +80,7 @@
                 <div class="max-w-8xl mx-auto mt-2">
                     <!-- Navigation Links -->
                     <div class="space-x-8 md:-my-px md:flex pb-1">
+                        <FooterLink :href="'/terms-of-service'" :active="false" text="Terms of Service" />
                         <FooterLink v-for="page in footerPages" :key="page.slug" :href="pageRoute(page.slug)" :active="isActiveRoute(page.slug)" :text="page.title" />
                     </div>
                 </div>

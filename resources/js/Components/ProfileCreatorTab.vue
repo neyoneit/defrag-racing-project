@@ -208,7 +208,7 @@
             <!-- Most Popular Maps - VQ3 / CPM -->
             <div v-if="highlightedMapData.vq3 || highlightedMapData.cpm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <!-- VQ3 Most Popular -->
-                <div v-if="highlightedMapData.vq3" class="bg-gradient-to-br from-blue-500/5 via-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl p-4 relative overflow-hidden">
+                <div v-if="highlightedMapData.vq3" class="bg-gradient-to-br from-blue-500/5 via-blue-500/10 to-blue-500/5 backdrop-blur-sm border border-blue-500/20 rounded-xl p-4 relative overflow-hidden">
                     <div class="absolute top-3 right-3">
                         <span class="text-xs font-black px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-400">VQ3</span>
                     </div>
@@ -237,7 +237,7 @@
                 </div>
 
                 <!-- CPM Most Popular -->
-                <div v-if="highlightedMapData.cpm" class="bg-gradient-to-br from-purple-500/5 via-purple-500/10 to-purple-500/5 border border-purple-500/20 rounded-xl p-4 relative overflow-hidden">
+                <div v-if="highlightedMapData.cpm" class="bg-gradient-to-br from-purple-500/5 via-purple-500/10 to-purple-500/5 backdrop-blur-sm border border-purple-500/20 rounded-xl p-4 relative overflow-hidden">
                     <div class="absolute top-3 right-3">
                         <span class="text-xs font-black px-2 py-0.5 rounded bg-purple-500/20 border border-purple-500/30 text-purple-400">CPM</span>
                     </div>
@@ -267,7 +267,7 @@
             </div>
 
             <!-- Stats Overview -->
-            <div class="bg-black/40 rounded-xl border border-white/5 mb-6 overflow-hidden">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 mb-6 overflow-hidden">
                 <!-- Top row (maps left, records right) -->
                 <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5 border-b border-white/5">
                     <div v-if="stats.oldest_map" class="p-4">
@@ -343,7 +343,7 @@
             </div>
 
             <!-- Maps Grid -->
-            <div class="bg-black/40 rounded-xl p-4 border border-white/5 mb-6">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 mb-6">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-4">
                     <h3 class="text-sm font-black text-white uppercase tracking-wider">Maps ({{ formatNumber(maps.total) }})</h3>
 
@@ -481,7 +481,7 @@
                 class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <template v-for="physics in ['vq3', 'cpm']" :key="physics">
                     <div v-if="topPlayersData.completionists_by_physics[physics]"
-                        class="rounded-xl border overflow-hidden"
+                        class="rounded-xl border overflow-hidden backdrop-blur-sm"
                         :class="physics === 'vq3' ? 'bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20' : 'bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20'">
                         <!-- Hall of Fame (100%) -->
                         <div v-if="topPlayersData.completionists_by_physics[physics]?.completionists?.length" class="p-4 border-b border-white/5">
@@ -532,7 +532,7 @@
             </div>
 
             <!-- Top Players -->
-            <div class="bg-black/40 rounded-xl p-4 border border-white/5 mb-6">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 mb-6">
                 <h3 class="text-sm font-black text-white uppercase tracking-wider mb-4">Top Players on These Maps</h3>
 
                 <div v-if="loadingTopPlayers" class="flex items-center justify-center py-8">
@@ -588,7 +588,7 @@
             <!-- Weapon Breakdown + Timeline side by side -->
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6">
                 <!-- Weapon Breakdown (3/5) -->
-                <div class="lg:col-span-3 bg-black/40 rounded-xl border border-white/5 overflow-hidden">
+                <div class="lg:col-span-3 bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 overflow-hidden">
                     <h3 class="text-sm font-black text-white uppercase tracking-wider px-4 pt-3 pb-2">Weapon Breakdown</h3>
                     <table class="w-full text-xs">
                         <thead>
@@ -636,7 +636,7 @@
                 </div>
 
                 <!-- Creation Timeline (2/5) -->
-                <div class="lg:col-span-2 bg-black/40 rounded-xl p-4 border border-white/5">
+                <div class="lg:col-span-2 bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5">
                     <h3 class="text-sm font-black text-white uppercase tracking-wider mb-3">Maps Timeline</h3>
                     <div v-if="heatmapYears.length > 0" class="space-y-1.5">
                         <div v-for="year in heatmapYears" :key="year" class="flex items-center gap-2">
@@ -655,7 +655,7 @@
             </div>
 
             <!-- Recent Activity -->
-            <div class="bg-black/40 rounded-xl p-4 border border-white/5 mb-6">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/5 mb-6">
                 <h3 class="text-sm font-black text-white uppercase tracking-wider mb-4">Recent Activity on These Maps</h3>
 
                 <div v-if="loadingRecentActivity" class="flex items-center justify-center py-8">

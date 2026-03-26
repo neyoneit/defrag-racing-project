@@ -53,7 +53,7 @@ const submit = () => {
             <div class="w-full max-w-md">
 
             <!-- 2FA Card -->
-            <div class="bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
+            <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                 <!-- Description -->
                 <div class="mb-6 text-sm text-gray-400">
                     <template v-if="!recovery">

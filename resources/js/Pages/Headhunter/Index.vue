@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
+import Pagination from '@/Components/Basic/Pagination.vue';
 
 const props = defineProps({
     challenges: Object,
@@ -11,9 +12,17 @@ const challengesLoaded = ref(false);
 
 onMounted(() => {
     if (!props.challenges) {
+        const start = Date.now();
         router.reload({
             only: ['challenges'],
-            onFinish: () => { challengesLoaded.value = true; }
+            onFinish: () => {
+                const remaining = 400 - (Date.now() - start);
+                if (remaining > 0) {
+                    setTimeout(() => { challengesLoaded.value = true; }, remaining);
+                } else {
+                    challengesLoaded.value = true;
+                }
+            }
         });
     } else {
         challengesLoaded.value = true;
@@ -114,7 +123,7 @@ const getStatusColor = (status) => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
 
             <!-- Disclaimer Banner -->
-            <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+            <div class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-6">
                 <div class="flex gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
@@ -133,12 +142,12 @@ const getStatusColor = (status) => {
                         @input="filterChallenges"
                         type="text"
                         placeholder="Search by title or map..."
-                        class="bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                        class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                     />
                     <div class="relative">
                         <button
                             @click="statusDropdownOpen = !statusDropdownOpen"
-                            class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                            class="w-full bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-white text-left flex items-center justify-between hover:border-white/20 transition-colors focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                         >
                             <span>{{ selectedStatusLabel() }}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-400 transition-transform" :class="statusDropdownOpen ? 'rotate-180' : ''">
@@ -163,7 +172,7 @@ const getStatusColor = (status) => {
 
             <!-- Loading skeleton -->
             <div v-if="!challengesLoaded" class="space-y-4">
-                <div v-for="i in 6" :key="i" class="bg-black/40 rounded-xl p-6 border border-white/10 animate-pulse">
+                <div v-for="i in 6" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 animate-pulse">
                     <div class="flex gap-4">
                         <div class="w-20 h-20 bg-white/10 rounded-lg flex-shrink-0 hidden sm:block"></div>
                         <div class="flex-1 space-y-3">
@@ -295,24 +304,8 @@ const getStatusColor = (status) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="challenges && challenges.data && challenges.data.length > 0" class="mt-6 flex justify-center">
-                <nav class="flex items-center gap-2">
-                    <component
-                        :is="link.url ? Link : 'span'"
-                        v-for="link in challenges.links"
-                        :key="link.label"
-                        :href="link.url"
-                        v-html="link.label"
-                        :class="[
-                            'px-4 py-2 rounded-lg font-semibold transition-all',
-                            link.active
-                                ? 'bg-blue-600 text-white'
-                                : link.url
-                                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-                                : 'bg-gray-800/30 text-gray-600 cursor-not-allowed'
-                        ]"
-                    />
-                </nav>
+            <div v-if="challenges && challenges.last_page > 1" class="mt-6 flex justify-center">
+                <Pagination :current_page="challenges.current_page" :last_page="challenges.last_page" :link="challenges.first_page_url" :only="['challenges']" />
             </div>
         </div>
     </div>

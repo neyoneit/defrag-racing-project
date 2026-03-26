@@ -148,10 +148,16 @@
 
         // Lazy-load rating data (page renders immediately with header/filters)
         if (!props.vq3Ratings && !props.cpmRatings) {
+            const start = Date.now();
             router.reload({
                 only: ['vq3Ratings', 'cpmRatings', 'myVq3Rating', 'myCpmRating'],
                 onFinish: () => {
-                    ratingsLoaded.value = true;
+                    const remaining = 400 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { ratingsLoaded.value = true; }, remaining);
+                    } else {
+                        ratingsLoaded.value = true;
+                    }
                 }
             });
         } else {
@@ -205,7 +211,7 @@
                     <!-- Right: Filters -->
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 w-full lg:w-auto">
                         <!-- Ranking Type Toggle (Separate Block) -->
-                        <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 w-full sm:w-auto sm:min-w-[270px]">
+                        <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-2.5 w-full sm:w-auto sm:min-w-[270px]">
                             <div class="flex sm:flex-col gap-2">
                                 <button
                                     v-for="rt in rankingtypes"
@@ -229,7 +235,7 @@
                         </div>
 
                         <!-- Categories & Gametypes -->
-                        <div class="space-y-2 w-full sm:w-auto">
+                        <div class="space-y-2 w-full sm:w-auto bg-black/40 backdrop-blur-sm rounded-xl p-2.5">
                             <!-- Row 1: Categories -->
                             <div class="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
                                 <button
@@ -281,7 +287,7 @@
             <!-- My Ratings Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- My VQ3 Rating -->
-                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-blue-400">
@@ -302,7 +308,7 @@
                 </div>
 
                 <!-- My CPM Rating -->
-                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-purple-400">
@@ -325,7 +331,7 @@
 
             <!-- Loading skeleton while ratings load -->
             <div v-if="!ratingsLoaded" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div v-for="i in 2" :key="i" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-pulse">
+                <div v-for="i in 2" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-white/10 animate-pulse">
                     <div class="bg-white/5 border-b border-white/10 px-4 py-3">
                         <div class="h-6 bg-white/10 rounded w-40"></div>
                     </div>
@@ -338,7 +344,7 @@
             <!-- All Rankings Section -->
             <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- VQ3 Rankings -->
-                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
@@ -370,7 +376,7 @@
                 </div>
 
                 <!-- CPM Rankings -->
-                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">

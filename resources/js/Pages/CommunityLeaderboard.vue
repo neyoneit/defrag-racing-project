@@ -93,6 +93,17 @@
         return Math.round(val * (props.weights[cat.key] || 0) * 100) / 100;
     };
 
+    const myScoreExpanded = ref(false);
+    const myScoreHovered = ref(false);
+    let myScoreHoverTimeout = null;
+    const onMyScoreEnter = () => {
+        clearTimeout(myScoreHoverTimeout);
+        myScoreHoverTimeout = setTimeout(() => { myScoreHovered.value = true; }, 100);
+    };
+    const onMyScoreLeave = () => {
+        clearTimeout(myScoreHoverTimeout);
+        myScoreHovered.value = false;
+    };
     const hoveredRow = ref(null);
     let hoverTimeout = null;
     const onRowEnter = (id) => {
@@ -117,7 +128,18 @@
 
     onMounted(() => {
         if (!props.scores) {
-            loadData();
+            const start = Date.now();
+            router.reload({
+                only: ['scores'],
+                onFinish: () => {
+                    const remaining = 350 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { loaded.value = true; }, remaining);
+                    } else {
+                        loaded.value = true;
+                    }
+                }
+            });
         }
     });
 </script>
@@ -129,41 +151,24 @@
     <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
             <div class="mb-8">
-                <div class="flex justify-between gap-8">
-                    <div class="flex-1">
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Defragger Leaderboard</h1>
-                        <p class="text-gray-400">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
-                    </div>
-                    <div class="flex-shrink-0 flex flex-col items-end gap-3">
-                        <div v-if="myScore" class="flex items-center gap-3 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-2">
-                            <div class="text-xl font-bold text-gray-400">#{{ myScore.rank }}</div>
-                            <div>
-                                <div class="text-white font-semibold text-sm">Your Score</div>
-                                <div class="text-gray-400 text-xs">
-                                    {{ parseFloat(myScore.total_score).toFixed(1) }} pts
-                                    <span v-if="myTier" :style="{ color: myTier.color }" class="ml-1 font-semibold">
-                                        <img src="/images/svg/badge-defragger.png" class="w-3 h-3 inline" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
-                                        {{ myTier.name }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap justify-end gap-2">
-                            <div v-for="tier in tiers" :key="tier.key"
-                                class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"
-                                :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
-                                <img src="/images/svg/badge-defragger.png" class="w-3 h-3" :style="{ filter: `drop-shadow(0 0 2px ${tier.color})` }">
-                                <span class="font-bold" :style="{ color: tier.color }">{{ tier.name }}</span>
-                                <span class="text-[10px]" :style="{ color: tier.color + '99' }">{{ tier.min_score }}+</span>
-                            </div>
+                <div class="flex items-center justify-between gap-4 mb-2">
+                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Defragger Leaderboard</h1>
+                    <div class="flex-shrink-0 flex flex-wrap justify-end gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
+                        <div v-for="tier in tiers" :key="tier.key"
+                            class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"
+                            :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
+                            <img src="/images/svg/badge-defragger.png" class="w-3 h-3" :style="{ filter: `drop-shadow(0 0 2px ${tier.color})` }">
+                            <span class="font-bold" :style="{ color: tier.color }">{{ tier.name }}</span>
+                            <span class="text-[10px]" :style="{ color: tier.color + '99' }">{{ tier.min_score }}+</span>
                         </div>
                     </div>
                 </div>
+                <p class="text-gray-500 text-sm bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
             </div>
         </div>
     </div>
 
-    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-[25rem] relative z-10 pb-12">
+    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-[27rem] relative z-10 pb-12">
 
         <!-- How it works - right aligned above table -->
         <div class="flex justify-end mb-2">
@@ -196,13 +201,115 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="!loaded" class="text-center py-20">
-            <div class="inline-block w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-            <div class="text-gray-400 mt-3">Loading leaderboard...</div>
+        <!-- My Score Card -->
+        <div v-if="myScore"
+            @click="myScoreExpanded = !myScoreExpanded"
+            @mouseenter="onMyScoreEnter"
+            @mouseleave="onMyScoreLeave"
+            class="mb-3 bg-black/40 backdrop-blur-sm border border-yellow-500/20 rounded-lg cursor-pointer hover:bg-yellow-500/5 transition-colors">
+            <div class="flex items-center gap-4 px-4 py-2.5">
+                <div class="text-xl font-bold" :style="myTier ? { color: myTier.color } : { color: '#9ca3af' }">#{{ myScore.rank }}</div>
+                <div class="flex items-center gap-2">
+                    <img :src="$page.props.auth?.user?.profile_photo_path ? '/storage/' + $page.props.auth.user.profile_photo_path : '/images/null.jpg'" class="w-6 h-6 rounded-full object-cover">
+                    <span class="font-semibold text-yellow-300 text-sm">Your Score</span>
+                </div>
+                <div class="flex gap-1.5 flex-wrap flex-1 hidden md:flex">
+                    <span v-for="cat in getTopCategories(myScore)" :key="cat.key"
+                        class="px-1.5 py-0.5 bg-gray-700/50 rounded text-xs text-gray-400">
+                        {{ cat.icon }} {{ cat.value }}
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 ml-auto">
+                    <span class="font-semibold" :style="myTier ? { color: myTier.color } : { color: 'white' }">{{ parseFloat(myScore.total_score).toFixed(1) }}</span>
+                    <span v-if="myTier" class="inline-flex items-center gap-1 text-xs font-semibold" :style="{ color: myTier.color }">
+                        <img src="/images/svg/badge-defragger.png" class="w-3 h-3" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
+                        {{ myTier.name }}
+                    </span>
+                    <svg class="w-4 h-4 text-gray-600 transition-all duration-200" :class="myScoreExpanded ? 'rotate-180 !text-yellow-400' : 'animate-bounce'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </div>
+            <!-- Hover peek -->
+            <div v-if="myScoreHovered && !myScoreExpanded" class="overflow-hidden">
+                <div class="peek-reveal">
+                    <div class="peek-content">
+                        <div class="bg-black/30 px-4 pt-3 pb-4">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                <div v-for="cat in categories" :key="cat.key"
+                                    class="flex items-center gap-2 px-2 py-1.5 rounded"
+                                    :class="getCategoryPoints(myScore, cat) > 0 ? 'bg-gray-700/50 text-gray-200' : 'text-gray-600'">
+                                    <span class="text-sm">{{ cat.icon }}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-xs truncate">{{ cat.label }}</div>
+                                        <div class="text-xs font-mono">
+                                            <span>{{ myScore[cat.key] === true ? 'Yes' : myScore[cat.key] === false ? 'No' : myScore[cat.key] }}</span>
+                                            <span v-if="getCategoryPoints(myScore, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(myScore, cat) }})</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="peek-fade">
+                        <div class="absolute inset-0 flex items-center justify-around pointer-events-none px-8">
+                            <div v-for="i in 9" :key="i" class="peek-chevron" :style="{ animationDelay: (i * 0.08) + 's' }">
+                                <svg class="w-3.5 h-3.5 text-yellow-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="myScoreExpanded" class="border-t border-yellow-500/20 px-4 py-4 bg-black/30">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <div v-for="cat in categories" :key="cat.key"
+                        class="group/cat relative flex items-center gap-2 px-2 py-1.5 rounded"
+                        :class="getCategoryPoints(myScore, cat) > 0 ? 'bg-gray-700/50 text-gray-200' : 'text-gray-600'">
+                        <span class="text-sm">{{ cat.icon }}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs truncate">{{ cat.label }}</div>
+                            <div class="text-xs font-mono">
+                                <span>{{ myScore[cat.key] === true ? 'Yes' : myScore[cat.key] === false ? 'No' : myScore[cat.key] }}</span>
+                                <span v-if="getCategoryPoints(myScore, cat) > 0" class="text-green-400 ml-1">(+{{ getCategoryPoints(myScore, cat) }})</span>
+                            </div>
+                        </div>
+                        <div class="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover/cat:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                            <div class="font-bold text-white mb-0.5">{{ cat.label }}</div>
+                            <div class="text-gray-400">{{ cat.desc }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-700/50 flex items-center gap-4 text-sm">
+                    <span class="text-gray-400">Total: <span class="text-white font-bold">{{ parseFloat(myScore.total_score).toFixed(1) }}</span></span>
+                    <span class="text-gray-400">Community: <span class="text-white font-bold">{{ parseFloat(myScore.community_badge_score).toFixed(1) }}</span></span>
+                    <span v-if="myTier" class="inline-flex items-center gap-1 font-semibold" :style="{ color: myTier.color }">
+                        <img src="/images/svg/badge-defragger.png" class="w-3.5 h-3.5" :style="{ filter: `drop-shadow(0 0 2px ${myTier.color})` }">
+                        {{ myTier.name }}
+                    </span>
+                </div>
+            </div>
         </div>
 
         <!-- Leaderboard Table -->
-        <div v-else-if="scores && scores.data && scores.data.length > 0" class="bg-gray-800/30 rounded-lg border border-gray-700 overflow-hidden">
+        <!-- Loading skeleton -->
+        <div v-if="!loaded" class="bg-black/40 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden">
+            <div class="border-b border-gray-700 px-4 py-3 flex gap-8">
+                <div class="h-4 bg-white/10 rounded w-12 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-20 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-32 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-16 animate-pulse ml-auto"></div>
+            </div>
+            <div v-for="i in 15" :key="i" class="flex items-center gap-4 px-4 py-2 border-b border-gray-700/30">
+                <div class="w-8 h-4 bg-white/10 rounded animate-pulse"></div>
+                <div class="w-6 h-6 bg-white/10 rounded-full animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded animate-pulse" :style="{ width: (80 + Math.random() * 80) + 'px' }"></div>
+                <div class="flex gap-1.5 flex-1" style="padding-left: 100px;">
+                    <div v-for="j in 4" :key="j" class="h-5 w-14 bg-white/5 rounded animate-pulse"></div>
+                </div>
+                <div class="h-4 bg-white/10 rounded w-12 animate-pulse ml-auto"></div>
+            </div>
+        </div>
+
+        <div v-else-if="scores && scores.data && scores.data.length > 0" class="bg-black/40 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-700 text-gray-400 text-sm">

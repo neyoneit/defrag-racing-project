@@ -356,14 +356,14 @@ const getFunctionName = (abbr) => {
                     </h1>
 
                     <div class="flex items-center gap-3 text-sm">
-                        <div class="flex items-center gap-2 bg-blue-500/20 px-3 py-2 rounded-lg border border-blue-400/30">
+                        <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/30">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-400">
                                 <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                             </svg>
                             <span class="font-bold text-blue-300">{{ players }}</span>
                             <span class="text-gray-300 font-semibold">Players Online</span>
                         </div>
-                        <div class="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg border border-white/20">
+                        <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-gray-300">
                                 <path d="M4.5 3.75a3 3 0 0 0-3 3v.75h21v-.75a3 3 0 0 0-3-3h-15Z" />
                                 <path fill-rule="evenodd" d="M22.5 9.75h-21v7.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3v-7.5Zm-18 3.75a.75.75 0 0 1 .75-.75h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z" clip-rule="evenodd" />
@@ -377,7 +377,7 @@ const getFunctionName = (abbr) => {
 
                 <!-- Filters & Controls -->
                 <div class="mt-6">
-                    <div class=" bg-white/5 rounded-2xl border border-white/10 p-4 shadow-2xl">
+                    <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5 p-4 shadow-2xl">
                 <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
                     <!-- Gametype Filter -->
                     <div class="flex items-center gap-2">
@@ -468,7 +468,7 @@ const getFunctionName = (abbr) => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
             <!-- Loading skeleton while deferred data loads -->
             <div v-if="!serversLoaded" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="i in 6" :key="i" class="bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 overflow-hidden animate-pulse">
+                <div v-for="i in 6" :key="i" class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden animate-pulse">
                     <div class="h-48 bg-white/5"></div>
                     <div class="p-4 space-y-3">
                         <div class="h-5 bg-white/10 rounded w-3/4"></div>
@@ -480,7 +480,7 @@ const getFunctionName = (abbr) => {
 
             <!-- Large Card Layout -->
             <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative cursor-default bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">

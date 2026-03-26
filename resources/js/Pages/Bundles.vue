@@ -19,7 +19,7 @@
         let slug = category.name.toLowerCase().trim();
         slug = slug.replaceAll(' ', '-');
 
-        let url = `/bundles/${category.id}/${slug}`
+        let url = `/downloads/${category.id}/${slug}`
 
         return url
     }
@@ -55,13 +55,13 @@
 
 <template>
     <div class="min-h-screen">
-        <Head title="Bundles" />
+        <Head title="Downloads" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Bundles</h1>
+                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Downloads</h1>
                     <p class="text-sm text-gray-400">{{ categories.length }} categories</p>
                 </div>
             </div>
@@ -72,7 +72,7 @@
             <div class="flex flex-col lg:flex-row gap-4">
                 <!-- Categories Sidebar -->
                 <div class="lg:w-56 flex-shrink-0">
-                    <div class="bg-black/40 rounded-xl overflow-hidden border border-cyan-500/10 sticky top-[120px]">
+                    <div class="bg-black/45 backdrop-blur-xl rounded-xl overflow-hidden border border-white/[0.08] sticky top-[120px]">
                         <Link
                             v-for="category in categories"
                             :key="category.id"
@@ -107,7 +107,7 @@
                     </div>
 
                     <!-- Empty State -->
-                    <div v-else class="bg-black/40 rounded-xl border border-white/5 p-12 text-center">
+                    <div v-else class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 p-12 text-center">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mx-auto text-gray-600 mb-3">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>

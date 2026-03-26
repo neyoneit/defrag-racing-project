@@ -32,7 +32,7 @@ const submit = () => {
             <div class="w-full max-w-md">
 
             <!-- Card -->
-            <div class="bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
+            <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                 <p class="text-sm text-gray-400 mb-6">
                     Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.
                 </p>
@@ -78,8 +78,8 @@ const submit = () => {
             </div>
 
                 <!-- Footer Links -->
-                <div class="mt-8 text-center">
-                    <Link :href="route('login')" class="text-sm text-gray-400 hover:text-white transition">
+                <div class="mt-8 flex justify-center">
+                    <Link :href="route('login')" class="px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-black/50 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all">
                         ← Back to Login
                     </Link>
                 </div>

@@ -316,17 +316,7 @@
 <!-- Cyberpunk lines overlay -->
 <rect width="1440" height="900" fill="url(#cyberLines)" opacity="0.55"/>
 
-<!-- Static lights (no animation) -->
-<g id="lights">
-  <circle cx="785" cy="788" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="1176" cy="421" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="773" cy="756" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="660" cy="382" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="680" cy="68" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="450" cy="490" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="1176" cy="441" r="3" fill="#3B82F6" opacity="0.8"/>
-  <circle cx="312" cy="425" r="3" fill="#3B82F6" opacity="0.8"/>
-</g>
+<!-- Lights moved to animated canvas -->
 
 <!-- Mask to make lights less visible over filled tiles -->
 <defs>

@@ -908,7 +908,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 <template v-if="activeTab === 'profile'">
             <div class="grid grid-cols-3 gap-4">
                 <!-- Profile Card -->
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -976,18 +976,18 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 </div>
 
                 <!-- Player Aliases -->
-                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
                     <ManageAliasesForm :user="user" />
                 </div>
 
                 <!-- Connections -->
-                <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
             </div>
 
             <!-- Profile Images Card -->
-            <div class="rounded-xl bg-black/60 border border-white/10">
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1100,7 +1100,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 <template v-if="activeTab === 'creator'">
 
             <!-- Intro -->
-            <div class="rounded-xl bg-gradient-to-br from-green-500/5 via-green-600/10 to-green-500/5 border border-green-500/20 mb-4">
+            <div class="rounded-xl bg-gradient-to-br from-green-500/5 via-green-600/10 to-green-500/5 backdrop-blur-sm border border-green-500/20 mb-4">
                 <div class="p-5">
                     <div class="flex items-start gap-4">
                         <div class="w-12 h-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center flex-shrink-0">
@@ -1140,7 +1140,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
             <div id="creator-names">
 
                 <!-- Claims list + Add form -->
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <!-- Add New Claim (at the top) -->
                         <div class="bg-black/20 rounded-lg border border-white/5 p-4 mb-4">
@@ -1286,7 +1286,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
             <!-- ===== MAP SELECTOR ===== -->
             <div id="creator-maps" class="mt-4">
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <h3 class="text-sm font-bold text-white mb-1">Map Selector</h3>
                         <p class="text-xs text-gray-500 mb-4">Include or exclude specific maps from your Mapper profile tab. Click a map to toggle it.</p>
@@ -1345,7 +1345,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
             <!-- ===== PINNED MODELS ===== -->
             <div id="creator-pinned" class="mt-4">
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="mb-3">
                             <div class="flex items-center justify-between">
@@ -1449,7 +1449,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
             <!-- ===== MODEL ORDER ===== -->
             <div id="creator-order" class="mt-4">
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-3">
                             <div>
@@ -1493,7 +1493,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
                 <!-- ==================== MARKETPLACE TAB ==================== -->
                 <template v-if="activeTab === 'marketplace'">
-            <div class="rounded-xl bg-black/60 border border-white/10">
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1676,7 +1676,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 <!-- ==================== CUSTOMIZE TAB ==================== -->
                 <template v-if="activeTab === 'customize'">
             <!-- Preferences Card -->
-            <div id="customize-effects" class="rounded-xl bg-black/60 border border-white/10">
+            <div id="customize-effects" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1800,7 +1800,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Map View Defaults Card -->
-            <div class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1853,7 +1853,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
             </div>
 
             <!-- Physics Column Order Card -->
-            <div class="rounded-xl bg-black/60 border border-white/10 transition-all duration-500">
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1906,7 +1906,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 <template v-if="activeTab === 'notifications'">
             <div class="grid grid-cols-2 gap-4">
                 <!-- Email & Site Notifications -->
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-2">
@@ -1993,7 +1993,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 </div>
 
                 <!-- Header Preview Settings -->
-                <div class="rounded-xl bg-black/60 border border-white/10">
+                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center gap-2 mb-4">
                             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 flex items-center justify-center">
@@ -2050,15 +2050,15 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
                 <!-- ==================== SECURITY TAB ==================== -->
                 <template v-if="activeTab === 'security'">
-            <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+            <div v-if="$page.props.jetstream.canUpdatePassword" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                 <UpdatePasswordForm />
             </div>
 
-            <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+            <div v-if="$page.props.jetstream.canManageTwoFactorAuthentication" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                 <TwoFactorAuthenticationForm :requires-confirmation="confirmsTwoFactorAuthentication" />
             </div>
 
-            <div class="rounded-xl bg-black/60 border border-white/10 overflow-hidden">
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                 <LogoutOtherBrowserSessionsForm :sessions="sessions" />
             </div>
 

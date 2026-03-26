@@ -116,7 +116,7 @@
 
 
 <template>
-    <div class="flex items-center justify-center gap-1">
+    <div class="flex items-center justify-center gap-1 bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 px-4 py-3">
         <!-- Spacer for balance (same width as total pages indicator) -->
         <div class="w-14"></div>
 

@@ -1142,9 +1142,17 @@ onMounted(() => {
     checkForProcessingDemos();
 
     if (!props.userDemos && !props.publicDemos) {
+        const start = Date.now();
         router.reload({
             only: ['userDemos', 'publicDemos', 'demoCounts', 'browseCounts'],
-            onFinish: () => { demosLoading.value = false; }
+            onFinish: () => {
+                const remaining = 400 - (Date.now() - start);
+                if (remaining > 0) {
+                    setTimeout(() => { demosLoading.value = false; }, remaining);
+                } else {
+                    demosLoading.value = false;
+                }
+            }
         });
     } else {
         demosLoading.value = false;
@@ -1300,7 +1308,7 @@ watch(selectedPhysics, () => {
                     <!-- Limits Info (Right Side) -->
                     <div class="flex flex-col gap-2">
                         <!-- Download Limit -->
-                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
                             <div class="flex items-center gap-2">
                                 <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1329,7 +1337,7 @@ watch(selectedPhysics, () => {
                             </div>
                         </div>
                         <!-- Upload Limit -->
-                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-gray-900/40 border-white/5'">
+                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-gray-900/40 border-white/5'">
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 flex-shrink-0" :class="localUploadLimitInfo.isGuest ? 'text-purple-400' : 'text-green-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"></path>
@@ -1355,12 +1363,12 @@ watch(selectedPhysics, () => {
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
-                <div class="bg-black/40 rounded-xl p-4 mb-6 shadow-2xl border border-white/5">
-                    <h3 class="text-lg font-bold text-gray-100 mb-3 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">
+                    <h3 class="text-sm font-bold text-gray-300 mb-2 flex items-center">
+                        <svg class="w-4 h-4 mr-1.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
-                        Upload New Demos
+                        Upload Demos
                     </h3>
 
                     <!-- Not logged in: full clickable login overlay -->
@@ -1407,7 +1415,7 @@ watch(selectedPhysics, () => {
                         @dragover="handleDragOver"
                         @drop="handleDrop"
                         :class="[
-                            'relative border-2 border-dashed rounded-xl p-4 text-center transition-all duration-300 ease-in-out',
+                            'relative border-2 border-dashed rounded-lg p-3 text-center transition-all duration-300 ease-in-out',
                             isDragOver
                                 ? 'border-blue-400 bg-blue-900/20 scale-[1.02]'
                                 : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/30'
@@ -1423,25 +1431,19 @@ watch(selectedPhysics, () => {
                                 <div class="text-sm text-blue-100 mt-1">Release to upload your selected demos</div>
                             </div>
                         </div>
-                        <div class="space-y-2">
-                            <div class="flex justify-center">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-center gap-2">
                                 <svg :class="[
-                                    'w-10 h-10 transition-all duration-300',
-                                    isDragOver ? 'text-blue-400 scale-110' : 'text-gray-400'
+                                    'w-6 h-6 transition-all duration-300',
+                                    isDragOver ? 'text-blue-400 scale-110' : 'text-gray-500'
                                 ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
-                            </div>
-
-                            <div>
                                 <p :class="[
-                                    'text-base font-semibold transition-colors duration-300',
-                                    isDragOver ? 'text-blue-300' : 'text-gray-200'
+                                    'text-sm font-semibold transition-colors duration-300',
+                                    isDragOver ? 'text-blue-300' : 'text-gray-300'
                                 ]">
-                                    {{ isDragOver ? 'Drop demo files or folders here' : 'Drag demo files or folders here' }}
-                                </p>
-                                <p class="text-gray-400 mt-1 text-sm">
-                                    Or use buttons below to select files or folders
+                                    {{ isDragOver ? 'Drop files here' : 'Drag demo files or folders here' }}
                                 </p>
                             </div>
 
@@ -1467,7 +1469,7 @@ watch(selectedPhysics, () => {
                             <div class="flex gap-2 justify-center">
                                 <button
                                     type="button"
-                                    class="relative inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                                    class="relative inline-flex items-center px-3 py-1.5 text-xs bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-md shadow hover:from-blue-700 hover:to-blue-800 transition-all duration-200 focus:outline-none"
                                     @click="$refs.fileInput.click()"
                                 >
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1477,7 +1479,7 @@ watch(selectedPhysics, () => {
                                 </button>
                                 <button
                                     type="button"
-                                    class="relative inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg shadow-lg hover:from-green-700 hover:to-green-800 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                                    class="relative inline-flex items-center px-3 py-1.5 text-xs bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-md shadow hover:from-green-700 hover:to-green-800 transition-all duration-200 focus:outline-none"
                                     @click="$refs.folderInput.click()"
                                 >
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1689,7 +1691,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Processing Results (shows after demos finish processing) -->
-                <div v-if="processingSummary" class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-cyan-500/30">
+                <div v-if="processingSummary" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-2xl border border-cyan-500/30">
                     <!-- Summary header -->
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
@@ -1781,7 +1783,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Global Processing Status (logged in only) -->
-                <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
+                <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 mb-4 shadow-2xl border border-white/5">
                     <button @click.stop="globalQueueExpanded = !globalQueueExpanded" class="w-full flex items-center justify-between" :class="{ 'mb-3': globalQueueExpanded }">
                         <h3 class="text-base font-semibold text-gray-200">Global Queue Status</h3>
                         <div class="flex items-center gap-2">
@@ -1841,7 +1843,7 @@ watch(selectedPhysics, () => {
                 <!-- Loading skeleton while demo lists load -->
                 <div v-if="demosLoading" class="space-y-6">
                     <!-- Your Uploads skeleton -->
-                    <div v-if="$page.props.auth.user" class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse mb-8">
+                    <div v-if="$page.props.auth.user" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse mb-8">
                         <div class="h-6 bg-white/10 rounded w-48 mb-4"></div>
                         <div class="flex gap-2 mb-4">
                             <div v-for="i in 5" :key="'tab'+i" class="h-8 bg-white/5 rounded-full w-24"></div>
@@ -1851,7 +1853,7 @@ watch(selectedPhysics, () => {
                         </div>
                     </div>
                     <!-- Browse All Demos skeleton -->
-                    <div class="bg-black/40 rounded-xl p-6 border border-white/5 animate-pulse">
+                    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/5 animate-pulse">
                         <div class="h-6 bg-white/10 rounded w-56 mb-4"></div>
                         <div class="space-y-3">
                             <div v-for="i in 8" :key="'browse'+i" class="h-12 bg-white/5 rounded"></div>
@@ -1860,7 +1862,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Your Uploads Section (authenticated users only) -->
-                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
+                <div v-else-if="$page.props.auth.user && userDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-8">
                     <!-- Show message when no demos uploaded at all -->
                     <div v-if="demoCountsComputed.all === 0" class="text-center py-12">
                         <svg class="w-16 h-16 mx-auto text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2312,7 +2314,7 @@ watch(selectedPhysics, () => {
                 </div>
 
                 <!-- Browse All Demos Section (for everyone) -->
-                <div v-if="!demosLoading && publicDemos" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+                <div v-if="!demosLoading && publicDemos" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
                     <h3 class="text-xl font-semibold text-gray-200 mb-4">
                         Browse All Demos
                     </h3>

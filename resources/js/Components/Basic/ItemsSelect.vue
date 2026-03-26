@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed } from 'vue';
+    import { ref, computed, watch } from 'vue';
 
     const emit = defineEmits(['update:modelValue'])
 
@@ -11,6 +11,11 @@
 
     const includeOptions = ref(props.values?.include ?? []);
     const excludeOptions = ref(props.values?.exclude ?? []);
+
+    watch(() => props.values, (newVal) => {
+        includeOptions.value = newVal?.include ?? [];
+        excludeOptions.value = newVal?.exclude ?? [];
+    }, { deep: true });
 
     const getItemState = (code) => {
         if (includeOptions.value.includes(code)) return 'include';
@@ -76,7 +81,7 @@
             <div class="flex items-center gap-1">
                 <span v-if="includeOptions.length > 0" class="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[11px] font-bold rounded">+{{ includeOptions.length }}</span>
                 <span v-if="excludeOptions.length > 0" class="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[11px] font-bold rounded">-{{ excludeOptions.length }}</span>
-                <span v-if="totalSelected === 0" class="text-xs text-gray-500">None</span>
+                <span v-if="totalSelected === 0" class="text-xs text-gray-500">{{ placeholder || 'None' }}</span>
             </div>
             <div class="flex items-center gap-1">
                 <button
@@ -198,8 +203,8 @@
 
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
-        gap: 0.25rem;
+        grid-template-columns: repeat(auto-fill, minmax(26px, 1fr));
+        gap: 0.2rem;
     }
 
     .item-tile {
@@ -209,8 +214,8 @@
         align-items: center;
         justify-content: center;
         background: rgba(255, 255, 255, 0.05);
-        border: 2px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.375rem;
         cursor: pointer;
         transition: all 0.2s ease;
     }
@@ -242,8 +247,8 @@
     }
 
     .item-sprite {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         flex-shrink: 0;
     }
 

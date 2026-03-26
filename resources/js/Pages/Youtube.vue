@@ -38,9 +38,17 @@
     onMounted(() => {
         // Lazy load video data
         if (!props.videos) {
+            const start = Date.now();
             router.reload({
                 only: ['videos', 'currentlyRendering', 'pendingQueue', 'pendingTotal'],
-                onFinish: () => { videosLoaded.value = true; }
+                onFinish: () => {
+                    const remaining = 400 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { videosLoaded.value = true; }, remaining);
+                    } else {
+                        videosLoaded.value = true;
+                    }
+                }
             });
         } else {
             videosLoaded.value = true;
@@ -116,14 +124,14 @@
 
 <template>
     <div class="min-h-screen">
-        <Head title="YouTube - Rendered Demos" />
+        <Head title="Rendered Demos" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-8">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div class="flex items-center gap-3">
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">YouTube</h1>
+                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Rendered Demos</h1>
                         <span v-if="demomeOnline" class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 border border-green-500/30">
                             <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
                             <span class="text-xs font-medium text-green-400">Renderer Online</span>
@@ -136,15 +144,15 @@
 
                     <!-- Stats (right side) -->
                     <div class="flex items-center gap-3">
-                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                        <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_renders }}</div>
                             <div class="text-[10px] text-gray-400">Videos</div>
                         </div>
-                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                        <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_render_hours }}h</div>
                             <div class="text-[10px] text-gray-400">Render Time</div>
                         </div>
-                        <div class="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-center">
+                        <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-center">
                             <div class="text-lg font-bold text-white leading-tight">{{ stats.total_maps }}</div>
                             <div class="text-[10px] text-gray-400">Maps</div>
                         </div>
@@ -159,7 +167,7 @@
                             @input="doSearch()"
                             type="text"
                             placeholder="Map name..."
-                            class="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
+                            class="w-40 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
                         />
                         <button v-if="searchMap" @click="searchMap = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -172,7 +180,7 @@
                             @input="doSearch()"
                             type="text"
                             placeholder="Player name..."
-                            class="w-40 bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
+                            class="w-40 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
                         />
                         <button v-if="searchPlayer" @click="searchPlayer = ''; doSearch()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -186,9 +194,9 @@
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 -mt-2 pb-12">
 
             <!-- Live Render Status -->
-            <div v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div v-if="videosLoaded && (currentlyRendering || (pendingQueue && pendingQueue.length > 0))" class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Currently Rendering (left) -->
-                <div v-if="currentlyRendering" class="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-xl p-5">
+                <div v-if="currentlyRendering" class="bg-gradient-to-r from-red-500/10 to-orange-500/10 backdrop-blur-sm border border-red-500/30 rounded-xl p-5">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
                         <span class="text-sm font-bold text-white uppercase tracking-wide">Currently Rendering</span>
@@ -225,7 +233,7 @@
                 </div>
 
                 <!-- Pending Queue (right) -->
-                <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-white/5 border border-white/10 rounded-xl overflow-hidden" :class="{ 'lg:col-start-2': !currentlyRendering }">
+                <div v-if="pendingQueue && pendingQueue.length > 0" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden" :class="{ 'lg:col-start-2': !currentlyRendering }">
                     <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
                         <span class="text-sm font-bold text-white">Queue</span>
                         <span class="text-xs text-gray-500">{{ pendingTotal }} pending</span>
@@ -257,12 +265,39 @@
             </div>
 
             <!-- Loading skeleton -->
-            <div v-if="!videosLoaded" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <div v-for="i in 12" :key="i" class="bg-white/5 border border-white/10 rounded-lg overflow-hidden animate-pulse">
-                    <div class="aspect-video bg-white/5"></div>
-                    <div class="p-3 space-y-2">
-                        <div class="h-4 bg-white/10 rounded w-3/4"></div>
-                        <div class="h-3 bg-white/5 rounded w-1/2"></div>
+            <div v-if="!videosLoaded">
+                <!-- Queue skeleton -->
+                <div class="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-5 animate-pulse">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-3 h-3 rounded-full bg-white/10"></div>
+                            <div class="h-3 bg-white/10 rounded w-32"></div>
+                        </div>
+                        <div class="h-5 bg-white/10 rounded w-48 mb-2"></div>
+                        <div class="h-3 bg-white/5 rounded w-64"></div>
+                        <div class="mt-4 h-1.5 bg-white/10 rounded-full"></div>
+                    </div>
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden animate-pulse">
+                        <div class="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+                            <div class="h-3 bg-white/10 rounded w-12"></div>
+                            <div class="h-3 bg-white/5 rounded w-16"></div>
+                        </div>
+                        <div class="divide-y divide-white/5">
+                            <div v-for="i in 4" :key="i" class="px-3 py-2 flex items-center gap-3">
+                                <div class="h-3 bg-white/5 rounded w-4"></div>
+                                <div class="h-3 bg-white/10 rounded w-40"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Video grid skeleton -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div v-for="i in 12" :key="i" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden animate-pulse">
+                        <div class="aspect-video bg-white/5"></div>
+                        <div class="p-3 space-y-2">
+                            <div class="h-4 bg-white/10 rounded w-3/4"></div>
+                            <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -279,8 +314,8 @@
                         v-for="video in videos.data"
                         :key="video.id"
                         :class="video.status === 'failed'
-                            ? 'bg-white/5 border border-red-500/30 rounded-lg overflow-hidden opacity-50'
-                            : 'bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all'"
+                            ? 'bg-black/40 border border-red-500/30 rounded-lg overflow-hidden opacity-50'
+                            : 'bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all'"
                     >
                         <!-- Failed overlay -->
                         <template v-if="video.status === 'failed'">

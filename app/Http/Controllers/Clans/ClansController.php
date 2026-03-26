@@ -55,63 +55,67 @@ class ClansController extends Controller {
                     ->get();
             }
 
-            $users = User::query()->orderBy('plain_name')->get(['id', 'name', 'country', 'plain_name']);
         } else {
             $myClan = null;
-            $users = [];
             $invitations = [];
             $joinRequests = [];
             $blockedUsers = [];
         }
 
         return Inertia::render('Clans/Index')
-            ->with('clans', Inertia::lazy(function () use ($sortBy, $sortDir) {
-                $query = Clan::with('admin:id,name')
-                    ->with(['players.user' => function ($q) {
-                        $q->select('id', 'name', 'profile_photo_path', 'cached_wr_count', 'cached_top3_count');
-                    }])
-                    ->withCount('players');
-
-                $query->selectRaw('clans.*,
-                    (SELECT COUNT(DISTINCT records.id)
-                     FROM clan_players
-                     JOIN records ON clan_players.user_id = records.user_id
-                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL AND records.deleted_at IS NULL) as total_records,
-                    (SELECT COALESCE(SUM(users.cached_wr_count), 0)
-                     FROM clan_players
-                     JOIN users ON clan_players.user_id = users.id
-                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_wrs,
-                    (SELECT COALESCE(SUM(users.cached_top3_count), 0)
-                     FROM clan_players
-                     JOIN users ON clan_players.user_id = users.id
-                     WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_top3
-                ');
-
-                switch ($sortBy) {
-                    case 'members':
-                        $query->orderBy('players_count', $sortDir);
-                        break;
-                    case 'wrs':
-                        $query->orderByRaw("total_wrs {$sortDir}");
-                        break;
-                    case 'top3':
-                        $query->orderByRaw("total_top3 {$sortDir}");
-                        break;
-                    case 'name':
-                    default:
-                        $query->orderBy('name', $sortDir);
-                        break;
-                }
-
-                return $query->paginate(20)->appends(['sort' => $sortBy, 'dir' => $sortDir]);
-            }))
+            ->with('clans', Inertia::lazy(fn () => $this->getClansData($sortBy, $sortDir)))
             ->with('myClan', $myClan)
-            ->with('users', $users)
+
+            ->with('users', Inertia::lazy(function () {
+                return User::query()->orderBy('plain_name')->get(['id', 'name', 'country', 'plain_name']);
+            }))
             ->with('invitations', $invitations)
             ->with('joinRequests', $joinRequests)
             ->with('blockedUsers', $blockedUsers)
             ->with('currentSort', $sortBy)
             ->with('currentDir', $sortDir);
+    }
+
+    private function getClansData($sortBy, $sortDir)
+    {
+        $query = Clan::with('admin:id,name')
+            ->with(['players.user' => function ($q) {
+                $q->select('id', 'name', 'profile_photo_path', 'cached_wr_count', 'cached_top3_count');
+            }])
+            ->withCount('players');
+
+        $query->selectRaw('clans.*,
+            (SELECT COUNT(DISTINCT records.id)
+             FROM clan_players
+             JOIN records ON clan_players.user_id = records.user_id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL AND records.deleted_at IS NULL) as total_records,
+            (SELECT COALESCE(SUM(users.cached_wr_count), 0)
+             FROM clan_players
+             JOIN users ON clan_players.user_id = users.id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_wrs,
+            (SELECT COALESCE(SUM(users.cached_top3_count), 0)
+             FROM clan_players
+             JOIN users ON clan_players.user_id = users.id
+             WHERE clan_players.clan_id = clans.id AND clan_players.deleted_at IS NULL) as total_top3
+        ');
+
+        switch ($sortBy) {
+            case 'members':
+                $query->orderBy('players_count', $sortDir);
+                break;
+            case 'wrs':
+                $query->orderByRaw("total_wrs {$sortDir}");
+                break;
+            case 'top3':
+                $query->orderByRaw("total_top3 {$sortDir}");
+                break;
+            case 'name':
+            default:
+                $query->orderBy('name', $sortDir);
+                break;
+        }
+
+        return $query->paginate(20)->appends(['sort' => $sortBy, 'dir' => $sortDir]);
     }
 
     public function show(Clan $clan, Request $request) {
