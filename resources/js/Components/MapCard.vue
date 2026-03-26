@@ -87,7 +87,7 @@
 
 <template>
     <Link :href="getGametype === 'run' ? `/maps/${encodeURIComponent(map.name)}` : `/maps/${encodeURIComponent(map.name)}?gametype=ctf2`" class="block group">
-        <div class="bg-black/40 border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
+        <div class="bg-black/40 backdrop-blur-sm border border-white/5 rounded-xl overflow-hidden hover:border-white/20 transition-all shadow-2xl hover:shadow-blue-500/20">
             <!-- Map Thumbnail -->
             <div class="relative w-full aspect-video overflow-hidden">
                 <div :class="['absolute inset-0 bg-cover bg-center', map.is_nsfw && !page.props.auth.user?.nsfw_confirmed ? 'blur-xl scale-110' : '']" :style="`background-image: url('/storage/${map.thumbnail}')`"></div>

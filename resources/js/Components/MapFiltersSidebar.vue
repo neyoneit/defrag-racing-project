@@ -100,8 +100,10 @@
         rank_max: props.queries?.rank_max ?? 999,
     });
 
+    const emit = defineEmits(['search']);
+
     const onFilterSubmit = () => {
-        form.get(route('maps.filters'));
+        emit('search', form.data());
     };
 
     const resetFilters = () => {
@@ -235,23 +237,14 @@
 
             <!-- Gametype & Physics -->
             <div class="sidebar-section">
-                <button @click="toggleSection('gametype')" class="accordion-btn">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
-                        <span>Gametype & Physics</span>
+                <div class="space-y-2 px-3 py-2">
+                    <div>
+                        <label class="field-label">Gametype</label>
+                        <SpecialRadio :options="types" v-model="form.gametype" :multi="true" :values="form.gametype" />
                     </div>
-                    <svg class="chevron" :class="{ open: openSections.gametype }" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
-                </button>
-                <div v-show="openSections.gametype" class="accordion-content">
-                    <div class="space-y-3">
-                        <div>
-                            <label class="field-label">Gametype</label>
-                            <SpecialRadio :options="types" v-model="form.gametype" :multi="true" :values="form.gametype" />
-                        </div>
-                        <div>
-                            <label class="field-label">Physics</label>
-                            <SpecialRadio :options="physics" v-model="form.physics" :values="form.physics" :multi="true" />
-                        </div>
+                    <div>
+                        <label class="field-label">Physics</label>
+                        <SpecialRadio :options="physics" v-model="form.physics" :values="form.physics" :multi="true" />
                     </div>
                 </div>
             </div>
@@ -305,19 +298,10 @@
                     <svg class="chevron" :class="{ open: openSections.content }" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
                 </button>
                 <div v-show="openSections.content" class="accordion-content">
-                    <div class="space-y-3">
-                        <div>
-                            <label class="field-label">Weapons</label>
-                            <ItemsSelect :options="weapons" :multi="false" v-model="form.weapons" :values="form.weapons" placeholder="Add weapons..." />
-                        </div>
-                        <div>
-                            <label class="field-label">Functions</label>
-                            <ItemsSelect :options="functions" :multi="false" v-model="form.functions" :values="form.functions" placeholder="Add functions..." />
-                        </div>
-                        <div>
-                            <label class="field-label">Items</label>
-                            <ItemsSelect :options="items" :multi="false" v-model="form.items" :values="form.items" placeholder="Add items..." />
-                        </div>
+                    <div class="space-y-2">
+                        <ItemsSelect :options="weapons" :multi="false" v-model="form.weapons" :values="form.weapons" placeholder="Weapons" />
+                        <ItemsSelect :options="functions" :multi="false" v-model="form.functions" :values="form.functions" placeholder="Functions" />
+                        <ItemsSelect :options="items" :multi="false" v-model="form.items" :values="form.items" placeholder="Items" />
                     </div>
                 </div>
             </div>

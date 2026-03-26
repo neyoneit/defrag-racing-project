@@ -61,13 +61,13 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
 
-Route::get('/youtube', [YoutubeController::class, 'index'])->name('youtube');
+Route::get('/rendered-demos', [YoutubeController::class, 'index'])->name('youtube');
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware('auth')->name('render.request');
 Route::post('/api/rendered-videos/{id}/report', [RenderRequestController::class, 'reportFailed'])->middleware('auth')->name('render.report');
 
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 
-Route::get('/bundles/{id?}/{slug?}', [BundlesController::class, 'index'])->name('bundles');
+Route::get('/downloads/{id?}/{slug?}', [BundlesController::class, 'index'])->name('bundles');
 
 // Models routes
 Route::get('/models', [ModelsController::class, 'index'])->name('models.index');

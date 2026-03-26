@@ -28,6 +28,7 @@
     const navActive = computed(() => {
         const url = page.url; // dependency for reactivity
         return {
+            home: route().current('home'),
             servers: route().current('servers'),
             players: route().current('records') || route().current('clans.*'),
             rankings: route().current('ranking') || route().current('community'),
@@ -772,6 +773,11 @@
 
                     <!-- Second Row: Navigation Links -->
                     <div class="flex items-center gap-1 h-12 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 border-t border-white/[0.08]">
+
+                        <!-- 0. Home -->
+                        <NavLink :href="route('home')" :active="navActive.home">
+                            Home
+                        </NavLink>
 
                         <!-- 1. Servers -->
                         <NavLink :href="route('servers')" :active="navActive.servers">

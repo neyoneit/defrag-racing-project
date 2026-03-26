@@ -128,7 +128,18 @@
 
     onMounted(() => {
         if (!props.scores) {
-            loadData();
+            const start = Date.now();
+            router.reload({
+                only: ['scores'],
+                onFinish: () => {
+                    const remaining = 350 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { loaded.value = true; }, remaining);
+                    } else {
+                        loaded.value = true;
+                    }
+                }
+            });
         }
     });
 </script>
@@ -142,7 +153,7 @@
             <div class="mb-8">
                 <div class="flex items-center justify-between gap-4 mb-2">
                     <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Defragger Leaderboard</h1>
-                    <div class="flex-shrink-0 flex flex-wrap justify-end gap-2 bg-gray-900/40 backdrop-blur-sm rounded-lg px-3 py-2">
+                    <div class="flex-shrink-0 flex flex-wrap justify-end gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div v-for="tier in tiers" :key="tier.key"
                             class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"
                             :style="{ borderColor: tier.color + '90', backgroundColor: tier.color + '35' }">
@@ -152,7 +163,7 @@
                         </div>
                     </div>
                 </div>
-                <p class="text-gray-500 text-sm bg-gray-900/40 backdrop-blur-sm rounded-lg px-3 py-2">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
+                <p class="text-gray-500 text-sm bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
             </div>
         </div>
     </div>
@@ -190,17 +201,12 @@
         </div>
 
         <!-- Loading -->
-        <div v-if="!loaded" class="text-center py-20">
-            <div class="inline-block w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin"></div>
-            <div class="text-gray-400 mt-3">Loading leaderboard...</div>
-        </div>
-
         <!-- My Score Card -->
-        <div v-if="myScore && loaded"
+        <div v-if="myScore"
             @click="myScoreExpanded = !myScoreExpanded"
             @mouseenter="onMyScoreEnter"
             @mouseleave="onMyScoreLeave"
-            class="mb-3 bg-gray-900/40 backdrop-blur-sm border border-yellow-500/20 rounded-lg cursor-pointer hover:bg-yellow-500/5 transition-colors">
+            class="mb-3 bg-black/40 backdrop-blur-sm border border-yellow-500/20 rounded-lg cursor-pointer hover:bg-yellow-500/5 transition-colors">
             <div class="flex items-center gap-4 px-4 py-2.5">
                 <div class="text-xl font-bold" :style="myTier ? { color: myTier.color } : { color: '#9ca3af' }">#{{ myScore.rank }}</div>
                 <div class="flex items-center gap-2">
@@ -284,7 +290,26 @@
         </div>
 
         <!-- Leaderboard Table -->
-        <div v-if="scores && scores.data && scores.data.length > 0" class="bg-gray-900/40 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden">
+        <!-- Loading skeleton -->
+        <div v-if="!loaded" class="bg-black/40 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden">
+            <div class="border-b border-gray-700 px-4 py-3 flex gap-8">
+                <div class="h-4 bg-white/10 rounded w-12 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-20 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-32 animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded w-16 animate-pulse ml-auto"></div>
+            </div>
+            <div v-for="i in 15" :key="i" class="flex items-center gap-4 px-4 py-2 border-b border-gray-700/30">
+                <div class="w-8 h-4 bg-white/10 rounded animate-pulse"></div>
+                <div class="w-6 h-6 bg-white/10 rounded-full animate-pulse"></div>
+                <div class="h-4 bg-white/10 rounded animate-pulse" :style="{ width: (80 + Math.random() * 80) + 'px' }"></div>
+                <div class="flex gap-1.5 flex-1" style="padding-left: 100px;">
+                    <div v-for="j in 4" :key="j" class="h-5 w-14 bg-white/5 rounded animate-pulse"></div>
+                </div>
+                <div class="h-4 bg-white/10 rounded w-12 animate-pulse ml-auto"></div>
+            </div>
+        </div>
+
+        <div v-else-if="scores && scores.data && scores.data.length > 0" class="bg-black/40 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden">
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-700 text-gray-400 text-sm">

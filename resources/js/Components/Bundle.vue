@@ -16,7 +16,7 @@
 
 <template>
     <a :href="getUrl"
-        class="group block p-4 rounded-xl bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border border-cyan-500/10 hover:border-cyan-500/30 hover:from-cyan-500/10 hover:to-blue-500/10 transition-all">
+        class="group block p-4 rounded-xl bg-black/40 backdrop-blur-sm border border-white/5 hover:border-cyan-500/30 hover:bg-gray-900/60 transition-all">
         <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-cyan-500/25 transition mt-0.5">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-cyan-400">

@@ -18,6 +18,11 @@
     const search = ref("");
 
     const selectedOptions = ref(props.values ?? []);
+
+    watch(() => props.values, (newVal) => {
+        selectedOptions.value = newVal ?? [];
+    });
+
     const recentlySelected = ref(false);
 
     const searchInput = ref(null);

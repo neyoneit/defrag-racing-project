@@ -16,9 +16,17 @@
 
     onMounted(() => {
         if (!props.tournaments) {
+            const start = Date.now();
             router.reload({
                 only: ['tournaments', 'activeTournaments', 'upcomingTournaments', 'pastTournaments'],
-                onFinish: () => { tournamentsLoaded.value = true; }
+                onFinish: () => {
+                    const remaining = 400 - (Date.now() - start);
+                    if (remaining > 0) {
+                        setTimeout(() => { tournamentsLoaded.value = true; }, remaining);
+                    } else {
+                        tournamentsLoaded.value = true;
+                    }
+                }
             });
         } else {
             tournamentsLoaded.value = true;
@@ -123,7 +131,7 @@
         <!-- Modern Tournaments Container -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
             <!-- Warning Message -->
-            <div v-if="records < 50" class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <div v-if="records < 50" class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-8">
                 <div class="flex items-start gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 shrink-0 mt-0.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
@@ -141,7 +149,7 @@
             </div>
 
             <!-- Tabs and Content -->
-            <div class="bg-black/40 rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+            <div class="bg-black/40 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
                 <!-- Tabs Header -->
                 <Tabs :tabs="tabs" :onClick="toggleTab" :activeTab="activeTab" />
 
@@ -149,7 +157,7 @@
                 <div class="p-6">
                     <!-- Loading skeleton -->
                     <div v-if="!tournamentsLoaded" class="space-y-4">
-                        <div v-for="i in 3" :key="i" class="bg-black/40 rounded-xl p-6 border border-white/10 animate-pulse">
+                        <div v-for="i in 3" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 border border-white/10 animate-pulse">
                             <div class="h-6 bg-white/10 rounded w-1/3 mb-3"></div>
                             <div class="h-4 bg-white/5 rounded w-2/3 mb-2"></div>
                             <div class="h-4 bg-white/5 rounded w-1/2"></div>

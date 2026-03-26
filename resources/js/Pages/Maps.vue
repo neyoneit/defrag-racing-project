@@ -104,6 +104,32 @@
 
     const mapsLoaded = ref(false);
 
+    const onSidebarSearch = (filters) => {
+        // Clean empty values
+        const params = {};
+        for (const [key, val] of Object.entries(filters)) {
+            if (val === '' || val === null || val === undefined) continue;
+            if (Array.isArray(val) && val.length === 0) continue;
+            if (typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length === 0) continue;
+            params[key] = val;
+        }
+
+        // Preserve active tags
+        if (selectedTags.value.length > 0) {
+            params.tags = selectedTags.value.join(',');
+        }
+
+        const hasFilters = Object.keys(params).length > 0;
+        const url = hasFilters ? '/maps/filters' : '/maps';
+        mapsLoaded.value = false;
+        router.get(url, params, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['maps', 'queries'],
+            onFinish: () => { mapsLoaded.value = true; }
+        });
+    };
+
     onMounted(() => {
         fetchTags();
 
@@ -239,22 +265,22 @@
         </div>
 
         <!-- Content -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -24rem;">
             <div class="flex flex-col md:flex-row gap-4">
                 <!-- Sidebar Filters (side on md+, above maps on smaller) -->
                 <div class="hidden md:block flex-shrink-0 w-[300px]">
-                    <MapFiltersSidebar :queries="queries ?? {}" />
+                    <MapFiltersSidebar :queries="queries ?? {}" @search="onSidebarSearch" />
                 </div>
 
                 <!-- Main content -->
                 <div class="flex-1 min-w-0">
                     <!-- Filters above maps on small screens -->
                     <div class="md:hidden mb-4">
-                        <MapFiltersSidebar :queries="queries ?? {}" />
+                        <MapFiltersSidebar :queries="queries ?? {}" @search="onSidebarSearch" />
                     </div>
                     <!-- Loading skeleton -->
                     <div v-if="!mapsLoaded" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        <div v-for="i in 20" :key="i" class="bg-black/40 rounded-xl border border-white/10 overflow-hidden animate-pulse">
+                        <div v-for="i in 20" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 overflow-hidden animate-pulse">
                             <div class="aspect-[4/3] bg-white/5"></div>
                             <div class="p-2 space-y-1.5">
                                 <div class="h-4 bg-white/10 rounded w-3/4"></div>
@@ -289,17 +315,18 @@
 
 <style scoped>
 .tags-bar {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(17, 24, 39, 0.4);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
     padding: 0.375rem 0.75rem;
     cursor: text;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background 0.2s;
 }
 .tags-bar:hover,
 .tags-bar:focus-within {
-    border-color: rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(17, 24, 39, 0.55);
 }
 
 .expand-tab {

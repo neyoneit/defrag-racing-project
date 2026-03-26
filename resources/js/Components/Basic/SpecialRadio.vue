@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, defineEmits } from 'vue';
+    import { ref, watch, defineEmits } from 'vue';
 
     const emit = defineEmits(['update:modelValue'])
 
@@ -13,6 +13,10 @@
     });
 
     const values = ref(props.values);
+
+    watch(() => props.values, (newVal) => {
+        values.value = newVal ?? [];
+    });
 
     const onClick = (key) => {
         if (props.multi) {
@@ -45,7 +49,7 @@
     const getClasses = (key, index) => {
         let classes = {
             'rounded-l-md': (index == 0),
-            'rounded-r-md border-r-2': (index == Object.keys(props.options).length - 1),
+            'rounded-r-md border-r': (index == Object.keys(props.options).length - 1),
             'bg-grayop-900 hover:bg-grayop-800': !values.value.includes(key)
         }
 
@@ -61,7 +65,7 @@
     <div class="sm:flex">
         <div v-for="(option, key, index) in options" class="flex-grow text-center">
             <div
-                class="cursor-pointer border-l-2 px-5 py-2 border-y-2 border-grayop-700 text-gray-300 hover:text-gray-100 shadow-sm"
+                class="cursor-pointer border-l px-2 py-1 border-y border-grayop-700 text-gray-300 hover:text-gray-100 shadow-sm text-xs"
                 :class="getClasses(key, index)"
                 @click="onClick(key)"
                 :key="key"

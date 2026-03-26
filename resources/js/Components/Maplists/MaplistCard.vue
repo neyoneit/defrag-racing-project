@@ -1,5 +1,5 @@
 <template>
-    <div class="bg-black/40 rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-white/5 hover:border-blue-500">
+    <div class="bg-black/40 backdrop-blur-sm rounded-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-white/5 hover:border-blue-500">
         <Link :href="`/maplists/${maplist.id}`" class="block">
             <!-- Thumbnail Preview (show first 4 map thumbnails if available) -->
             <div class="grid grid-cols-2 grid-rows-2 gap-0 bg-gray-950 h-48">

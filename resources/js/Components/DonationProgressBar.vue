@@ -29,7 +29,7 @@ onMounted(async () => {
     <Link
         :href="route('donations.index')"
         v-if="!loading && progress && !isOnDonationsPage"
-        class="block bg-black/60 border-t border-white/10 hover:bg-black/80 transition-all cursor-pointer group"
+        class="block bg-black/45 backdrop-blur-sm border-t border-white/10 hover:bg-black/55 transition-all cursor-pointer group"
     >
         <div class="max-w-8xl mx-auto px-4 lg:px-8 py-3">
             <div class="flex items-center justify-between gap-4 mb-2">

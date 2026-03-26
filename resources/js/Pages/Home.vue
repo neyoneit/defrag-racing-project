@@ -19,7 +19,8 @@
         totalMaps: Number,
         totalDemos: Number,
         activeServers: Number,
-        activePlayers: Number
+        activePlayers: Number,
+        totalRecords: Number
     });
 
     const page = usePage();
@@ -63,33 +64,33 @@
 
                     <!-- Stats Row -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 max-w-5xl mx-auto mb-8">
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all">
+                        <Link :href="route('maps')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 text-center hover:border-blue-500/50 transition-all cursor-pointer">
                             <div class="text-2xl md:text-3xl font-black text-blue-400 mb-1">{{ totalMaps >= 1000 ? (totalMaps / 1000).toFixed(1) + 'K' : totalMaps }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Total Maps</div>
-                        </div>
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-yellow-500/50 transition-all">
+                        </Link>
+                        <Link href="/demos" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 text-center hover:border-yellow-500/50 transition-all cursor-pointer">
                             <div class="text-2xl md:text-3xl font-black text-yellow-400 mb-1">{{ totalDemos >= 1000 ? (totalDemos / 1000).toFixed(1) + 'K' : totalDemos }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Total Demos</div>
-                        </div>
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-green-500/50 transition-all">
+                        </Link>
+                        <Link :href="route('servers')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 text-center hover:border-green-500/50 transition-all cursor-pointer">
                             <div class="text-2xl md:text-3xl font-black text-green-400 mb-1">{{ activeServers }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Active Servers</div>
-                        </div>
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-purple-500/50 transition-all">
+                        </Link>
+                        <Link href="/ranking" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 text-center hover:border-purple-500/50 transition-all cursor-pointer">
                             <div class="text-2xl md:text-3xl font-black text-purple-400 mb-1">{{ activePlayers }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Players (30d)</div>
-                        </div>
-                        <div class="bg-white/5 rounded-xl p-4 border border-white/10 text-center hover:border-orange-500/50 transition-all">
-                            <div class="text-2xl md:text-3xl font-black text-orange-400 mb-1">1M+</div>
+                        </Link>
+                        <Link :href="route('records')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 text-center hover:border-orange-500/50 transition-all cursor-pointer">
+                            <div class="text-2xl md:text-3xl font-black text-orange-400 mb-1">{{ totalRecords >= 1000000 ? (totalRecords / 1000000).toFixed(1) + 'M' : totalRecords >= 1000 ? (totalRecords / 1000).toFixed(1) + 'K' : totalRecords }}</div>
                             <div class="text-gray-400 font-semibold text-xs">Records Stored</div>
-                        </div>
+                        </Link>
                     </div>
 
                     <!-- Latest News -->
                     <Link
                         v-if="latestAnnouncement"
                         :href="route('announcements')"
-                        class="relative flex items-start gap-4 px-6 py-4 bg-white/5 border border-white/10 rounded-xl text-gray-300 hover:bg-white/10 hover:border-blue-500/50 transition-all group max-w-4xl mx-auto"
+                        class="relative flex items-start gap-4 px-6 py-4 bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl text-gray-300 hover:bg-black/50 hover:border-blue-500/50 transition-all group max-w-4xl mx-auto"
                     >
                         <div class="absolute -top-2 -right-2 px-3 py-1 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full text-xs font-black text-white shadow-lg">
                             NEW
@@ -113,8 +114,8 @@
         </div>
 
         <!-- How to Get Started Section -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 -mt-8">
-            <div class="text-center mb-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 -mt-8">
+            <div class="text-center mb-4">
                 <h2 class="text-3xl md:text-4xl font-black text-white mb-3">Get Started in Minutes</h2>
                 <p class="text-gray-400 text-base">Follow these simple steps to join the Defrag racing community</p>
             </div>
@@ -130,7 +131,7 @@
                         </div>
                         <div class="w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link v-if="!isAuthenticated" :href="route('register')" class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-white/10 transition-all group">
+                    <Link v-if="!isAuthenticated" :href="route('register')" class="flex-1 bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-8 hover:border-blue-500/50 hover:bg-black/50 transition-all group">
                         <div class="flex items-start gap-6">
                             <div class="p-4 bg-blue-500/20 rounded-xl group-hover:bg-blue-500/30 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-blue-400">
@@ -144,7 +145,7 @@
                             <div class="hidden md:flex items-center shrink-0 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-lg text-sm font-bold text-blue-400 group-hover:bg-blue-500/30 transition-colors self-center">Register →</div>
                         </div>
                     </Link>
-                    <div v-else class="flex-1 bg-green-500/10 rounded-xl border border-green-500/30 p-8">
+                    <div v-else class="flex-1 bg-green-500/10 backdrop-blur-sm rounded-xl border border-green-500/30 p-8">
                         <div class="flex items-start gap-6">
                             <div class="p-4 bg-green-500/20 rounded-xl">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-green-400">
@@ -168,7 +169,7 @@
                         </div>
                         <div class="w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link v-if="!isLinked" href="/link-account" :class="['flex-1 rounded-xl border p-8 transition-all group', 'bg-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/50 hover:bg-yellow-500/10']">
+                    <Link v-if="!isLinked" href="/link-account" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', 'bg-yellow-500/5 border-yellow-500/30 hover:border-yellow-500/50 hover:bg-yellow-500/10']">
                         <div class="flex items-start gap-6">
                             <div class="p-4 bg-yellow-500/20 rounded-xl group-hover:bg-yellow-500/30 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-yellow-400">
@@ -182,7 +183,7 @@
                             <div class="hidden md:flex items-center shrink-0 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-lg text-sm font-bold text-yellow-400 group-hover:bg-yellow-500/30 transition-colors self-center">Link Account →</div>
                         </div>
                     </Link>
-                    <div v-else class="flex-1 bg-green-500/10 rounded-xl border border-green-500/30 p-8">
+                    <div v-else class="flex-1 bg-green-500/10 backdrop-blur-sm rounded-xl border border-green-500/30 p-8">
                         <div class="flex items-start gap-6">
                             <div class="p-4 bg-green-500/20 rounded-xl">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-green-400">
@@ -207,7 +208,7 @@
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
                     <div class="flex-1 flex gap-4 items-center">
-                        <Link :href="route('bundles')" :class="['flex-1 rounded-xl border p-8 transition-all group', downloadChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                        <Link :href="route('bundles')" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', downloadChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50 hover:bg-black/50']">
                             <div class="flex items-start gap-6">
                                 <div :class="['p-4 rounded-xl transition-colors', downloadChecked ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', downloadChecked ? 'text-green-400' : 'text-blue-400']">
@@ -237,7 +238,7 @@
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
                     <div class="flex-1 flex gap-4 items-center">
-                        <a href="https://discord.defrag.racing" target="_blank" :class="['flex-1 rounded-xl border p-8 transition-all group', discordChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                        <a href="https://discord.defrag.racing" target="_blank" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', discordChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50 hover:bg-black/50']">
                             <div class="flex items-start gap-6">
                                 <div :class="['p-4 rounded-xl transition-colors', discordChecked ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', discordChecked ? 'text-green-400' : 'text-blue-400']">
@@ -266,7 +267,7 @@
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link :href="route('maps')" :class="['flex-1 rounded-xl border p-8 transition-all group', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                    <Link :href="route('maps')" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50 hover:bg-black/50']">
                         <div class="flex items-start gap-6">
                             <div :class="['p-4 rounded-xl transition-colors', hasRecords ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasRecords ? 'text-green-400' : 'text-blue-400']">
@@ -291,7 +292,7 @@
                         </div>
                         <div class="hidden md:block w-1 h-full bg-blue-500/30 mt-4"></div>
                     </div>
-                    <Link v-if="isAuthenticated" :href="route('profile.index', { userId: page.props.auth.user.id })" :class="['flex-1 rounded-xl border p-8 transition-all group', hasColoredNick ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                    <Link v-if="isAuthenticated" :href="route('profile.index', { userId: page.props.auth.user.id })" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', hasColoredNick ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50 hover:bg-black/50']">
                         <div class="flex items-start gap-6">
                             <div :class="['p-4 rounded-xl transition-colors', hasColoredNick ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasColoredNick ? 'text-green-400' : 'text-blue-400']">
@@ -308,7 +309,7 @@
                             <div :class="['hidden md:flex items-center shrink-0 px-4 py-2 border rounded-lg text-sm font-bold transition-colors self-center', hasColoredNick ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-blue-500/20 border-blue-500/30 text-blue-400 group-hover:bg-blue-500/30']">Customize →</div>
                         </div>
                     </Link>
-                    <div v-else class="flex-1 bg-white/5 rounded-xl border border-white/10 p-8 opacity-60">
+                    <div v-else class="flex-1 bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-8">
                         <div class="flex items-start gap-6">
                             <div class="p-4 bg-gray-500/20 rounded-xl">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-gray-400">
@@ -331,7 +332,7 @@
                             <span v-else>{{ isAuthenticated ? '7' : '6' }}</span>
                         </div>
                     </div>
-                    <Link :href="route('servers')" :class="['flex-1 rounded-xl border p-8 transition-all group', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:border-blue-500/50 hover:bg-white/10']">
+                    <Link :href="route('servers')" :class="['flex-1 rounded-xl border p-8 transition-all group backdrop-blur-sm', hasRecords ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50 hover:bg-black/50']">
                         <div class="flex items-start gap-6">
                             <div :class="['p-4 rounded-xl transition-colors', hasRecords ? 'bg-green-500/20' : 'bg-blue-500/20 group-hover:bg-blue-500/30']">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-8 h-8', hasRecords ? 'text-green-400' : 'text-blue-400']">

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import MaplistCard from '@/Components/Maplists/MaplistCard.vue';
+import Pagination from '@/Components/Basic/Pagination.vue';
 import DialogModal from '@/Components/Laravel/DialogModal.vue';
 import ConfirmationModal from '@/Components/Laravel/ConfirmationModal.vue';
 
@@ -355,6 +356,7 @@ const createMaplist = async () => {
                             <template v-else-if="currentView === 'favorites'">My Favourites</template>
                             <template v-else-if="currentView === 'likes'">My Likes</template>
                             <template v-else>Maplists</template>
+                            <span v-if="maplists?.total != null" class="text-lg font-semibold text-gray-500 align-middle ml-2">{{ maplists.total }} found</span>
                         </h1>
                         <p class="text-gray-400">
                             <template v-if="currentView === 'mine'">Manage and organize your personal map collections.</template>
@@ -386,7 +388,7 @@ const createMaplist = async () => {
                 <!-- Left Sidebar - Filters -->
                 <!-- Mobile filter toggle -->
                 <button @click="showMobileFilters = !showMobileFilters"
-                    class="lg:hidden w-full flex items-center justify-between px-4 py-3 mb-4 bg-black/40 rounded-xl border border-white/5 text-sm font-bold text-gray-300 hover:text-white transition">
+                    class="lg:hidden w-full flex items-center justify-between px-4 py-3 mb-4 bg-black/40 backdrop-blur-sm rounded-xl border border-white/5 text-sm font-bold text-gray-300 hover:text-white transition">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>
                         Filters
@@ -394,40 +396,29 @@ const createMaplist = async () => {
                     <svg class="w-4 h-4 transition-transform" :class="showMobileFilters ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                 </button>
 
-                <div :class="showMobileFilters ? 'block mb-4' : 'hidden'" class="lg:block lg:w-64 lg:mb-0 lg:sticky lg:top-[120px] lg:self-start" style="height: fit-content; max-height: calc(100vh - 136px); overflow-y: auto;">
-                    <div class="space-y-2">
+                <div :class="showMobileFilters ? 'block mb-4' : 'hidden'" class="lg:block lg:w-56 lg:mb-0 lg:sticky lg:top-[120px] lg:self-start" style="height: fit-content; max-height: calc(100vh - 136px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent;">
+                    <div class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] divide-y divide-white/5">
                         <!-- Search -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                                </svg>
-                                Search
-                            </h3>
+                        <div class="px-3 py-2.5">
                             <input
                                 v-model="searchQuery"
                                 @input="onSearchInput"
                                 type="text"
-                                placeholder="Maplist or map name..."
-                                class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
+                                placeholder="Search maplists..."
+                                class="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50"
                             />
                         </div>
 
                         <!-- Sort Options -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
-                                </svg>
-                                Sort By
-                            </h3>
-                            <div class="space-y-1">
+                        <div class="px-3 py-2.5">
+                            <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sort</div>
+                            <div class="space-y-0.5">
                                 <button
                                     v-for="option in sortOptions"
                                     :key="option.value"
                                     @click="changeSort(option.value)"
                                     :class="[
-                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                        'w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-all text-xs',
                                         currentSort === option.value
                                             ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                                             : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -438,21 +429,15 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- View Filter (only for logged in users) -->
-                        <div v-if="page.props.auth.user" class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.577 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.577-3.007-9.963-7.178z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                View
-                            </h3>
-                            <div class="space-y-1">
+                        <div v-if="page.props.auth.user" class="px-3 py-2.5">
+                            <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">View</div>
+                            <div class="space-y-0.5">
                                 <button
                                     v-for="option in viewOptions"
                                     :key="option.value"
                                     @click="changeView(option.value)"
                                     :class="[
-                                        'w-full text-left px-3 py-2 rounded-lg font-medium transition-all text-sm',
+                                        'w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-all text-xs',
                                         currentView === option.value
                                             ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
                                             : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -463,14 +448,11 @@ const createMaplist = async () => {
                         </div>
 
                         <!-- Author Filter -->
-                        <div class="bg-black/40 rounded-xl p-4 border border-white/5 author-dropdown">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                </svg>
-                                Author
-                                <span v-if="selectedAuthors.length" class="ml-auto text-xs bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full">{{ selectedAuthors.length }}</span>
-                            </h3>
+                        <div class="px-3 py-2.5 author-dropdown">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Author</div>
+                                <span v-if="selectedAuthors.length" class="text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded-full font-bold">{{ selectedAuthors.length }}</span>
+                            </div>
                             <button
                                 @click.stop="authorDropdownOpen = !authorDropdownOpen"
                                 class="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition-colors"
@@ -482,82 +464,77 @@ const createMaplist = async () => {
                                 </svg>
                             </button>
                             <!-- Dropdown panel -->
-                            <div v-if="authorDropdownOpen" class="mt-2 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col">
+                            <div v-if="authorDropdownOpen" class="mt-1.5 bg-gray-900/95 border border-white/10 rounded-lg shadow-xl max-h-48 overflow-hidden flex flex-col">
                                 <input
                                     v-model="authorSearchInput"
                                     type="text"
                                     placeholder="Filter..."
-                                    class="w-full bg-transparent border-b border-white/10 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none"
+                                    class="w-full bg-transparent border-b border-white/10 px-2.5 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none"
                                     @click.stop
                                 />
                                 <div class="overflow-y-auto flex-1">
                                     <label
                                         v-for="[id, data] in filteredAuthors"
                                         :key="id"
-                                        class="flex items-center gap-2 px-3 py-1.5 hover:bg-white/5 cursor-pointer text-sm"
+                                        class="flex items-center gap-2 px-2.5 py-1 hover:bg-white/5 cursor-pointer text-xs"
                                         @click.stop
                                     >
                                         <input
                                             type="checkbox"
                                             :checked="selectedAuthors.includes(id)"
                                             @change="toggleAuthor(id)"
-                                            class="rounded bg-white/10 border-white/20 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0"
+                                            class="rounded bg-white/10 border-white/20 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 w-3.5 h-3.5"
                                         />
                                         <span class="text-gray-300 truncate flex-1">{{ data.name }}</span>
-                                        <span class="text-gray-600 text-xs">{{ data.count }}</span>
+                                        <span class="text-gray-600 text-[10px]">{{ data.count }}</span>
                                     </label>
-                                    <div v-if="filteredAuthors.length === 0" class="px-3 py-4 text-center text-gray-500 text-sm">No results</div>
+                                    <div v-if="filteredAuthors.length === 0" class="px-3 py-3 text-center text-gray-500 text-xs">No results</div>
                                 </div>
-                                <button v-if="selectedAuthors.length" @click.stop="clearAuthors" class="w-full px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
+                                <button v-if="selectedAuthors.length" @click.stop="clearAuthors" class="w-full px-3 py-1.5 text-[11px] text-red-400 hover:bg-red-500/10 border-t border-white/10 transition-colors">
                                     Clear selection
                                 </button>
                             </div>
                         </div>
 
                         <!-- Quick Access (logged in, public view only) -->
-                        <div v-if="page.props.auth.user && currentView === 'public' && myPlayLater" class="bg-black/40 rounded-xl p-4 border border-white/5">
-                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                                </svg>
-                                Quick Access
-                            </h3>
-                            <div class="space-y-2">
-                                <Link href="/maplists/play-later" class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm">
-                                    <span class="text-gray-300 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div v-if="page.props.auth.user && currentView === 'public' && myPlayLater" class="px-3 py-2.5">
+                            <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Quick Access</div>
+                            <div class="space-y-0.5">
+                                <Link href="/maplists/play-later" class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/10 transition text-xs">
+                                    <span class="text-gray-300 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         Play Later
                                     </span>
-                                    <span class="text-green-400 font-bold text-xs">{{ myPlayLater.maps_count || 0 }}</span>
+                                    <span class="text-green-400 font-bold text-[10px]">{{ myPlayLater.maps_count || 0 }}</span>
                                 </Link>
-                                <Link v-if="myMaplists.length > 0" href="/maplists?view=mine" class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm">
-                                    <span class="text-gray-300 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <Link v-if="myMaplists.length > 0" href="/maplists?view=mine" class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/10 transition text-xs">
+                                    <span class="text-gray-300 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                                         </svg>
                                         My Maplists
                                     </span>
-                                    <span class="text-blue-400 font-bold text-xs">{{ myMaplists.length }}</span>
+                                    <span class="text-blue-400 font-bold text-[10px]">{{ myMaplists.length }}</span>
                                 </Link>
-                                <Link v-if="myFavoriteMaplists.length > 0" href="/maplists?view=favorites" class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm">
-                                    <span class="text-gray-300 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                <Link v-if="myFavoriteMaplists.length > 0" href="/maplists?view=favorites" class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/10 transition text-xs">
+                                    <span class="text-gray-300 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                         </svg>
                                         Favourites
                                     </span>
-                                    <span class="text-yellow-400 font-bold text-xs">{{ myFavoriteMaplists.length }}</span>
+                                    <span class="text-yellow-400 font-bold text-[10px]">{{ myFavoriteMaplists.length }}</span>
                                 </Link>
-                                <Link v-if="myLikedMaplists.length > 0" href="/maplists?view=likes" class="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-sm">
-                                    <span class="text-gray-300 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <Link v-if="myLikedMaplists.length > 0" href="/maplists?view=likes" class="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white/5 hover:bg-white/10 transition text-xs">
+                                    <span class="text-gray-300 flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
                                         </svg>
                                         Likes
                                     </span>
-                                    <span class="text-red-400 font-bold text-xs">{{ myLikedMaplists.length }}</span>
+                                    <span class="text-red-400 font-bold text-[10px]">{{ myLikedMaplists.length }}</span>
                                 </Link>
                             </div>
                         </div>
@@ -613,11 +590,6 @@ const createMaplist = async () => {
                         </div>
                     </div>
 
-                    <!-- Results count -->
-                    <div class="mb-4 text-sm text-gray-400">
-                        {{ maplists.total }} maplist{{ maplists.total !== 1 ? 's' : '' }} found
-                    </div>
-
                     <!-- Maplists Grid -->
                     <div v-if="maplists.data && maplists.data.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         <MaplistCard v-for="maplist in maplists.data" :maplist="maplist" :key="maplist.id" />
@@ -640,19 +612,8 @@ const createMaplist = async () => {
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="maplists.total > maplists.per_page" class="flex justify-center mt-8 gap-2">
-                        <Link
-                            v-for="p in Array.from({ length: maplists.last_page }, (_, i) => i + 1)"
-                            :key="p"
-                            :href="`/maplists?page=${p}&sort=${currentSort}&view=${currentView}${searchQuery ? '&search=' + encodeURIComponent(searchQuery) : ''}${selectedAuthors.length ? '&authors=' + selectedAuthors.join(',') : ''}`"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold transition',
-                                p === maplists.current_page
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                            ]">
-                            {{ p }}
-                        </Link>
+                    <div v-if="maplists.last_page > 1" class="flex justify-center mt-8">
+                        <Pagination :current_page="maplists.current_page" :last_page="maplists.last_page" :link="maplists.first_page_url" />
                     </div>
                 </main>
             </div>

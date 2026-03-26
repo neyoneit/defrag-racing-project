@@ -14,9 +14,17 @@ const listingsLoaded = ref(false);
 
 onMounted(() => {
     if (!props.listings) {
+        const start = Date.now();
         router.reload({
             only: ['listings'],
-            onFinish: () => { listingsLoaded.value = true; }
+            onFinish: () => {
+                const remaining = 400 - (Date.now() - start);
+                if (remaining > 0) {
+                    setTimeout(() => { listingsLoaded.value = true; }, remaining);
+                } else {
+                    listingsLoaded.value = true;
+                }
+            }
         });
     } else {
         listingsLoaded.value = true;
@@ -128,6 +136,18 @@ const selectStatus = (value) => {
         </div>
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
+            <!-- Disclaimer Banner -->
+            <div class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-6">
+                <div class="flex gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    <div class="text-sm text-yellow-300">
+                        <strong>Disclaimer:</strong> Defrag Racing is not responsible for marketplace transactions. All work, payments, and deliverables are agreements between the parties involved. Users who fail to honor agreements may be banned from future marketplace activity.
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabs -->
             <div class="flex gap-2 mb-4">
                 <button

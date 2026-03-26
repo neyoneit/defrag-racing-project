@@ -41,7 +41,7 @@ const submit = () => {
             <div class="w-full max-w-md">
 
             <!-- Login Card -->
-            <div class="bg-black/40 rounded-2xl p-8 shadow-2xl border border-white/10">
+            <div class="bg-black/40 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/10">
                 <!-- Status Message -->
                 <div v-if="status" class="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30">
                     <p class="text-sm font-medium text-green-400">{{ status }}</p>
@@ -137,8 +137,8 @@ const submit = () => {
             </div>
 
                 <!-- Footer Links -->
-                <div class="mt-8 text-center">
-                    <Link :href="route('home')" class="text-sm text-gray-400 hover:text-white transition">
+                <div class="mt-8 flex justify-center">
+                    <Link :href="route('home')" class="px-6 py-3 bg-black/40 backdrop-blur-sm hover:bg-black/50 border border-white/10 hover:border-white/20 text-white font-medium rounded-lg transition-all">
                         ← Back to Home
                     </Link>
                 </div>

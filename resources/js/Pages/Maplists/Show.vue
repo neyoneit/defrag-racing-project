@@ -50,6 +50,15 @@ const showServerDropdown = ref(false);
 
 const isPlayLater = computed(() => props.maplist.is_play_later);
 
+const emptyServers = computed(() => {
+    if (!props.servers) return [];
+    return props.servers
+        .filter(s => !s.online_players || s.online_players.length === 0)
+        .sort((a, b) => (a.plain_name || '').localeCompare(b.plain_name || ''));
+});
+
+const showAllServers = ref(false);
+
 const dropdownStyle = computed(() => {
     if (!tagInputContainer.value) return {};
     const rect = tagInputContainer.value.getBoundingClientRect();
@@ -373,12 +382,12 @@ const closeServerDropdown = () => {
         </div>
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pointer-events-none" :class="isPlayLater ? 'pb-6' : 'pb-96'">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <!-- Breadcrumb -->
-                <div class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+                <!-- Breadcrumb (not for Play Later) -->
+                <div v-if="!isPlayLater" class="flex items-center gap-2 text-sm text-gray-400 mb-6">
                     <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
-                    <template v-if="is_owner && !isPlayLater">
+                    <template v-if="is_owner">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
@@ -391,7 +400,7 @@ const closeServerDropdown = () => {
                 </div>
 
                 <!-- Maplist Header Card -->
-                <div class="bg-black/40 rounded-2xl border border-white/5 p-6 md:p-8 shadow-2xl">
+                <div class="bg-black/40 rounded-2xl border border-white/5 shadow-2xl" :class="isPlayLater ? 'p-4 md:p-5' : 'p-6 md:p-8'">
                     <!-- Edit Mode -->
                     <div v-if="isEditing">
                         <div class="mb-6">
@@ -460,26 +469,21 @@ const closeServerDropdown = () => {
                     <!-- View Mode -->
                     <div v-else>
                         <!-- Title Row with Actions -->
-                        <div class="flex items-start justify-between gap-4 mb-6">
+                        <div class="flex items-start justify-between gap-4" :class="isPlayLater ? 'mb-0' : 'mb-6'">
                             <!-- Title Left -->
                             <div class="flex flex-wrap items-center gap-3 flex-1 min-w-0">
-                                <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
+                                <h1 :class="isPlayLater ? 'text-3xl md:text-4xl' : 'text-5xl md:text-6xl'" class="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
                                     {{ maplist.name }}
                                 </h1>
-                                <div v-if="isPlayLater" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg flex-shrink-0">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Play Later
-                                </div>
-                                <div v-else-if="maplist.is_public" class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg flex-shrink-0">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <span v-if="isPlayLater" class="text-sm font-semibold text-gray-500 align-middle">{{ maplist.maps?.length || 0 }} maps</span>
+                                <div v-if="!isPlayLater && maplist.is_public" class="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     Public
                                 </div>
-                                <div v-else class="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg flex-shrink-0">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div v-else-if="!isPlayLater" class="px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
                                     Private
@@ -536,7 +540,7 @@ const closeServerDropdown = () => {
                         </div>
 
                         <!-- Stats Cards Row -->
-                        <div class="flex flex-wrap gap-4 mb-6">
+                        <div v-if="!isPlayLater" class="flex flex-wrap gap-4 mb-6">
                             <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-xl border border-blue-500/30">
                                 <div class="p-2 bg-blue-500/20 rounded-lg">
                                     <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -592,7 +596,7 @@ const closeServerDropdown = () => {
                         </div>
 
                         <!-- Description -->
-                        <p v-if="maplist.description" class="text-gray-300 text-xl leading-relaxed mb-6 max-w-4xl">
+                        <p v-if="maplist.description" :class="isPlayLater ? 'text-gray-500 text-sm mb-2' : 'text-gray-300 text-xl leading-relaxed mb-6'" class="max-w-4xl">
                             {{ maplist.description }}
                         </p>
 
@@ -661,6 +665,93 @@ const closeServerDropdown = () => {
                                 </Teleport>
                             </div>
                         </div>
+                        <!-- Play Wizard (for Play Later only) -->
+                        <div v-if="isPlayLater && servers && servers.length > 0" class="mt-5 pt-5 border-t border-white/10 relative z-30" @click.stop>
+                            <!-- Step indicators -->
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-black flex-shrink-0"
+                                        :class="selectedServer ? 'bg-green-500 text-white' : 'bg-blue-500 text-white ring-2 ring-blue-500/30'">
+                                        <svg v-if="selectedServer" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                        <span v-else>1</span>
+                                    </div>
+                                    <span class="text-sm" :class="selectedServer ? 'text-green-400 font-semibold' : 'text-white font-semibold'">Choose a server</span>
+                                </div>
+                                <div class="h-px flex-1 bg-white/10"></div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-black flex-shrink-0"
+                                        :class="selectedServer ? 'bg-blue-500 text-white ring-2 ring-blue-500/30' : 'bg-white/10 text-gray-500'">
+                                        2
+                                    </div>
+                                    <span class="text-sm" :class="selectedServer ? 'text-white font-semibold' : 'text-gray-500'">Click Connect on a map</span>
+                                </div>
+                                <div class="h-px flex-1 bg-white/10"></div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-black flex-shrink-0 bg-green-500/20 text-green-400 border border-green-500/40">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                                    </div>
+                                    <span class="text-sm text-green-400/80 font-medium">Callvote auto-copied upon clicking Connect</span>
+                                </div>
+                            </div>
+
+                            <!-- Server selector -->
+                            <div class="relative">
+                                <div
+                                    @click="showServerDropdown = !showServerDropdown"
+                                    class="w-full flex items-center gap-3 border-2 rounded-lg px-4 py-3 cursor-pointer transition"
+                                    :class="selectedServer
+                                        ? 'bg-green-500/10 border-green-500/40 hover:border-green-400/60'
+                                        : 'bg-white/5 border-white/15 hover:border-blue-500/50'">
+                                    <template v-if="!selectedServer">
+                                        <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" /></svg>
+                                        <span class="text-gray-400 text-sm">Select an empty server to play on...</span>
+                                        <svg class="w-4 h-4 text-gray-500 flex-shrink-0 ml-auto transition-transform" :class="showServerDropdown ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                                    </template>
+                                    <template v-else>
+                                        <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" /></svg>
+                                        <div class="flex-1 min-w-0">
+                                            <span v-html="q3tohtml(selectedServer.name)" class="text-sm font-semibold truncate block"></span>
+                                            <span class="text-xs text-gray-500">{{ selectedServer.ip }}:{{ selectedServer.port }}</span>
+                                        </div>
+                                        <button @click.stop="selectedServer = null" class="text-gray-500 hover:text-red-400 p-1 rounded transition flex-shrink-0" title="Change server">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </template>
+                                </div>
+
+                                <!-- Dropdown -->
+                                <div v-if="showServerDropdown" class="absolute z-50 left-0 right-0 mt-2 bg-gray-900 border border-white/15 rounded-lg overflow-hidden shadow-2xl shadow-black/60">
+                                    <div class="px-4 py-2.5 border-b border-white/10 flex items-center justify-between bg-gray-800/80">
+                                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Empty Servers</span>
+                                        <button @click.stop="showAllServers = !showAllServers" class="text-xs text-blue-400 hover:text-blue-300 font-medium">
+                                            {{ showAllServers ? 'Empty only' : 'Show all servers' }}
+                                        </button>
+                                    </div>
+                                    <div class="max-h-64 overflow-y-auto">
+                                        <div
+                                            v-for="server in (showAllServers ? servers : emptyServers)"
+                                            :key="server.id"
+                                            @click="selectedServer = server; showServerDropdown = false"
+                                            class="px-4 py-3 hover:bg-blue-500/15 cursor-pointer transition border-b border-white/5 last:border-0">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <span v-html="q3tohtml(server.name)" class="font-semibold truncate block"></span>
+                                                    <div class="text-xs text-gray-500 mt-0.5">
+                                                        {{ server.ip }}:{{ server.port }}
+                                                        <span v-if="server.location"> - {{ server.location }}</span>
+                                                    </div>
+                                                </div>
+                                                <span v-if="server.online_players && server.online_players.length > 0" class="text-yellow-400 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-yellow-500/15 rounded">{{ server.online_players.length }} playing</span>
+                                                <span v-else class="text-gray-500 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-white/5 rounded">EMPTY</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="(showAllServers ? servers : emptyServers).length === 0" class="px-4 py-6 text-center text-gray-500 text-sm">
+                                            No empty servers available right now
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -693,51 +784,11 @@ const closeServerDropdown = () => {
                     </button>
                 </div>
 
-                <!-- Server Selection (for Play Later only) -->
-                <div v-if="isPlayLater && servers && servers.length > 0" class="bg-black/40 border border-white/5 rounded-lg p-4 mb-4 relative z-30" @click.stop>
-                    <label class="block text-sm font-semibold text-gray-300 mb-2">Select Server to Play:</label>
-                    <div class="relative">
-                        <div
-                            @click="showServerDropdown = !showServerDropdown"
-                            class="w-full bg-black/60 border border-white/10 text-white rounded-lg px-4 py-2 cursor-pointer hover:border-white/20 transition">
-                            <div v-if="!selectedServer" class="text-gray-400">Choose a server...</div>
-                            <div v-else class="flex items-center justify-between gap-2">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <span v-html="q3tohtml(selectedServer.name)" class="truncate"></span>
-                                    <span v-if="selectedServer.map" class="text-gray-500 text-xs">{{ selectedServer.map }}</span>
-                                </div>
-                                <span v-if="selectedServer.online_players && selectedServer.online_players.length > 0" class="text-green-400 text-xs font-bold flex-shrink-0">{{ selectedServer.online_players.length }} playing</span>
-                                <span v-else class="text-gray-600 text-xs font-bold flex-shrink-0">EMPTY</span>
-                            </div>
-                        </div>
-                        <div v-if="showServerDropdown" class="absolute z-50 w-full mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-60 overflow-y-auto">
-                            <div
-                                v-for="server in servers"
-                                :key="server.id"
-                                @click="selectedServer = server; showServerDropdown = false"
-                                class="px-4 py-2.5 hover:bg-white/10 cursor-pointer transition border-b border-white/5 last:border-0">
-                                <div class="flex items-center justify-between gap-2">
-                                    <span v-html="q3tohtml(server.name)"></span>
-                                    <span v-if="server.online_players && server.online_players.length > 0" class="text-green-400 text-xs font-bold">{{ server.online_players.length }} playing</span>
-                                    <span v-else class="text-gray-600 text-xs font-bold">EMPTY</span>
-                                </div>
-                                <div class="text-xs text-gray-500 mt-0.5">
-                                    <span v-if="server.map" class="text-gray-400">{{ server.map }}</span>
-                                    <span v-if="server.map && server.location"> · </span>
-                                    <span>{{ server.location }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <p v-if="selectedServer" class="text-xs text-gray-400 mt-2">
-                        Click the "Play" button on any map below to connect to <span v-html="q3tohtml(selectedServer.name)"></span> and start a vote for that map
-                    </p>
-                </div>
             </div>
         </div>
 
         <!-- Maps Grid -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" style="margin-top: -22rem;">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" :style="isPlayLater ? '' : 'margin-top: -22rem;'">
             <!-- Reordering Instructions -->
             <div v-if="isReordering" class="mb-4 p-4 bg-purple-600/20 border border-purple-500/50 rounded-lg text-purple-200 text-center">
                 <p class="font-semibold">Drag and drop maps to reorder them</p>
@@ -760,18 +811,19 @@ const closeServerDropdown = () => {
                         v-if="isPlayLater && selectedServer"
                         :href="`defrag://${selectedServer.ip}:${selectedServer.port}`"
                         @click="copyMapCommand(map.id, map.name)"
-                        :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'play-button-cpm' : 'play-button-vq3'"
-                        class="play-button absolute top-2 right-0 text-white p-2.5 rounded-lg transition z-10 flex items-center justify-center gap-1.5"
+                        :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'"
+                        class="connect-button absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between px-3 py-2 rounded-b-lg text-white font-bold text-xs transition-all"
                         :title="`Connect to ${selectedServer.ip}:${selectedServer.port} (/cv map ${map.name} copied to clipboard)`">
-                        <svg v-if="copiedMapId !== map.id" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 flex-shrink-0">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                        </svg>
-                        <template v-else>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        <div class="flex items-center gap-1.5">
+                            <svg v-if="copiedMapId !== map.id" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                             </svg>
-                            <span class="text-xs font-bold whitespace-nowrap">Copied callvote!</span>
-                        </template>
+                            <svg v-else class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                            {{ copiedMapId === map.id ? 'Copied!' : 'Connect' }}
+                        </div>
+                        <span :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'bg-purple-500/30 border-purple-400/50 text-purple-300' : 'bg-blue-500/30 border-blue-400/50 text-blue-300'" class="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border">
+                            {{ selectedServer.defrag?.toLowerCase().includes('cpm') ? 'CPM' : 'VQ3' }}
+                        </span>
                     </a>
 
                     <!-- Remove Button (for owner) -->
@@ -908,28 +960,28 @@ const closeServerDropdown = () => {
     }
 }
 
-/* Play Button - Glass Morphism Effect */
-.play-button {
+/* Connect Button - same as Servers page */
+.connect-button {
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(12px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.play-button::before {
+.connect-button::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        135deg,
-        rgba(255, 255, 255, 0.1) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        transparent 50%
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.05) 25%,
+        transparent 50%,
+        rgba(0, 0, 0, 0.05) 75%,
+        rgba(0, 0, 0, 0.1) 100%
     );
     pointer-events: none;
 }
 
-.play-button::after {
+.connect-button::after {
     content: '';
     position: absolute;
     top: 0;
@@ -940,27 +992,27 @@ const closeServerDropdown = () => {
     transition: left 0.5s ease;
 }
 
-.play-button:hover::after {
+.connect-button:hover::after {
     left: 100%;
 }
 
-.play-button-vq3 {
+.connect-button-vq3 {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.15));
     border: 2px solid rgba(96, 165, 250, 0.4);
 }
 
-.play-button-vq3:hover {
+.connect-button-vq3:hover {
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(37, 99, 235, 0.25));
     border-color: rgba(96, 165, 250, 0.6);
     box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-.play-button-cpm {
+.connect-button-cpm {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(147, 51, 234, 0.15));
     border: 2px solid rgba(192, 132, 252, 0.4);
 }
 
-.play-button-cpm:hover {
+.connect-button-cpm:hover {
     background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(147, 51, 234, 0.25));
     border-color: rgba(192, 132, 252, 0.6);
     box-shadow: 0 6px 20px rgba(168, 85, 247, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);

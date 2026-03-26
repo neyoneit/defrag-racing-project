@@ -920,35 +920,35 @@
                     </div>
 
                     <!-- Map Features: Weapons, Items, Functions -->
-                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap items-center justify-center gap-4 mb-4">
-                        <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-1.5">
+                    <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap items-center justify-center gap-2 mb-3">
+                        <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-1">
                             <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Weapons</span>
-                            <div class="flex gap-1">
+                            <div class="flex gap-0.5">
                                 <img v-for="weapon in map.weapons.split(',')" :key="weapon"
                                      :src="getWeaponIcon(weapon)"
                                      :alt="getWeaponName(weapon)"
                                      :title="getWeaponName(weapon)"
-                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                                     class="w-5 h-5 opacity-90 hover:opacity-100 transition-opacity" />
                             </div>
                         </div>
-                        <div v-if="map.items && map.items.length > 0" class="flex items-center gap-1.5">
+                        <div v-if="map.items && map.items.length > 0" class="flex items-center gap-1">
                             <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Items</span>
-                            <div class="flex gap-1">
+                            <div class="flex gap-0.5">
                                 <img v-for="item in map.items.split(',')" :key="item"
                                      :src="getItemIcon(item)"
                                      :alt="getItemName(item)"
                                      :title="getItemName(item)"
-                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                                     class="w-5 h-5 opacity-90 hover:opacity-100 transition-opacity" />
                             </div>
                         </div>
-                        <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-1.5">
+                        <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-1">
                             <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Functions</span>
-                            <div class="flex gap-1">
+                            <div class="flex gap-0.5">
                                 <img v-for="func in map.functions.split(',')" :key="func"
                                      :src="getFunctionIcon(func)"
                                      :alt="getFunctionName(func)"
                                      :title="getFunctionName(func)"
-                                     class="w-6 h-6 opacity-90 hover:opacity-100 transition-opacity" />
+                                     class="w-5 h-5 opacity-90 hover:opacity-100 transition-opacity" />
                             </div>
                         </div>
                     </div>

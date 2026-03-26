@@ -248,7 +248,7 @@
 </script>
 
 <template>
-    <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
                 <h3 class="text-lg font-semibold text-white">Activity History</h3>

@@ -842,7 +842,7 @@
                 </button>
                 <Teleport to="body">
                     <div v-if="quickSettingsDropdown" @click="quickSettingsDropdown = false" class="fixed inset-0 z-[998]"></div>
-                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
+                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
                         <button
                             v-for="panel in quickSettingsPanels"
                             :key="panel.id"
@@ -1081,7 +1081,7 @@
                                 <!-- Dropdown (teleported to body to avoid overflow-hidden clipping) -->
                                 <Teleport to="body">
                                     <div v-if="quickSettingsDropdown" @click="quickSettingsDropdown = false" class="fixed inset-0 z-[998]"></div>
-                                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900 border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
+                                    <div v-if="quickSettingsDropdown" ref="customizeDropdownEl" class="fixed w-56 bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden z-[999] shadow-2xl" :style="customizeDropdownStyle">
                                         <button
                                             v-for="panel in quickSettingsPanels"
                                             :key="panel.id"
@@ -1120,9 +1120,9 @@
         </transition>
 
         <!-- Profile Tabs -->
-        <div v-if="hasCreatorTabs" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 mb-3 relative z-10">
+        <div v-if="hasCreatorTabs" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 mb-4 relative z-20">
             <div class="flex items-center gap-3 flex-wrap">
-                <div class="flex items-center gap-1 bg-black/30 rounded-xl p-1 border border-white/5 w-fit">
+                <div class="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/10 w-fit">
                     <button @click="switchTab('records')"
                         class="px-5 py-2 rounded-lg text-sm font-bold transition-all"
                         :class="activeTab === 'records' ? 'bg-white/10 text-white border border-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'">
@@ -1144,7 +1144,7 @@
                 <div v-if="creatorClaimNames.length" class="flex items-center gap-2 flex-wrap">
                     <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Creator Names:</span>
                     <span v-for="claim in creatorClaimNames" :key="claim.name + claim.type"
-                        class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                        class="px-2.5 py-0.5 rounded-full text-xs font-bold backdrop-blur-sm"
                         :class="claim.type === 'map' ? 'bg-green-500/20 border border-green-500/30 text-green-400' : 'bg-blue-500/20 border border-blue-500/30 text-blue-400'">
                         {{ claim.name }}
                     </span>
@@ -1199,7 +1199,7 @@
 
             <!-- Stats Grid - Clean Text Layout -->
             <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div v-if="showStatBox('performance')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('performance') }">
+                <div v-if="showStatBox('performance')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('performance') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
                         <div class="flex items-center gap-0">
@@ -1278,7 +1278,7 @@
                 </div>
 
                 <!-- Map Features -->
-                <div v-if="showStatBox('map_features')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('map_features') }">
+                <div v-if="showStatBox('map_features')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('map_features') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Map Features</h3>
                         <div class="flex items-center gap-0">
@@ -1335,7 +1335,7 @@
                 </div>
 
                 <!-- Record Types -->
-                <div v-if="showStatBox('record_types') && stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('record_types') }">
+                <div v-if="showStatBox('record_types') && stats.filter(s => s.value !== 'world_records').some(s => (profile?.hasOwnProperty('cpm_' + s.value) ? profile['cpm_' + s.value] : 0) > 0 || (profile?.hasOwnProperty('vq3_' + s.value) ? profile['vq3_' + s.value] : 0) > 0)" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('record_types') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Record Types</h3>
                         <div class="flex items-center gap-0">
@@ -1359,7 +1359,7 @@
                 </div>
 
                 <!-- Activity & Misc -->
-                <div v-if="showStatBox('activity')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('activity') }">
+                <div v-if="showStatBox('activity')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('activity') }">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Activity</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between items-center group relative">
@@ -1394,7 +1394,7 @@
                 </div>
 
                 <!-- Demos Statistics -->
-                <div v-if="showStatBox('demos_statistics')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('demos_statistics') }">
+                <div v-if="showStatBox('demos_statistics')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('demos_statistics') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Demos</h3>
                         <div class="flex items-center gap-0">
@@ -1441,7 +1441,7 @@
                 </div>
 
                 <!-- Renders Statistics -->
-                <div v-if="showStatBox('renders') && (renderStats.total_renders || 0) > 0" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('renders') }">
+                <div v-if="showStatBox('renders') && (renderStats.total_renders || 0) > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('renders') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Renders</h3>
                         <div class="flex items-center gap-0">
@@ -1467,7 +1467,7 @@
                 </div>
 
                 <!-- Top Downloaded Demos -->
-                <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('top_downloaded_demos') }">
+                <div v-if="showStatBox('top_downloaded_demos')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('top_downloaded_demos') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Top Demos</h3>
                         <div class="flex items-center gap-0">
@@ -1504,7 +1504,7 @@
             </div>
 
             <!-- Rendered Videos -->
-            <div v-if="showSection('rendered_videos') && latestRenderedVideos && latestRenderedVideos.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('rendered_videos') }">
+            <div v-if="showSection('rendered_videos') && latestRenderedVideos && latestRenderedVideos.length > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('rendered_videos') }">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-white flex items-center gap-2">
                         <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor">
@@ -1549,7 +1549,7 @@
             <!-- Known Aliases -->
             <div v-if="showSection('known_aliases') && ((aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0))" class="mb-6" :style="{ order: sectionOrder('known_aliases') }">
                 <div>
-                    <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5">
+                    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-indigo-400">
@@ -1655,7 +1655,7 @@
             <div v-if="hasProfile && showSection('records')" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6" :style="{ order: sectionOrder('records') }">
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
-                    <div class="bg-black/40 rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
+                    <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
                         <!-- Gamemode Filter (MOVED TO TOP) -->
                         <div class="mb-4">
                             <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>
@@ -1714,7 +1714,7 @@
                 <div class="lg:col-span-8">
                     <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <!-- VQ3 Records -->
-                        <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
+                        <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
@@ -1818,7 +1818,7 @@
                         </div>
 
                         <!-- CPM Records -->
-                        <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
+                        <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
                             <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
@@ -1923,7 +1923,7 @@
                     </div>
 
                     <!-- No Records State -->
-                    <div v-else class="bg-black/40 rounded-xl overflow-hidden shadow-2xl border border-white/5">
+                    <div v-else class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-white/5">
                         <div class="text-center py-20">
                             <svg class="w-16 h-16 mx-auto mb-4 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
                                 <use href="/images/svg/icons.svg#icon-trophy"></use>
@@ -1935,7 +1935,7 @@
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->
-            <div v-if="showSection('similar_skill_rivals') && (cpmCompetitors || cpmRivals || loadingExtras)" class="bg-black/40 rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden" :style="{ order: sectionOrder('similar_skill_rivals') }">
+            <div v-if="showSection('similar_skill_rivals') && (cpmCompetitors || cpmRivals || loadingExtras)" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden" :style="{ order: sectionOrder('similar_skill_rivals') }">
                 <!-- Loading skeleton -->
                 <div v-if="loadingExtras" class="p-5">
                     <div class="animate-pulse space-y-3">
@@ -2057,7 +2057,7 @@
             </div>
 
             <!-- Direct Competitor Comparison -->
-            <div v-if="showSection('competitor_comparison')" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('competitor_comparison') }">
+            <div v-if="showSection('competitor_comparison')" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('competitor_comparison') }">
                 <h2 class="text-xl font-bold text-white mb-4">
                     Direct Competitor Comparison
                 </h2>
@@ -2241,7 +2241,7 @@
             </div>
 
             <!-- User's Featured Maplists -->
-            <div v-if="showSection('featured_maplists') && user_maplists && user_maplists.length > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('featured_maplists') }">
+            <div v-if="showSection('featured_maplists') && user_maplists && user_maplists.length > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('featured_maplists') }">
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-2xl font-bold text-white flex items-center gap-2">
                         <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2290,7 +2290,7 @@
             </div>
 
             <!-- Map Completionist List -->
-            <div v-if="showSection('map_completionist') && currentUnplayedMaps && currentUnplayedMaps.total > 0" class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
+            <div v-if="showSection('map_completionist') && currentUnplayedMaps && currentUnplayedMaps.total > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('map_completionist') }">
                 <div class="mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -2413,7 +2413,7 @@
 
         <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
         <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="max-w-screen-2xl mx-auto px-4 mt-8 mb-8">
-            <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
                 <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics (Backend Load Times)</h3>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">

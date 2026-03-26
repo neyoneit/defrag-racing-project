@@ -124,7 +124,7 @@ const formatNumber = (num) => {
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- General -->
-                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">General</h3>
                     <div class="space-y-2">
                         <div v-if="statistics.hall_of_fame.record_king" class="flex justify-between items-center">
@@ -155,7 +155,7 @@ const formatNumber = (num) => {
                 </div>
 
                 <!-- Physics & Weapons -->
-                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Physics & Weapons</h3>
                     <div class="space-y-2">
                         <div v-if="statistics.hall_of_fame.vq3_master" class="flex justify-between items-center">
@@ -186,7 +186,7 @@ const formatNumber = (num) => {
                 </div>
 
                 <!-- Map Features -->
-                <div class="bg-black/20 border border-white/10 rounded-lg p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4">
                     <h3 class="text-sm font-bold text-white uppercase tracking-wide mb-3">Map Features</h3>
                     <div class="space-y-2">
                         <div v-if="statistics.hall_of_fame.slick_master" class="flex justify-between items-center">

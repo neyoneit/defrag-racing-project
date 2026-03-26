@@ -30,18 +30,18 @@
 </script>
 
 <template>
-    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 first:rounded-t-[10px] last:rounded-b-[10px] hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)] overflow-hidden">
         <!-- Background Map Thumbnail (always visible, blurred) - extends to edges with overflow-hidden -->
-        <div v-if="record.map?.thumbnail" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px] overflow-hidden">
+        <div v-if="record.map?.thumbnail" class="absolute inset-0 transition-all duration-500 overflow-hidden">
             <img
                 :src="`/storage/${record.map.thumbnail}`"
                 loading="lazy"
                 decoding="async"
-                class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                class="w-full h-full object-cover scale-100 group-hover:scale-105 opacity-0 group-hover:opacity-100 transition-all duration-500"
                 :alt="record.mapname"
                 onerror="this.src='/images/unknown.jpg'"
             />
-            <div class="absolute inset-0 bg-gradient-to-r from-black/98 via-black/95 to-black/98 group-hover:from-black/40 group-hover:via-black/30 group-hover:to-black/40 transition-all duration-500"></div>
+            <div class="absolute inset-0 bg-transparent group-hover:bg-black/30 transition-all duration-500"></div>
         </div>
 
         <!-- Content (relative to background) -->
