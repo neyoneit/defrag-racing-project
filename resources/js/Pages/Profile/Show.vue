@@ -816,29 +816,33 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
             <div class="flex gap-6">
                 <!-- Left Sidebar Navigation -->
                 <div class="w-48 shrink-0 sticky top-[120px] self-start overflow-y-auto" style="max-height: calc(100vh - 136px);">
-                    <nav class="space-y-1">
+                    <nav class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-2 space-y-1">
                         <template v-for="tab in tabs" :key="tab.id">
                             <!-- Profile tab with nested Creator & Customize -->
                             <template v-if="tab.id === 'profile'">
-                                <button
-                                    @click="switchTab('profile')"
-                                    :class="[
-                                        'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
-                                        activeTab === 'profile'
-                                            ? 'bg-white/10 text-white border border-white/10'
-                                            : isProfileGroup(activeTab)
-                                                ? 'text-white'
+                                <div :class="[
+                                    'rounded-lg transition-all',
+                                    isProfileGroup(activeTab) || activeTab === 'profile'
+                                        ? 'bg-white/[0.07] border border-white/10'
+                                        : ''
+                                ]">
+                                    <button
+                                        @click="switchTab('profile')"
+                                        :class="[
+                                            'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                            activeTab === 'profile' || isProfileGroup(activeTab)
+                                                ? 'bg-blue-500/20 text-white'
                                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    ]"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                        <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
-                                    </svg>
-                                    {{ tab.label }}
-                                </button>
+                                        ]"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                                        </svg>
+                                        {{ tab.label }}
+                                    </button>
 
-                                <!-- Profile sub-tabs: Creator & Customize (always expanded) -->
-                                <div class="ml-3 pl-3 border-l border-white/15 space-y-0.5">
+                                    <!-- Profile sub-tabs: Creator & Customize (always expanded) -->
+                                    <div class="ml-3 pl-3 border-l border-white/15 space-y-0.5 pb-1">
                                     <template v-for="subTab in profileSubTabs" :key="subTab.id">
                                         <button
                                             @click="switchTab(subTab.id)"
@@ -865,6 +869,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                                                 {{ sub.label }}
                                             </button>
                                         </template>
+                                        <div v-if="subTab.id === 'creator'" class="my-1.5 border-t border-white/10 mx-1"></div>
                                         <!-- Customize sub-sections (always visible) -->
                                         <template v-if="subTab.id === 'customize'">
                                             <button v-for="sub in customizeSections" :key="sub.id"
@@ -878,6 +883,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                                         </template>
                                     </template>
                                 </div>
+                                </div>
                             </template>
 
                             <!-- Regular tabs (Marketplace, Notifications, Security) -->
@@ -887,7 +893,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                                     :class="[
                                         'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
                                         activeTab === tab.id
-                                            ? 'bg-white/10 text-white border border-white/10'
+                                            ? 'bg-blue-500/20 text-white'
                                             : 'text-gray-400 hover:text-white hover:bg-white/5'
                                     ]"
                                 >

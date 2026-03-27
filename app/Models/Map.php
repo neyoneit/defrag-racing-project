@@ -190,4 +190,9 @@ class Map extends Model
             ->withPivot('user_id')
             ->withTimestamps();
     }
+
+    public function difficultyRatings()
+    {
+        return $this->hasMany(MapDifficultyRating::class);
+    }
 }

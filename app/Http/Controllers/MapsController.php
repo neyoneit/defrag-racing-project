@@ -36,6 +36,8 @@ class MapsController extends Controller
 
         $maps = Map::query()
             ->select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at')
+            ->withAvg('difficultyRatings', 'rating')
+            ->withCount('difficultyRatings')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
             ->paginate(28)

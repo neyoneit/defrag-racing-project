@@ -191,7 +191,6 @@
 
     const maps = ref([]);
     const players = ref([]);
-    const demos = ref([]);
     const clans = ref([]);
     const bundles = ref([]);
     const models = ref([]);
@@ -215,7 +214,6 @@
                 }).then(response => {
                     maps.value = response.data?.maps
                     players.value = response.data?.players
-                    demos.value = response.data?.demos || []
                     clans.value = response.data?.clans || []
                     bundles.value = response.data?.bundles || []
                     models.value = response.data?.models || []
@@ -241,7 +239,6 @@
         if (search.value.length == 0) {
             maps.value = [];
             players.value = [];
-            demos.value = [];
             clans.value = [];
             bundles.value = [];
             models.value = [];
@@ -274,9 +271,13 @@
         }
     });
 
+    const searchResultsDropdown = ref(null);
+
     const handleNavClick = (event) => {
-        // Close search if clicking anywhere in nav except the search input itself
+        // Close search if clicking outside search input AND outside results dropdown
         if (showResultsSection.value && searchSection.value && !searchSection.value.contains(event.target)) {
+            // Don't close if clicking inside the teleported results dropdown
+            if (searchResultsDropdown.value && searchResultsDropdown.value.contains(event.target)) return;
             closeSearch();
         }
     };
@@ -425,7 +426,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative">
+        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-x-hidden">
             <canvas ref="dotsCanvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 0;"></canvas>
             <!-- Modern Compact Header -->
             <nav class="bg-white/[0.025] border-b border-white/[0.04] sticky top-0 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md" @click="handleNavClick">
@@ -461,13 +462,13 @@
 
                                 <!-- Backdrop - positioned BELOW the nav (z-40) -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed inset-0 z-[201]" @click="closeSearch"></div>
+                                    <div v-if="showResultsSection" class="fixed inset-0 z-[199]" @click="closeSearch"></div>
                                 </Teleport>
 
                                 <!-- Search Results Dropdown -->
                                 <Teleport to="body">
-                                    <div v-if="showResultsSection" class="fixed rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] bg-gray-800/90 backdrop-blur-xl border border-white/15 overflow-hidden z-[202] left-1/2 -translate-x-1/2 w-full max-w-8xl mx-auto px-4 lg:px-8"
-                                         :style="{ top: searchDropdownPosition.top + 'px', maxHeight: '70vh' }"
+                                    <div v-if="showResultsSection" ref="searchResultsDropdown" class="fixed rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] bg-gray-800/90 backdrop-blur-xl border border-white/15 overflow-hidden z-[202] left-1/2 -translate-x-1/2 w-full max-w-5xl mx-auto px-4 lg:px-8"
+                                         :style="{ top: searchDropdownPosition.top + 'px', maxHeight: '55vh' }"
                                          @click.stop>
 
                                     <div v-if="search.length == 0" class="text-center py-20 text-gray-500 text-sm">
@@ -483,16 +484,13 @@
                                             <button @click="activeSearchTab = 'players'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'players' ? 'text-purple-400 border-b-2 border-purple-400' : 'text-gray-500 hover:text-gray-300']">
                                                 PLAYERS<span v-if="players?.length > 0" class="ml-1 opacity-60">({{ players.length }})</span>
                                             </button>
-                                            <button @click="activeSearchTab = 'demos'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'demos' ? 'text-orange-400 border-b-2 border-orange-400' : 'text-gray-500 hover:text-gray-300']">
-                                                DEMOS<span v-if="demos?.length > 0" class="ml-1 opacity-60">({{ demos.length }})</span>
-                                            </button>
                                             <button @click="activeSearchTab = 'models'" :class="['flex-1 py-2.5 text-xs font-bold transition-colors', activeSearchTab === 'models' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-500 hover:text-gray-300']">
                                                 MODELS<span v-if="models?.length > 0" class="ml-1 opacity-60">({{ models.length }})</span>
                                             </button>
                                         </div>
 
                                         <!-- Mobile Tab Content (< lg) -->
-                                        <div class="lg:hidden p-4 overflow-y-auto defrag-scrollbar max-h-[70vh]">
+                                        <div class="lg:hidden p-4 overflow-y-auto defrag-scrollbar max-h-[55vh]">
                                             <!-- Maps -->
                                             <div v-if="activeSearchTab === 'maps'">
                                                 <div v-if="maps.data?.length > 0" class="space-y-2" @click="closeSearch">
@@ -506,30 +504,6 @@
                                                     <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                                 </div>
                                                 <div v-else class="text-xs text-gray-600 text-center py-8">No players found</div>
-                                            </div>
-                                            <!-- Demos -->
-                                            <div v-if="activeSearchTab === 'demos'">
-                                                <div v-if="demos?.length > 0" class="space-y-2" @click="closeSearch">
-                                                    <div v-for="demo in demos" :key="demo.id" class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/5">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="shrink-0">
-                                                                <div class="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-orange-400">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                            <div class="flex-1 min-w-0">
-                                                                <div class="text-base font-black text-white group-hover:text-orange-400 transition-colors truncate">{{ demo.filename }}</div>
-                                                                <div class="text-xs text-gray-400 font-semibold mt-0.5">Uploaded {{ new Date(demo.created_at).toLocaleDateString() }}</div>
-                                                            </div>
-                                                            <svg class="w-5 h-5 text-gray-600 group-hover:text-orange-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                            </svg>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No demos found</div>
                                             </div>
                                             <!-- Models -->
                                             <div v-if="activeSearchTab === 'models'">
@@ -556,7 +530,7 @@
                                         </div>
 
                                         <!-- Desktop Grid Layout (>= lg) -->
-                                        <div ref="resultsSection" class="hidden lg:grid grid-cols-4 gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[70vh]">
+                                        <div ref="resultsSection" class="hidden lg:grid grid-cols-3 gap-4 p-6 overflow-y-auto defrag-scrollbar max-h-[55vh]">
                                             <!-- Maps Column -->
                                             <div class="flex flex-col">
                                                 <div class="text-xs font-bold text-green-400 mb-3 pb-2 border-b border-green-500/30 flex items-center justify-between">
@@ -579,35 +553,6 @@
                                                     <PlayerSearchItem v-for="player in players" :player="player" :key="player.id" />
                                                 </div>
                                                 <div v-else class="text-xs text-gray-600 text-center py-8">No players found</div>
-                                            </div>
-
-                                            <!-- Demos Column -->
-                                            <div class="flex flex-col">
-                                                <div class="text-xs font-bold text-orange-400 mb-3 pb-2 border-b border-orange-500/30 flex items-center justify-between">
-                                                    <span>DEMOS</span>
-                                                    <span v-if="demos?.length > 0" class="text-[10px] opacity-60">({{ demos.length }})</span>
-                                                </div>
-                                                <div v-if="demos?.length > 0" class="space-y-2" @click="closeSearch">
-                                                    <div v-for="demo in demos" :key="demo.id" class="group cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/5">
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="shrink-0">
-                                                                <div class="w-10 h-10 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-orange-400">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                                    </svg>
-                                                                </div>
-                                                            </div>
-                                                            <div class="flex-1 min-w-0">
-                                                                <div class="text-base font-black text-white group-hover:text-orange-400 transition-colors truncate">{{ demo.filename }}</div>
-                                                                <div class="text-xs text-gray-400 font-semibold mt-0.5">Uploaded {{ new Date(demo.created_at).toLocaleDateString() }}</div>
-                                                            </div>
-                                                            <svg class="w-5 h-5 text-gray-600 group-hover:text-orange-400 group-hover:translate-x-1 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                                            </svg>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div v-else class="text-xs text-gray-600 text-center py-8">No demos found</div>
                                             </div>
 
                                             <!-- Models Column -->
@@ -772,114 +717,173 @@
                     </div>
 
                     <!-- Second Row: Navigation Links -->
-                    <div class="flex items-center gap-1 h-12 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 border-t border-white/[0.08]">
+                    <div class="flex items-center gap-1 h-12 -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 border-t border-white/[0.08] overflow-x-auto overflow-y-hidden scrollbar-hide">
 
-                        <!-- 0. Home -->
+                        <!-- 0. Home - always visible -->
                         <NavLink :href="route('home')" :active="navActive.home">
                             Home
                         </NavLink>
 
-                        <!-- 1. Servers -->
+                        <!-- 1. Servers - always visible -->
                         <NavLink :href="route('servers')" :active="navActive.servers">
                             Servers
                         </NavLink>
 
-                        <!-- 2. Players -->
-                        <Dropdown align="left" width="48" :hoverable="true">
-                            <template #trigger="{ open }">
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
-                                    :class="navActive.players ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                    <span>Players</span>
-                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                            </template>
-                            <template #content>
-                                <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
-                                <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
-                            </template>
-                        </Dropdown>
+                        <!-- 2. Players - visible from md -->
+                        <div class="hidden md:block">
+                            <Dropdown align="left" width="48" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="navActive.players ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>Players</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
+                                    <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
-                        <!-- 3. Rankings -->
-                        <Dropdown align="left" width="56" :hoverable="true">
-                            <template #trigger="{ open }">
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
-                                    :class="navActive.rankings ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                    <span>Rankings</span>
-                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                            </template>
-                            <template #content>
-                                <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
-                                <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
-                            </template>
-                        </Dropdown>
+                        <!-- 3. Rankings - visible from lg -->
+                        <div class="hidden lg:block">
+                            <Dropdown align="left" width="56" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="navActive.rankings ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>Rankings</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
+                                    <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
-                        <!-- 4. Maps & Models -->
-                        <Dropdown align="left" width="48" :hoverable="true">
-                            <template #trigger="{ open }">
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
-                                    :class="navActive.mapsmodels ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                    <span>Maps & Models</span>
-                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                            </template>
-                            <template #content>
-                                <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
-                                <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
-                            </template>
-                        </Dropdown>
+                        <!-- 4. Maps & Models - visible from md -->
+                        <div class="hidden md:block">
+                            <Dropdown align="left" width="48" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="navActive.mapsmodels ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>Maps & Models</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
+                                    <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
-                        <!-- 4b. Maplists -->
+                        <!-- 4b. Maplists - visible from xl -->
                         <Link :href="route('maplists.index')"
-                            class="inline-flex items-center px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                            class="hidden xl:inline-flex items-center px-3 py-2 text-sm font-medium transition-all rounded-lg"
                             :class="navActive.maplists ? 'text-white bg-blue-600/30 border border-blue-500/40' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
                             Maplists
                         </Link>
 
-                        <!-- 5. Demos -->
-                        <Dropdown align="left" width="48" :hoverable="true">
-                            <template #trigger="{ open }">
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
-                                    :class="navActive.demos ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                    <span>Demos</span>
-                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                            </template>
-                            <template #content>
-                                <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
-                                <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
-                            </template>
-                        </Dropdown>
+                        <!-- 5. Demos - visible from md -->
+                        <div class="hidden md:block">
+                            <Dropdown align="left" width="48" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="navActive.demos ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>Demos</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
+                                    <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
-                        <!-- 6. Challenges -->
-                        <Dropdown align="left" width="48" :hoverable="true">
-                            <template #trigger="{ open }">
-                                <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
-                                    :class="navActive.challenges ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                    <span>Challenges</span>
-                                    <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                </button>
-                            </template>
-                            <template #content>
-                                <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
-                                <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
-                            </template>
-                        </Dropdown>
+                        <!-- 6. Challenges - visible from lg -->
+                        <div class="hidden lg:block">
+                            <Dropdown align="left" width="48" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="navActive.challenges ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>Challenges</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
+                                    <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
-                        <!-- 7. Tournaments -->
-                        <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
-                            Tournaments
-                        </NavLink>
+                        <!-- 7. Tournaments - visible from xl -->
+                        <div class="hidden xl:inline-flex">
+                            <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
+                                Tournaments
+                            </NavLink>
+                        </div>
 
-                        <!-- 8. Downloads -->
-                        <NavLink :href="route('bundles')" :active="navActive.bundles">
-                            Downloads
-                        </NavLink>
+                        <!-- 8. Downloads - visible from xl -->
+                        <div class="hidden xl:inline-flex">
+                            <NavLink :href="route('bundles')" :active="navActive.bundles">
+                                Downloads
+                            </NavLink>
+                        </div>
 
-                        <!-- 9. Beta -->
-                        <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
-                            Beta
-                        </NavLink>
+                        <!-- 9. Beta - visible from xl -->
+                        <div class="hidden xl:inline-flex">
+                            <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
+                                Beta
+                            </NavLink>
+                        </div>
+
+                        <!-- More dropdown - visible below xl -->
+                        <div class="xl:hidden">
+                            <Dropdown align="left" width="56" :hoverable="true">
+                                <template #trigger="{ open }">
+                                    <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
+                                        :class="open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
+                                        <span>More</span>
+                                        <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <!-- Items hidden below md (Players, Maps, Demos) -->
+                                    <div class="md:hidden">
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Players</div>
+                                        <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
+                                        <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Maps & Models</div>
+                                        <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
+                                        <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Demos</div>
+                                        <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
+                                        <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
+                                        <div class="border-t border-white/10 my-1.5"></div>
+                                    </div>
+                                    <!-- Items hidden below lg (Rankings, Challenges) -->
+                                    <div class="lg:hidden">
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Rankings</div>
+                                        <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
+                                        <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
+                                        <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Challenges</div>
+                                        <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
+                                        <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
+                                        <div class="border-t border-white/10 my-1.5"></div>
+                                    </div>
+                                    <!-- Items always in More (hidden inline below xl) -->
+                                    <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
+                                    <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">Tournaments</DropdownLink>
+                                    <DropdownLink :href="route('bundles')" :active="navActive.bundles">Downloads</DropdownLink>
+                                    <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">Beta</DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
 
                     </div>
                 </div>

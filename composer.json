@@ -9,6 +9,7 @@
     "license": "AGPL-3.0-or-later",
     "require": {
         "php": "^8.1",
+        "awcodes/filament-tiptap-editor": "^3.5",
         "aws/aws-sdk-php": "^3.297",
         "filament/filament": "^3.2",
         "flowframe/laravel-trend": "^0.1.5",

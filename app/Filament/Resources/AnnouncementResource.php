@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AnnouncementResource\Pages;
 use App\Filament\Resources\AnnouncementResource\RelationManagers;
 use App\Models\Announcement;
+use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -33,24 +34,9 @@ class AnnouncementResource extends Resource
                 Forms\Components\TextInput::make('title')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\RichEditor::make('text')
+                TiptapEditor::make('text')
                     ->required()
-                    ->toolbarButtons([
-                        'blockquote',
-                        'bold',
-                        'bulletList',
-                        'codeBlock',
-                        'h2',
-                        'h3',
-                        'italic',
-                        'link',
-                        'orderedList',
-                        'redo',
-                        'strike',
-                        'underline',
-                        'undo',
-                    ])
-                    ->maxLength(65535)
+                    ->profile('default')
                     ->columnSpanFull(),
                 Forms\Components\TextInput::make('type')
                     ->required()

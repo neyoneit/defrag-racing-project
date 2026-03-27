@@ -22,6 +22,14 @@
         }
     });
 
+    const difficulties = {
+        '1': { value: 'Beginner', color: 'bg-green-600' },
+        '2': { value: 'Easy', color: 'bg-lime-600' },
+        '3': { value: 'Medium', color: 'bg-yellow-600' },
+        '4': { value: 'Hard', color: 'bg-orange-600' },
+        '5': { value: 'Extreme', color: 'bg-red-600' },
+    };
+
     const types = {
         'run': { value: 'Run', color: 'bg-blue-600' },
         'team': { value: 'Team', color: 'bg-blue-600' },
@@ -86,6 +94,7 @@
     const form = useForm({
         search: props.queries?.search ?? '',
         author: props.queries?.author ?? '',
+        difficulty: props.queries?.difficulty ?? [],
         gametype: props.queries?.gametype ?? [],
         physics: props.queries?.physics ?? [],
         has_records: props.queries?.has_records ?? [],
@@ -109,6 +118,7 @@
     const resetFilters = () => {
         form.search = '';
         form.author = '';
+        form.difficulty = [];
         form.gametype = [];
         form.physics = [];
         form.has_records = [];
@@ -143,6 +153,7 @@
         let count = 0;
         if (form.search) count++;
         if (form.author) count++;
+        if (form.difficulty.length) count += form.difficulty.length;
         if (form.gametype.length) count += form.gametype.length;
         if (form.physics.length) count += form.physics.length;
         if (form.has_records.length) count++;
@@ -235,9 +246,13 @@
                 <TextInput type="text" v-model="form.author" class="block w-full" placeholder="Author..." v-on:keyup.enter="onFilterSubmit" />
             </div>
 
-            <!-- Gametype & Physics -->
+            <!-- Difficulty, Gametype & Physics -->
             <div class="sidebar-section">
                 <div class="space-y-2 px-3 py-2">
+                    <div>
+                        <label class="field-label">Difficulty</label>
+                        <SpecialRadio :options="difficulties" v-model="form.difficulty" :multi="true" :values="form.difficulty" />
+                    </div>
                     <div>
                         <label class="field-label">Gametype</label>
                         <SpecialRadio :options="types" v-model="form.gametype" :multi="true" :values="form.gametype" />
