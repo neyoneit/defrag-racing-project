@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, onUnmounted } from 'vue';
+    import { ref, computed, onMounted, onUnmounted } from 'vue';
     import { Head, Link, router } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
 
@@ -23,7 +23,7 @@
             const params = {};
             if (searchMap.value) params.search_map = searchMap.value;
             if (searchPlayer.value) params.search_player = searchPlayer.value;
-            router.get('/youtube', params, {
+            router.get('/rendered-demos', params, {
                 preserveState: true,
                 preserveScroll: true,
                 only: ['videos'],
@@ -108,6 +108,16 @@
         const min = Math.round(totalSec / 60);
         return `~${min} min`;
     };
+
+    const gridSize = ref(4);
+    const gridClass = computed(() => {
+        return {
+            3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+            4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+        }[gridSize.value];
+    });
+
+    const embedParams = 'autoplay=1&rel=0&iv_load_policy=3&playsinline=1&color=white&modestbranding=1';
 
     const timeSince = (dateStr) => {
         const now = new Date();
@@ -308,8 +318,17 @@
             </div>
 
             <div v-else-if="videos && videos.data.length > 0">
-                <h2 v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="text-lg font-bold text-white mb-4">Completed</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 v-if="currentlyRendering || (pendingQueue && pendingQueue.length > 0)" class="text-lg font-bold text-white">Completed</h2>
+                    <div class="flex items-center gap-1 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-1">
+                        <button v-for="n in [3, 4]" :key="n" @click="gridSize = n"
+                            class="px-2.5 py-1 text-xs font-medium rounded-md transition-all"
+                            :class="gridSize === n ? 'bg-white/15 text-white' : 'text-gray-400 hover:text-white'">
+                            {{ n }}
+                        </button>
+                    </div>
+                </div>
+                <div class="grid gap-4" :class="gridClass">
                     <div
                         v-for="video in videos.data"
                         :key="video.id"
@@ -335,7 +354,7 @@
                         <div class="relative aspect-video bg-black cursor-pointer" @click="toggleVideo(video.id)">
                             <template v-if="expandedVideo === video.id">
                                 <iframe
-                                    :src="`https://www.youtube.com/embed/${video.youtube_video_id}?autoplay=1`"
+                                    :src="`https://www.youtube.com/embed/${video.youtube_video_id}?${embedParams}`"
                                     class="absolute inset-0 w-full h-full"
                                     frameborder="0"
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -344,16 +363,24 @@
                             </template>
                             <template v-else>
                                 <img
-                                    :src="`https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`"
+                                    :src="`https://img.youtube.com/vi/${video.youtube_video_id}/maxresdefault.jpg`"
                                     :alt="video.map_name"
                                     class="absolute inset-0 w-full h-full object-cover"
                                     loading="lazy"
                                     decoding="async"
+                                    @error="(e) => e.target.src = `https://img.youtube.com/vi/${video.youtube_video_id}/mqdefault.jpg`"
                                 />
-                                <div class="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors">
-                                    <svg class="w-12 h-12 text-white/80" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M8 5v14l11-7z"/>
-                                    </svg>
+                                <div class="absolute inset-0">
+                                    <div class="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/70 to-transparent"></div>
+                                    <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/70 to-transparent"></div>
+                                    <div class="absolute inset-0 flex items-center justify-center group">
+                                        <svg class="w-[68px] h-[48px] transition-opacity group-hover:opacity-100 opacity-80" viewBox="0 0 68 48">
+                                            <path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="red"/>
+                                            <path d="M45 24 27 14v20" fill="white"/>
+                                        </svg>
+                                    </div>
+                                    <div class="absolute bottom-2 left-3 text-xs text-white/80 font-medium drop-shadow">{{ video.map_name }}</div>
+                                    <div class="absolute bottom-2 right-3 text-xs text-white/60 font-mono drop-shadow">{{ formatTime(video.time_ms) }}</div>
                                 </div>
                             </template>
                         </div>
@@ -389,20 +416,32 @@
                                 </div>
                             </div>
 
-                            <a
-                                v-if="video.youtube_url"
-                                :href="video.youtube_url"
-                                target="_blank"
-                                rel="noopener"
-                                class="mt-2 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
-                            >
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
-                                    <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
-                                </svg>
-                                Watch on YouTube
-                            </a>
-                            <div v-else-if="video.status === 'failed'" class="mt-2 text-xs text-red-400/60">
+                            <div class="mt-2 flex items-center justify-between">
+                                <a
+                                    v-if="video.youtube_url"
+                                    :href="video.youtube_url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                                >
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/>
+                                        <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/>
+                                    </svg>
+                                    Watch on YouTube
+                                </a>
+                                <a
+                                    v-if="video.demo_id"
+                                    :href="`/demos/${video.demo_id}/download`"
+                                    class="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                    </svg>
+                                    Download Demo
+                                </a>
+                            </div>
+                            <div v-if="!video.youtube_url && video.status === 'failed'" class="mt-2 text-xs text-red-400/60">
                                 Waiting for admin fix
                             </div>
                         </div>

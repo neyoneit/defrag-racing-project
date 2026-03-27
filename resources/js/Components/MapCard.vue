@@ -39,6 +39,21 @@
         }
     }
 
+    const difficultyLabels = [
+        { level: 1, label: 'Beginner', color: 'bg-green-600' },
+        { level: 2, label: 'Easy', color: 'bg-lime-600' },
+        { level: 3, label: 'Medium', color: 'bg-yellow-600' },
+        { level: 4, label: 'Hard', color: 'bg-orange-600' },
+        { level: 5, label: 'Extreme', color: 'bg-red-600' },
+    ];
+
+    const difficultyBadge = computed(() => {
+        const avg = props.map.difficulty_ratings_avg_rating;
+        if (!avg || !props.map.difficulty_ratings_count) return null;
+        const level = Math.round(avg);
+        return difficultyLabels[level - 1] || null;
+    });
+
     const background = computed(() => {
         const physics = props.map.physics.toLowerCase()
         const bgs = {
@@ -95,7 +110,13 @@
                 <div v-if="map.is_nsfw && !page.props.auth.user?.nsfw_confirmed" class="absolute inset-0 flex items-center justify-center bg-black/40">
                     <span class="px-3 py-1 bg-red-600/80 rounded-lg text-xs font-black text-white border border-red-500/50">NSFW</span>
                 </div>
-                <!-- Physics Badge -->
+                <!-- Difficulty Badge (top left) -->
+                <div v-if="difficultyBadge" class="absolute top-2 left-2">
+                    <div :class="`px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white ${difficultyBadge.color}`">
+                        {{ difficultyBadge.label }}
+                    </div>
+                </div>
+                <!-- Physics Badge (top right) -->
                 <div class="absolute top-2 right-2 flex flex-col gap-1 items-end">
                     <div v-if="map.is_nsfw" class="px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white bg-red-600/80">NSFW</div>
                     <div :class="`px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white ${background}`">

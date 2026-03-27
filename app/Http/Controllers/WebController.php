@@ -12,6 +12,8 @@ use App\Models\Tournament;
 use App\Models\MddProfile;
 use App\Models\UploadedDemo;
 use App\Models\Record;
+use App\Models\PlayerRating;
+use App\Models\PlayerModel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
@@ -55,7 +57,7 @@ class WebController extends Controller
 
             return [
                 'activeServers' => $servers->count(),
-                'servers' => $servers->values()->take(3),
+                'servers' => $servers->values()->take(4),
             ];
         });
 
@@ -64,6 +66,89 @@ class WebController extends Controller
         });
 
         $totalRecords = Cache::remember('home:total_records', 3600, fn () => Record::count());
+
+        // Recent world records (rank 1) - 3 VQ3 + 3 CPM
+        $recentWorldRecords = Cache::remember('home:recent_wrs', 120, function () {
+            $cols = ['id', 'mapname', 'mdd_id', 'name', 'time', 'physics', 'date_set', 'gametype'];
+            $vq3 = Record::where('rank', 1)->where('physics', 'vq3')
+                ->with('user:id,name,profile_photo_path,country,mdd_id,color')
+                ->orderBy('date_set', 'DESC')->limit(3)->get($cols);
+            $cpm = Record::where('rank', 1)->where('physics', 'cpm')
+                ->with('user:id,name,profile_photo_path,country,mdd_id,color')
+                ->orderBy('date_set', 'DESC')->limit(3)->get($cols);
+            return $vq3->concat($cpm);
+        });
+
+        // Ranking highlights - top 3 VQ3 + top 3 CPM
+        $rankingHighlights = Cache::remember('home:ranking_highlights', 3600, function () {
+            $vq3 = PlayerRating::where('physics', 'vq3')
+                ->where('mode', 'run')
+                ->where('category', 'overall')
+                ->where('active_players_rank', '>', 0)
+                ->orderBy('active_players_rank', 'ASC')
+                ->with('user:id,name,profile_photo_path,country,mdd_id,color')
+                ->limit(3)
+                ->get(['id', 'name', 'mdd_id', 'physics', 'active_players_rank', 'player_rating']);
+            $cpm = PlayerRating::where('physics', 'cpm')
+                ->where('mode', 'run')
+                ->where('category', 'overall')
+                ->where('active_players_rank', '>', 0)
+                ->orderBy('active_players_rank', 'ASC')
+                ->with('user:id,name,profile_photo_path,country,mdd_id,color')
+                ->limit(3)
+                ->get(['id', 'name', 'mdd_id', 'physics', 'active_players_rank', 'player_rating']);
+            return ['vq3' => $vq3, 'cpm' => $cpm];
+        });
+
+        // Recent changelog (from git log, reuse roadmap cache)
+        $recentChangelog = Cache::remember('home:changelog', 3600, function () {
+            $format = '%H' . chr(30) . '%s' . chr(30) . '%b' . chr(30) . '%ai' . chr(31);
+            $output = shell_exec("git log --format=\"$format\" -15 2>/dev/null");
+            if (!$output) return [];
+
+            $entries = explode(chr(31), $output);
+            $commits = [];
+            foreach ($entries as $entry) {
+                $entry = trim($entry);
+                if (!$entry) continue;
+                $parts = explode(chr(30), $entry, 4);
+                if (count($parts) < 2) continue;
+                $title = trim($parts[1]);
+                if (str_starts_with($title, 'Merge pull request') || str_starts_with($title, 'Merge branch')) continue;
+                $body = trim($parts[2] ?? '');
+                $body = preg_replace('/\n*Co-Authored-By:.*$/s', '', $body);
+                $body = trim($body);
+                $commits[] = [
+                    'hash' => substr(trim($parts[0]), 0, 7),
+                    'title' => $title,
+                    'description' => $body,
+                    'date' => isset($parts[3]) ? date('Y-m-d', strtotime(trim($parts[3]))) : null,
+                ];
+            }
+            return array_slice($commits, 0, 5);
+        });
+
+        // Upcoming/current tournaments
+        $upcomingTournaments = Cache::remember('home:upcoming_tournaments', 600, function () {
+            return Tournament::where(function ($q) {
+                $q->where('end_date', '>=', now())
+                  ->orWhereNull('end_date');
+            })
+            ->orderBy('start_date', 'ASC')
+            ->limit(3)
+            ->get();
+        });
+
+        // Latest model with gesture gif
+        $latestModel = Cache::remember('home:latest_model', 3600, function () {
+            return PlayerModel::where('approval_status', 'approved')
+                ->whereNotNull('gesture_gif')
+                ->orderBy('created_at', 'DESC')
+                ->first(['id', 'name', 'gesture_gif', 'thumbnail', 'idle_gif']);
+        });
+
+        // Latest map (already have $maps but get the first one)
+        $latestMap = $maps->first();
 
         return Inertia::render('Home')
             ->with('latestAnnouncement', $announcements['latest'])
@@ -75,7 +160,13 @@ class WebController extends Controller
             ->with('totalDemos', $totalDemos)
             ->with('activeServers', $serverData['activeServers'])
             ->with('activePlayers', $activePlayers)
-            ->with('totalRecords', $totalRecords);
+            ->with('totalRecords', $totalRecords)
+            ->with('recentWorldRecords', $recentWorldRecords)
+            ->with('rankingHighlights', $rankingHighlights)
+            ->with('recentChangelog', $recentChangelog)
+            ->with('upcomingTournaments', $upcomingTournaments)
+            ->with('latestModel', $latestModel)
+            ->with('latestMap', $latestMap);
     }
 
     function sortServers($servers) {

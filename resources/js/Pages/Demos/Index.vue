@@ -1308,7 +1308,7 @@ watch(selectedPhysics, () => {
                     <!-- Limits Info (Right Side) -->
                     <div class="flex flex-col gap-2">
                         <!-- Download Limit -->
-                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-gray-900/40 border-white/5'">
+                        <div v-if="localDownloadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localDownloadLimitInfo.isGuest ? 'bg-blue-900/20 border-blue-500/30' : localDownloadLimitInfo.remaining === 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-white/[0.06] border-white/10'">
                             <div class="flex items-center gap-2">
                                 <svg v-if="localDownloadLimitInfo.isGuest" class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -1337,7 +1337,7 @@ watch(selectedPhysics, () => {
                             </div>
                         </div>
                         <!-- Upload Limit -->
-                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-gray-900/40 border-white/5'">
+                        <div v-if="localUploadLimitInfo" class="rounded-lg px-4 py-2 shadow-xl border backdrop-blur-sm" :class="localUploadLimitInfo.isGuest ? 'bg-purple-900/20 border-purple-500/30' : 'bg-white/[0.06] border-white/10'">
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 flex-shrink-0" :class="localUploadLimitInfo.isGuest ? 'text-purple-400' : 'text-green-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"></path>

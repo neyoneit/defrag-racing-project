@@ -14,11 +14,14 @@ class MapFilters {
 
     public function filter(Request $request) {
         $maps = Map::select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at', 'cpm_average', 'vq3_average')
+            ->withAvg('difficultyRatings', 'rating')
+            ->withCount('difficultyRatings')
             ->orderBy('date_added', 'DESC');
 
         $maps = $this->search($request, $maps);
         $maps = $this->author($request, $maps);
         $maps = $this->tags($request, $maps);
+        $maps = $this->difficulty($request, $maps);
 
         $maps = $this->physics($request, $maps);
         $maps = $this->gametype($request, $maps);
@@ -48,9 +51,15 @@ class MapFilters {
         ];
     }
 
+    private function buildFuzzyLike(string $input): string {
+        $chars = mb_str_split(strtolower(trim($input)));
+        return '%' . implode('%', $chars) . '%';
+    }
+
     public function search(Request $request, $maps) {
         if ($request->filled('search')) {
-            $maps = $maps->where('name', 'LIKE', '%' . $request->search . '%');
+            $fuzzy = $this->buildFuzzyLike($request->search);
+            $maps = $maps->where('name', 'LIKE', $fuzzy);
             $this->queries['search'] = $request->search;
         }
 
@@ -59,7 +68,8 @@ class MapFilters {
 
     public function author(Request $request, $maps) {
         if ($request->filled('author')) {
-            $maps = $maps->where('author', 'LIKE', '%' . $request->author . '%');
+            $fuzzy = $this->buildFuzzyLike($request->author);
+            $maps = $maps->where('author', 'LIKE', $fuzzy);
             $this->queries['author'] = $request->author;
         }
 
@@ -80,6 +90,21 @@ class MapFilters {
             }
 
             $this->queries['tags'] = $request->tags;
+        }
+
+        return $maps;
+    }
+
+    public function difficulty(Request $request, $maps) {
+        if ($request->filled('difficulty') && count($request->difficulty) > 0) {
+            $levels = array_map('intval', $request->difficulty);
+            $maps = $maps->whereHas('difficultyRatings', function (Builder $query) use ($levels) {
+                $query->selectRaw('1')
+                    ->groupBy('map_id')
+                    ->havingRaw('ROUND(AVG(rating)) IN (' . implode(',', array_fill(0, count($levels), '?')) . ')', $levels);
+            });
+
+            $this->queries['difficulty'] = $request->difficulty;
         }
 
         return $maps;

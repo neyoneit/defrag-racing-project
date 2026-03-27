@@ -45,7 +45,7 @@ class YoutubeController extends Controller
             ->select([
                 'id', 'map_name', 'player_name', 'physics', 'time_ms', 'status',
                 'youtube_url', 'youtube_video_id', 'source', 'requested_by',
-                'render_duration_seconds', 'record_id', 'created_at',
+                'render_duration_seconds', 'record_id', 'demo_id', 'created_at',
             ]);
 
         if ($searchMap) {

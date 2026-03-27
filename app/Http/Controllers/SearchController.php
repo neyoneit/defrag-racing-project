@@ -15,10 +15,24 @@ class SearchController extends Controller
             'search'    =>      ['required', 'string', 'min:1', 'max:255']
         ]);
 
-        $maps = Map::search($request->search)->paginate(25);
+        $fuzzyPattern = '%' . implode('%', mb_str_split(strtolower(trim($request->search)))) . '%';
 
+        // Typesense search + DB fuzzy fallback for maps
+        $maps = Map::search($request->search)->paginate(25);
+        if ($maps->isEmpty()) {
+            $maps = Map::where('name', 'LIKE', $fuzzyPattern)
+                ->orderBy('date_added', 'DESC')
+                ->paginate(25);
+        }
+
+        // Typesense search + DB fuzzy fallback for players
         $users = User::search($request->search)->get();
         $profiles = MddProfile::search($request->search)->get();
+
+        if ($users->isEmpty() && $profiles->isEmpty()) {
+            $users = User::where('plain_name', 'LIKE', $fuzzyPattern)->limit(25)->get();
+            $profiles = MddProfile::where('name', 'LIKE', $fuzzyPattern)->limit(25)->get();
+        }
 
         $players = [];
 
@@ -84,11 +98,14 @@ class SearchController extends Controller
             ];
         })->toArray());
 
-        // Search models by name or author
+        // Search models by name or author (with fuzzy)
+        $fuzzyPattern = '%' . implode('%', mb_str_split(strtolower(trim($request->search)))) . '%';
         $models = PlayerModel::where('approval_status', 'approved')
-            ->where(function($query) use ($request) {
+            ->where(function($query) use ($request, $fuzzyPattern) {
                 $query->where('name', 'LIKE', '%' . $request->search . '%')
-                      ->orWhere('author', 'LIKE', '%' . $request->search . '%');
+                      ->orWhere('author', 'LIKE', '%' . $request->search . '%')
+                      ->orWhere('name', 'LIKE', $fuzzyPattern)
+                      ->orWhere('author', 'LIKE', $fuzzyPattern);
             })
             ->limit(10)
             ->get(['id', 'name', 'author', 'head_icon']);

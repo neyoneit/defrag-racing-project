@@ -86,6 +86,160 @@
     overflow-y: auto;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Latest News quasar jets */
+.news-quasar-jet-left,
+.news-quasar-jet-right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 0;
+}
+.news-quasar-jet-left {
+    right: calc(100% - 6px);
+    animation: quasar-sway-left 5s ease-in-out infinite;
+}
+.news-quasar-jet-right {
+    left: calc(100% - 6px);
+    animation: quasar-sway-right 5s ease-in-out infinite;
+}
+
+/* Hot core at the base */
+.news-quasar-jet-left .news-quasar-core {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, rgba(191,219,254,0.9) 30%, rgba(96,165,250,0.5) 60%, transparent 100%);
+    box-shadow: 0 0 10px 4px rgba(255,255,255,0.5), 0 0 25px 8px rgba(96,165,250,0.6), 0 0 50px 15px rgba(59,130,246,0.3);
+    animation: quasar-core-pulse 2s ease-in-out infinite;
+}
+.news-quasar-jet-right .news-quasar-core {
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, rgba(165,243,252,0.9) 30%, rgba(34,211,238,0.5) 60%, transparent 100%);
+    box-shadow: 0 0 10px 4px rgba(255,255,255,0.5), 0 0 25px 8px rgba(34,211,238,0.6), 0 0 50px 15px rgba(6,182,212,0.3);
+    animation: quasar-core-pulse 2s ease-in-out infinite reverse;
+}
+
+/* Main beam - sharp center */
+.news-quasar-jet-left > .news-quasar-beam {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 160px;
+    height: 3px;
+    background: linear-gradient(to left, rgba(255,255,255,0.95), rgba(147,197,253,0.8) 15%, rgba(96,165,250,0.5) 40%, rgba(59,130,246,0.15) 70%, transparent);
+    border-radius: 3px;
+    animation: quasar-beam-pulse 3s ease-in-out infinite;
+}
+.news-quasar-jet-right > .news-quasar-beam {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 160px;
+    height: 3px;
+    background: linear-gradient(to right, rgba(255,255,255,0.95), rgba(165,243,252,0.8) 15%, rgba(34,211,238,0.5) 40%, rgba(6,182,212,0.15) 70%, transparent);
+    border-radius: 3px;
+    animation: quasar-beam-pulse 3s ease-in-out infinite reverse;
+}
+
+/* Wide diffuse glow beam */
+.news-quasar-beam-wide {
+    height: 14px !important;
+    opacity: 0.4;
+    filter: blur(6px);
+}
+
+/* Faint outer haze */
+.news-quasar-beam-faint {
+    height: 30px !important;
+    opacity: 0.15;
+    filter: blur(14px);
+}
+
+/* Particles flying out */
+.news-quasar-particles {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 200px;
+    height: 40px;
+}
+.news-quasar-jet-left .news-quasar-particles { right: 0; }
+.news-quasar-jet-right .news-quasar-particles { left: 0; }
+
+.news-quasar-particles span {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    top: 50%;
+}
+.news-quasar-jet-left .news-quasar-particles span {
+    background: rgba(147,197,253,0.9);
+    box-shadow: 0 0 6px 2px rgba(96,165,250,0.6);
+    animation: quasar-particle-left 2.5s ease-out infinite;
+}
+.news-quasar-jet-right .news-quasar-particles span {
+    background: rgba(165,243,252,0.9);
+    box-shadow: 0 0 6px 2px rgba(34,211,238,0.6);
+    animation: quasar-particle-right 2.5s ease-out infinite;
+}
+.news-quasar-particles span:nth-child(1) { animation-delay: 0s; }
+.news-quasar-particles span:nth-child(2) { animation-delay: 0.5s; }
+.news-quasar-particles span:nth-child(3) { animation-delay: 1s; }
+.news-quasar-particles span:nth-child(4) { animation-delay: 1.5s; }
+.news-quasar-particles span:nth-child(5) { animation-delay: 2s; }
+
+@keyframes quasar-sway-left {
+    0%, 100% { transform: translateY(-50%) rotate(-6deg); }
+    50% { transform: translateY(-50%) rotate(6deg); }
+}
+@keyframes quasar-sway-right {
+    0%, 100% { transform: translateY(-50%) rotate(6deg); }
+    50% { transform: translateY(-50%) rotate(-6deg); }
+}
+@keyframes quasar-core-pulse {
+    0%, 100% { transform: translateY(-50%) scale(0.8); opacity: 0.7; }
+    50% { transform: translateY(-50%) scale(1.2); opacity: 1; }
+}
+@keyframes quasar-beam-pulse {
+    0%, 100% { width: 120px; opacity: 0.6; }
+    50% { width: 180px; opacity: 1; }
+}
+@keyframes quasar-particle-left {
+    0% { transform: translate(0, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-180px, calc(-50% + var(--py, 0px))) scale(0); opacity: 0; }
+}
+@keyframes quasar-particle-right {
+    0% { transform: translate(0, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(180px, calc(-50% + var(--py, 0px))) scale(0); opacity: 0; }
+}
+.news-quasar-particles span:nth-child(1) { --py: -8px; }
+.news-quasar-particles span:nth-child(2) { --py: 12px; }
+.news-quasar-particles span:nth-child(3) { --py: -4px; }
+.news-quasar-particles span:nth-child(4) { --py: 8px; }
+.news-quasar-particles span:nth-child(5) { --py: -12px; }
+
 .defrag-scrollbar::-webkit-scrollbar {
     width: 10px;
 }

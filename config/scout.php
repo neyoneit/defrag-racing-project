@@ -200,7 +200,8 @@ return [
                 ],
                 'search-parameters' => [
                     'query_by' => 'name',
-                    'prefix'   => true
+                    'prefix'   => true,
+                    'num_typos' => 2,
                 ],
             ],
 
@@ -225,7 +226,8 @@ return [
                 ],
                 'search-parameters' => [
                     'query_by' => 'plain_name',
-                    'prefix'   => true
+                    'prefix'   => true,
+                    'num_typos' => 2,
                 ],
             ],
 
@@ -250,7 +252,8 @@ return [
                 ],
                 'search-parameters' => [
                     'query_by' => 'plain_name',
-                    'prefix'   => true
+                    'prefix'   => true,
+                    'num_typos' => 2,
                 ],
             ],
 

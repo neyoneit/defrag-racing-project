@@ -444,12 +444,49 @@
         loadDemoMatches();
     });
 
+    const fuzzyMatch = (text, query) => {
+        const t = text.toLowerCase();
+        const q = query.toLowerCase();
+        if (t.includes(q)) return { match: true, score: 0 };
+        let ti = 0;
+        let consecutive = 0;
+        let maxConsecutive = 0;
+        let matched = 0;
+        for (let qi = 0; qi < q.length; qi++) {
+            let found = false;
+            while (ti < t.length) {
+                if (t[ti] === q[qi]) {
+                    matched++;
+                    consecutive++;
+                    maxConsecutive = Math.max(maxConsecutive, consecutive);
+                    ti++;
+                    found = true;
+                    break;
+                }
+                consecutive = 0;
+                ti++;
+            }
+            if (!found) return { match: false, score: Infinity };
+        }
+        return { match: true, score: q.length - maxConsecutive + (t.length - matched) };
+    };
+
     const filteredTags = computed(() => {
         if (!newTagInput.value) return availableTags.value;
-        const search = newTagInput.value.toLowerCase();
-        return availableTags.value.filter(tag =>
-            tag.name.includes(search) || tag.display_name.toLowerCase().includes(search)
-        );
+        const q = newTagInput.value.trim();
+        if (!q) return availableTags.value;
+
+        const results = [];
+        for (const tag of availableTags.value) {
+            const nameMatch = fuzzyMatch(tag.name, q);
+            const displayMatch = fuzzyMatch(tag.display_name, q);
+            const best = nameMatch.score <= displayMatch.score ? nameMatch : displayMatch;
+            if (best.match) {
+                results.push({ tag, score: best.score });
+            }
+        }
+        results.sort((a, b) => a.score - b.score);
+        return results.map(r => r.tag);
     });
 
     const addTag = async (tagName) => {
@@ -1205,10 +1242,14 @@
                                 :class="[
                                     'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all',
                                     difficultyData.user_rating === d.level
-                                        ? d.color + ' text-white ' + d.borderColor + ' ring-1 ' + d.activeRing + ' shadow-lg'
-                                        : communityDifficultyLevel === d.level && difficultyData.total > 0
-                                            ? d.color + '/40 text-white ' + d.borderColor + '/50'
-                                            : 'bg-white/5 text-gray-400 border-white/10 ' + ($page.props.auth?.user ? d.hoverColor + '/20 hover:text-white hover:border-white/30 cursor-pointer' : 'cursor-default'),
+                                        ? d.color + ' text-white ' + d.borderColor + ' ring-2 ' + d.activeRing + ' shadow-lg'
+                                        : communityDifficultyLevel === d.level && difficultyData.total > 0 && !$page.props.auth?.user
+                                            ? d.color + ' text-white ' + d.borderColor + ' ring-2 ' + d.activeRing + ' shadow-lg'
+                                            : communityDifficultyLevel === d.level && difficultyData.total > 0 && !difficultyData.user_rating && $page.props.auth?.user
+                                                ? d.color + '/60 text-white ' + d.borderColor + '/70'
+                                            : communityDifficultyLevel === d.level && difficultyData.total > 0
+                                                ? d.color + '/40 text-white ' + d.borderColor + '/50'
+                                                : 'bg-white/5 text-gray-400 border-white/10 ' + ($page.props.auth?.user ? d.hoverColor + '/20 hover:text-white hover:border-white/30 cursor-pointer' : 'cursor-default'),
                                 ]"
                                 :title="d.desc + (difficultyData.distribution[d.level] ? '\n' + difficultyData.distribution[d.level] + ' vote' + (difficultyData.distribution[d.level] > 1 ? 's' : '') : '')"
                             >

@@ -46,7 +46,7 @@ const onMouseEnter = () => {
 
 const onMouseLeave = () => {
     if (!props.hoverable || isTouchDevice()) return;
-    hoverTimeout = setTimeout(() => { open.value = false; }, 300);
+    hoverTimeout = setTimeout(() => { open.value = false; }, 150);
 };
 
 const hoverEntry = props.hoverable ? { id: instanceId, close: () => { clearTimeout(hoverTimeout); open.value = false; } } : null;

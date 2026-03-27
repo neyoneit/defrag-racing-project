@@ -32,7 +32,7 @@
             if (document.activeElement === tagSearchInput.value) return;
             tagsExpanded.value = false;
             tagSearch.value = '';
-        }, 1000);
+        }, 300);
     };
 
     const onTagSearchBlur = () => {
@@ -42,12 +42,52 @@
         }, 100);
     };
 
+    const fuzzyMatch = (text, query) => {
+        const t = text.toLowerCase();
+        const q = query.toLowerCase();
+        // Exact substring match = best score
+        if (t.includes(q)) return { match: true, score: 0 };
+        // Fuzzy: all query chars must appear in order
+        let ti = 0;
+        let consecutive = 0;
+        let maxConsecutive = 0;
+        let matched = 0;
+        for (let qi = 0; qi < q.length; qi++) {
+            let found = false;
+            while (ti < t.length) {
+                if (t[ti] === q[qi]) {
+                    matched++;
+                    consecutive++;
+                    maxConsecutive = Math.max(maxConsecutive, consecutive);
+                    ti++;
+                    found = true;
+                    break;
+                }
+                consecutive = 0;
+                ti++;
+            }
+            if (!found) return { match: false, score: Infinity };
+        }
+        // Lower score = better match. Prioritize consecutive matches and early matches.
+        return { match: true, score: q.length - maxConsecutive + (t.length - matched) };
+    };
+
     const filteredTagsForOverlay = computed(() => {
         if (!tagSearch.value) return tagsWithUsage.value;
-        const s = tagSearch.value.toLowerCase();
-        return tagsWithUsage.value.filter(tag =>
-            tag.name.toLowerCase().includes(s) || tag.display_name.toLowerCase().includes(s)
-        );
+        const q = tagSearch.value.trim();
+        if (!q) return tagsWithUsage.value;
+
+        const results = [];
+        for (const tag of tagsWithUsage.value) {
+            const nameMatch = fuzzyMatch(tag.name, q);
+            const displayMatch = fuzzyMatch(tag.display_name, q);
+            const best = nameMatch.score <= displayMatch.score ? nameMatch : displayMatch;
+            if (best.match) {
+                results.push({ tag, score: best.score });
+            }
+        }
+        results.sort((a, b) => a.score - b.score);
+        return results.map(r => r.tag);
     });
 
     const fetchTags = async () => {
@@ -315,9 +355,9 @@
 
 <style scoped>
 .tags-bar {
-    background: rgba(17, 24, 39, 0.4);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
     padding: 0.375rem 0.75rem;
     cursor: text;
@@ -325,8 +365,8 @@
 }
 .tags-bar:hover,
 .tags-bar:focus-within {
-    border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(17, 24, 39, 0.55);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .expand-tab {
