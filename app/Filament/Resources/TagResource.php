@@ -186,6 +186,10 @@ class TagResource extends Resource
                         $targetTag = Tag::find($data['target_tag_id']);
                         if (!$targetTag) return;
 
+                        // Collect source tag's map/maplist IDs BEFORE merge for revert capability
+                        $sourceMapIds = DB::table('map_tag')->where('tag_id', $record->id)->pluck('map_id')->all();
+                        $sourceMaplistIds = DB::table('maplist_tag')->where('tag_id', $record->id)->pluck('maplist_id')->all();
+
                         // Move all map_tag relations to target (skip duplicates)
                         // MySQL can't UPDATE and SELECT from same table in subquery, so collect IDs first
                         $existingMapIds = DB::table('map_tag')->where('tag_id', $targetTag->id)->pluck('map_id')->all();
@@ -222,10 +226,22 @@ class TagResource extends Resource
 
                         ModerationLog::log('tags', 'merged', $targetTag, [
                             'source_tag' => $record->display_name,
+                            'source_tag_normalized' => $record->name,
+                            'source_tag_category' => $record->category,
+                            'source_tag_note' => $record->note,
+                            'source_tag_blocked_keywords' => $record->blocked_keywords,
+                            'source_tag_youtube_url' => $record->youtube_url,
+                            'source_tag_parent_tag_id' => $record->parent_tag_id,
+                            'source_map_ids' => $sourceMapIds,
+                            'source_maplist_ids' => $sourceMaplistIds,
+                            'target_map_ids' => $existingMapIds,
+                            'target_maplist_ids' => $existingMaplistIds,
                             'target_tag' => $targetTag->display_name,
+                            'target_tag_id' => $targetTag->id,
                         ]);
 
-                        // Delete source tag
+                        // Delete source tag (skip delete log - merge already logged)
+                        $record->skipDeleteLog = true;
                         $record->delete();
 
                         Notification::make()
@@ -259,6 +275,12 @@ class TagResource extends Resource
                             foreach ($records as $record) {
                                 if ($record->id === $targetTag->id) continue;
 
+                                // Collect BEFORE merge for revert capability
+                                $sourceMapIds = DB::table('map_tag')->where('tag_id', $record->id)->pluck('map_id')->all();
+                                $sourceMaplistIds = DB::table('maplist_tag')->where('tag_id', $record->id)->pluck('maplist_id')->all();
+                                $existingMapIds = DB::table('map_tag')->where('tag_id', $targetTag->id)->pluck('map_id')->all();
+                                $existingMaplistIds = DB::table('maplist_tag')->where('tag_id', $targetTag->id)->pluck('maplist_id')->all();
+
                                 DB::table('map_tag')
                                     ->where('tag_id', $record->id)
                                     ->whereNotIn('map_id', function ($q) use ($targetTag) {
@@ -284,9 +306,22 @@ class TagResource extends Resource
 
                                 ModerationLog::log('tags', 'merged', $targetTag, [
                                     'source_tag' => $record->display_name,
+                                    'source_tag_normalized' => $record->name,
+                                    'source_tag_category' => $record->category,
+                                    'source_tag_note' => $record->note,
+                                    'source_tag_blocked_keywords' => $record->blocked_keywords,
+                                    'source_tag_youtube_url' => $record->youtube_url,
+                                    'source_tag_parent_tag_id' => $record->parent_tag_id,
+                                    'source_map_ids' => $sourceMapIds,
+                                    'source_maplist_ids' => $sourceMaplistIds,
+                                    'target_map_ids' => $existingMapIds,
+                                    'target_maplist_ids' => $existingMaplistIds,
                                     'target_tag' => $targetTag->display_name,
+                                    'target_tag_id' => $targetTag->id,
                                 ]);
 
+                                // Skip delete log - merge already logged
+                                $record->skipDeleteLog = true;
                                 $record->delete();
                             }
 

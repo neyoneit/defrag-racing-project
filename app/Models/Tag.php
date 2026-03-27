@@ -12,17 +12,30 @@ class Tag extends Model
         'blocked_keywords' => 'array',
     ];
 
+    /** Set to true to skip ModerationLog/TagActivity in deleting event (e.g. during merge) */
+    public bool $skipDeleteLog = false;
+
     protected static function booted()
     {
         static::deleting(function (Tag $tag) {
+            if ($tag->skipDeleteLog) return;
+
             // Collect map IDs before cascade delete removes them
             $mapIds = $tag->maps()->pluck('maps.id')->toArray();
             $maplistIds = $tag->maplists()->pluck('maplists.id')->toArray();
 
             ModerationLog::log('tags', 'deleted', $tag, [
                 'tag_name' => $tag->display_name,
+                'tag_name_normalized' => $tag->name,
                 'usage_count' => $tag->usage_count,
-                'map_count' => count($tag->maps()->pluck('maps.id')->toArray()),
+                'category' => $tag->category,
+                'note' => $tag->note,
+                'blocked_keywords' => $tag->blocked_keywords,
+                'youtube_url' => $tag->youtube_url,
+                'parent_tag_id' => $tag->parent_tag_id,
+                'map_ids' => $mapIds,
+                'maplist_ids' => $maplistIds,
+                'map_count' => count($mapIds),
             ]);
 
             TagActivity::log('deleted', auth()?->id() ?? 0, $tag->id, 'delete', 0, [

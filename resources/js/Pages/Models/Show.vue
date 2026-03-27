@@ -596,6 +596,15 @@ const approveModel = async () => {
     }
 };
 
+const rejectModel = async () => {
+    try {
+        await axios.post(`/models/${props.model.id}/reject`);
+        router.reload();
+    } catch (e) {
+        alert('Failed to reject: ' + (e.response?.data?.message || e.message));
+    }
+};
+
 const deleteModel = async () => {
     isDeleting.value = true;
     try {
@@ -1509,13 +1518,17 @@ const confirmNsfw = () => {
                                     </div>
                                 </div>
                                 <!-- Pending approval banner (admin only) -->
-                                <div v-if="model.approval_status === 'pending' && $page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                                <div v-if="model.approval_status === 'pending' && $page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.is_moderator || $page.props.auth.user.id === model.user_id)" class="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                                     <span class="text-yellow-400 text-xs font-semibold">Pending Approval</span>
-                                    <button v-if="$page.props.auth.user.admin" @click="approveModel" :disabled="isApproving"
+                                    <button v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" @click="approveModel" :disabled="isApproving"
                                         class="px-3 py-1 rounded bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-all disabled:opacity-50">
                                         {{ isApproving ? 'Approving...' : 'Approve' }}
                                     </button>
-                                    <button @click="showDeleteConfirm = true"
+                                    <button v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" @click="rejectModel"
+                                        class="px-3 py-1 rounded bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-semibold hover:bg-orange-500/30 transition-all">
+                                        Reject
+                                    </button>
+                                    <button v-if="$page.props.auth.user.admin || $page.props.auth.user.id === model.user_id" @click="showDeleteConfirm = true"
                                         class="px-3 py-1 rounded bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all">
                                         Delete
                                     </button>
@@ -1807,7 +1820,7 @@ const confirmNsfw = () => {
                     <div v-if="!isThumbnailMode">
 
                         <!-- Admin actions row -->
-                        <div v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.id === model.user_id)" class="flex gap-2 mb-4">
+                        <div v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.is_moderator || $page.props.auth.user.id === model.user_id)" class="flex gap-2 mb-4">
                             <button
                                 @click="generateGifThumbnail"
                                 :disabled="isGeneratingGif || !viewerLoaded"
@@ -1828,7 +1841,7 @@ const confirmNsfw = () => {
                                 </span>
                             </button>
                             <a
-                                v-if="$page.props.auth?.user?.admin"
+                                v-if="$page.props.auth?.user?.admin || $page.props.auth?.user?.is_moderator"
                                 :href="`/defraghq/models/${model.id}/edit`"
                                 class="px-3 py-2 bg-amber-500/20 border border-amber-500/30 text-amber-300 font-semibold rounded-lg hover:bg-amber-500/30 transition-all text-xs flex items-center gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
@@ -1845,6 +1858,24 @@ const confirmNsfw = () => {
                                 </svg>
                                 Delete
                             </button>
+                        </div>
+                        <!-- Asset status badges (admin/mod only) -->
+                        <div v-if="$page.props.auth?.user && ($page.props.auth.user.admin || $page.props.auth.user.is_moderator)" class="flex flex-wrap gap-1.5 mb-4">
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.idle_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
+                                Idle {{ model.idle_gif ? 'OK' : 'Missing' }}
+                            </span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.rotate_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
+                                Rotate {{ model.rotate_gif ? 'OK' : 'Missing' }}
+                            </span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.gesture_gif ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
+                                Gesture {{ model.gesture_gif ? 'OK' : 'Missing' }}
+                            </span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.head_icon ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
+                                Head Icon {{ model.head_icon ? 'OK' : 'Missing' }}
+                            </span>
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border" :class="model.thumbnail ? 'bg-green-500/15 border-green-500/30 text-green-400' : 'bg-red-500/15 border-red-500/30 text-red-400'">
+                                Thumbnail {{ model.thumbnail ? 'OK' : 'Missing' }}
+                            </span>
                         </div>
                         <!-- Delete confirmation (admin or owner of pending) -->
                         <div v-if="showDeleteConfirm && $page.props.auth?.user && ($page.props.auth.user.admin || (model.approval_status === 'pending' && $page.props.auth.user.id === model.user_id))" class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">

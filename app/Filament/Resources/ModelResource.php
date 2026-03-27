@@ -204,7 +204,7 @@ class ModelResource extends Resource
                 Tables\Actions\Action::make('viewModel')
                     ->icon('heroicon-o-photo')
                     ->color('warning')
-                    ->label('Generate GIF')
+                    ->label('Check & Generate GIF')
                     ->url(fn (PlayerModel $record) => "/models/{$record->id}")
                     ->openUrlInNewTab(),
             ])

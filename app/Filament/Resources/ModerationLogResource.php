@@ -3,9 +3,11 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ModerationLogResource\Pages;
+use App\Models\MapperClaim;
 use App\Models\ModerationLog;
 use App\Models\Tag;
 use App\Models\TagActivity;
+use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -70,8 +72,9 @@ class ModerationLogResource extends Resource
                 Tables\Columns\TextColumn::make('action')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'approved', 'resolved', 'restored', 'claim_removed' => 'success',
-                        'rejected', 'dismissed', 'deleted' => 'danger',
+                        'approved', 'resolved', 'restored', 'claim_removed', 'tag_unbanned' => 'success',
+                        'rejected', 'dismissed', 'deleted', 'tag_banned' => 'danger',
+                        'reverted' => 'warning',
                         default => 'gray',
                     })
                     ->sortable(),
@@ -80,7 +83,7 @@ class ModerationLogResource extends Resource
                     ->getStateUsing(function (ModerationLog $record) {
                         $meta = $record->metadata ?? [];
                         $parts = [];
-                        foreach (['claim_name', 'claim_user', 'reporter', 'reason', 'model_name', 'flag_reason'] as $key) {
+                        foreach (['tag_name', 'source_tag', 'target_tag', 'result', 'original_user', 'maps_restored', 'banned_user', 'claim_name', 'claim_user', 'reporter', 'reason', 'model_name', 'flag_reason'] as $key) {
                             if (isset($meta[$key])) $parts[] = "{$key}: {$meta[$key]}";
                         }
                         return implode(', ', $parts) ?: '-';
@@ -102,27 +105,33 @@ class ModerationLogResource extends Resource
                         return "This will recreate tag \"{$name}\" and re-attach it to its maps.";
                     })
                     ->action(function (ModerationLog $record): void {
-                        // Find matching TagActivity record to get full metadata (map_ids etc.)
-                        $tagActivity = TagActivity::where('action', 'deleted')
-                            ->whereNotNull('metadata')
-                            ->whereRaw("JSON_EXTRACT(metadata, '$.tag_name') = ?", [$record->metadata['tag_name'] ?? ''])
-                            ->where('user_id', $record->user_id)
-                            ->latest()
-                            ->first();
-
-                        if (!$tagActivity) {
-                            Notification::make()->title('No matching tag activity found for restore')->danger()->send();
-                            return;
-                        }
-
-                        $meta = $tagActivity->metadata ?? [];
-                        $name = $meta['tag_name'] ?? null;
-                        $normalized = $meta['tag_name_normalized'] ?? strtolower($name ?? '');
+                        $logMeta = $record->metadata ?? [];
+                        $name = $logMeta['tag_name'] ?? null;
 
                         if (!$name) {
-                            Notification::make()->title('Cannot restore - no tag name')->danger()->send();
+                            Notification::make()->title('Cannot restore - no tag name in log metadata')->danger()->send();
                             return;
                         }
+
+                        // Use metadata from ModerationLog directly (new format has map_ids)
+                        // Fall back to TagActivity for older logs that don't have map_ids
+                        $meta = $logMeta;
+                        $tagActivity = null;
+
+                        if (!isset($meta['map_ids'])) {
+                            $tagActivity = TagActivity::where('action', 'deleted')
+                                ->whereNotNull('metadata')
+                                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.tag_name')) = ?", [$name])
+                                ->where('user_id', $record->user_id)
+                                ->latest()
+                                ->first();
+
+                            if ($tagActivity) {
+                                $meta = array_merge($meta, $tagActivity->metadata ?? []);
+                            }
+                        }
+
+                        $normalized = $meta['tag_name_normalized'] ?? strtolower($name);
 
                         $existing = Tag::where('name', $normalized)->first();
                         if ($existing) {
@@ -157,6 +166,7 @@ class ModerationLogResource extends Resource
                         }
 
                         $maplistIds = $meta['maplist_ids'] ?? [];
+                        $maplistReattached = 0;
                         foreach ($maplistIds as $maplistId) {
                             if (\App\Models\Maplist::where('id', $maplistId)->exists()) {
                                 DB::table('maplist_tag')->insertOrIgnore([
@@ -166,6 +176,7 @@ class ModerationLogResource extends Resource
                                     'created_at' => now(),
                                     'updated_at' => now(),
                                 ]);
+                                $maplistReattached++;
                             }
                         }
 
@@ -174,16 +185,152 @@ class ModerationLogResource extends Resource
                                 + DB::table('maplist_tag')->where('tag_id', $tag->id)->count(),
                         ]);
 
-                        // Mark both logs as restored
-                        $record->update(['metadata' => array_merge($record->metadata ?? [], ['restored' => true])]);
-                        $tagActivity->update(['tag_id' => $tag->id, 'metadata' => array_merge($tagActivity->metadata ?? [], ['restored' => true, 'restored_by' => auth()->id()])]);
+                        // Mark log as restored
+                        $record->update(['metadata' => array_merge($logMeta, ['restored' => true])]);
+                        if ($tagActivity) {
+                            $tagActivity->update(['tag_id' => $tag->id, 'metadata' => array_merge($tagActivity->metadata ?? [], ['restored' => true, 'restored_by' => auth()->id()])]);
+                        }
 
-                        ModerationLog::log('tags', 'restored', $tag, ['tag_name' => $name, 'maps_restored' => $reattached]);
+                        ModerationLog::log('tags', 'restored', $tag, ['tag_name' => $name, 'maps_restored' => $reattached, 'maplists_restored' => $maplistReattached]);
 
-                        Notification::make()
-                            ->title("Tag \"{$name}\" restored with {$reattached} maps")
-                            ->success()
-                            ->send();
+                        $msg = "Tag \"{$name}\" restored with {$reattached} maps";
+                        if ($maplistReattached > 0) $msg .= " and {$maplistReattached} maplists";
+                        if (empty($mapIds) && empty($maplistIds)) $msg .= " (no map/maplist data in log - old format)";
+
+                        Notification::make()->title($msg)->success()->send();
+                    }),
+                Tables\Actions\Action::make('revert_merge')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->label('Revert Merge')
+                    ->visible(fn (ModerationLog $record) => $record->area === 'tags' && $record->action === 'merged' && !($record->metadata['reverted'] ?? false))
+                    ->requiresConfirmation()
+                    ->modalHeading(function (ModerationLog $record) {
+                        $meta = $record->metadata ?? [];
+                        return "Revert merge of \"{$meta['source_tag']}\" into \"{$meta['target_tag']}\"?";
+                    })
+                    ->modalDescription(function (ModerationLog $record) {
+                        $meta = $record->metadata ?? [];
+                        if (!isset($meta['source_map_ids'])) {
+                            return "Cannot revert - old log format without map data. The source tag would be recreated empty.";
+                        }
+                        $mapCount = count($meta['source_map_ids'] ?? []);
+                        $maplistCount = count($meta['source_maplist_ids'] ?? []);
+                        $existing = Tag::where('name', $meta['source_tag_normalized'] ?? strtolower($meta['source_tag'] ?? ''))->first();
+                        if ($existing) {
+                            return "Tag \"{$meta['source_tag']}\" already exists (ID: {$existing->id}). Cannot revert.";
+                        }
+                        return "This will recreate tag \"{$meta['source_tag']}\" and move {$mapCount} maps back from \"{$meta['target_tag']}\".";
+                    })
+                    ->action(function (ModerationLog $record): void {
+                        $meta = $record->metadata ?? [];
+                        $sourceName = $meta['source_tag'] ?? null;
+                        $sourceNormalized = $meta['source_tag_normalized'] ?? strtolower($sourceName ?? '');
+                        $targetTagId = $meta['target_tag_id'] ?? null;
+
+                        if (!$sourceName) {
+                            Notification::make()->title('Missing source tag data in log metadata')->danger()->send();
+                            return;
+                        }
+
+                        $existing = Tag::where('name', $sourceNormalized)->first();
+                        if ($existing) {
+                            Notification::make()->title("Tag \"{$sourceName}\" already exists (ID: {$existing->id})")->danger()->send();
+                            return;
+                        }
+
+                        // Recreate source tag
+                        $sourceTag = Tag::create([
+                            'name' => $sourceNormalized,
+                            'display_name' => $sourceName,
+                            'category' => $meta['source_tag_category'] ?? null,
+                            'note' => $meta['source_tag_note'] ?? null,
+                            'blocked_keywords' => $meta['source_tag_blocked_keywords'] ?? null,
+                            'youtube_url' => $meta['source_tag_youtube_url'] ?? null,
+                            'parent_tag_id' => $meta['source_tag_parent_tag_id'] ?? null,
+                            'usage_count' => 0,
+                        ]);
+
+                        $targetTag = $targetTagId ? Tag::find($targetTagId) : null;
+                        $movedMaps = 0;
+                        $movedMaplists = 0;
+
+                        $sourceMapIds = $meta['source_map_ids'] ?? [];
+                        $targetOriginalMapIds = $meta['target_map_ids'] ?? [];
+                        // Maps that were ONLY on source (not on target before merge) - these should be removed from target
+                        $mapsToRemoveFromTarget = array_diff($sourceMapIds, $targetOriginalMapIds);
+
+                        foreach ($sourceMapIds as $mapId) {
+                            if (!\App\Models\Map::where('id', $mapId)->exists()) continue;
+
+                            // Remove from target only if it wasn't originally on target
+                            if ($targetTag && in_array($mapId, $mapsToRemoveFromTarget)) {
+                                DB::table('map_tag')
+                                    ->where('tag_id', $targetTag->id)
+                                    ->where('map_id', $mapId)
+                                    ->delete();
+                            }
+
+                            // Add to source tag
+                            DB::table('map_tag')->insertOrIgnore([
+                                'map_id' => $mapId,
+                                'tag_id' => $sourceTag->id,
+                                'user_id' => auth()->id(),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $movedMaps++;
+                        }
+
+                        $sourceMaplistIds = $meta['source_maplist_ids'] ?? [];
+                        $targetOriginalMaplistIds = $meta['target_maplist_ids'] ?? [];
+                        $maplistsToRemoveFromTarget = array_diff($sourceMaplistIds, $targetOriginalMaplistIds);
+
+                        foreach ($sourceMaplistIds as $maplistId) {
+                            if (!\App\Models\Maplist::where('id', $maplistId)->exists()) continue;
+
+                            if ($targetTag && in_array($maplistId, $maplistsToRemoveFromTarget)) {
+                                DB::table('maplist_tag')
+                                    ->where('tag_id', $targetTag->id)
+                                    ->where('maplist_id', $maplistId)
+                                    ->delete();
+                            }
+
+                            DB::table('maplist_tag')->insertOrIgnore([
+                                'maplist_id' => $maplistId,
+                                'tag_id' => $sourceTag->id,
+                                'user_id' => auth()->id(),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                            $movedMaplists++;
+                        }
+
+                        // Update usage counts
+                        $sourceTag->update([
+                            'usage_count' => DB::table('map_tag')->where('tag_id', $sourceTag->id)->count()
+                                + DB::table('maplist_tag')->where('tag_id', $sourceTag->id)->count(),
+                        ]);
+                        if ($targetTag) {
+                            $targetTag->update([
+                                'usage_count' => DB::table('map_tag')->where('tag_id', $targetTag->id)->count()
+                                    + DB::table('maplist_tag')->where('tag_id', $targetTag->id)->count(),
+                            ]);
+                        }
+
+                        $record->update(['metadata' => array_merge($meta, ['reverted' => true, 'reverted_by' => auth()->id()])]);
+
+                        ModerationLog::log('tags', 'reverted', $sourceTag, [
+                            'tag_name' => $sourceName,
+                            'original_action' => 'merged',
+                            'result' => "unmerged from \"{$meta['target_tag']}\", {$movedMaps} maps moved back",
+                        ]);
+
+                        $msg = "Tag \"{$sourceName}\" recreated with {$movedMaps} maps";
+                        if ($movedMaplists > 0) $msg .= " and {$movedMaplists} maplists";
+                        if (empty($sourceMapIds) && empty($sourceMaplistIds)) $msg .= " (no map data in log - old format)";
+
+                        Notification::make()->title($msg)->success()->send();
                     }),
                 Tables\Actions\Action::make('revert')
                     ->icon('heroicon-o-arrow-uturn-left')
@@ -191,9 +338,90 @@ class ModerationLogResource extends Resource
                     ->label('Revert')
                     ->visible(fn (ModerationLog $record) => in_array($record->action, ['approved', 'rejected', 'dismissed', 'claim_removed']) && !($record->metadata['reverted'] ?? false))
                     ->requiresConfirmation()
-                    ->modalHeading('Revert this action?')
-                    ->modalDescription('This will attempt to undo this moderation action.')
+                    ->modalHeading(function (ModerationLog $record) {
+                        if ($record->action === 'claim_removed') {
+                            $meta = $record->metadata ?? [];
+                            $claimName = $meta['claim_name'] ?? '?';
+                            $claimType = $meta['claim_type'] ?? 'map';
+                            $existingClaim = MapperClaim::where('name', $claimName)->where('type', $claimType)->with('user')->first();
+                            if ($existingClaim) {
+                                return "Claim \"{$claimName}\" is now owned by {$existingClaim->user?->plain_name}";
+                            }
+                            return "Restore claim \"{$claimName}\"?";
+                        }
+                        return 'Revert this action?';
+                    })
+                    ->modalDescription(function (ModerationLog $record) {
+                        if ($record->action === 'claim_removed') {
+                            $meta = $record->metadata ?? [];
+                            $claimName = $meta['claim_name'] ?? '?';
+                            $claimType = $meta['claim_type'] ?? 'map';
+                            $originalUser = $meta['claim_user'] ?? '?';
+                            $existingClaim = MapperClaim::where('name', $claimName)->where('type', $claimType)->with('user')->first();
+                            if ($existingClaim) {
+                                return "Someone else has claimed \"{$claimName}\" ({$claimType}) since it was removed. "
+                                    . "Current owner: {$existingClaim->user?->plain_name}. "
+                                    . "This will remove their claim and restore it to the original owner ({$originalUser}). "
+                                    . "The report will be set back to pending.";
+                            }
+                            return "This will recreate the claim \"{$claimName}\" ({$claimType}) for {$originalUser} and set the report back to pending.";
+                        }
+                        return 'This will attempt to undo this moderation action.';
+                    })
                     ->action(function (ModerationLog $record): void {
+                        if ($record->action === 'claim_removed') {
+                            $meta = $record->metadata ?? [];
+                            $claimName = $meta['claim_name'] ?? null;
+                            $claimUserId = $meta['claim_user_id'] ?? null;
+                            $claimType = $meta['claim_type'] ?? 'map';
+
+                            if (!$claimName || !$claimUserId) {
+                                Notification::make()->title('Missing claim data in log metadata (old log format)')->danger()->send();
+                                return;
+                            }
+
+                            // Remove any existing claim on the same name/type by another user
+                            $existingClaim = MapperClaim::where('name', $claimName)->where('type', $claimType)->first();
+                            if ($existingClaim && $existingClaim->user_id != $claimUserId) {
+                                $existingClaim->delete();
+                            }
+
+                            // Recreate the original claim if it doesn't exist
+                            $restoredClaim = MapperClaim::where('name', $claimName)->where('type', $claimType)->where('user_id', $claimUserId)->first();
+                            if (!$restoredClaim) {
+                                $restoredClaim = MapperClaim::create([
+                                    'user_id' => $claimUserId,
+                                    'name' => $claimName,
+                                    'type' => $claimType,
+                                ]);
+                            }
+
+                            // Re-link the report to the restored claim and set back to pending (if report still exists)
+                            $report = $record->subject;
+                            if ($report) {
+                                $report->update([
+                                    'mapper_claim_id' => $restoredClaim->id,
+                                    'status' => 'pending',
+                                    'resolved_at' => null,
+                                    'resolved_by' => null,
+                                ]);
+                            }
+
+                            $record->update(['metadata' => array_merge($meta, ['reverted' => true, 'reverted_by' => auth()->id()])]);
+
+                            ModerationLog::log('mapper_claims', 'reverted', $report ?? $restoredClaim, [
+                                'original_action' => 'claim_removed',
+                                'original_log_id' => $record->id,
+                                'claim_name' => $claimName,
+                                'restored_to_user' => $meta['claim_user'] ?? '?',
+                            ]);
+
+                            $msg = "Claim \"{$claimName}\" restored to {$meta['claim_user']}";
+                            if ($report) $msg .= ', report set to pending';
+                            Notification::make()->title($msg)->success()->send();
+                            return;
+                        }
+
                         // Generic revert - reset status on subject back to pending
                         $subject = $record->subject;
                         if (!$subject) {
@@ -243,6 +471,9 @@ class ModerationLogResource extends Resource
                         'hidden' => 'Hidden',
                         'shown' => 'Shown',
                         'claim_removed' => 'Claim Removed',
+                        'reverted' => 'Reverted',
+                        'tag_banned' => 'Tag Banned',
+                        'tag_unbanned' => 'Tag Unbanned',
                     ]),
             ]);
     }

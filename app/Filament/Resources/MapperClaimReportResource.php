@@ -131,9 +131,12 @@ class MapperClaimReportResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('This will delete the claim and mark the report as resolved.')
                     ->action(function (MapperClaimReport $record) {
-                        $claimName = $record->claim?->name;
-                        $claimUser = $record->claim?->user?->plain_name;
-                        $record->claim?->delete();
+                        $claim = $record->claim;
+                        $claimName = $claim?->name;
+                        $claimUser = $claim?->user?->plain_name;
+                        $claimUserId = $claim?->user_id;
+                        $claimType = $claim?->type;
+                        $claim?->delete();
                         $record->update([
                             'status' => 'resolved',
                             'resolved_by' => auth()->id(),
@@ -143,6 +146,8 @@ class MapperClaimReportResource extends Resource
                         ModerationLog::log('mapper_claims', 'claim_removed', $record, [
                             'claim_name' => $claimName,
                             'claim_user' => $claimUser,
+                            'claim_user_id' => $claimUserId,
+                            'claim_type' => $claimType,
                             'reporter' => $record->reporter?->plain_name,
                         ]);
                     })

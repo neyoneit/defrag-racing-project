@@ -2027,7 +2027,7 @@ class ModelsController extends Controller
      */
     public function approveModel($id)
     {
-        if (!Auth::check() || !Auth::user()->admin) {
+        if (!Auth::check() || (!Auth::user()->admin && !Auth::user()->is_moderator)) {
             abort(403);
         }
 
@@ -2035,7 +2035,24 @@ class ModelsController extends Controller
         $model->approval_status = 'approved';
         $model->save();
 
+        \App\Models\ModerationLog::log('models', 'approved', $model, ['model_name' => $model->name, 'uploader' => $model->user?->plain_name]);
+
         return response()->json(['success' => true, 'message' => "Model \"{$model->name}\" approved."]);
+    }
+
+    public function rejectModel($id)
+    {
+        if (!Auth::check() || (!Auth::user()->admin && !Auth::user()->is_moderator)) {
+            abort(403);
+        }
+
+        $model = PlayerModel::findOrFail($id);
+        $model->approval_status = 'rejected';
+        $model->save();
+
+        \App\Models\ModerationLog::log('models', 'rejected', $model, ['model_name' => $model->name, 'uploader' => $model->user?->plain_name]);
+
+        return response()->json(['success' => true, 'message' => "Model \"{$model->name}\" rejected."]);
     }
 
     /**
