@@ -23,6 +23,7 @@ use Filament\Navigation\NavigationGroup;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Assets\Css;
 use Illuminate\Support\Facades\Blade;
+use App\Http\Middleware\TrackAdminPresence;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -55,6 +56,10 @@ class AdminPanelProvider extends PanelProvider
                 'panels::head.end',
                 fn () => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/filament/filament/q3.css\') }}">')
             )
+            ->renderHook(
+                'panels::global-search.before',
+                fn () => Blade::render('@livewire(\'admin-presence-indicator\')')
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
@@ -78,6 +83,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                TrackAdminPresence::class,
             ]);
     }
 }

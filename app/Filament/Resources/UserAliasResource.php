@@ -79,7 +79,9 @@ class UserAliasResource extends Resource
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('User')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn (string $state): string => \App\Filament\Resources\UserResource::q3tohtml($state))
+                    ->html(),
 
                 Tables\Columns\TextColumn::make('alias')
                     ->label('Alias')

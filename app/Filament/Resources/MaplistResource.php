@@ -62,7 +62,9 @@ class MaplistResource extends Resource
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn (string $state): string => \App\Filament\Resources\UserResource::q3tohtml($state))
+                    ->html(),
                 Tables\Columns\TextColumn::make('maps_count')
                     ->label('Maps')
                     ->counts('maps')

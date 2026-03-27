@@ -889,6 +889,24 @@
                 </div>
             </nav>
 
+            <!-- Latest Announcement Banner (guests only) -->
+            <div v-if="!$page.props.auth?.user && $page.props.globalLatestAnnouncement" class="bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-blue-500/10 border-b border-blue-500/20">
+                <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+                    <Link href="/announcements" class="flex items-center justify-between gap-4 py-2 group">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+                            </svg>
+                            <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Latest News</span>
+                            <span class="text-sm text-gray-300 group-hover:text-white transition-colors truncate">{{ $page.props.globalLatestAnnouncement.title }}</span>
+                        </div>
+                        <svg class="w-4 h-4 text-blue-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </Link>
+                </div>
+            </div>
+
             <!-- Link Account Banner (unlinked users) -->
             <div v-if="$page.props.auth?.user && !$page.props.auth.user.mdd_id" class="bg-gradient-to-r from-yellow-500/10 via-amber-500/15 to-yellow-500/10 border-b border-yellow-500/20">
                 <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">

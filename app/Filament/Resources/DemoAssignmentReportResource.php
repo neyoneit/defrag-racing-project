@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DemoAssignmentReportResource\Pages;
 use App\Models\DemoAssignmentReport;
 use App\Models\UploadedDemo;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -346,6 +347,11 @@ class DemoAssignmentReportResource extends Resource
                             }
                         }
 
+                        ModerationLog::log('demo_assignments', 'approved', $record, [
+                            'report_type' => $record->report_type,
+                            'reporter' => $record->reportedByUser?->plain_name,
+                        ]);
+
                         Notification::make()
                             ->title('Report Approved')
                             ->success()
@@ -375,6 +381,11 @@ class DemoAssignmentReportResource extends Resource
                             'resolved_at' => now(),
                             'resolved_by_admin_id' => auth()->id(),
                             'admin_notes' => $notes,
+                        ]);
+
+                        ModerationLog::log('demo_assignments', 'rejected', $record, [
+                            'report_type' => $record->report_type,
+                            'reason' => $data['admin_notes'],
                         ]);
 
                         Notification::make()

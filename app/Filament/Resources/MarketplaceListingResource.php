@@ -99,9 +99,13 @@ class MarketplaceListingResource extends Resource
                     ]),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (string $state): string => \App\Filament\Resources\UserResource::q3tohtml($state))
+                    ->html(),
                 Tables\Columns\TextColumn::make('assignedTo.name')
-                    ->label('Assigned To'),
+                    ->label('Assigned To')
+                    ->formatStateUsing(fn (?string $state): string => $state ? \App\Filament\Resources\UserResource::q3tohtml($state) : '-')
+                    ->html(),
                 Tables\Columns\TextColumn::make('budget'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

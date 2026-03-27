@@ -54,6 +54,29 @@ class TagController extends Controller
         ]);
 
         $map = Map::findOrFail($mapId);
+
+        // Check if typed name matches any tag's blocked keywords
+        $normalizedInput = strtolower(trim($validated['tag_name']));
+        $blockedMatch = Tag::whereNotNull('blocked_keywords')
+            ->get()
+            ->first(function ($t) use ($normalizedInput) {
+                $keywords = is_array($t->blocked_keywords) ? $t->blocked_keywords : [];
+                foreach ($keywords as $kw) {
+                    if (strtolower(trim($kw)) === $normalizedInput) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+
+        if ($blockedMatch) {
+            return response()->json([
+                'error' => 'blocked_keyword',
+                'message' => "This keyword is blocked. Use the correct tag instead.",
+                'suggested_tag' => $blockedMatch->load('parent:id,name,display_name', 'children:id,name,display_name,parent_tag_id'),
+            ], 422);
+        }
+
         $tag = Tag::findOrCreateByName($validated['tag_name']);
 
         // Check if tag already exists on this map

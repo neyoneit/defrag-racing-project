@@ -516,13 +516,26 @@
             newTagInput.value = '';
             showTagSuggestions.value = false;
         } catch (error) {
-            if (error.response?.data?.error) {
+            if (error.response?.data?.error === 'blocked_keyword' && error.response?.data?.suggested_tag) {
+                blockedSuggestedTag.value = error.response.data.suggested_tag;
+                showBlockedTagModal.value = true;
+            } else if (error.response?.data?.error) {
                 alert(error.response.data.error);
             } else {
                 alert('Failed to add tag');
             }
         } finally {
             addingTag.value = false;
+        }
+    };
+
+    // Blocked keyword modal
+    const showBlockedTagModal = ref(false);
+    const blockedSuggestedTag = ref(null);
+    const acceptSuggestedTag = () => {
+        if (blockedSuggestedTag.value) {
+            showBlockedTagModal.value = false;
+            addTag(blockedSuggestedTag.value.display_name);
         }
     };
 
@@ -838,6 +851,12 @@
         return functions[abbr.toLowerCase().trim()] || abbr;
     };
 
+    const extractYoutubeId = (url) => {
+        if (!url) return '';
+        const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        return match ? match[1] : '';
+    };
+
     const formatTime = (milliseconds) => {
         const minutes = Math.floor(milliseconds / 60000);
         const seconds = Math.floor((milliseconds % 60000) / 1000);
@@ -1103,14 +1122,25 @@
                                     :style="tagInfoStyle"
                                     @mouseenter="showTagInfo = true"
                                     @mouseleave="showTagInfo = false"
-                                    class="fixed w-72 rounded-lg border border-white/20 shadow-2xl p-2.5"
+                                    class="fixed w-96 max-h-[70vh] overflow-y-auto rounded-lg border border-white/20 shadow-2xl p-3"
                                     style="background: #0f1219; z-index: 9999;"
                                 >
                                     <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Tag Info</div>
-                                    <div class="space-y-1.5">
-                                        <div v-for="t in tags" :key="'legend-' + t.id" class="flex items-center gap-2">
-                                            <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white whitespace-nowrap flex-shrink-0 leading-none">{{ t.display_name }}</span>
-                                            <span class="text-[11px] text-gray-400 leading-none">{{ t.note || 'No description yet' }}</span>
+                                    <div class="space-y-2.5">
+                                        <div v-for="t in tags" :key="'legend-' + t.id">
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white whitespace-nowrap flex-shrink-0 leading-none">{{ t.display_name }}</span>
+                                                <span class="text-[11px] text-gray-400 leading-none">{{ t.note || 'No description yet' }}</span>
+                                            </div>
+                                            <div v-if="t.youtube_url" class="mt-1.5 rounded-lg overflow-hidden aspect-video">
+                                                <iframe
+                                                    :src="'https://www.youtube.com/embed/' + extractYoutubeId(t.youtube_url) + '?rel=0&modestbranding=1'"
+                                                    class="w-full h-full"
+                                                    frameborder="0"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowfullscreen
+                                                ></iframe>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1750,6 +1780,37 @@
                     </div>
                 </div>
             </Transition>
+        </Teleport>
+
+        <!-- Blocked keyword modal -->
+        <Teleport to="body">
+            <div v-if="showBlockedTagModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click.self="showBlockedTagModal = false">
+                <div class="fixed inset-0 bg-black/60"></div>
+                <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
+                    <h3 class="text-lg font-bold text-white mb-3">Tag Suggestion</h3>
+                    <p class="text-gray-300 mb-4">
+                        This keyword is not a valid tag. Did you mean:
+                    </p>
+                    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4 flex items-center gap-3">
+                        <span class="px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-600 text-white">{{ blockedSuggestedTag?.display_name }}</span>
+                        <span v-if="blockedSuggestedTag?.note" class="text-sm text-gray-400">{{ blockedSuggestedTag.note }}</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <button
+                            @click="acceptSuggestedTag"
+                            class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                        >
+                            Add "{{ blockedSuggestedTag?.display_name }}"
+                        </button>
+                        <button
+                            @click="showBlockedTagModal = false"
+                            class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
         </Teleport>
     </div>
 </template>
