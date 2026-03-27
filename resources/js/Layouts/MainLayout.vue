@@ -690,6 +690,9 @@
                                             <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
                                             <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
+                                        <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
+                                            Admin Panel
+                                        </a>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">

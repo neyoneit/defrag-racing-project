@@ -7,6 +7,7 @@ use App\Models\TagActivity;
 use App\Models\Tag;
 use App\Models\Map;
 use App\Models\Maplist;
+use App\Models\ModerationLog;
 use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -144,8 +145,6 @@ class TagActivityResource extends Resource
                     ->options([
                         'added' => 'Added',
                         'removed' => 'Removed',
-                        'merged' => 'Merged',
-                        'deleted' => 'Deleted',
                     ]),
                 Tables\Filters\SelectFilter::make('tag_id')
                     ->label('Tag')
@@ -188,8 +187,15 @@ class TagActivityResource extends Resource
                             Notification::make()->title('Cannot ban admins or moderators.')->danger()->send();
                             return;
                         }
+                        $wasBanned = $user->tag_banned;
                         $user->tag_banned = !$user->tag_banned;
                         $user->save();
+
+                        ModerationLog::log('tags', $user->tag_banned ? 'tag_banned' : 'tag_unbanned', $user, [
+                            'tag_name' => $record->tag?->display_name ?? '[unknown]',
+                            'banned_user' => $user->plain_name,
+                        ]);
+
                         Notification::make()
                             ->title($user->tag_banned
                                 ? "\"{$user->plain_name}\" has been tag banned."
@@ -216,102 +222,6 @@ class TagActivityResource extends Resource
                         } else {
                             Notification::make()->title('Could not revert')->body($result)->danger()->send();
                         }
-                    }),
-                Tables\Actions\Action::make('restore')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('success')
-                    ->label('Restore')
-                    ->visible(fn (TagActivity $record) => $record->action === 'deleted' && !($record->metadata['restored'] ?? false))
-                    ->requiresConfirmation()
-                    ->modalHeading('Restore deleted tag?')
-                    ->modalDescription(function (TagActivity $record) {
-                        $name = $record->metadata['tag_name'] ?? '?';
-                        $mapCount = count($record->metadata['map_ids'] ?? []);
-                        $maplistCount = count($record->metadata['maplist_ids'] ?? []);
-                        $parts = ["This will recreate tag \"{$name}\""];
-                        if ($mapCount) $parts[] = "and re-attach it to {$mapCount} maps";
-                        if ($maplistCount) $parts[] = "and {$maplistCount} maplists";
-                        return implode(' ', $parts) . '.';
-                    })
-                    ->action(function (TagActivity $record): void {
-                        $meta = $record->metadata ?? [];
-                        $name = $meta['tag_name'] ?? null;
-                        $normalized = $meta['tag_name_normalized'] ?? strtolower($name ?? '');
-
-                        if (!$name) {
-                            Notification::make()->title('Cannot restore - no tag name in metadata')->danger()->send();
-                            return;
-                        }
-
-                        // Check if tag already exists (someone recreated it)
-                        $existing = Tag::where('name', $normalized)->first();
-                        if ($existing) {
-                            Notification::make()->title("Tag \"{$name}\" already exists (ID: {$existing->id})")->danger()->send();
-                            return;
-                        }
-
-                        // Recreate tag
-                        $tag = Tag::create([
-                            'name' => $normalized,
-                            'display_name' => $name,
-                            'category' => $meta['category'] ?? null,
-                            'note' => $meta['note'] ?? null,
-                            'blocked_keywords' => $meta['blocked_keywords'] ?? null,
-                            'youtube_url' => $meta['youtube_url'] ?? null,
-                            'parent_tag_id' => $meta['parent_tag_id'] ?? null,
-                            'usage_count' => 0,
-                        ]);
-
-                        // Re-attach to maps
-                        $mapIds = $meta['map_ids'] ?? [];
-                        $reattached = 0;
-                        foreach ($mapIds as $mapId) {
-                            if (\App\Models\Map::where('id', $mapId)->exists()) {
-                                DB::table('map_tag')->insertOrIgnore([
-                                    'map_id' => $mapId,
-                                    'tag_id' => $tag->id,
-                                    'user_id' => auth()->id(),
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ]);
-                                $reattached++;
-                            }
-                        }
-
-                        // Re-attach to maplists
-                        $maplistIds = $meta['maplist_ids'] ?? [];
-                        foreach ($maplistIds as $maplistId) {
-                            if (\App\Models\Maplist::where('id', $maplistId)->exists()) {
-                                DB::table('maplist_tag')->insertOrIgnore([
-                                    'maplist_id' => $maplistId,
-                                    'tag_id' => $tag->id,
-                                    'user_id' => auth()->id(),
-                                    'created_at' => now(),
-                                    'updated_at' => now(),
-                                ]);
-                            }
-                        }
-
-                        // Update usage count
-                        $tag->update([
-                            'usage_count' => DB::table('map_tag')->where('tag_id', $tag->id)->count()
-                                + DB::table('maplist_tag')->where('tag_id', $tag->id)->count(),
-                        ]);
-
-                        // Mark as restored
-                        $record->update([
-                            'tag_id' => $tag->id,
-                            'metadata' => array_merge($meta, ['restored' => true, 'restored_by' => auth()->id()]),
-                        ]);
-
-                        TagActivity::log('added', auth()->id(), $tag->id, 'restore', 0, [
-                            'restored_from_activity_id' => $record->id,
-                        ]);
-
-                        Notification::make()
-                            ->title("Tag \"{$name}\" restored with {$reattached} maps")
-                            ->success()
-                            ->send();
                     }),
             ])
             ->bulkActions([
@@ -382,6 +292,20 @@ class TagActivityResource extends Resource
 
             TagActivity::log('removed', auth()->id(), $tag->id, $record->taggable_type, $record->taggable_id, ['reverted_action_id' => $record->id]);
             $record->update(['metadata' => array_merge($record->metadata ?? [], ['reverted' => true, 'reverted_by' => auth()->id()])]);
+
+            $targetName = null;
+            if ($record->taggable_type === 'App\\Models\\Map') {
+                $targetName = Map::find($record->taggable_id)?->name;
+            } elseif ($record->taggable_type === 'App\\Models\\Maplist') {
+                $targetName = Maplist::find($record->taggable_id)?->name;
+            }
+            ModerationLog::log('tags', 'reverted', $tag, [
+                'tag_name' => $tag->display_name,
+                'original_action' => 'added',
+                'result' => 'tag removed from ' . ($targetName ?? $record->taggable_type . '#' . $record->taggable_id),
+                'original_user' => $record->user?->plain_name,
+            ]);
+
             return true;
         }
 
@@ -417,10 +341,29 @@ class TagActivityResource extends Resource
 
             TagActivity::log('added', auth()->id(), $tag->id, $record->taggable_type, $record->taggable_id, ['reverted_action_id' => $record->id]);
             $record->update(['metadata' => array_merge($record->metadata ?? [], ['reverted' => true, 'reverted_by' => auth()->id()])]);
+
+            $targetName = null;
+            if ($record->taggable_type === 'App\\Models\\Map') {
+                $targetName = Map::find($record->taggable_id)?->name;
+            } elseif ($record->taggable_type === 'App\\Models\\Maplist') {
+                $targetName = Maplist::find($record->taggable_id)?->name;
+            }
+            ModerationLog::log('tags', 'reverted', $tag, [
+                'tag_name' => $tag->display_name,
+                'original_action' => 'removed',
+                'result' => 'tag re-added to ' . ($targetName ?? $record->taggable_type . '#' . $record->taggable_id),
+                'original_user' => $record->user?->plain_name,
+            ]);
+
             return true;
         }
 
         return 'Cannot revert this action type.';
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('action', ['added', 'removed']);
     }
 
     public static function getPages(): array
