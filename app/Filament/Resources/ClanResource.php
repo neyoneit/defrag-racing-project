@@ -123,7 +123,9 @@ class ClanResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Clan Name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(fn (string $state): string => \App\Filament\Resources\UserResource::q3tohtml($state))
+                    ->html(),
                 Tables\Columns\TextColumn::make('tag')
                     ->label('Tag')
                     ->searchable()

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AliasReportResource\Pages;
 use App\Models\AliasReport;
 use App\Models\UserAlias;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -205,6 +206,12 @@ class AliasReportResource extends Resource
                             $alias->update(['is_approved' => false]);
                         }
 
+                        ModerationLog::log('alias_reports', 'approved', $record, [
+                            'alias' => $record->alias?->alias,
+                            'reported_user' => $record->alias?->user?->plain_name,
+                            'reporter' => $record->reporter?->plain_name,
+                        ]);
+
                         Notification::make()
                             ->title('Report Approved & Alias Rejected')
                             ->success()
@@ -237,6 +244,11 @@ class AliasReportResource extends Resource
                         if ($alias && !$alias->is_approved) {
                             $alias->update(['is_approved' => true]);
                         }
+
+                        ModerationLog::log('alias_reports', 'rejected', $record, [
+                            'alias' => $record->alias?->alias,
+                            'reported_user' => $record->alias?->user?->plain_name,
+                        ]);
 
                         Notification::make()
                             ->title('Report Rejected & Alias Approved')

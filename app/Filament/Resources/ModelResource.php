@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ModelResource\Pages;
 use App\Models\PlayerModel;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -17,7 +18,7 @@ class ModelResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
 
-    protected static ?string $navigationGroup = 'Content';
+    protected static ?string $navigationGroup = 'Moderation';
 
     protected static ?string $navigationLabel = 'Models';
 
@@ -168,25 +169,37 @@ class ModelResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['approval_status' => 'approved']))
+                    ->action(function (PlayerModel $record) {
+                        $record->update(['approval_status' => 'approved']);
+                        ModerationLog::log('models', 'approved', $record, ['model_name' => $record->name, 'uploader' => $record->user?->plain_name]);
+                    })
                     ->visible(fn (PlayerModel $record) => $record->approval_status !== 'approved'),
                 Tables\Actions\Action::make('reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['approval_status' => 'rejected']))
+                    ->action(function (PlayerModel $record) {
+                        $record->update(['approval_status' => 'rejected']);
+                        ModerationLog::log('models', 'rejected', $record, ['model_name' => $record->name, 'uploader' => $record->user?->plain_name]);
+                    })
                     ->visible(fn (PlayerModel $record) => $record->approval_status !== 'rejected'),
                 Tables\Actions\Action::make('hide')
                     ->icon('heroicon-o-eye-slash')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['hidden' => true]))
+                    ->action(function (PlayerModel $record) {
+                        $record->update(['hidden' => true]);
+                        ModerationLog::log('models', 'hidden', $record, ['model_name' => $record->name]);
+                    })
                     ->visible(fn (PlayerModel $record) => !$record->hidden),
                 Tables\Actions\Action::make('show')
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->requiresConfirmation()
-                    ->action(fn (PlayerModel $record) => $record->update(['hidden' => false]))
+                    ->action(function (PlayerModel $record) {
+                        $record->update(['hidden' => false]);
+                        ModerationLog::log('models', 'shown', $record, ['model_name' => $record->name]);
+                    })
                     ->visible(fn (PlayerModel $record) => $record->hidden),
                 Tables\Actions\Action::make('viewModel')
                     ->icon('heroicon-o-photo')

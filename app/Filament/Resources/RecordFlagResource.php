@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\RecordFlagResource\Pages;
 use App\Models\RecordFlag;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -231,6 +232,11 @@ class RecordFlagResource extends Resource
                             'resolved_by_admin_id' => auth()->id(),
                             'admin_notes' => $notes,
                         ]);
+                        ModerationLog::log('record_flags', 'approved', $record, [
+                            'flag_type' => $record->flag_type,
+                            'mapname' => $record->mapname,
+                            'flagged_by' => $record->flaggedByUser?->plain_name,
+                        ]);
 
                         Notification::make()
                             ->title('Flag Approved')
@@ -261,6 +267,11 @@ class RecordFlagResource extends Resource
                             'resolved_at' => now(),
                             'resolved_by_admin_id' => auth()->id(),
                             'admin_notes' => $notes,
+                        ]);
+                        ModerationLog::log('record_flags', 'rejected', $record, [
+                            'flag_type' => $record->flag_type,
+                            'mapname' => $record->mapname,
+                            'reason' => $data['admin_notes'],
                         ]);
 
                         Notification::make()

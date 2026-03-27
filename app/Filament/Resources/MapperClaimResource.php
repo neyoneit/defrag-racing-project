@@ -71,10 +71,13 @@ class MapperClaimResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('matching_maps_count')
                     ->label('Matching Maps')
-                    ->getStateUsing(fn (MapperClaim $record) => Map::where('visible', true)
-                        ->where('author', 'REGEXP', MapperClaim::authorRegexp($record->name))
-                        ->count()
-                    ),
+                    ->getStateUsing(fn (MapperClaim $record) => $record->type === 'map'
+                        ? Map::where('visible', true)
+                            ->where('author', 'REGEXP', MapperClaim::authorRegexp($record->name))
+                            ->count()
+                        : '-'
+                    )
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable(),

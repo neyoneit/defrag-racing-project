@@ -176,3 +176,8 @@
 .fi-sidebar-nav > ul {
     gap: 0.125rem;
 }
+
+/* TipTap editor min height */
+.tiptap-wrapper .ProseMirror {
+    min-height: 500px;
+}

@@ -8,6 +8,7 @@ use App\Models\Tag;
 use App\Models\TagActivity;
 use App\Models\Map;
 use App\Models\Maplist;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -39,13 +40,17 @@ class TagResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Tag Hierarchy')
-                    ->description('Tags can have a parent-child relationship. When a child tag (e.g. "PGB") is added to a map, the parent tag (e.g. "Ground Boost") is automatically added too. When a parent tag is removed, all its children are removed from that map.')
-                    ->icon('heroicon-o-information-circle')
+                Forms\Components\Section::make('Deprecated Features')
+                    ->description('These features are deprecated and no longer recommended. Click to expand if you still need to modify them.')
+                    ->icon('heroicon-o-exclamation-triangle')
                     ->schema([
+                        Forms\Components\TextInput::make('category')
+                            ->maxLength(255)
+                            ->nullable()
+                            ->helperText('Tag category (deprecated - no longer used in frontend)'),
                         Forms\Components\Placeholder::make('hierarchy_info')
                             ->content(new \Illuminate\Support\HtmlString(
-                                '<div class="text-sm space-y-2">' .
+                                '<div class="text-sm space-y-2 opacity-60">' .
                                 '<p><strong>Example:</strong> "Ground Boost" is a parent tag. "PGB" (Plasma Ground Boost) and "RGB" (Rocket Ground Boost) are its children.</p>' .
                                 '<ul class="list-disc pl-5 space-y-1">' .
                                 '<li>Adding "PGB" to a map → "Ground Boost" is <strong>auto-added</strong></li>' .
@@ -57,9 +62,31 @@ class TagResource extends Resource
                                 '</div>'
                             ))
                             ->hiddenLabel(),
+                        Forms\Components\Select::make('parent_tag_id')
+                            ->label('Parent Tag')
+                            ->helperText('If set, adding this tag to a map will also auto-add the parent tag.')
+                            ->relationship('parent', 'display_name')
+                            ->options(fn (?Tag $record) => Tag::whereNull('parent_tag_id')
+                                ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                ->orderBy('display_name')
+                                ->pluck('display_name', 'id')
+                            )
+                            ->searchable()
+                            ->nullable()
+                            ->preload(),
+                        Forms\Components\Placeholder::make('children_info')
+                            ->label('Child Tags')
+                            ->content(function (?Tag $record) {
+                                if (!$record) return 'Save tag first to see children.';
+                                $children = $record->children()->pluck('display_name')->toArray();
+                                if (empty($children)) return 'No child tags.';
+                                return implode(', ', $children);
+                            })
+                            ->visibleOn('edit'),
                     ])
                     ->collapsible()
-                    ->collapsed(),
+                    ->collapsed()
+                    ->extraAttributes(['class' => 'opacity-50 hover:opacity-100 transition-opacity']),
 
                 Forms\Components\TextInput::make('display_name')
                     ->required()
@@ -77,34 +104,21 @@ class TagResource extends Resource
                     ->label('Normalized Name')
                     ->unique(ignoreRecord: true)
                     ->helperText('Lowercase, used for deduplication'),
-                Forms\Components\TextInput::make('category')
-                    ->maxLength(255)
-                    ->nullable(),
                 Forms\Components\TextInput::make('note')
                     ->maxLength(255)
                     ->nullable()
                     ->helperText('Short description shown as tooltip when hovering the tag on map detail'),
-                Forms\Components\Select::make('parent_tag_id')
-                    ->label('Parent Tag')
-                    ->helperText('If set, adding this tag to a map will also auto-add the parent tag. Only tags without a parent can be selected (no multi-level nesting).')
-                    ->relationship('parent', 'display_name')
-                    ->options(fn (?Tag $record) => Tag::whereNull('parent_tag_id')
-                        ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
-                        ->orderBy('display_name')
-                        ->pluck('display_name', 'id')
-                    )
-                    ->searchable()
+                Forms\Components\TagsInput::make('blocked_keywords')
+                    ->placeholder('Type a keyword and press Enter')
+                    ->helperText('When a user types any of these words as a tag, it will be blocked and this tag will be suggested instead. E.g. tag "Plasma Ground Boost" could block keywords: "pgb", "plasma boost", "plasma ground".')
+                    ->separator(',')
+                    ->nullable(),
+                Forms\Components\TextInput::make('youtube_url')
+                    ->maxLength(255)
                     ->nullable()
-                    ->preload(),
-                Forms\Components\Placeholder::make('children_info')
-                    ->label('Child Tags')
-                    ->content(function (?Tag $record) {
-                        if (!$record) return 'Save tag first to see children.';
-                        $children = $record->children()->pluck('display_name')->toArray();
-                        if (empty($children)) return 'No child tags. Other tags can reference this tag as their parent.';
-                        return implode(', ', $children);
-                    })
-                    ->visibleOn('edit'),
+                    ->url()
+                    ->prefix('https://')
+                    ->helperText('YouTube video URL for visual explanation of this tag/technique. Shown in tag info panel.'),
                 Forms\Components\TextInput::make('usage_count')
                     ->numeric()
                     ->default(0)
@@ -130,16 +144,6 @@ class TagResource extends Resource
                     ->label('Normalized')
                     ->color('gray')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('category')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'weapons' => 'danger',
-                        'items' => 'warning',
-                        'functions' => 'info',
-                        default => 'gray',
-                    }),
                 Tables\Columns\TextColumn::make('usage_count')
                     ->numeric()
                     ->sortable()
@@ -158,13 +162,6 @@ class TagResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('category')
-                    ->options(fn () => Tag::query()
-                        ->whereNotNull('category')
-                        ->distinct()
-                        ->pluck('category', 'category')
-                        ->toArray()
-                    ),
                 Tables\Filters\Filter::make('unused')
                     ->query(fn (Builder $query): Builder => $query->where('usage_count', 0))
                     ->label('Unused tags only'),
@@ -223,6 +220,11 @@ class TagResource extends Resource
                             'target_tag' => $targetTag->display_name,
                         ]);
 
+                        ModerationLog::log('tags', 'merged', $targetTag, [
+                            'source_tag' => $record->display_name,
+                            'target_tag' => $targetTag->display_name,
+                        ]);
+
                         // Delete source tag
                         $record->delete();
 
@@ -277,6 +279,11 @@ class TagResource extends Resource
                                 TagActivity::log('merged', auth()->id(), $record->id, 'merge', 0, [
                                     'source_tag' => $record->display_name,
                                     'target_tag_id' => $targetTag->id,
+                                    'target_tag' => $targetTag->display_name,
+                                ]);
+
+                                ModerationLog::log('tags', 'merged', $targetTag, [
+                                    'source_tag' => $record->display_name,
                                     'target_tag' => $targetTag->display_name,
                                 ]);
 

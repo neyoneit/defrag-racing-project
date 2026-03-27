@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\MapperClaimReportResource\Pages;
 use App\Models\MapperClaimReport;
+use App\Models\ModerationLog;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -130,12 +131,19 @@ class MapperClaimReportResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('This will delete the claim and mark the report as resolved.')
                     ->action(function (MapperClaimReport $record) {
+                        $claimName = $record->claim?->name;
+                        $claimUser = $record->claim?->user?->plain_name;
                         $record->claim?->delete();
                         $record->update([
                             'status' => 'resolved',
                             'resolved_by' => auth()->id(),
                             'resolved_at' => now(),
                             'admin_notes' => ($record->admin_notes ? $record->admin_notes . "\n" : '') . 'Claim removed by admin.',
+                        ]);
+                        ModerationLog::log('mapper_claims', 'claim_removed', $record, [
+                            'claim_name' => $claimName,
+                            'claim_user' => $claimUser,
+                            'reporter' => $record->reporter?->plain_name,
                         ]);
                     })
                     ->visible(fn (MapperClaimReport $record) => $record->status === 'pending'),
@@ -149,6 +157,10 @@ class MapperClaimReportResource extends Resource
                             'status' => 'dismissed',
                             'resolved_by' => auth()->id(),
                             'resolved_at' => now(),
+                        ]);
+                        ModerationLog::log('mapper_claims', 'dismissed', $record, [
+                            'claim_name' => $record->claim?->name,
+                            'reporter' => $record->reporter?->plain_name,
                         ]);
                     })
                     ->visible(fn (MapperClaimReport $record) => $record->status === 'pending'),

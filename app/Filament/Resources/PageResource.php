@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PageResource\Pages;
 use App\Filament\Resources\PageResource\RelationManagers;
 use App\Models\Page;
+use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -42,8 +43,9 @@ class PageResource extends Resource
                 ->required(),
             Forms\Components\Toggle::make('footer_link')
                 ->required(),
-            Forms\Components\RichEditor::make('content')
+            TiptapEditor::make('content')
                 ->required()
+                ->profile('default')
                 ->columnSpanFull(),
         ]);
     }

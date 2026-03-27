@@ -166,10 +166,11 @@ class UserResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\ImageColumn::make('profile_photo_path')->defaultImageUrl(url('/images/null.jpg'))->circular(),
+                Tables\Columns\ImageColumn::make('profile_photo_path')->defaultImageUrl(url('/images/null.jpg'))->circular()->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('country')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('mdd_id')
                     ->searchable()
                     ->sortable(),
