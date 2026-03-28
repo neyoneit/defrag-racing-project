@@ -12,8 +12,9 @@ class CalculateRatingsRust extends Command
     protected $signature = 'ratings:calculate {--physics= : vq3 or cpm} {--mode=run : game mode} {--category= : ranking category}';
     protected $description = 'Calculate ratings using Rust (100x faster than SQL)';
 
-    // All available categories
+    // All available categories for run mode
     const CATEGORIES = ['overall', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg', 'strafe', 'lg'];
+    const CTF_MODES = ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'];
     const RANKING_TYPES = ['active_players', 'all_players'];
 
     public function handle()
@@ -23,19 +24,26 @@ class CalculateRatingsRust extends Command
         $category = $this->option('category');
 
         if (!$physics) {
-            // Run for both VQ3 and CPM, all categories
-            $this->info('Calculating ratings for VQ3 and CPM, all categories...');
+            // Run for both VQ3 and CPM, all modes
+            $this->info('Calculating ratings for VQ3 and CPM, all modes and categories...');
 
-            $this->call('ratings:calculate', ['--physics' => 'vq3', '--mode' => $mode]);
-            $this->call('ratings:calculate', ['--physics' => 'cpm', '--mode' => $mode]);
+            $this->call('ratings:calculate', ['--physics' => 'vq3', '--mode' => 'run']);
+            $this->call('ratings:calculate', ['--physics' => 'cpm', '--mode' => 'run']);
+
+            // CTF modes - overall only
+            foreach (self::CTF_MODES as $ctfMode) {
+                $this->call('ratings:calculate', ['--physics' => 'vq3', '--mode' => $ctfMode, '--category' => 'overall']);
+                $this->call('ratings:calculate', ['--physics' => 'cpm', '--mode' => $ctfMode, '--category' => 'overall']);
+            }
 
             return 0;
         }
 
         if (!$category) {
-            // Run all categories for this physics
+            // Run all categories for this physics/mode
             $this->info("Calculating all categories for {$physics} {$mode}...");
-            foreach (self::CATEGORIES as $cat) {
+            $categories = in_array($mode, self::CTF_MODES) ? ['overall'] : self::CATEGORIES;
+            foreach ($categories as $cat) {
                 $this->call('ratings:calculate', ['--physics' => $physics, '--mode' => $mode, '--category' => $cat]);
             }
             return 0;

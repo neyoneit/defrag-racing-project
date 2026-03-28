@@ -288,7 +288,7 @@ const updateNotifications = () => {
 
 // Resolve initial tab from URL query param ?tab=
 const urlParams = new URLSearchParams(window.location.search);
-const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'notifications', 'security'];
+const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'global-customize', 'notifications', 'security'];
 const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
 const activeTab = ref(initialTab);
 

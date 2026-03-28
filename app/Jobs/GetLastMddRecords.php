@@ -16,6 +16,7 @@ use App\Models\RecordHistory;
 use App\Models\MddProfile;
 
 use App\Jobs\ProcessNotificationsJob;
+use App\Jobs\RecalcMapRatingsJob;
 use App\Http\Controllers\RecordsController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -210,6 +211,9 @@ class GetLastMddRecords implements ShouldQueue
         }
 
         ProcessNotificationsJob::dispatch($newrecord);
+
+        // Incrementally recalculate ratings for this map
+        RecalcMapRatingsJob::dispatch($newrecord->mapname, $newrecord->physics, $newrecord->mode);
     }
 
     private function get_int_parameter($name) {

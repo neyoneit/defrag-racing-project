@@ -26,10 +26,8 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('tournaments:notifications-send')->everyTwoMinutes();
 
-        // Calculate VQ3 and CPM ratings using Rust - all 8 categories (overall, rocket, plasma, grenade, slick, tele, bfg, strafe)
-        // VQ3: ~89s, CPM: ~166s = ~4.5 minutes total for all 16 category rankings
-        $schedule->command('ratings:calculate --physics=vq3')->withoutOverlapping()->daily();
-        $schedule->command('ratings:calculate --physics=cpm')->withoutOverlapping()->daily();
+        // Calculate VQ3 and CPM ratings using Rust - all 9 categories + update map ranked flags
+        $schedule->command('ratings:calculate')->withoutOverlapping()->everyTwoHours();
 
         // Update last_activity in player_ratings from records (~20s)
         $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();
@@ -61,8 +59,7 @@ class Kernel extends ConsoleKernel
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
 
-        // Update map ranked flags hourly
-        $schedule->command('maps:update-ranked-flags')->withoutOverlapping()->hourly();
+        // Map ranked flags are now updated by ratings:calculate (Rust binary)
 
         // Calculate community helper leaderboard scores every 30 minutes
         $schedule->command('community:calculate-scores')->withoutOverlapping()->everyThirtyMinutes();
