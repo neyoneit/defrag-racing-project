@@ -6,6 +6,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 use App\Jobs\GetLastMddRecords;
+use App\Jobs\ScrapeRecords;
 use App\Jobs\TournamentCalculationsJob;
 
 class Kernel extends ConsoleKernel
@@ -20,6 +21,7 @@ class Kernel extends ConsoleKernel
     // scrape offline servers less frequently (every 5 minutes)
     $schedule->command('scrape:servers 1')->withoutOverlapping()->evenInMaintenanceMode()->everyFiveMinutes();
         $schedule->job(new GetLastMddRecords)->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
+        $schedule->job(new ScrapeRecords(1, 2))->withoutOverlapping()->evenInMaintenanceMode()->everyFiveMinutes();
         $schedule->command('scrape:maps')->withoutOverlapping()->evenInMaintenanceMode()->everyTwoMinutes();
 
         $schedule->job(new TournamentCalculationsJob)->withoutOverlapping()->evenInMaintenanceMode()->everyMinute();
