@@ -1385,7 +1385,7 @@
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
-                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
@@ -1402,6 +1402,14 @@
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
+                        </div>
+                        <!-- Column Headers -->
+                        <div v-if="getVq3Records.total > 0" class="flex items-center gap-1.5 mt-0.5 -ml-4 -mr-2">
+                            <div class="w-8 flex-shrink-0 text-center text-[10px] text-blue-400/60 uppercase tracking-wider font-medium">#</div>
+                            <div class="flex-1 text-[10px] text-blue-400/60 uppercase tracking-wider font-medium">Player</div>
+                            <div class="w-[90px] flex-shrink-0 text-[10px] pl-8 text-blue-400/60 uppercase tracking-wider font-medium text-center">Time</div>
+                            <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-blue-400/60 uppercase tracking-wider font-medium -ml-1">Score</div>
+                            <div class="w-[50px] flex-shrink-0 text-[10px] text-blue-400/60 uppercase tracking-wider font-medium text-center">Date</div>
                         </div>
                     </div>
 
@@ -1438,7 +1446,7 @@
                 <!-- CPM Leaderboard -->
                 <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" :style="{ order: cpmFirst ? 1 : 2 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
                     <!-- CPM Header -->
-                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
@@ -1455,6 +1463,14 @@
                                 </div>
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
+                        </div>
+                        <!-- Column Headers -->
+                        <div v-if="getCpmRecords.total > 0" class="flex items-center gap-1.5 mt-0.5 -ml-4 -mr-2">
+                            <div class="w-8 flex-shrink-0 text-center text-[10px] text-purple-400/60 uppercase tracking-wider font-medium">#</div>
+                            <div class="flex-1 text-[10px] text-purple-400/60 uppercase tracking-wider font-medium">Player</div>
+                            <div class="w-[90px] flex-shrink-0 text-[10px] pl-8 text-purple-400/60 uppercase tracking-wider font-medium text-center">Time</div>
+                            <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-purple-400/60 uppercase tracking-wider font-medium -ml-1">Score</div>
+                            <div class="w-[50px] flex-shrink-0 text-[10px] text-purple-400/60 uppercase tracking-wider font-medium text-center">Date</div>
                         </div>
                     </div>
 

@@ -106,7 +106,7 @@ class Tag extends Model
     public static function findOrCreateByName(string $tagName, ?string $category = null): Tag
     {
         $normalized = strtolower(trim($tagName));
-        $displayName = trim($tagName);
+        $displayName = ucfirst(strtolower(trim($tagName)));
 
         $tag = static::where('name', $normalized)->first();
 
