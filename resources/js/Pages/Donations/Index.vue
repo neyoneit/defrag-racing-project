@@ -491,7 +491,7 @@ const getYearProgress = (year, yearTotal) => {
         <div class="relative z-10 max-w-7xl mx-auto px-4 pb-12" style="margin-top: -22rem;">
 
             <!-- Make a Donation -->
-            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto text-center">
                 <h2 class="text-2xl font-bold text-white mb-4">Make a Donation</h2>
                 <p class="text-gray-400 mb-6">Your support helps cover defrag.racing projects and continue improving!</p>
 
@@ -514,7 +514,7 @@ const getYearProgress = (year, yearTotal) => {
             </div>
 
             <!-- Current Year Progress -->
-            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <div class="relative mb-2">
                     <h2 class="text-2xl font-bold text-white text-center">{{ currentYear }} Progress</h2>
 
@@ -634,7 +634,7 @@ const getYearProgress = (year, yearTotal) => {
             </div>
 
             <!-- Where Donations Go -->
-            <div class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                 <h2 class="text-2xl font-bold text-white mb-4 text-center">Where Your Support Goes</h2>
                 <div class="max-w-3xl mx-auto space-y-4 text-gray-300">
                     <div id="operational-costs">
@@ -685,7 +685,7 @@ const getYearProgress = (year, yearTotal) => {
             <div class="space-y-4">
                 <h2 class="text-3xl font-bold text-white text-center mb-6">Donation History</h2>
 
-                <div v-for="yearData in groupedByYear" :key="yearData.year" class="bg-black/40 rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
+                <div v-for="yearData in groupedByYear" :key="yearData.year" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5 mb-5 mx-auto">
                     <div
                         class="cursor-pointer hover:bg-white/5 rounded-lg p-2 -m-2 transition-colors"
                         @click="toggleYear(yearData.year)"

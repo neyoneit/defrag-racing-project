@@ -148,7 +148,7 @@ class MapsController extends Controller
             ->pluck('id')
             ->toArray();
 
-        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
+        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos.renderedVideo', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
         // Attach community flags before ranking
         $this->attachCommunityFlags($cpmRecords);
@@ -194,7 +194,7 @@ class MapsController extends Controller
             ->pluck('id')
             ->toArray();
 
-        $vq3Records = $vq3Records->with(['user', 'uploadedDemos', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+        $vq3Records = $vq3Records->with(['user', 'uploadedDemos.renderedVideo', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
 
         // Attach community flags before ranking
         $this->attachCommunityFlags($vq3Records);

@@ -479,8 +479,8 @@
 }
 
 @keyframes chevronBounce {
-    0%, 100% { transform: translateY(-3px); opacity: 0.4; }
-    50% { transform: translateY(3px); opacity: 1; }
+    0%, 100% { transform: translateY(-5px); opacity: 0.4; }
+    50% { transform: translateY(-1px); opacity: 1; }
 }
 
 @keyframes peekOpen {
