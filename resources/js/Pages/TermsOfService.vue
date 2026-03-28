@@ -7,7 +7,7 @@ defineProps({
 </script>
 
 <template>
-    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="py-12 px-4 sm:px-6 lg:px-8">
         <Head title="Terms of Service" />
 
         <!-- Modern Terms Container -->

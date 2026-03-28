@@ -58,7 +58,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head :title="clan.plain_name + ' - Clan'" />
 
         <!-- Hero Section with Background -->

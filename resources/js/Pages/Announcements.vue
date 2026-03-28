@@ -12,7 +12,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Announcements" />
 
         <!-- Hero Section with Shadow Gradient -->

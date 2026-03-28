@@ -54,7 +54,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div>
         <Head title="Downloads" />
 
         <!-- Header Section -->
@@ -117,6 +117,6 @@
             </div>
         </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
     </div>
 </template>

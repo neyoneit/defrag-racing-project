@@ -1715,25 +1715,30 @@
                     <div v-if="hasProfile && (vq3Records.total > 0 || cpmRecords.total > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <!-- VQ3 Records -->
                         <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-blue-500/20 flex flex-col min-h-[800px]">
-                            <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                            <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                                 <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" />
-                                        <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
-                                    </div>
-                                    <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
                             </div>
 
                             <div v-if="vq3Records.total > 0" class="px-4 py-2 flex-1">
+                                <!-- Column Headers -->
+                                <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
+                                    <div class="w-5 sm:w-8 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
+                                    <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Map</div>
+                                    <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
+                                    <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                </div>
                                 <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
                                     <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
                                         <img
                                             :src="`/storage/${record.map.thumbnail}`"
-                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-0 group-hover:opacity-100 transition-all duration-500"
                                             :alt="record.mapname"
                                             onerror="this.src='/images/unknown.jpg'"
                                         />
@@ -1744,8 +1749,13 @@
                                     <div class="relative flex items-center gap-2 sm:gap-3 w-full">
                                         <!-- Rank -->
                                         <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-all"
-                                                :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-500 group-hover:text-white'">
+                                            <span class="text-xs sm:text-sm font-black tabular-nums transition-all"
+                                                :class="{
+                                                    'text-yellow-200 [text-shadow:0_0_8px_#facc15,0_0_20px_#facc15,0_0_40px_#facc15,0_0_80px_#facc15,0_0_120px_rgba(250,204,21,0.5)]': record.rank === 1,
+                                                    'text-white [text-shadow:0_0_8px_#e2e8f0,0_0_20px_#e2e8f0,0_0_40px_#e2e8f0,0_0_80px_rgba(226,232,240,0.5)]': record.rank === 2,
+                                                    'text-amber-300 [text-shadow:0_0_8px_#f59e0b,0_0_20px_#f59e0b,0_0_40px_#f59e0b,0_0_80px_rgba(245,158,11,0.5)]': record.rank === 3,
+                                                    'text-gray-400': record.rank > 3
+                                                }">
                                                 {{ record.rank }}
                                             </span>
                                         </div>
@@ -1797,27 +1807,17 @@
                                         </div>
 
                                         <!-- Map Score -->
-                                        <div class="w-10 sm:w-14 flex-shrink-0 text-right relative group/score">
-                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
-                                            <!-- Score tooltip -->
-                                            <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
-                                                <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
-                                                    <div class="text-xs font-bold text-yellow-400 mb-1">Rating Impact</div>
-                                                    <div class="text-xs text-gray-300 space-y-0.5">
-                                                        <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
-                                                        <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
-                                                        <div>Rank: <span class="text-white font-bold">#{{ record.score_rank }}</span> / {{ record.score_rank_total }}</div>
-                                                        <div>Weight: <span class="text-white font-mono">{{ record.score_weight }}</span></div>
-                                                        <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="w-8 sm:w-10 flex-shrink-0 text-center">
+                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
                                         </div>
 
                                         <!-- Date -->
-                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
-                                            <div class="text-xs text-gray-100 group-hover:text-white font-mono font-semibold transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                                        <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                            <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                                                {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>
                                     </div>
@@ -1837,25 +1837,30 @@
 
                         <!-- CPM Records -->
                         <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-purple-500/20 flex flex-col min-h-[800px]">
-                            <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                            <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                                 <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" />
-                                        <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
-                                    </div>
-                                    <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
                             </div>
 
                             <div v-if="cpmRecords.total > 0" class="px-4 py-2 flex-1">
+                                <!-- Column Headers -->
+                                <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
+                                    <div class="w-5 sm:w-8 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
+                                    <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Map</div>
+                                    <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
+                                    <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                </div>
                                 <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
                                     <div v-if="record.map" class="absolute inset-0 transition-all duration-500 first:rounded-t-[10px] last:rounded-b-[10px]">
                                         <img
                                             :src="`/storage/${record.map.thumbnail}`"
-                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-20 group-hover:opacity-100 transition-all duration-500"
+                                            class="w-full h-full object-cover scale-110 blur-xl group-hover:blur-none group-hover:scale-105 opacity-0 group-hover:opacity-100 transition-all duration-500"
                                             :alt="record.mapname"
                                             onerror="this.src='/images/unknown.jpg'"
                                         />
@@ -1866,8 +1871,13 @@
                                     <div class="relative flex items-center gap-2 sm:gap-3 w-full">
                                         <!-- Rank -->
                                         <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                                            <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-all"
-                                                :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-500 group-hover:text-white'">
+                                            <span class="text-xs sm:text-sm font-black tabular-nums transition-all"
+                                                :class="{
+                                                    'text-yellow-200 [text-shadow:0_0_8px_#facc15,0_0_20px_#facc15,0_0_40px_#facc15,0_0_80px_#facc15,0_0_120px_rgba(250,204,21,0.5)]': record.rank === 1,
+                                                    'text-white [text-shadow:0_0_8px_#e2e8f0,0_0_20px_#e2e8f0,0_0_40px_#e2e8f0,0_0_80px_rgba(226,232,240,0.5)]': record.rank === 2,
+                                                    'text-amber-300 [text-shadow:0_0_8px_#f59e0b,0_0_20px_#f59e0b,0_0_40px_#f59e0b,0_0_80px_rgba(245,158,11,0.5)]': record.rank === 3,
+                                                    'text-gray-400': record.rank > 3
+                                                }">
                                                 {{ record.rank }}
                                             </span>
                                         </div>
@@ -1919,27 +1929,17 @@
                                         </div>
 
                                         <!-- Map Score -->
-                                        <div class="w-10 sm:w-14 flex-shrink-0 text-right relative group/score">
-                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
-                                            <!-- Score tooltip -->
-                                            <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
-                                                <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
-                                                    <div class="text-xs font-bold text-yellow-400 mb-1">Rating Impact</div>
-                                                    <div class="text-xs text-gray-300 space-y-0.5">
-                                                        <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
-                                                        <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
-                                                        <div>Rank: <span class="text-white font-bold">#{{ record.score_rank }}</span> / {{ record.score_rank_total }}</div>
-                                                        <div>Weight: <span class="text-white font-mono">{{ record.score_weight }}</span></div>
-                                                        <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div class="w-8 sm:w-10 flex-shrink-0 text-center">
+                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
                                         </div>
 
                                         <!-- Date -->
-                                        <div class="w-20 sm:w-28 flex-shrink-0 text-right">
-                                            <div class="text-xs text-gray-100 group-hover:text-white font-mono font-semibold transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                                        <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                            <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                                                {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
                                         </div>
                                     </div>
@@ -2447,25 +2447,8 @@
             </div> <!-- Close Reorderable Sections Container -->
         </div>
 
-        <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
-        <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="max-w-screen-2xl mx-auto px-4 mt-8 mb-8">
-            <div class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5">
-                <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics (Backend Load Times)</h3>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
-                        <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
-                        <div class="text-xl font-bold" :class="time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400'">
-                            {{ time }}ms
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 text-sm text-gray-500">
-                    <p><span class="text-green-400">Green</span> = Fast (&lt;500ms) | <span class="text-yellow-400">Yellow</span> = Moderate (500-1000ms) | <span class="text-red-400">Red</span> = Slow (&gt;1000ms)</p>
-                </div>
-            </div>
-        </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
 
         <!-- Alias Report Modal -->
         <Teleport to="body">

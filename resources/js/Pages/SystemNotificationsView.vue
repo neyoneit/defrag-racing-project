@@ -9,7 +9,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="System Notifications" />
 
         <!-- Header Section -->
@@ -73,6 +73,6 @@
             </div>
         </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
     </div>
 </template>

@@ -81,7 +81,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Home" />
 
         <!-- Hero Section -->
@@ -163,7 +163,7 @@
         </div>
 
         <!-- Main Content Sections -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 pb-4">
 
             <!-- Row 1: Active Servers + Recent World Records + Top Players + Tournaments -->
             <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1.5fr_1fr_1fr] gap-6">

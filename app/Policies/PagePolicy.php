@@ -45,7 +45,7 @@ class PagePolicy
      */
     public function delete(User $user, Page $page): bool
     {
-        return !in_array($page->slug, ['privacy-policy', 'privacy-policy-twitch']);
+        return true;
     }
 
     /**
@@ -61,6 +61,6 @@ class PagePolicy
      */
     public function forceDelete(User $user, Page $page): bool
     {
-        return !in_array($page->slug, ['privacy-policy', 'privacy-policy-twitch']);
+        return true;
     }
 }

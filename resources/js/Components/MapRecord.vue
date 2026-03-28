@@ -344,10 +344,19 @@
         if (hasValidityIssue.value) {
             return 'text-red-500/50';
         }
+        if (props.record.rank === 1) {
+            return 'text-yellow-200 !text-base [text-shadow:0_0_8px_#facc15,0_0_20px_#facc15,0_0_40px_#facc15,0_0_80px_#facc15,0_0_120px_rgba(250,204,21,0.5)]';
+        }
+        if (props.record.rank === 2) {
+            return 'text-white !text-base [text-shadow:0_0_8px_#e2e8f0,0_0_20px_#e2e8f0,0_0_40px_#e2e8f0,0_0_80px_rgba(226,232,240,0.5)]';
+        }
+        if (props.record.rank === 3) {
+            return 'text-amber-300 !text-base [text-shadow:0_0_8px_#f59e0b,0_0_20px_#f59e0b,0_0_40px_#f59e0b,0_0_80px_rgba(245,158,11,0.5)]';
+        }
         if (isVerified.value) {
             return 'text-green-400 group-hover:text-green-300';
         }
-        return 'text-white group-hover:text-white';
+        return 'text-gray-400';
     });
 
 </script>
@@ -363,7 +372,7 @@
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
         <div
-            class="font-black text-lg w-8 flex-shrink-0 text-right leading-none transition-all duration-200 group-hover:scale-110"
+            class="font-black text-sm w-8 flex-shrink-0 text-center leading-none transition-all duration-200 group-hover:scale-110"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
         >
@@ -759,7 +768,7 @@
         </div>
 
         <!-- Time - MASSIVE and eye-catching -->
-        <div class="text-right flex-shrink-0">
+        <div class="text-right flex-shrink-0 ml-2">
             <div
                 class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
@@ -775,17 +784,17 @@
         </div>
 
         <!-- Map Score -->
-        <div class="w-8 sm:w-10 text-right flex-shrink-0">
-            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+        <div class="w-10 sm:w-12 text-center flex-shrink-0 -ml-1 flex items-start">
+            <div v-if="record.map_score" class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full" style="line-height: 16px;">{{ Math.round(record.map_score) }}</div>
         </div>
 
         <!-- Date -->
-        <div class="flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">
-            <div
-                class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                :title="record.date_set"
-            >
-                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+        <div class="w-[50px] flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity text-right">
+            <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+            </div>
+            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
             </div>
         </div>
 

@@ -70,9 +70,7 @@ class PageResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                        ->visible(fn (Page $record) => !in_array($record->slug, ['privacy-policy', 'privacy-policy-twitch']))
-                        ->disabled(fn (Page $record) => in_array($record->slug, ['privacy-policy', 'privacy-policy-twitch'])),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -23,7 +23,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head title="Create Listing - Marketplace" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">

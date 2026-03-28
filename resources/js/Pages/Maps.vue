@@ -202,7 +202,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Maps" />
 
         <!-- Header Section -->
@@ -330,7 +330,7 @@
                     </div>
 
                     <!-- Maps Grid -->
-                    <div v-else-if="maps && maps.total > 0" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <div v-else-if="maps && maps.total > 0" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                         <MapCard v-for="map in maps.data" :map="map" :key="map.id" />
                     </div>
 
@@ -344,7 +344,7 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="maps && maps.total > maps.per_page" class="flex justify-center mt-8">
+                    <div v-if="maps && maps.total > maps.per_page" class="flex justify-center mt-3">
                         <Pagination :current_page="maps.current_page" :last_page="maps.last_page" :link="maps.first_page_url" :only="['maps']" />
                     </div>
                 </div>

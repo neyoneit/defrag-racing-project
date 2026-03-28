@@ -26,7 +26,7 @@ class ModelsController extends Controller
         $search = $request->get('search');
         $myUploads = filter_var($request->get('my_uploads', false), FILTER_VALIDATE_BOOLEAN);
         $approvalStatus = $request->get('approval_status');
-        $perPage = in_array((int) $request->input('per_page'), [12, 24, 48]) ? (int) $request->input('per_page') : 12;
+        $perPage = in_array((int) $request->input('per_page'), [6, 8, 12, 24, 48]) ? (int) $request->input('per_page') : 8;
 
         if (!$isPartial) {
             return Inertia::render('Models/Index', [
@@ -118,7 +118,7 @@ class ModelsController extends Controller
             $query->orderBy('created_at', 'desc')->orderBy('id', 'desc'); // newest (default)
         }
 
-        $perPage = in_array((int) $request->input('per_page'), [12, 24, 48]) ? (int) $request->input('per_page') : 12;
+        $perPage = in_array((int) $request->input('per_page'), [6, 8, 12, 24, 48]) ? (int) $request->input('per_page') : 8;
         $models = $query->paginate($perPage)->withQueryString();
         $timings['models_query'] = round((microtime(true) - $start) * 1000, 2);
 

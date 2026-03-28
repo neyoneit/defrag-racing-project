@@ -330,7 +330,7 @@ const createMaplist = async () => {
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Maplists" />
 
         <!-- Header Section -->

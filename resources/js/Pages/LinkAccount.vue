@@ -98,7 +98,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Link Your Account" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-12">

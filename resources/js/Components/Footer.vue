@@ -3,30 +3,6 @@
     import FooterLink from '@/Components/FooterLink.vue';
 
     const footerPages = usePage().props.footerPages;
-
-    const specialPages = {
-    'privacy-policy': 'pages.privacy-policy',
-    'privacy-policy-twitch': 'pages.privacy-policy-twitch',
-    }
-
-    function pageRoute(slug)
-    {
-    if (specialPages[slug]) {
-        return route(specialPages[slug]);
-    }
-    return route('pages.show', { slug });
-    }
-
-    function isActiveRoute(slug)
-    {
-    const routeName = specialPages[slug] || 'pages.show';
-    
-    if (routeName === 'pages.show') {
-        return route().current(routeName, { slug });
-    } else {
-        return route().current(routeName);
-    }
-    }
 </script>
 
 <template>
@@ -80,8 +56,7 @@
                 <div class="max-w-8xl mx-auto mt-2">
                     <!-- Navigation Links -->
                     <div class="space-x-8 md:-my-px md:flex pb-1">
-                        <FooterLink :href="'/terms-of-service'" :active="false" text="Terms of Service" />
-                        <FooterLink v-for="page in footerPages" :key="page.slug" :href="pageRoute(page.slug)" :active="isActiveRoute(page.slug)" :text="page.title" />
+                        <FooterLink v-for="page in footerPages" :key="page.slug" :href="'/' + page.slug" :active="false" :text="page.title" />
                     </div>
                 </div>
             </div>

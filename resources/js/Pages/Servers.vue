@@ -344,7 +344,7 @@ const getFunctionName = (abbr) => {
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Servers" />
 
         <!-- Header Section -->

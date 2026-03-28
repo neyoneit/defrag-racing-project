@@ -66,7 +66,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head title="Records" />
 
         <!-- Header Section -->
@@ -85,56 +85,55 @@
                     </div>
 
                     <!-- Gamemode Filter -->
-                    <div class="flex flex-wrap gap-3">
+                    <div class="flex flex-wrap items-center gap-2 bg-black/40 backdrop-blur-sm rounded-xl p-2.5">
                         <!-- All Modes -->
-                        <div class="flex gap-2 bg-black/40 backdrop-blur-sm rounded-lg p-1 border border-white/10">
+                        <div class="flex items-center bg-white/5 border border-white/10 rounded-xl p-2">
                             <button
                                 @click="sortByMode('all')"
                                 :class="[
-                                    'px-4 py-2 rounded-md text-sm font-bold transition-all',
+                                    'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border',
                                     mode === 'all'
-                                        ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                                        ? 'bg-white/30 border-white/50 text-white'
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
                                 ALL MODES
                             </button>
                         </div>
 
                         <!-- Run Mode -->
-                        <div class="flex gap-2 bg-black/40 backdrop-blur-sm rounded-lg p-1 border border-green-500/20">
+                        <div class="flex items-center bg-white/5 border border-white/10 rounded-xl p-2">
                             <button
                                 @click="sortByMode('run')"
                                 :class="[
-                                    'px-4 py-2 rounded-md text-sm font-bold transition-all',
+                                    'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border',
                                     mode === 'run'
-                                        ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg'
-                                        : 'text-gray-400 hover:text-white hover:bg-green-600/20'
+                                        ? 'bg-green-500/30 border-green-400/50 text-white'
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
                                 RUN
                             </button>
                         </div>
 
                         <!-- CTF Modes -->
-                        <div class="flex gap-1 bg-black/40 backdrop-blur-sm rounded-lg p-1 border border-red-500/20">
+                        <div class="flex items-center gap-1 bg-white/5 border border-white/10 rounded-xl p-2">
                             <button
                                 @click="sortByMode('ctf')"
                                 :class="[
-                                    'px-4 py-2 rounded-md text-sm font-bold transition-all',
+                                    'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border',
                                     mode === 'ctf'
-                                        ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg'
-                                        : 'text-gray-400 hover:text-white hover:bg-red-600/20'
+                                        ? 'bg-red-500/30 border-red-400/50 text-white'
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
                                 ALL CTF
                             </button>
-                            <div class="w-px bg-red-500/20"></div>
                             <button
                                 v-for="i in 7" :key="'ctf' + i"
                                 @click="sortByMode('ctf' + i)"
                                 :class="[
-                                    'px-3 py-2 rounded-md text-sm font-bold transition-all',
+                                    'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border',
                                     mode === 'ctf' + i
-                                        ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg'
-                                        : 'text-gray-400 hover:text-white hover:bg-red-600/20'
+                                        ? 'bg-red-500/30 border-red-400/50 text-white'
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                                 ]">
                                 {{ i }}
                             </button>
@@ -146,7 +145,7 @@
 
         <!-- Records List - Two Tables -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-[800px]">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[800px]">
                 <!-- Loading skeleton -->
                 <template v-if="!vq3Records && !cpmRecords">
                     <div v-for="i in 2" :key="i" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-white/10">
@@ -168,18 +167,29 @@
 
                 <template v-else>
                 <!-- VQ3 Records -->
-                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-blue-500/20">
-                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 py-3">
+                <div :style="{ order: cpmFirst ? 2 : 1 }" class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span class="text-sm font-normal text-gray-400">({{ vq3Records.total }})</span></h2>
                             </div>
-                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                            <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
                             </Link>
                         </div>
                     </div>
                     <div class="px-4 py-2">
+                        <!-- Column Headers -->
+                        <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
+                            <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
+                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
+                                <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
+                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                            </div>
+                        </div>
                         <Record v-for="record in vq3Records.data" :key="record.id" :record="record" />
                     </div>
                     <!-- VQ3 Pagination -->
@@ -189,18 +199,29 @@
                 </div>
 
                 <!-- CPM Records -->
-                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-black/40 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-purple-500/20">
-                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 py-3">
+                <div :style="{ order: cpmFirst ? 1 : 2 }" class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-2xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records <span class="text-sm font-normal text-gray-400">({{ cpmRecords.total }})</span></h2>
                             </div>
-                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                            <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
                             </Link>
                         </div>
                     </div>
                     <div class="px-4 py-2">
+                        <!-- Column Headers -->
+                        <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
+                            <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
+                            <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
+                                <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
+                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                            </div>
+                        </div>
                         <Record v-for="record in cpmRecords.data" :key="record.id" :record="record" />
                     </div>
                     <!-- CPM Pagination -->
@@ -212,6 +233,6 @@
             </div>
         </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
     </div>
 </template>

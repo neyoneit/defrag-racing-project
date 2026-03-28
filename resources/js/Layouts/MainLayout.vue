@@ -426,7 +426,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-x-hidden">
+        <div class="min-h-screen flex flex-col bg-gray-900 bg-[url('/images/pattern.svg')] relative">
             <canvas ref="dotsCanvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 0;"></canvas>
             <!-- Modern Compact Header -->
             <nav class="bg-white/[0.025] border-b border-white/[0.04] sticky top-0 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md" @click="handleNavClick">
@@ -936,12 +936,12 @@
             </header>
 
             <!-- Page Content -->
-            <main class="pb-8">
+            <main class="pb-4 flex-grow">
                 <slot />
             </main>
 
             <!-- Donation Progress Bar -->
-            <div class="mt-8">
+            <div class="mt-4">
                 <DonationProgressBar />
             </div>
 

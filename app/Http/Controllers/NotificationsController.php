@@ -11,29 +11,10 @@ use App\Models\Notification;
 class NotificationsController extends Controller
 {
     public function records (Request $request) {
-        // Get only the 30 most recent record notifications
         $recordNotificationsPage = RecordNotification::query()
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'DESC')
-            ->limit(30)
-            ->get()
-            ->values()
-            ->toArray();
-
-        // Delete any record notifications older than the 30 most recent
-        $oldestKeptId = RecordNotification::query()
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'DESC')
-            ->limit(1)
-            ->offset(29)
-            ->value('id');
-
-        if ($oldestKeptId) {
-            RecordNotification::query()
-                ->where('user_id', $request->user()->id)
-                ->where('id', '<', $oldestKeptId)
-                ->delete();
-        }
+            ->paginate(20, ['*'], 'records_page');
 
         $systemNotificationsPage = Notification::query()
             ->where('user_id', $request->user()->id)
@@ -72,34 +53,15 @@ class NotificationsController extends Controller
     }
 
     public function system (Request $request) {
-        // Get only the 30 most recent record notifications
         $recordNotificationsPage = RecordNotification::query()
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'DESC')
-            ->limit(30)
-            ->get()
-            ->values()
-            ->toArray();
-
-        // Delete any record notifications older than the 30 most recent
-        $oldestKeptId = RecordNotification::query()
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'DESC')
-            ->limit(1)
-            ->offset(29)
-            ->value('id');
-
-        if ($oldestKeptId) {
-            RecordNotification::query()
-                ->where('user_id', $request->user()->id)
-                ->where('id', '<', $oldestKeptId)
-                ->delete();
-        }
+            ->paginate(20, ['*'], 'records_page');
 
         $systemNotificationsPage = Notification::query()
             ->where('user_id', $request->user()->id)
             ->orderBy('created_at', 'DESC')
-            ->paginate(30);
+            ->paginate(20, ['*'], 'system_page');
 
         return Inertia::render('NotificationsView')->with([
             'recordNotificationsPage' => $recordNotificationsPage,

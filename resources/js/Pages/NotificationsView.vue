@@ -41,36 +41,29 @@
     };
 
     const totalCount = computed(() => {
-        const unreadRecords = (props.recordNotificationsPage || []).filter(n => !n.read).length;
+        const unreadRecords = (props.recordNotificationsPage?.data || []).filter(n => !n.read).length;
         const unreadSystem = (props.systemNotificationsPage?.data || []).filter(n => !n.read).length;
         return unreadRecords + unreadSystem;
     });
 
     const toggleNotificationRead = (notificationId) => {
         axios.post(route('notifications.toggle', notificationId)).then((response) => {
-            const notification = props.recordNotificationsPage.find(n => n.id === notificationId);
+            const notification = props.recordNotificationsPage.data.find(n => n.id === notificationId);
             if (notification) {
                 notification.read = response.data.read;
             }
         });
     };
 
-    const markNotificationAsRead = (notificationId) => {
-        const notification = props.recordNotificationsPage.find(n => n.id === notificationId);
-        if (notification && !notification.read) {
-            toggleNotificationRead(notificationId);
-        }
-    };
-
     const markAllAsRead = () => {
         axios.post(route('notifications.clear')).then(() => {
-            props.recordNotificationsPage.forEach(n => n.read = true);
+            props.recordNotificationsPage.data.forEach(n => n.read = true);
         });
     };
 
     const markAllAsUnread = () => {
         axios.post(route('notifications.mark.unread')).then(() => {
-            props.recordNotificationsPage.forEach(n => n.read = false);
+            props.recordNotificationsPage.data.forEach(n => n.read = false);
         });
     };
 
@@ -82,13 +75,6 @@
                 notification.read = response.data.read;
             }
         });
-    };
-
-    const markSystemNotificationAsRead = (notificationId) => {
-        const notification = props.systemNotificationsPage.data.find(n => n.id === notificationId);
-        if (notification && !notification.read) {
-            toggleSystemNotificationRead(notificationId);
-        }
     };
 
     const markAllSystemAsRead = () => {
@@ -105,7 +91,7 @@
 
     // Filter record notifications by sub-tab category
     const filteredRecordNotifications = computed(() => {
-        const notifications = props.recordNotificationsPage || [];
+        const notifications = props.recordNotificationsPage?.data || [];
 
         if (activeRecordTab.value === 'beaten') {
             return notifications.filter(n => !n.worldrecord);
@@ -118,7 +104,7 @@
 
     // Count notifications for each record sub-tab (only unread)
     const recordTabCounts = computed(() => {
-        const notifications = (props.recordNotificationsPage || []).filter(n => !n.read);
+        const notifications = (props.recordNotificationsPage?.data || []).filter(n => !n.read);
         return {
             all: notifications.length,
             beaten: notifications.filter(n => !n.worldrecord).length,
@@ -264,7 +250,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Notification Center" />
 
         <!-- Header Section -->
@@ -292,7 +278,7 @@
                 <div class="flex border-b border-white/10">
                     <Link
                         :href="route('notifications.index')"
-                        class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                        class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                         :class="activeTab === 'records'
                             ? 'text-orange-400 bg-orange-500/10'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -302,9 +288,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
                             </svg>
                             <span>Record Notifications</span>
-                            <span v-if="(recordNotificationsPage || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                            <span v-if="(recordNotificationsPage?.data || []).filter(n => !n.read).length" class="px-2 py-0.5 rounded-full text-xs font-bold"
                                   :class="activeTab === 'records' ? 'bg-orange-500/30 text-orange-300' : 'bg-white/10 text-gray-400'">
-                                {{ (recordNotificationsPage || []).filter(n => !n.read).length }}
+                                {{ (recordNotificationsPage?.data || []).filter(n => !n.read).length }}
                             </span>
                         </div>
                         <div v-if="activeTab === 'records'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-orange-400 to-transparent"></div>
@@ -312,7 +298,7 @@
 
                     <Link
                         :href="route('notifications.system.index')"
-                        class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                        class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                         :class="activeTab === 'system'
                             ? 'text-blue-400 bg-blue-500/10'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -337,7 +323,7 @@
                     <div class="flex border-b border-white/10 bg-black/20">
                         <button
                             @click="activeRecordTab = 'all'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'all'
                                 ? 'text-orange-400 bg-orange-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -357,7 +343,7 @@
 
                         <button
                             @click="activeRecordTab = 'beaten'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'beaten'
                                 ? 'text-blue-400 bg-blue-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -377,7 +363,7 @@
 
                         <button
                             @click="activeRecordTab = 'worldrecords'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'worldrecords'
                                 ? 'text-yellow-400 bg-yellow-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -397,16 +383,16 @@
                     </div>
 
                     <!-- Bulk Actions -->
-                    <div class="flex items-center justify-end gap-2 p-4 bg-black/20 border-b border-white/10">
-                        <button @click="markAllAsRead" class="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-sm transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    <div class="flex items-center justify-end gap-2 px-3 py-1.5 bg-black/20 border-b border-white/10">
+                        <button @click="markAllAsRead" class="px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-xs transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                             </svg>
                             Mark All as Read
                         </button>
-                        <button @click="markAllAsUnread" class="px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-sm transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                        <button @click="markAllAsUnread" class="px-2.5 py-1 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-xs transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
                             Mark All as Unread
                         </button>
@@ -414,12 +400,12 @@
 
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="markNotificationAsRead(notification.id)" class="group p-2 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read && highlightId !== notification.id, 'ring-2 ring-orange-500/50 bg-orange-500/10 rounded-lg': highlightId === notification.id}">
-                            <div class="flex items-center gap-3">
+                        <div v-for="notification in filteredRecordNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="toggleNotificationRead(notification.id)" class="group px-2 py-1 hover:bg-white/10 hover:!opacity-100 transition-all cursor-pointer" :class="{'opacity-40': notification.read && highlightId !== notification.id, 'ring-2 ring-orange-500/50 bg-orange-500/10 rounded-lg': highlightId === notification.id}">
+                            <div class="flex items-center gap-2">
                                 <!-- Icon -->
                                 <div class="shrink-0">
-                                    <div class="w-8 h-8 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-orange-400">
+                                    <div class="w-6 h-6 rounded bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 text-orange-400">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
                                         </svg>
                                     </div>
@@ -428,28 +414,33 @@
                                 <!-- Content - Single Line -->
                                 <div class="flex-1 min-w-0 text-sm text-gray-300 flex items-center gap-2 flex-wrap">
                                     <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${notification.country}.png`" class="w-5 h-4 rounded-sm shadow-sm shrink-0">
-                                    <span class="font-bold text-white" v-html="q3tohtml(notification.name)"></span>
+                                    <Link :href="`/profile/mdd/${notification.mdd_id}`" class="font-bold text-white hover:text-blue-300 hover:underline transition-colors" v-html="q3tohtml(notification.name)" @click.stop></Link>
                                     <span class="text-xs px-2 py-0.5 rounded-full font-bold uppercase shrink-0" :class="{'bg-purple-500/30 text-purple-300': notification.physics.includes('cpm'), 'bg-blue-500/30 text-blue-300': !notification.physics.includes('cpm')}">
                                         {{ notification.physics }}
                                     </span>
                                     <span class="text-gray-500">broke your time on</span>
-                                    <Link class="text-blue-400 hover:text-blue-300 font-semibold transition-colors" :href="`/maps/${encodeURIComponent(notification.mapname)}`">{{ notification.mapname }}</Link>
+                                    <Link class="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors" :href="`/maps/${encodeURIComponent(notification.mapname)}`" @click.stop>{{ notification.mapname }}</Link>
                                     <span class="text-gray-500">with</span>
                                     <span class="font-bold text-white">{{ formatTime(notification.time) }}</span>
                                     <span class="text-green-400 font-semibold">(+{{ formatTime(timeDiff(notification.my_time, notification.time)) }})</span>
                                 </div>
 
                                 <!-- Read/Unread Toggle -->
-                                <button @click="toggleNotificationRead(notification.id)" class="shrink-0 p-2 rounded-lg hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
-                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400">
+                                <button @click.stop="toggleNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-green-400">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400">
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                                     </svg>
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex justify-center p-4 border-t border-white/5" v-if="recordNotificationsPage?.total > recordNotificationsPage?.per_page && filteredRecordNotifications.length >= recordNotificationsPage?.per_page">
+                        <Pagination :current_page="recordNotificationsPage?.current_page" :last_page="recordNotificationsPage?.last_page" :link="recordNotificationsPage?.first_page_url" pageName="records_page" :only="['recordNotificationsPage']" />
                     </div>
 
                     <!-- Empty State -->
@@ -468,7 +459,7 @@
                     <div class="flex border-b border-white/10 bg-black/20">
                         <button
                             @click="activeSystemTab = 'all'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeSystemTab === 'all'
                                 ? 'text-white bg-white/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -488,7 +479,7 @@
 
                         <button
                             @click="activeSystemTab = 'announcements'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeSystemTab === 'announcements'
                                 ? 'text-blue-400 bg-blue-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -508,7 +499,7 @@
 
                         <button
                             @click="activeSystemTab = 'clan'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeSystemTab === 'clan'
                                 ? 'text-green-400 bg-green-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -528,7 +519,7 @@
 
                         <button
                             @click="activeSystemTab = 'tournament'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeSystemTab === 'tournament'
                                 ? 'text-pink-400 bg-pink-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -548,7 +539,7 @@
 
                         <button
                             @click="activeSystemTab = 'profile'"
-                            class="flex-1 px-6 py-4 text-center font-semibold transition-all relative group"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeSystemTab === 'profile'
                                 ? 'text-indigo-400 bg-indigo-500/10'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'"
@@ -568,16 +559,16 @@
                     </div>
 
                     <!-- Bulk Actions -->
-                    <div class="flex items-center justify-end gap-2 p-4 bg-black/20 border-b border-white/10">
-                        <button @click="markAllSystemAsRead" class="px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-sm transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    <div class="flex items-center justify-end gap-2 px-3 py-1.5 bg-black/20 border-b border-white/10">
+                        <button @click="markAllSystemAsRead" class="px-2.5 py-1 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-xs transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                             </svg>
                             Mark All as Read
                         </button>
-                        <button @click="markAllSystemAsUnread" class="px-4 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/30 text-yellow-400 font-semibold text-sm transition-all flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                        <button @click="markAllSystemAsUnread" class="px-2.5 py-1 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/30 text-green-400 font-semibold text-xs transition-all flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                             </svg>
                             Mark All as Unread
                         </button>
@@ -585,12 +576,12 @@
 
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="markSystemNotificationAsRead(notification.id)" class="group p-4 hover:bg-white/5 transition-all cursor-pointer" :class="{'opacity-50': notification.read && highlightId !== notification.id, 'ring-2 ring-blue-500/50 bg-blue-500/10 rounded-lg': highlightId === notification.id}">
-                            <div class="flex items-center gap-4">
+                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="toggleSystemNotificationRead(notification.id)" class="group px-2 py-1 hover:bg-white/10 hover:!opacity-100 transition-all cursor-pointer" :class="{'opacity-40': notification.read && highlightId !== notification.id, 'ring-2 ring-blue-500/50 bg-blue-500/10 rounded-lg': highlightId === notification.id}">
+                            <div class="flex items-center gap-2">
                                 <!-- Icon -->
                                 <div class="shrink-0">
-                                    <div :class="[getNotificationTypeInfo(notification.type).bgColor, getNotificationTypeInfo(notification.type).borderColor, 'w-10 h-10 rounded-lg border flex items-center justify-center']">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-5 h-5', getNotificationTypeInfo(notification.type).iconColor]">
+                                    <div :class="[getNotificationTypeInfo(notification.type).bgColor, getNotificationTypeInfo(notification.type).borderColor, 'w-6 h-6 rounded border flex items-center justify-center']">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="['w-3 h-3', getNotificationTypeInfo(notification.type).iconColor]">
                                             <path stroke-linecap="round" stroke-linejoin="round" :d="getNotificationTypeInfo(notification.type).icon" />
                                         </svg>
                                     </div>
@@ -600,25 +591,25 @@
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
                                     <template v-if="notification.type === 'announcement'">
                                         <span>Announcement: </span>
-                                        <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
                                     </template>
                                     <template v-else>
                                         <span v-html="q3tohtml(notification.before)"></span>
                                         <span> </span>
-                                        <Link class="text-blue-400 hover:text-blue-300 font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
                                         <span> </span>
                                         <span v-html="q3tohtml(notification.after)"></span>
                                         <span v-if="notification.type === 'alias_suggestion'">. </span>
-                                        <Link v-if="notification.type === 'alias_suggestion'" class="text-blue-400 hover:text-blue-300 underline transition-colors" :href="notification.url">Click here to approve or reject</Link>
+                                        <Link v-if="notification.type === 'alias_suggestion'" class="text-blue-400 hover:text-blue-300 hover:underline transition-colors" :href="notification.url">Click here to approve or reject</Link>
                                     </template>
                                 </div>
 
                                 <!-- Read/Unread Toggle -->
-                                <button @click="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-2 rounded-lg hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
-                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-green-400">
+                                <button @click.stop="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-green-400">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-yellow-400">
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
                                     </svg>
                                 </button>
@@ -627,8 +618,8 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div class="flex justify-center p-6 border-t border-white/5" v-if="systemNotificationsPage?.total > systemNotificationsPage?.per_page">
-                        <Pagination :current_page="systemNotificationsPage?.current_page" :last_page="systemNotificationsPage?.last_page" :link="systemNotificationsPage?.first_page_url" :only="['systemNotificationsPage']" />
+                    <div class="flex justify-center p-4 border-t border-white/5" v-if="systemNotificationsPage?.total > systemNotificationsPage?.per_page && filteredSystemNotifications.length >= systemNotificationsPage?.per_page">
+                        <Pagination :current_page="systemNotificationsPage?.current_page" :last_page="systemNotificationsPage?.last_page" :link="systemNotificationsPage?.first_page_url" pageName="system_page" :only="['systemNotificationsPage']" />
                     </div>
 
                     <!-- Empty State -->
@@ -644,6 +635,6 @@
             </div>
         </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
     </div>
 </template>
