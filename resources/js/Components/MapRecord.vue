@@ -759,7 +759,7 @@
         </div>
 
         <!-- Time - MASSIVE and eye-catching -->
-        <div class="text-right flex-shrink-0">
+        <div class="text-right flex-shrink-0 relative group/time">
             <div
                 class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
@@ -771,6 +771,17 @@
             </div>
             <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                 -{{ formatTime(timeDiff) }}
+            </div>
+            <!-- Map Score Tooltip -->
+            <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/time:block z-50 pointer-events-none">
+                <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
+                    <div class="text-xs font-bold text-yellow-400 mb-1">Rating Score</div>
+                    <div class="text-xs text-gray-300 space-y-0.5">
+                        <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
+                        <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
+                        <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
+                    </div>
+                </div>
             </div>
         </div>
 

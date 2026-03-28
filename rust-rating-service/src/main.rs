@@ -466,8 +466,8 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
         ))?;
     }
 
-    // Step 7: Update ranked flags on maps table (only for 'overall')
-    if category == "overall" {
+    // Step 7: Update ranked flags on maps table (only for 'overall' category in 'run' mode)
+    if category == "overall" && mode == "run" {
         println!("Step 7: Updating map ranked flags...");
         let column = format!("is_ranked_{}", physics);
 

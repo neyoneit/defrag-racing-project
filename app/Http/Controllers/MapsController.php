@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Map;
 use App\Models\MddProfile;
 use App\Models\RecordFlag;
+use App\Models\PlayerMapScore;
 use App\Models\MapDifficultyRating;
 
 use App\Filters\MapFilters;
@@ -222,6 +223,9 @@ class MapsController extends Controller
             return $record;
         });
 
+        // Attach map scores (map_score, reltime) from player_map_scores
+        $this->attachMapScores($cpmRecords, $map->name, 'cpm', $gametype);
+        $this->attachMapScores($vq3Records, $map->name, 'vq3', $gametype);
 
         $userDefaultOldtop = $request->user()?->default_show_oldtop ? 'true' : 'false';
         $showOldtop = $request->has('showOldtop') ? $request->input('showOldtop') : $userDefaultOldtop;
@@ -786,5 +790,28 @@ class MapsController extends Controller
                 return $group->sortByDesc('flag_count')->first();
             })->values()->toArray();
         }
+    }
+
+    private function attachMapScores($records, string $mapname, string $physics, string $mode): void
+    {
+        if (!$records || $records->isEmpty()) return;
+
+        $mddIds = $records->getCollection()->pluck('mdd_id')->unique()->toArray();
+        if (empty($mddIds)) return;
+
+        $scores = PlayerMapScore::where('mapname', $mapname)
+            ->where('physics', $physics)
+            ->where('mode', $mode)
+            ->whereIn('mdd_id', $mddIds)
+            ->get()
+            ->keyBy('mdd_id');
+
+        $records->getCollection()->transform(function ($record) use ($scores) {
+            $score = $scores->get($record->mdd_id);
+            $record->map_score = $score ? round($score->map_score, 2) : null;
+            $record->reltime = $score ? round($score->reltime, 4) : null;
+            $record->is_outlier = $score ? $score->is_outlier : false;
+            return $record;
+        });
     }
 }
