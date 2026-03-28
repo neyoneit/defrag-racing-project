@@ -258,9 +258,12 @@ Route::get('/baseq3/{path}', [FileController::class, 'serveBaseq3File'])->where(
 
 Route::get('/announcements', [ChangelogController::class, 'announcements'])->name('announcements');
 
-Route::get('/privacy-policy', [PagesController::class, 'privacypolicy'])->name('pages.privacy-policy');
-Route::get('/privacy-policy-twitch', [PagesController::class, 'privacypolicytwitch'])->name('pages.privacy-policy-twitch');
-Route::get('/pages/{slug}', [PagesController::class, 'index'])->name('pages.show');
+// Settings (overrides Jetstream's /user/profile)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('profile.show');
+    Route::redirect('/user/profile', '/user/settings', 301);
+});
+
 
 // Maplist routes
 Route::get('/maplists', [App\Http\Controllers\MaplistController::class, 'index'])->name('maplists.index');
@@ -382,3 +385,6 @@ Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookControlle
 //
 //     Route::post('/donation-goal', [DonationManagementController::class, 'updateGoal'])->name('defraghq.goal.update');
 // });
+
+// Clean URLs for admin-created pages (catch-all, must be last route)
+Route::get("/{slug}", [App\Http\Controllers\PagesController::class, "index"])->name("pages.show.clean")->where("slug", "[a-z0-9\\-]+");

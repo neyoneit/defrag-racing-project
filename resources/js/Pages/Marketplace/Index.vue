@@ -88,7 +88,7 @@ const selectStatus = (value) => {
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head title="Marketplace" />
 
         <!-- Header -->

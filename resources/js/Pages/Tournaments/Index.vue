@@ -78,7 +78,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div>
         <Head title="Tournaments" />
 
         <!-- Top Shadow Gradient -->

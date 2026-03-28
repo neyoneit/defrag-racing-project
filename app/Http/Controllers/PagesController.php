@@ -12,16 +12,9 @@ class PagesController extends Controller {
         $page = Page::where('slug', $slug)
             ->where('visible', true)
             ->firstOrFail();
-            
+
         return Inertia::render('PageView')
             ->with('page', $page);
     }
 
-    public function privacypolicy(Request $request){
-        return $this->index($request, 'privacy-policy');
-    }
-    
-    public function privacypolicytwitch(Request $request){
-        return $this->index($request, 'privacy-policy-twitch');
-    }
 }

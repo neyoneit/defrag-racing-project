@@ -311,7 +311,7 @@ function currentViewerModel() {
 
 <template>
     <Head title="Upload Model" />
-    <div class="min-h-screen">
+    <div class="">
         <!-- Header -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-16">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

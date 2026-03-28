@@ -358,7 +358,7 @@ const closeServerDropdown = () => {
 </script>
 
 <template>
-    <div class="min-h-screen relative" @click="closeServerDropdown">
+    <div class="relative" @click="closeServerDropdown">
         <Head :title="maplist.name" />
 
         <!-- Animated Background Pattern -->

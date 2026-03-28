@@ -336,7 +336,7 @@ const getParticipantStatusLabel = (status) => {
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head :title="challenge.title" />
 
         <!-- Header Section -->

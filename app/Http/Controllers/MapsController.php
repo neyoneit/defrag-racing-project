@@ -41,7 +41,7 @@ class MapsController extends Controller
             ->withCount('difficultyRatings')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC')
-            ->paginate(28)
+            ->paginate(16)
             ->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
@@ -64,7 +64,7 @@ class MapsController extends Controller
         }
 
         $maps = $mapFilters['query'];
-        $maps = $maps->paginate(28)->withQueryString();
+        $maps = $maps->paginate(16)->withQueryString();
 
         if ($request->has('page') && $request->get('page') > $maps->lastPage()) {
             $paging = ['page' => $maps->lastPage()];

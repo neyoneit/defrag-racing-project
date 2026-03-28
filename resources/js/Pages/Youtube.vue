@@ -133,7 +133,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Rendered Demos" />
 
         <!-- Header Section -->

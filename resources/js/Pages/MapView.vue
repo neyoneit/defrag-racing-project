@@ -1318,7 +1318,7 @@
                                 Demos Top
                             </button>
                             <div class="text-xs text-gray-500">
-                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Set your defaults
                                 </Link>
                                 <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
@@ -1381,16 +1381,16 @@
                     </button>
                 </div>
 
-                <div class="md:flex gap-4 justify-center">
+                <div class="lg:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
-                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
+                    <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
                     <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
-                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1403,19 +1403,19 @@
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
                         </div>
-                        <!-- Column Headers -->
-                        <div v-if="getVq3Records.total > 0" class="flex items-center gap-1.5 mt-0.5 -ml-4 -mr-2">
-                            <div class="w-8 flex-shrink-0 text-center text-[10px] text-blue-400/60 uppercase tracking-wider font-medium">#</div>
-                            <div class="flex-1 text-[10px] text-blue-400/60 uppercase tracking-wider font-medium">Player</div>
-                            <div class="w-[90px] flex-shrink-0 text-[10px] pl-8 text-blue-400/60 uppercase tracking-wider font-medium text-center">Time</div>
-                            <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-blue-400/60 uppercase tracking-wider font-medium -ml-1">Score</div>
-                            <div class="w-[50px] flex-shrink-0 text-[10px] text-blue-400/60 uppercase tracking-wider font-medium text-center">Date</div>
-                        </div>
                     </div>
 
                     <!-- VQ3 Records List -->
                     <div class="p-3">
                         <div v-if="getVq3Records.total > 0">
+                            <!-- Column Headers -->
+                            <div class="flex items-center gap-1.5 -ml-3 -mr-1 -mt-1 mb-0 pb-1 border-b border-white/15">
+                                <div class="w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
+                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
+                                <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-1">Score</div>
+                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                            </div>
                             <div class="flex-grow">
                                 <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>
@@ -1444,14 +1444,14 @@
                 </div>
 
                 <!-- CPM Leaderboard -->
-                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" :style="{ order: cpmFirst ? 1 : 2 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 md:mt-0">
+                <div v-show="mobilePhysics === 'both' || mobilePhysics === 'CPM'" :style="{ order: cpmFirst ? 1 : 2 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300 mt-5 lg:mt-0">
                     <!-- CPM Header -->
                     <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
-                                <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1464,19 +1464,19 @@
                                 <div v-else class="text-sm text-gray-500">-</div>
                             </div>
                         </div>
-                        <!-- Column Headers -->
-                        <div v-if="getCpmRecords.total > 0" class="flex items-center gap-1.5 mt-0.5 -ml-4 -mr-2">
-                            <div class="w-8 flex-shrink-0 text-center text-[10px] text-purple-400/60 uppercase tracking-wider font-medium">#</div>
-                            <div class="flex-1 text-[10px] text-purple-400/60 uppercase tracking-wider font-medium">Player</div>
-                            <div class="w-[90px] flex-shrink-0 text-[10px] pl-8 text-purple-400/60 uppercase tracking-wider font-medium text-center">Time</div>
-                            <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-purple-400/60 uppercase tracking-wider font-medium -ml-1">Score</div>
-                            <div class="w-[50px] flex-shrink-0 text-[10px] text-purple-400/60 uppercase tracking-wider font-medium text-center">Date</div>
-                        </div>
                     </div>
 
                     <!-- CPM Records List -->
                     <div class="p-3">
                         <div v-if="getCpmRecords.total > 0">
+                            <!-- Column Headers -->
+                            <div class="flex items-center gap-1.5 -ml-3 -mr-1 -mt-1 mb-0 pb-1 border-b border-white/15">
+                                <div class="w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
+                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
+                                <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
+                                <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-1">Score</div>
+                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                            </div>
                             <div class="flex-grow">
                                 <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
                             </div>

@@ -135,7 +135,7 @@ const alignmentClasses = computed(() => {
                 <div v-show="open" class="fixed z-[220]"
                      :class="[widthClass, alignmentClasses]"
                      :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left !== 'auto' ? dropdownPosition.left + 'px' : 'auto', right: dropdownPosition.right !== 'auto' ? dropdownPosition.right + 'px' : 'auto' }"
-                     @click.stop
+                     @click="open = false"
                      @mouseenter="onMouseEnter"
                      @mouseleave="onMouseLeave">
                     <div :class="hoverable ? 'pt-2' : ''">

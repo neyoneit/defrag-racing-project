@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class RecordsController extends Controller
 {
-    const PER_PAGE = 30;
+    const PER_PAGE = 20;
     const PREBUILT_PAGES = 3; // Pages 1-3 are long-cached and incrementally updated
 
     // Cache keys pattern: records:page:{physics}:{mode}:{page}

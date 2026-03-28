@@ -58,7 +58,7 @@ return [
     */
 
     'features' => [
-        Features::termsAndPrivacyPolicy(),
+        // Features::termsAndPrivacyPolicy(), // Handled by admin Pages
         Features::profilePhotos(),
         // Features::api(),
         // Features::teams(['invitations' => true]),

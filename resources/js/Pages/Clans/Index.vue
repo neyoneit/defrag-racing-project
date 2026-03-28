@@ -470,7 +470,7 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head title="Clans" />
 
         <!-- Header Section -->

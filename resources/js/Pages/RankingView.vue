@@ -172,7 +172,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen">
+    <div class="">
         <Head title="Ranking" />
 
         <!-- Header Section -->
@@ -350,7 +350,7 @@
                             <div class="flex items-center gap-2">
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Rankings <span v-if="vq3Ratings" class="text-sm font-normal text-gray-400">({{ vq3Ratings.total }})</span></h2>
                             </div>
-                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                            <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
                             </Link>
                         </div>
@@ -382,7 +382,7 @@
                             <div class="flex items-center gap-2">
                                 <h2 class="text-lg font-bold text-purple-400">CPM Rankings <span v-if="cpmRatings" class="text-sm font-normal text-gray-400">({{ cpmRatings.total }})</span></h2>
                             </div>
-                            <Link v-if="page.props.auth?.user" href="/user/profile?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                            <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                 Swap VQ3/CPM sides
                             </Link>
                         </div>
@@ -409,7 +409,7 @@
             </div>
         </div>
 
-        <div class="h-20"></div>
+        <div class="h-4"></div>
     </div>
 
     <!-- Login Required Popup -->

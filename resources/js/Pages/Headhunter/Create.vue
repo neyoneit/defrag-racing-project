@@ -117,7 +117,7 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="min-h-screen pb-20">
+    <div class="pb-4">
         <Head title="Create Challenge" />
 
         <!-- Header Section -->

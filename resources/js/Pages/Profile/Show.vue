@@ -308,6 +308,9 @@ const customizeSections = [
 
 const switchTab = (tabId) => {
     activeTab.value = tabId;
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tabId);
+    window.history.replaceState({}, '', url.toString());
     nextTick(() => { globalThis.scrollTo({ top: 0, behavior: 'smooth' }); });
 };
 
@@ -796,7 +799,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 </script>
 
 <template>
-    <div class="min-h-screen pb-20 relative">
+    <div class="min-h-screen pb-4 relative">
         <Head title="Settings" />
 
         <!-- Fade shadow at top (absolute positioned behind everything) -->
@@ -815,7 +818,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 relative" style="z-index: 10;">
             <div class="flex gap-6">
                 <!-- Left Sidebar Navigation -->
-                <div class="w-48 shrink-0 sticky top-[120px] self-start overflow-y-auto" style="max-height: calc(100vh - 136px);">
+                <div class="hidden lg:block w-48 shrink-0 sticky top-[120px] self-start">
                     <nav class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-2 space-y-1">
                         <template v-for="tab in tabs" :key="tab.id">
                             <!-- Profile tab with nested Creator & Customize -->

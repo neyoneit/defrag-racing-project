@@ -22,6 +22,14 @@ class Announcement extends Model
             User::all()->each->systemNotifyAnnouncement('announcement', 'Announcement', $announcement->title, '', '/announcements');
         });
 
+        static::updated(function (Announcement $announcement) {
+            if ($announcement->isDirty('title')) {
+                Notification::where('type', 'announcement')
+                    ->where('headline', $announcement->getOriginal('title'))
+                    ->update(['headline' => $announcement->title]);
+            }
+        });
+
         static::saved(function () {
             Cache::forget('home:announcements');
         });

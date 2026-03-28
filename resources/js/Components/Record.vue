@@ -30,7 +30,7 @@
 </script>
 
 <template>
-    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)] overflow-hidden">
+    <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.04] last:border-0 hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.08)] overflow-hidden">
         <!-- Background Map Thumbnail (always visible, blurred) - extends to edges with overflow-hidden -->
         <div v-if="record.map?.thumbnail" class="absolute inset-0 transition-all duration-500 overflow-hidden">
             <img
@@ -47,16 +47,16 @@
         <!-- Content (relative to background) -->
         <div class="relative flex items-center gap-2 sm:gap-3 w-full transition-all duration-300">
             <!-- Rank -->
-            <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6">
-                <span class="text-[10px] sm:text-xs font-bold tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)] transition-all"
-                    :class="record.rank === 1 ? 'text-yellow-400' : record.rank === 2 ? 'text-gray-300' : record.rank === 3 ? 'text-amber-600' : 'text-gray-400 group-hover:text-white'">
+            <div class="w-5 sm:w-8 flex-shrink-0 text-center flex items-center justify-center h-6 -ml-3">
+                <span class="text-xs sm:text-sm font-black tabular-nums transition-all"
+                    :class="{
+                        'text-yellow-200 text-base [text-shadow:0_0_8px_#facc15,0_0_20px_#facc15,0_0_40px_#facc15,0_0_80px_#facc15,0_0_120px_rgba(250,204,21,0.5)]': record.rank === 1,
+                        'text-white text-base [text-shadow:0_0_8px_#e2e8f0,0_0_20px_#e2e8f0,0_0_40px_#e2e8f0,0_0_80px_rgba(226,232,240,0.5)]': record.rank === 2,
+                        'text-amber-300 text-base [text-shadow:0_0_8px_#f59e0b,0_0_20px_#f59e0b,0_0_40px_#f59e0b,0_0_80px_rgba(245,158,11,0.5)]': record.rank === 3,
+                        'text-gray-400': record.rank > 3
+                    }">
                     {{ record.rank }}
                 </span>
-            </div>
-
-            <!-- Map Name -->
-            <div class="w-28 sm:w-40 flex-shrink-0">
-                <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
             </div>
 
             <!-- Player Info -->
@@ -65,7 +65,7 @@
                 :href="getRoute"
                 @click.stop
                 :class="[
-                    'flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 group/player hover:bg-white/5 -my-2 py-2 px-1 sm:px-2 -ml-1 sm:-ml-2 rounded transition-colors',
+                    'flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 group/player -my-2 py-2 px-1 sm:px-2 -ml-1 sm:-ml-2 rounded transition-colors',
                     !getRoute && isLoggedIn ? 'cursor-default opacity-70' : !getRoute ? 'cursor-help opacity-70' : 'cursor-pointer'
                 ]"
             >
@@ -88,28 +88,24 @@
                 </div>
             </component>
 
-
-            <!-- Time + Score + Date -->
-            <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0 ml-auto">
-                <div class="text-right">
+            <!-- Map + Time + Score + Date -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+                <!-- Map Name -->
+                <div class="w-28 sm:w-40 flex-shrink-0">
+                    <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
+                </div>
+                <div class="w-[80px] text-right ml-2">
                     <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
                 </div>
-                <div class="w-8 sm:w-10 text-right relative group/score">
-                    <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
-                    <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
-                        <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
-                            <div class="text-xs font-bold text-yellow-400 mb-1">Rating Score</div>
-                            <div class="text-xs text-gray-300 space-y-0.5">
-                                <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
-                                <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
-                                <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="w-8 sm:w-10 text-center flex-shrink-0">
+                    <div v-if="record.map_score" class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
                 </div>
-                <div class="text-right opacity-90 group-hover:opacity-100 transition-opacity">
-                    <div class="text-[10px] sm:text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
-                        {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                        {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                    </div>
+                    <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                        {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                     </div>
                 </div>
             </div>

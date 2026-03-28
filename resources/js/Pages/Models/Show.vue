@@ -2310,42 +2310,6 @@ const confirmNsfw = () => {
                         </div>
 
 
-                        <!-- Performance Metrics Panel (only visible to admin neyoneit) -->
-                        <div v-if="load_times && $page.props.auth?.user?.username === 'neyoneit'" class="mt-8">
-                            <div class="bg-black/40 rounded-xl p-6 shadow-2xl border border-white/5">
-                                <h3 class="text-lg font-bold text-white mb-4">⚡ Performance Metrics</h3>
-
-                                <!-- Backend Timings -->
-                                <div class="mb-6">
-                                    <h4 class="text-sm font-semibold text-blue-400 mb-3">🖥️ Backend (Server)</h4>
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        <div v-for="(time, key) in load_times" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
-                                            <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
-                                            <div class="text-xl font-bold" :class="typeof time === 'number' ? (time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400') : 'text-blue-400'">
-                                                {{ typeof time === 'number' ? time + 'ms' : time }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Frontend Timings -->
-                                <div>
-                                    <h4 class="text-sm font-semibold text-purple-400 mb-3">🌐 Frontend (Browser)</h4>
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        <div v-for="(time, key) in { frontend_mount: frontendTimings.mount_to_ready, dom_content_loaded: frontendTimings.dom_content_loaded, total_page_load: frontendTimings.total_page_load, model_3d_load: frontendTimings.model_load_time }" :key="key" class="bg-white/5 rounded-lg p-3 border border-white/10">
-                                            <div class="text-xs text-gray-400 uppercase mb-1">{{ key.replace(/_/g, ' ') }}</div>
-                                            <div class="text-xl font-bold" :class="time > 1000 ? 'text-red-400' : time > 500 ? 'text-yellow-400' : 'text-green-400'">
-                                                {{ Math.round(time) }}ms
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 text-sm text-gray-500">
-                                    <p><span class="text-green-400">Green</span> = Fast (&lt;500ms) | <span class="text-yellow-400">Yellow</span> = Moderate (500-1000ms) | <span class="text-red-400">Red</span> = Slow (&gt;1000ms)</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

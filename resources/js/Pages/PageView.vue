@@ -7,7 +7,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="py-12 px-4 sm:px-6 lg:px-8">
         <Head :title="page.title" />
 
         <div class="max-w-4xl mx-auto">
