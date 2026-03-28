@@ -11,6 +11,7 @@ use App\Models\Map;
 use App\Models\MddProfile;
 use App\Models\RenderedVideo;
 use App\Models\CommunityHelperScore;
+use App\Models\PlayerMapScore;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -119,6 +120,10 @@ class ProfileController extends Controller {
                 ]);
             }
             $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
+
+            // Attach map scores to records
+            $this->attachProfileMapScores($vq3Records, $mddId, 'vq3');
+            $this->attachProfileMapScores($cpmRecords, $mddId, 'cpm');
         }
 
         // --- Profile stats (cached + consolidated: ~25 queries → 6) ---
@@ -1147,5 +1152,49 @@ class ProfileController extends Controller {
             ->orderBy('created_at', 'desc')
             ->limit(6)
             ->get(['id', 'map_name', 'player_name', 'physics', 'time_ms', 'youtube_url', 'youtube_video_id', 'created_at']);
+    }
+
+    private function attachProfileMapScores($records, int $mddId, string $physics): void
+    {
+        if (!$records || !method_exists($records, 'getCollection') || $records->isEmpty()) return;
+
+        $mapnames = $records->getCollection()->pluck('mapname')->unique()->toArray();
+        if (empty($mapnames)) return;
+
+        $scores = PlayerMapScore::where('mdd_id', $mddId)
+            ->where('physics', $physics)
+            ->whereIn('mapname', $mapnames)
+            ->get()
+            ->keyBy(fn($s) => $s->mapname . '_' . $s->mode);
+
+        // Get player's rank for each map_score (position in their sorted scores for this physics)
+        $allScores = PlayerMapScore::where('mdd_id', $mddId)
+            ->where('physics', $physics)
+            ->orderBy('map_score', 'desc')
+            ->pluck('map_score', 'mapname')
+            ->toArray();
+
+        $scoreRanks = [];
+        $rank = 1;
+        foreach ($allScores as $mapname => $score) {
+            $scoreRanks[$mapname] = $rank++;
+        }
+
+        $totalMaps = count($allScores);
+
+        $records->getCollection()->transform(function ($record) use ($scores, $scoreRanks, $totalMaps) {
+            $key = $record->mapname . '_' . $record->mode;
+            $score = $scores->get($key);
+            $record->map_score = $score ? round($score->map_score, 2) : null;
+            $record->reltime = $score ? round($score->reltime, 4) : null;
+            $record->is_outlier = $score ? $score->is_outlier : false;
+            $record->score_rank = $scoreRanks[$record->mapname] ?? null;
+            $record->score_rank_total = $totalMaps;
+            // Weight for this rank position
+            if (isset($scoreRanks[$record->mapname])) {
+                $record->score_weight = round(exp(-0.02 * $scoreRanks[$record->mapname]), 4);
+            }
+            return $record;
+        });
     }
 }

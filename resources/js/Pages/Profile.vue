@@ -1796,6 +1796,24 @@
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
                                         </div>
 
+                                        <!-- Map Score -->
+                                        <div class="w-10 sm:w-14 flex-shrink-0 text-right relative group/score">
+                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                                            <!-- Score tooltip -->
+                                            <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
+                                                <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
+                                                    <div class="text-xs font-bold text-yellow-400 mb-1">Rating Impact</div>
+                                                    <div class="text-xs text-gray-300 space-y-0.5">
+                                                        <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
+                                                        <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
+                                                        <div>Rank: <span class="text-white font-bold">#{{ record.score_rank }}</span> / {{ record.score_rank_total }}</div>
+                                                        <div>Weight: <span class="text-white font-mono">{{ record.score_weight }}</span></div>
+                                                        <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- Date -->
                                         <div class="w-20 sm:w-28 flex-shrink-0 text-right">
                                             <div class="text-xs text-gray-100 group-hover:text-white font-mono font-semibold transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">
@@ -1898,6 +1916,24 @@
                                         <!-- Time -->
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-right">
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
+                                        </div>
+
+                                        <!-- Map Score -->
+                                        <div class="w-10 sm:w-14 flex-shrink-0 text-right relative group/score">
+                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                                            <!-- Score tooltip -->
+                                            <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
+                                                <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
+                                                    <div class="text-xs font-bold text-yellow-400 mb-1">Rating Impact</div>
+                                                    <div class="text-xs text-gray-300 space-y-0.5">
+                                                        <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
+                                                        <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
+                                                        <div>Rank: <span class="text-white font-bold">#{{ record.score_rank }}</span> / {{ record.score_rank_total }}</div>
+                                                        <div>Weight: <span class="text-white font-mono">{{ record.score_weight }}</span></div>
+                                                        <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Date -->

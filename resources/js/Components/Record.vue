@@ -89,10 +89,23 @@
             </component>
 
 
-            <!-- Time + Date -->
+            <!-- Time + Score + Date -->
             <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0 ml-auto">
                 <div class="text-right">
                     <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
+                </div>
+                <div class="w-8 sm:w-10 text-right relative group/score">
+                    <div v-if="record.map_score" class="text-[10px] sm:text-xs font-bold tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                    <div v-if="record.map_score" class="absolute bottom-full right-0 mb-2 hidden group-hover/score:block z-50 pointer-events-none">
+                        <div class="bg-gray-900/95 border border-white/10 rounded-lg px-3 py-2 shadow-xl text-left whitespace-nowrap">
+                            <div class="text-xs font-bold text-yellow-400 mb-1">Rating Score</div>
+                            <div class="text-xs text-gray-300 space-y-0.5">
+                                <div>Score: <span class="text-white font-bold">{{ record.map_score }}</span></div>
+                                <div>Reltime: <span class="text-white font-mono">{{ record.reltime }}</span></div>
+                                <div v-if="record.is_outlier" class="text-orange-400 text-[10px]">Outlier-normalized</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="text-right opacity-90 group-hover:opacity-100 transition-opacity">
                     <div class="text-[10px] sm:text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" :title="record.date_set">

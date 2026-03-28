@@ -26,8 +26,8 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('tournaments:notifications-send')->everyTwoMinutes();
 
-        // Calculate VQ3 and CPM ratings using Rust - all 9 categories + update map ranked flags
-        $schedule->command('ratings:calculate')->withoutOverlapping()->everyTwoHours();
+        // Full rating recalc daily (backup - incremental handles new records in real-time)
+        $schedule->command('ratings:calculate')->withoutOverlapping()->daily();
 
         // Update last_activity in player_ratings from records (~20s)
         $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();

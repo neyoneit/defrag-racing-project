@@ -7,6 +7,7 @@ use Inertia\Inertia;
 
 use App\Models\Map;
 use App\Models\Record;
+use App\Models\PlayerMapScore;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -93,7 +94,7 @@ class RecordsController extends Controller
      */
     private function fetchPageFromDb(string $physics, string $mode, int $page = 1): array
     {
-        $recordColumns = ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics'];
+        $recordColumns = ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics', 'mode'];
 
         $records = $this->buildModeQuery($mode)
             ->where('physics', $physics)
@@ -102,6 +103,23 @@ class RecordsController extends Controller
             ->offset(($page - 1) * self::PER_PAGE)
             ->limit(self::PER_PAGE)
             ->get($recordColumns);
+
+        // Attach map scores
+        $mddIds = $records->pluck('mdd_id')->unique()->toArray();
+        $mapnames = $records->pluck('mapname')->unique()->toArray();
+        $scores = PlayerMapScore::where('physics', $physics)
+            ->whereIn('mdd_id', $mddIds)
+            ->whereIn('mapname', $mapnames)
+            ->get()
+            ->keyBy(fn($s) => $s->mdd_id . '_' . $s->mapname . '_' . $s->mode);
+
+        $records->each(function ($record) use ($scores) {
+            $key = $record->mdd_id . '_' . $record->mapname . '_' . $record->mode;
+            $score = $scores->get($key);
+            $record->map_score = $score ? round($score->map_score, 2) : null;
+            $record->reltime = $score ? round($score->reltime, 4) : null;
+            $record->is_outlier = $score ? $score->is_outlier : false;
+        });
 
         return $records->toArray();
     }
