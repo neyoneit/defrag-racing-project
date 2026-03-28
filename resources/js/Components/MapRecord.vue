@@ -55,6 +55,9 @@
         if (props.record.rendered_videos && props.record.rendered_videos.length > 0) {
             return props.record.rendered_videos[0];
         }
+        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0 && props.record.uploaded_demos[0].rendered_video) {
+            return props.record.uploaded_demos[0].rendered_video;
+        }
         return null;
     });
 
@@ -148,6 +151,10 @@
 
     const showValidityTooltip = ref(false);
     const validityTooltipPos = ref({ x: 0, y: 0 });
+    const showVerifiedTooltip = ref(false);
+    const verifiedTooltipPos = ref({ x: 0, y: 0 });
+    const showRecTooltip = ref(false);
+    const recTooltipPos = ref({ x: 0, y: 0 });
     const hoveredCommunityFlag = ref(null);
     const communityFlagTooltipPos = ref({ x: 0, y: 0 });
 
@@ -366,8 +373,7 @@
         class="group relative flex items-center gap-1.5 -mr-1 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-3"
         :class="{
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
-            'border-l-2 border-green-500/50 hover:border-green-400': !isMyRecord && isVerified,
-            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !isVerified
+            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord
         }"
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
@@ -483,10 +489,39 @@
                     />
                 </span>
                 <span
+                    v-else-if="isVerified"
+                    class="ml-2 relative inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50 cursor-help"
+                    @mouseenter="showVerifiedTooltip = true; verifiedTooltipPos = { x: $event.clientX, y: $event.clientY }"
+                    @mousemove="verifiedTooltipPos = { x: $event.clientX, y: $event.clientY }"
+                    @mouseleave="showVerifiedTooltip = false"
+                >
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    Verified
+                    <Teleport to="body" v-if="showVerifiedTooltip">
+                        <div class="fixed z-[9999] pointer-events-none" :style="{ top: verifiedTooltipPos.y + 'px', left: verifiedTooltipPos.x + 'px' }">
+                            <div class="bg-gray-900 border border-green-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                                <div class="text-green-400 font-semibold text-xs">Verified Record</div>
+                                <div class="text-gray-300 text-xs mt-0.5">Online record + online demo matches</div>
+                            </div>
+                        </div>
+                    </Teleport>
+                </span>
+                <span
                     v-else
-                    class="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50"
+                    class="ml-2 relative inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50 cursor-help"
+                    @mouseenter="showRecTooltip = true; recTooltipPos = { x: $event.clientX, y: $event.clientY }"
+                    @mousemove="recTooltipPos = { x: $event.clientX, y: $event.clientY }"
+                    @mouseleave="showRecTooltip = false"
                 >
                     rec.
+                    <Teleport to="body" v-if="showRecTooltip">
+                        <div class="fixed z-[9999] pointer-events-none" :style="{ top: recTooltipPos.y + 'px', left: recTooltipPos.x + 'px' }">
+                            <div class="bg-gray-900 border border-green-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                                <div class="text-green-400 font-semibold text-xs">Online Record</div>
+                                <div class="text-gray-300 text-xs mt-0.5">No demo attached - not verified</div>
+                            </div>
+                        </div>
+                    </Teleport>
                 </span>
 
                 <!-- Combined demo download + render chip -->

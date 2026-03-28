@@ -768,7 +768,7 @@
     const flagDemoId = ref(null);
 
     const getRenderedVideo = (record) => {
-        return record.rendered_videos?.[0] || null;
+        return record.rendered_videos?.[0] || record.uploaded_demos?.[0]?.rendered_video || null;
     };
 
     const canRequestRender = (record) => {

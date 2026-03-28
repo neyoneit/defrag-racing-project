@@ -104,7 +104,7 @@ class ProfileController extends Controller {
             if ($tablePrefix === 'records') {
                 $vq3Records = $vq3Records->with([
                     'map' => fn($q) => $q->select('name', 'thumbnail'),
-                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename')->with('renderedVideo'),
                     'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
                 ]);
             }
@@ -115,7 +115,7 @@ class ProfileController extends Controller {
             if ($tablePrefix === 'records') {
                 $cpmRecords = $cpmRecords->with([
                     'map' => fn($q) => $q->select('name', 'thumbnail'),
-                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                    'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename')->with('renderedVideo'),
                     'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
                 ]);
             }
@@ -299,7 +299,7 @@ class ProfileController extends Controller {
         if ($tablePrefix === 'records') {
             $vq3Records = $vq3Records->with([
                 'map' => fn($q) => $q->select('name', 'thumbnail'),
-                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename')->with('renderedVideo'),
                 'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
             ]);
         }
@@ -313,7 +313,7 @@ class ProfileController extends Controller {
         if ($tablePrefix === 'records') {
             $cpmRecords = $cpmRecords->with([
                 'map' => fn($q) => $q->select('name', 'thumbnail'),
-                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename'),
+                'uploadedDemos' => fn($q) => $q->select('id', 'record_id', 'original_filename')->with('renderedVideo'),
                 'renderedVideos' => fn($q) => $q->visible()->latest()->limit(1),
             ]);
         }
