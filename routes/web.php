@@ -387,4 +387,5 @@ Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookControlle
 // });
 
 // Clean URLs for admin-created pages (catch-all, must be last route)
-Route::get("/{slug}", [App\Http\Controllers\PagesController::class, "index"])->name("pages.show.clean")->where("slug", "[a-z0-9\\-]+");
+// Exclude prefixes used by other route files (clans, headhunter, marketplace, tournaments)
+Route::get("/{slug}", [App\Http\Controllers\PagesController::class, "index"])->name("pages.show.clean")->where("slug", "(?!clans|headhunter|marketplace|tournaments)[a-z0-9\\-]+");
