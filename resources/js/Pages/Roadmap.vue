@@ -67,7 +67,7 @@ const commitItems = props.commits;
                         <div v-for="(commit, index) in commitItems" :key="commit.hash" class="relative pl-6 border-l-2 border-green-500/20">
                             <div class="absolute left-0 top-2 w-4 h-0.5 bg-green-500/20"></div>
                             <div>
-                                <div class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded cursor-help transition-all"
+                                <a :href="`https://github.com/defrag-racing/defrag-racing-project/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded cursor-pointer transition-all"
                                     @mouseenter="onCommitEnter($event, commit)"
                                     @mousemove="onCommitMove"
                                     @mouseleave="onCommitLeave"
@@ -78,7 +78,7 @@ const commitItems = props.commits;
                                     <span class="text-xs font-mono text-green-400/70">{{ commit.hash }}</span>
                                     <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
                                     <span class="text-[10px] text-gray-500 flex-shrink-0">{{ commit.author }}</span>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>

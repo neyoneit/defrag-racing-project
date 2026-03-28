@@ -366,12 +366,12 @@
                              @mousemove="commit.description ? onCommitMove($event) : null"
                              @mouseleave="onCommitLeave">
                             <div class="absolute left-0 top-2.5 w-3 h-0.5 bg-green-500/20"></div>
-                            <div class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
+                            <a :href="`https://github.com/defrag-racing/defrag-racing-project/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
                                 <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
                                 <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
                                 <span class="text-xs font-mono text-green-400/70">{{ commit.hash }}</span>
                                 <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
-                            </div>
+                            </a>
                         </div>
                     </div>
                     <div v-else class="px-5 py-8 text-center text-sm text-gray-500">No recent changes</div>
