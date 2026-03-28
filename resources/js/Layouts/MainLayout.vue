@@ -678,17 +678,17 @@
                                             Play Later
                                         </DropdownLink>
                                         <div class="mx-3 border-t border-white/10 my-1" />
-                                        <DropdownLink :href="route('profile.show')">
+                                        <DropdownLink :href="route('settings.show')">
                                             Settings
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
-                                            <Link :href="route('profile.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
-                                            <Link :href="route('profile.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Creator</Link>
-                                            <Link :href="route('profile.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Customize</Link>
-                                            <Link :href="route('profile.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Global Customize</Link>
-                                            <Link :href="route('profile.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
-                                            <Link :href="route('profile.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
-                                            <Link :href="route('profile.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
+                                            <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
+                                            <Link :href="route('settings.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Creator</Link>
+                                            <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Customize</Link>
+                                            <Link :href="route('settings.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Global Customize</Link>
+                                            <Link :href="route('settings.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
+                                            <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
+                                            <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
                                         <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" target="_blank" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
                                             Admin Panel

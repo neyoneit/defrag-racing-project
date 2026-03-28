@@ -25,7 +25,7 @@ class OAuthController extends Controller
     {
         // Check if user denied authorization
         if (request()->has('error')) {
-            return redirect()->route('profile.show')->with('info', 'Discord connection cancelled.');
+            return redirect()->route('settings.show')->with('info', 'Discord connection cancelled.');
         }
 
         try {
@@ -40,9 +40,9 @@ class OAuthController extends Controller
                 'discord_token_expires_at' => Carbon::now()->addSeconds($discordUser->expiresIn),
             ]);
 
-            return redirect()->route('profile.show')->with('success', 'Discord account connected successfully!');
+            return redirect()->route('settings.show')->with('success', 'Discord account connected successfully!');
         } catch (\Exception $e) {
-            return redirect()->route('profile.show')->with('error', 'Failed to connect Discord account.');
+            return redirect()->route('settings.show')->with('error', 'Failed to connect Discord account.');
         }
     }
 
@@ -59,7 +59,7 @@ class OAuthController extends Controller
             'discord_token_expires_at' => null,
         ]);
 
-        return redirect()->route('profile.show')->with('success', 'Discord account disconnected.');
+        return redirect()->route('settings.show')->with('success', 'Discord account disconnected.');
     }
 
     /**
@@ -79,7 +79,7 @@ class OAuthController extends Controller
     {
         // Check if user denied authorization
         if (request()->has('error')) {
-            return redirect()->route('profile.show')->with('info', 'Twitch connection cancelled.');
+            return redirect()->route('settings.show')->with('info', 'Twitch connection cancelled.');
         }
 
         try {
@@ -94,9 +94,9 @@ class OAuthController extends Controller
                 'twitch_token_expires_at' => Carbon::now()->addSeconds($twitchUser->expiresIn),
             ]);
 
-            return redirect()->route('profile.show')->with('success', 'Twitch account connected successfully!');
+            return redirect()->route('settings.show')->with('success', 'Twitch account connected successfully!');
         } catch (\Exception $e) {
-            return redirect()->route('profile.show')->with('error', 'Failed to connect Twitch account.');
+            return redirect()->route('settings.show')->with('error', 'Failed to connect Twitch account.');
         }
     }
 
@@ -115,7 +115,7 @@ class OAuthController extends Controller
             'live_status_checked_at' => null,
         ]);
 
-        return redirect()->route('profile.show')->with('success', 'Twitch account disconnected.');
+        return redirect()->route('settings.show')->with('success', 'Twitch account disconnected.');
     }
 
     /**
@@ -133,7 +133,7 @@ class OAuthController extends Controller
     {
         // Check if user denied authorization
         if (request()->has('error')) {
-            return redirect()->route('profile.show')->with('info', 'Steam connection cancelled.');
+            return redirect()->route('settings.show')->with('info', 'Steam connection cancelled.');
         }
 
         try {
@@ -146,9 +146,9 @@ class OAuthController extends Controller
                 'steam_avatar' => $steamUser->getAvatar(),
             ]);
 
-            return redirect()->route('profile.show')->with('success', 'Steam account connected successfully!');
+            return redirect()->route('settings.show')->with('success', 'Steam account connected successfully!');
         } catch (\Exception $e) {
-            return redirect()->route('profile.show')->with('error', 'Failed to connect Steam account.');
+            return redirect()->route('settings.show')->with('error', 'Failed to connect Steam account.');
         }
     }
 
@@ -164,7 +164,7 @@ class OAuthController extends Controller
             'steam_avatar' => null,
         ]);
 
-        return redirect()->route('profile.show')->with('success', 'Steam account disconnected.');
+        return redirect()->route('settings.show')->with('success', 'Steam account disconnected.');
     }
 
     /**
@@ -182,7 +182,7 @@ class OAuthController extends Controller
     {
         // Check if user denied authorization
         if (request()->has('error')) {
-            return redirect()->route('profile.show')->with('info', 'Twitter/X connection cancelled.');
+            return redirect()->route('settings.show')->with('info', 'Twitter/X connection cancelled.');
         }
 
         try {
@@ -197,9 +197,9 @@ class OAuthController extends Controller
                 'twitter_token_expires_at' => Carbon::now()->addSeconds($twitterUser->expiresIn),
             ]);
 
-            return redirect()->route('profile.show')->with('success', 'Twitter/X account connected successfully!');
+            return redirect()->route('settings.show')->with('success', 'Twitter/X account connected successfully!');
         } catch (\Exception $e) {
-            return redirect()->route('profile.show')->with('error', 'Failed to connect Twitter/X account.');
+            return redirect()->route('settings.show')->with('error', 'Failed to connect Twitter/X account.');
         }
     }
 
@@ -216,6 +216,6 @@ class OAuthController extends Controller
             'twitter_token_expires_at' => null,
         ]);
 
-        return redirect()->route('profile.show')->with('success', 'Twitter/X account disconnected.');
+        return redirect()->route('settings.show')->with('success', 'Twitter/X account disconnected.');
     }
 }
