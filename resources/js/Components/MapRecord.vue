@@ -55,9 +55,6 @@
         if (props.record.rendered_videos && props.record.rendered_videos.length > 0) {
             return props.record.rendered_videos[0];
         }
-        if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0 && props.record.uploaded_demos[0].rendered_video) {
-            return props.record.uploaded_demos[0].rendered_video;
-        }
         return null;
     });
 

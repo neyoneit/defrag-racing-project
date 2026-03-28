@@ -1150,7 +1150,7 @@
                     </span>
                 </div>
                 <a v-if="isOwnProfile && activeTab === 'modeler'"
-                    :href="route('profile.show') + '?tab=creator'"
+                    :href="route('settings.show') + '?tab=creator'"
                     class="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 border border-white/20 hover:border-blue-400/50 hover:bg-blue-600/20 text-gray-400 hover:text-blue-300 transition-all text-xs font-bold backdrop-blur-sm">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     Customize Pins & Order
@@ -1499,7 +1499,7 @@
                     :activityYears="activity_years"
                     :mddId="profile?.id || profile?.mdd_id"
                     :isNew="isOwnProfile && isNewSection('activity_history')"
-                    :customizeUrl="route('profile.show') + '?tab=customize'"
+                    :customizeUrl="route('settings.show') + '?tab=customize'"
                 />
             </div>
 
@@ -1561,7 +1561,7 @@
                                 <!-- Edit button (own profile) -->
                                 <Link
                                     v-if="can_manage_aliases"
-                                    :href="route('profile.show')"
+                                    :href="route('settings.show')"
                                     class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-400 hover:bg-white/5 transition-all"
                                     title="Edit aliases"
                                 >

@@ -141,7 +141,7 @@
                         <p class="text-yellow-300 text-sm">
                             You need at least 50 records to create tournaments. You currently have {{ records }} records.
                             <span v-if="!$page.props.auth?.user?.mdd_id">
-                                Link your account to Q3DF.org from <Link :href="route('profile.show')" class="text-yellow-200 hover:text-white underline font-medium">Settings</Link>.
+                                Link your account to Q3DF.org from <Link :href="route('settings.show')" class="text-yellow-200 hover:text-white underline font-medium">Settings</Link>.
                             </span>
                         </p>
                     </div>

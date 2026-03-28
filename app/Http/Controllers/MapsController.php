@@ -148,7 +148,7 @@ class MapsController extends Controller
             ->pluck('id')
             ->toArray();
 
-        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos.renderedVideo', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
+        $cpmRecords = $cpmRecords->with(['user', 'uploadedDemos', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'cpmPage')->withQueryString();
 
         // Attach community flags before ranking
         $this->attachCommunityFlags($cpmRecords);
@@ -194,7 +194,7 @@ class MapsController extends Controller
             ->pluck('id')
             ->toArray();
 
-        $vq3Records = $vq3Records->with(['user', 'uploadedDemos.renderedVideo', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
+        $vq3Records = $vq3Records->with(['user', 'uploadedDemos', 'renderedVideos' => fn($q) => $q->visible()->latest()])->orderBy($column, $order)->orderBy('date_set', 'ASC')->paginate(50, ['*'], 'vq3Page')->withQueryString();
 
         // Attach community flags before ranking
         $this->attachCommunityFlags($vq3Records);
@@ -461,7 +461,7 @@ class MapsController extends Controller
         $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)
             ->where('status', 'assigned')
             ->whereNotNull('record_id')
-            ->with(['record.user', 'user']);
+            ->with(['record.user', 'user', 'renderedVideo']);
 
         // Apply physics filter
         if ($physicsPattern) {
@@ -503,10 +503,11 @@ class MapsController extends Controller
                 'demo_id' => null, // Online demos don't use demo_id
                 'record_id' => $demo->record_id, // Has record_id since they're assigned
                 'user' => $user, // Use record owner (assigned user) for avatar/effects/country
-                'country' => $demo->record->country ?? $demo->country, // Use record's country
+                'country' => $demo->record?->country ?? $demo->country, // Use record's country
                 'rank' => null, // Will be calculated after merge
                 'is_online' => true, // Flag for online demos
                 'verification_type' => 'verified', // Online demos assigned to records are verified
+                'rendered_videos' => $demo->renderedVideo ? [$demo->renderedVideo] : [],
             ];
         });
 

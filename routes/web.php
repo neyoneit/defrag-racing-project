@@ -260,7 +260,7 @@ Route::get('/announcements', [ChangelogController::class, 'announcements'])->nam
 
 // Settings (overrides Jetstream's /user/profile)
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('profile.show');
+    Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('settings.show');
     Route::redirect('/user/profile', '/user/settings', 301);
 });
 
