@@ -268,7 +268,11 @@
         return [...missing, ...saved];
     });
 
-    const showStatBox = (id) => activeStatBoxes.value.includes(id);
+    const showStatBox = (id) => {
+        if (!activeStatBoxes.value.includes(id)) return false;
+        if (!props.user?.profile_layout && globallyHiddenStatBoxes.value.includes(id)) return false;
+        return true;
+    };
     const statBoxOrder = (id) => {
         const idx = activeStatBoxes.value.indexOf(id);
         return idx >= 0 ? idx : 99;
@@ -307,6 +311,46 @@
     const isOwnProfile = computed(() => page.props.auth?.user?.id === props.user?.id);
     const ownProfileNotVerified = computed(() => isOwnProfile.value && !page.props.auth?.user?.email_verified_at);
     const ownProfileNotLinked = computed(() => isOwnProfile.value && !props.hasProfile);
+
+    const sectionLabels = {
+        activity_history: 'Activity History',
+        records: 'Records',
+        rendered_videos: 'Rendered Videos',
+        similar_skill_rivals: 'Similar Skill Rivals',
+        competitor_comparison: 'Competitor Comparison',
+        known_aliases: 'Known Aliases',
+        featured_maplists: 'Featured Maplists',
+        map_completionist: 'Map Completionist',
+    };
+
+    const statBoxLabels = {
+        performance: 'Performance',
+        activity: 'Activity',
+        record_types: 'Record Types',
+        map_features: 'Map Features',
+        renders: 'Renders',
+    };
+
+    const isGlobalCustomizationActive = computed(() => {
+        if (isOwnProfile.value) return false;
+        if (!props.hasProfile) return false;
+        if (props.user?.profile_layout) return false;
+        return true;
+    });
+
+    const globallyHiddenSections = computed(() => {
+        if (!isGlobalCustomizationActive.value) return [];
+        return props.visitorGlobalPreferences?.hidden_sections || [];
+    });
+
+    const globallyHiddenStatBoxes = computed(() => {
+        if (!isGlobalCustomizationActive.value) return [];
+        return props.visitorGlobalPreferences?.hidden_stat_boxes || [];
+    });
+
+    const showGlobalStatBox = (id) => {
+        return !globallyHiddenStatBoxes.value.includes(id);
+    };
     const showQuickSettings = ref(false);
     const quickSettingsPanel = ref(localStorage.getItem('quick_settings_panel') || 'layout');
     const quickSettingsDropdown = ref(false);
@@ -1517,6 +1561,34 @@
                     <div v-else class="text-xs text-gray-600 text-center py-2">No downloaded demos</div>
                 </div>
             </div>
+            <!-- Global Customization Notices -->
+            <div v-if="globallyHiddenStatBoxes.length > 0" class="mb-2">
+                <Link :href="route('settings.show') + '?tab=global-customize'" class="flex items-center gap-2.5 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/15 hover:border-yellow-500/30 transition-all group">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                    <span class="text-xs text-yellow-300">
+                        Your global customization is hiding stat boxes: <span class="font-bold text-yellow-200">{{ globallyHiddenStatBoxes.map(id => statBoxLabels[id] || id).join(', ') }}</span>
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-yellow-500 group-hover:text-yellow-300 transition-colors shrink-0 ml-auto">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </Link>
+            </div>
+            <div v-if="globallyHiddenSections.length > 0" class="mb-4">
+                <Link :href="route('settings.show') + '?tab=global-customize'" class="flex items-center gap-2.5 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg hover:bg-yellow-500/15 hover:border-yellow-500/30 transition-all group">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400 shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                    <span class="text-xs text-yellow-300">
+                        Your global customization is hiding sections: <span class="font-bold text-yellow-200">{{ globallyHiddenSections.map(id => sectionLabels[id] || id).join(', ') }}</span>
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 text-yellow-500 group-hover:text-yellow-300 transition-colors shrink-0 ml-auto">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                </Link>
+            </div>
+
             <!-- Reorderable Sections Container -->
             <div class="flex flex-col">
 

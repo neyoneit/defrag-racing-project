@@ -64,6 +64,62 @@ const autoSaveInterval = ref(null);
 const hasUnsavedChanges = ref(false);
 const drafts = ref([]);
 
+// Map search for create modal
+const mapSearchQuery = ref('');
+const mapSearchResults = ref([]);
+const mapSearchLoading = ref(false);
+let mapSearchDebounce = null;
+
+const searchMapsForModal = () => {
+    clearTimeout(mapSearchDebounce);
+    if (!mapSearchQuery.value.trim()) {
+        mapSearchResults.value = [];
+        return;
+    }
+    mapSearchLoading.value = true;
+    mapSearchDebounce = setTimeout(async () => {
+        try {
+            const response = await axios.get('/api/maps/search', { params: { q: mapSearchQuery.value } });
+            mapSearchResults.value = response.data;
+        } catch (error) {
+            console.error('Error searching maps:', error);
+        } finally {
+            mapSearchLoading.value = false;
+        }
+    }, 250);
+};
+
+const addMapFromSearch = (map) => {
+    const currentMaps = newMaplistMaps.value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+    if (currentMaps.includes(map.name)) return;
+
+    if (newMaplistMaps.value.trim()) {
+        newMaplistMaps.value += '\n' + map.name;
+    } else {
+        newMaplistMaps.value = map.name;
+    }
+};
+
+const isMapAdded = (mapName) => {
+    const currentMaps = newMaplistMaps.value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+    return currentMaps.includes(mapName);
+};
+
+const addedMapCount = computed(() => {
+    return newMaplistMaps.value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(n => n.length > 0)
+        .length;
+});
+
 // Search input
 const searchQuery = ref(props.search || '');
 const showMobileFilters = ref(false);
@@ -227,6 +283,8 @@ const openCreateModal = () => {
     validationErrors.value = [];
     draftId.value = null;
     hasUnsavedChanges.value = false;
+    mapSearchQuery.value = '';
+    mapSearchResults.value = [];
     showCreateModal.value = true;
     startAutoSave();
 };
@@ -623,66 +681,141 @@ const createMaplist = async () => {
         </div>
 
         <!-- Create Maplist Modal -->
-        <DialogModal :show="showCreateModal" @close="attemptCloseModal" max-width="lg">
+        <DialogModal :show="showCreateModal" @close="attemptCloseModal" max-width="4xl">
             <template #title>
                 <div class="flex items-center space-x-2">
-                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                     <span>Create New Maplist</span>
+                    <span v-if="addedMapCount > 0" class="text-xs text-gray-400 font-normal ml-2">({{ addedMapCount }} maps)</span>
                 </div>
             </template>
 
             <template #content>
-                <div class="space-y-4">
-                    <div>
-                        <label for="maplist_name" class="block text-xs font-medium text-gray-400 mb-1">Maplist Name</label>
-                        <input
-                            id="maplist_name"
-                            v-model="newMaplistName"
-                            type="text"
-                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
-                            placeholder="e.g., My Favorite Maps"
-                        />
-                    </div>
+                <div class="flex gap-6">
+                    <!-- Left: Form -->
+                    <div class="flex-1 space-y-4 min-w-0">
+                        <div>
+                            <label for="maplist_name" class="block text-xs font-medium text-gray-400 mb-1">Maplist Name</label>
+                            <input
+                                id="maplist_name"
+                                v-model="newMaplistName"
+                                type="text"
+                                class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+                                placeholder="e.g., My Favorite Maps"
+                            />
+                        </div>
 
-                    <div>
-                        <label for="maplist_description" class="block text-xs font-medium text-gray-400 mb-1">Description (Optional)</label>
-                        <textarea
-                            id="maplist_description"
-                            v-model="newMaplistDescription"
-                            rows="3"
-                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
-                            placeholder="Describe your maplist..."
-                        ></textarea>
-                    </div>
+                        <div>
+                            <label for="maplist_description" class="block text-xs font-medium text-gray-400 mb-1">Description (Optional)</label>
+                            <textarea
+                                id="maplist_description"
+                                v-model="newMaplistDescription"
+                                rows="2"
+                                class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+                                placeholder="Describe your maplist..."
+                            ></textarea>
+                        </div>
 
-                    <div>
-                        <label for="maplist_maps" class="block text-xs font-medium text-gray-400 mb-1">Maps (Optional - One per line)</label>
-                        <textarea
-                            id="maplist_maps"
-                            v-model="newMaplistMaps"
-                            rows="6"
-                            class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 font-mono"
-                            placeholder="skatepark&#10;temple&#10;rust3dm1&#10;..."
-                        ></textarea>
-                        <p class="mt-1 text-xs text-gray-500">Enter map names, one per line. Exact names required.</p>
-                    </div>
+                        <div>
+                            <label for="maplist_maps" class="block text-xs font-medium text-gray-400 mb-1">Maps (One per line)</label>
+                            <textarea
+                                id="maplist_maps"
+                                v-model="newMaplistMaps"
+                                rows="10"
+                                class="w-full bg-black/30 border border-white/10 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 font-mono"
+                                placeholder="Type map names manually, one per line..."
+                            ></textarea>
+                            <p class="mt-1 text-xs text-gray-500">Type map names one per line, or use the search panel to find and add maps.</p>
+                        </div>
 
-                    <!-- Validation Errors -->
-                    <div v-if="validationErrors.length > 0" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                        <h4 class="font-medium text-red-400 mb-2 text-sm">Cannot create maplist - Map issues found:</h4>
-                        <div class="space-y-2">
-                            <div v-for="(error, index) in validationErrors" :key="index" class="text-sm">
-                                <p class="text-red-300 font-medium">{{ error.map_name }}</p>
-                                <p class="text-gray-400 ml-4 text-xs">{{ error.message }}</p>
-                                <div v-if="error.suggestions && error.suggestions.length > 0" class="ml-4 mt-1">
-                                    <p class="text-yellow-400 text-xs">Did you mean:</p>
-                                    <ul class="list-disc list-inside text-gray-400 text-xs">
-                                        <li v-for="suggestion in error.suggestions" :key="suggestion">{{ suggestion }}</li>
-                                    </ul>
+                        <!-- Validation Errors -->
+                        <div v-if="validationErrors.length > 0" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+                            <h4 class="font-medium text-red-400 mb-2 text-sm">Cannot create maplist - Map issues found:</h4>
+                            <div class="space-y-2">
+                                <div v-for="(error, index) in validationErrors" :key="index" class="text-sm">
+                                    <p class="text-red-300 font-medium">{{ error.map_name }}</p>
+                                    <p class="text-gray-400 ml-4 text-xs">{{ error.message }}</p>
+                                    <div v-if="error.suggestions && error.suggestions.length > 0" class="ml-4 mt-1">
+                                        <p class="text-yellow-400 text-xs">Did you mean:</p>
+                                        <ul class="list-disc list-inside text-gray-400 text-xs">
+                                            <li v-for="suggestion in error.suggestions" :key="suggestion"
+                                                class="cursor-pointer hover:text-yellow-300"
+                                                @click="newMaplistMaps = newMaplistMaps.replace(error.map_name, suggestion)"
+                                            >{{ suggestion }}</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Map Search Panel -->
+                    <div class="w-72 shrink-0 flex flex-col bg-white/[0.02] rounded-xl border border-white/10 overflow-hidden">
+                        <div class="p-3 border-b border-white/10">
+                            <label class="block text-xs font-medium text-gray-400 mb-1.5">Search Maps</label>
+                            <div class="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-500 absolute left-2.5 top-2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                                </svg>
+                                <input
+                                    v-model="mapSearchQuery"
+                                    @input="searchMapsForModal"
+                                    type="text"
+                                    class="w-full bg-black/30 border border-white/10 text-white rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+                                    placeholder="Type map name..."
+                                />
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto max-h-[360px] p-1.5 space-y-1">
+                            <div v-if="mapSearchLoading" class="flex items-center justify-center py-8">
+                                <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            <div v-else-if="!mapSearchQuery.trim()" class="flex flex-col items-center justify-center py-8 text-center px-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-gray-600 mb-2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                                </svg>
+                                <p class="text-xs text-gray-500">Search for maps to add them to your maplist</p>
+                            </div>
+                            <div v-else-if="mapSearchResults.length === 0" class="flex flex-col items-center justify-center py-8">
+                                <p class="text-xs text-gray-500">No maps found</p>
+                            </div>
+                            <button
+                                v-for="map in mapSearchResults"
+                                :key="map.id"
+                                @click="addMapFromSearch(map)"
+                                :disabled="isMapAdded(map.name)"
+                                class="w-full flex items-center gap-2.5 p-2 rounded-lg text-left transition-all"
+                                :class="isMapAdded(map.name)
+                                    ? 'bg-green-500/10 border border-green-500/20 opacity-60 cursor-default'
+                                    : 'hover:bg-white/5 border border-transparent hover:border-white/10 cursor-pointer'"
+                            >
+                                <img
+                                    v-if="map.thumbnail"
+                                    :src="`/storage/${map.thumbnail}`"
+                                    class="w-10 h-10 rounded object-cover shrink-0 bg-black/40"
+                                    @error="$event.target.style.display = 'none'"
+                                />
+                                <div v-else class="w-10 h-10 rounded bg-gray-800 shrink-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-600">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                                    </svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm text-white font-medium truncate">{{ map.name }}</p>
+                                    <p v-if="map.author" class="text-xs text-gray-500 truncate">by {{ map.author }}</p>
+                                </div>
+                                <svg v-if="isMapAdded(map.name)" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4 text-green-400 shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-600 shrink-0">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -699,7 +832,7 @@ const createMaplist = async () => {
                     <button
                         @click="createMaplist"
                         :disabled="creating"
-                        class="px-5 py-2 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition text-sm">
+                        class="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition text-sm">
                         {{ creating ? 'Creating...' : 'Create Maplist' }}
                     </button>
                 </div>

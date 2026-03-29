@@ -215,9 +215,19 @@ const profileSections = [
     { id: 'map_completionist', label: 'Map Completionist' },
 ];
 
+const statBoxItems = [
+    { id: 'performance', label: 'Performance' },
+    { id: 'activity', label: 'Activity' },
+    { id: 'record_types', label: 'Record Types' },
+    { id: 'map_features', label: 'Map Features' },
+    { id: 'renders', label: 'Renders' },
+];
+
 const savedHidden = user.value.global_profile_preferences?.hidden_sections || [];
+const savedHiddenStatBoxes = user.value.global_profile_preferences?.hidden_stat_boxes || [];
 const globalProfileForm = useForm({
     hidden_sections: [...savedHidden],
+    hidden_stat_boxes: [...savedHiddenStatBoxes],
 });
 
 const toggleGlobalSection = (id) => {
@@ -227,9 +237,29 @@ const toggleGlobalSection = (id) => {
     } else {
         globalProfileForm.hidden_sections.push(id);
     }
+    saveGlobalPreferencesDebounced();
+};
+
+const toggleGlobalStatBox = (id) => {
+    const idx = globalProfileForm.hidden_stat_boxes.indexOf(id);
+    if (idx >= 0) {
+        globalProfileForm.hidden_stat_boxes.splice(idx, 1);
+    } else {
+        globalProfileForm.hidden_stat_boxes.push(id);
+    }
+    saveGlobalPreferencesDebounced();
+};
+
+let globalPrefTimeout = null;
+const saveGlobalPreferencesDebounced = () => {
+    clearTimeout(globalPrefTimeout);
+    globalPrefTimeout = setTimeout(() => {
+        globalProfileForm.post(route('settings.global-profile-preferences'), { preserveScroll: true });
+    }, 500);
 };
 
 const updateGlobalProfilePreferences = () => {
+    clearTimeout(globalPrefTimeout);
     globalProfileForm.post(route('settings.global-profile-preferences'), { preserveScroll: true });
 };
 
@@ -948,6 +978,26 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
                 <!-- ==================== PROFILE TAB ==================== -->
                 <template v-if="activeTab === 'profile'">
+
+            <!-- Link MDD Account Banner -->
+            <a v-if="isVerified && !user.mdd_id" href="/link-account" class="group block rounded-xl overflow-hidden mb-4 relative">
+                <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-gradient-shift"></div>
+                <div class="relative m-[2px] rounded-[10px] bg-gray-900/95 px-5 py-4 flex items-center gap-4 group-hover:bg-gray-900/80 transition-colors">
+                    <div class="shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 border border-blue-400/40 flex items-center justify-center animate-pulse">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-blue-400">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-white font-bold text-lg">Link your MDD Account</p>
+                        <p class="text-gray-400 text-sm">Connect your Q3DF.org profile to unlock records, rankings, tournaments and more.</p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 text-gray-400 group-hover:text-white group-hover:translate-x-1 transition-all shrink-0">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                </div>
+            </a>
+
             <div class="grid grid-cols-3 gap-4">
                 <!-- Profile Card -->
                 <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
@@ -1942,7 +1992,46 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                 </div>
             </div>
 
-            <!-- Profile Sections Visibility Card -->
+            <!-- Hide Stat Boxes Card -->
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-600/20 border border-orange-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-orange-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-bold text-white">Hide Stat Boxes</h2>
+                                <p class="text-xs text-gray-500">Hide stat boxes on other players' profiles (uncustomized only)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div v-if="globalProfileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        <label v-for="box in statBoxItems" :key="box.id"
+                            class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+                            :class="globalProfileForm.hidden_stat_boxes.includes(box.id) ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10 hover:bg-white/10'"
+                        >
+                            <input type="checkbox"
+                                :checked="!globalProfileForm.hidden_stat_boxes.includes(box.id)"
+                                @change="toggleGlobalStatBox(box.id)"
+                                class="w-4 h-4 rounded bg-white/10 border-white/20 text-orange-600"
+                            />
+                            <span class="text-xs font-medium" :class="globalProfileForm.hidden_stat_boxes.includes(box.id) ? 'text-red-400 line-through' : 'text-gray-300'">{{ box.label }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hide Profile Sections Card -->
             <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
@@ -1954,7 +2043,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
                             <div>
                                 <h2 class="text-sm font-bold text-white">Hide Profile Sections</h2>
-                                <p class="text-xs text-gray-500">Applies only to profiles that haven't been customized by their owner</p>
+                                <p class="text-xs text-gray-500">Hide sections on other players' profiles (uncustomized only)</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -1962,9 +2051,6 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                                 <span class="text-xs text-green-400 font-medium">Saved</span>
                             </div>
-                            <PrimaryButton type="button" @click="updateGlobalProfilePreferences" :disabled="globalProfileForm.processing">
-                                <span class="text-xs">Save</span>
-                            </PrimaryButton>
                         </div>
                     </div>
 
@@ -2161,5 +2247,16 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 .cropper {
     height: 400px;
     width: 100%;
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-shift {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
 }
 </style>

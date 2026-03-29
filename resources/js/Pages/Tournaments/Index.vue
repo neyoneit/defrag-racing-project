@@ -9,7 +9,6 @@
         activeTournaments: Object,
         upcomingTournaments: Object,
         pastTournaments: Object,
-        records: Number
     });
 
     const tournamentsLoaded = ref(false);
@@ -101,7 +100,7 @@
                 </Link>
 
                 <Link
-                    v-else-if="$page.props.auth.user && records >= 50"
+                    v-else-if="$page.props.auth.user && $page.props.auth.user.mdd_id"
                     :href="route('tournaments.create')"
                     class="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/20"
                 >
@@ -122,16 +121,17 @@
                     Log in to create tournaments
                 </Link>
 
-                <div
+                <Link
                     v-else
-                    class="flex items-center gap-2 px-4 py-3 bg-gray-700/50 text-gray-500 font-bold rounded-lg cursor-not-allowed"
-                    title="You need at least 50 records to create tournaments"
+                    :href="route('settings.show')"
+                    class="flex items-center gap-2 px-4 py-3 bg-gray-700/50 border border-white/10 text-gray-400 font-bold rounded-lg transition-all hover:bg-gray-600/50 hover:text-gray-300"
+                    title="Link your account to create tournaments"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-3.062a4.5 4.5 0 0 0-1.242-7.244l4.5-4.5a4.5 4.5 0 0 1 6.364 6.364l-1.757 1.757" />
                     </svg>
-                    Create Tournament
-                </div>
+                    Link Account to Create
+                </Link>
             </div>
             </div>
         </div>
@@ -152,19 +152,16 @@
                     </div>
                 </div>
             </div>
-            <!-- Records Warning (only for verified users) -->
-            <div v-else-if="$page.props.auth?.user && records < 50" class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <!-- Link Account Warning (only for verified users without linked account) -->
+            <div v-else-if="$page.props.auth?.user && !$page.props.auth?.user?.mdd_id" class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-8">
                 <div class="flex items-start gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 shrink-0 mt-0.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-3.062a4.5 4.5 0 0 0-1.242-7.244l4.5-4.5a4.5 4.5 0 0 1 6.364 6.364l-1.757 1.757" />
                     </svg>
                     <div class="flex-1">
-                        <p class="text-yellow-400 font-bold mb-1">Tournament Creation Restricted</p>
+                        <p class="text-yellow-400 font-bold mb-1">Account Linking Required</p>
                         <p class="text-yellow-300 text-sm">
-                            You need at least 50 records to create tournaments. You currently have {{ records }} records.
-                            <span v-if="!$page.props.auth?.user?.mdd_id">
-                                Link your account to Q3DF.org from <Link :href="route('settings.show')" class="text-yellow-200 hover:text-white underline font-medium">Settings</Link>.
-                            </span>
+                            <Link :href="route('settings.show')" class="text-yellow-200 hover:text-white underline font-medium">Link your account</Link> to Q3DF.org to create tournaments.
                         </p>
                     </div>
                 </div>
