@@ -131,6 +131,10 @@
         latestRenderedVideos: {
             type: Array,
             default: () => []
+        },
+        visitorGlobalPreferences: {
+            type: Object,
+            default: null
         }
     });
 
@@ -271,7 +275,13 @@
     };
     const showSection = (id) => {
         const section = orderedSections.value.find(s => s.id === id);
-        return section ? section.visible : true;
+        const ownerVisible = section ? section.visible : true;
+        if (!ownerVisible) return false;
+        // Apply visitor's global preferences only on uncustomized profiles
+        if (!props.user?.profile_layout && props.visitorGlobalPreferences?.hidden_sections?.includes(id)) {
+            return false;
+        }
+        return true;
     };
     const sectionOrder = (id) => {
         const idx = orderedSections.value.findIndex(s => s.id === id);
@@ -295,6 +305,8 @@
         localStorage.setItem('dismissed_new_sections', JSON.stringify(updated));
     }
     const isOwnProfile = computed(() => page.props.auth?.user?.id === props.user?.id);
+    const ownProfileNotVerified = computed(() => isOwnProfile.value && !page.props.auth?.user?.email_verified_at);
+    const ownProfileNotLinked = computed(() => isOwnProfile.value && !props.hasProfile);
     const showQuickSettings = ref(false);
     const quickSettingsPanel = ref(localStorage.getItem('quick_settings_panel') || 'layout');
     const quickSettingsDropdown = ref(false);
@@ -830,7 +842,7 @@
             </div>
 
             <!-- Customize button (top-right, aligned to content max-width) -->
-            <div v-if="isOwnProfile" class="absolute top-4 right-0 left-0 z-20 pointer-events-none">
+            <div v-if="isOwnProfile && !ownProfileNotVerified && !ownProfileNotLinked" class="absolute top-4 right-0 left-0 z-20 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 lg:px-8 flex justify-end">
             <div class="flex items-center shadow-xl pointer-events-auto">
                 <button @click="showQuickSettings = !showQuickSettings" :class="showQuickSettings ? 'bg-blue-600/50 border-blue-400/50 text-white' : 'bg-black/50 border-white/20 hover:border-white/30 hover:bg-black/60 text-gray-400 hover:text-white'" class="px-3 py-1.5 rounded-l-lg transition-all backdrop-blur-sm flex items-center gap-1.5 border border-r-0">
@@ -1120,7 +1132,7 @@
         </transition>
 
         <!-- Profile Tabs -->
-        <div v-if="hasCreatorTabs" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 mb-4 relative z-20">
+        <div v-if="hasCreatorTabs && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 mb-4 relative z-20">
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-xl p-1 border border-white/10 w-fit">
                     <button @click="switchTab('records')"
@@ -1168,8 +1180,36 @@
             <ProfileModelerTab :userId="user?.id" />
         </div>
 
+        <!-- Own profile but email not verified (shown outside records tab) -->
+        <div v-if="ownProfileNotVerified" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+            <div class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-red-500/10 via-red-500/20 to-red-500/10 border border-red-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-red-400 mb-2">Verify Your Email</div>
+                    <div class="text-lg font-semibold text-red-200/80 mb-2">Your email address is not verified yet.</div>
+                    <div class="text-sm text-gray-400 mb-4">Verify your email to unlock account linking, demo uploads, map tagging, and more.</div>
+                    <Link href="/email/verify" class="inline-block px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors">
+                        Verify Email
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+        <!-- Own profile, verified but not linked -->
+        <div v-if="ownProfileNotLinked && !ownProfileNotVerified" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+            <div class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-yellow-500/10 via-yellow-500/20 to-yellow-500/10 border border-yellow-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-yellow-400 mb-2">Link Your Q3DF Profile</div>
+                    <div class="text-lg font-semibold text-yellow-200/80 mb-2">Your account is not linked to a Q3DF/MDD profile yet.</div>
+                    <div class="text-sm text-gray-400 mb-4">Link your profile to unlock records, rankings, stats, demo matching, and more.</div>
+                    <Link href="/link-account" class="inline-block px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">
+                        Link Account Now
+                    </Link>
+                </div>
+            </div>
+        </div>
+
         <!-- EPIC REDESIGN - Main Content (Records Tab) -->
-        <div v-show="activeTab === 'records'" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
+        <div v-show="activeTab === 'records' && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
             <div v-if="!user?.id && !$page.props.auth?.user?.mdd_id" class="relative z-20 mb-6">
                 <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
                     <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
@@ -1185,17 +1225,6 @@
                 </div>
             </div>
 
-            <!-- Own profile but not linked to MDD -->
-            <div v-if="user?.id && !hasProfile && $page.props.auth?.user?.id === user.id" class="relative z-20 mb-6">
-                <div class="bg-gradient-to-r from-yellow-500/10 via-yellow-500/20 to-yellow-500/10 border border-yellow-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
-                    <div class="text-3xl font-black text-yellow-400 mb-2">Link Your Q3DF Profile</div>
-                    <div class="text-lg font-semibold text-yellow-200/80 mb-2">Your account is not linked to a Q3DF/MDD profile yet.</div>
-                    <div class="text-sm text-gray-400 mb-4">Link your profile to unlock records, rankings, stats, demo matching, and more.</div>
-                    <Link href="/link-account" class="inline-block px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">
-                        Link Account Now
-                    </Link>
-                </div>
-            </div>
 
             <!-- Stats Grid - Clean Text Layout -->
             <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

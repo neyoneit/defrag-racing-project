@@ -20,8 +20,8 @@ use App\Http\Controllers\StandingsController;
 use App\Http\Controllers\MapDownloadController;
 
 Route::get('/tournaments', [TournamentsController::class, 'index'])->name('tournaments.index');
-Route::get('/tournaments/manage/tournament/create', [TournamentManagementController::class, 'create'])->name('tournaments.create');
-Route::post('/tournaments/manage/tournament/create', [TournamentManagementController::class, 'store'])->name('tournaments.store');
+Route::get('/tournaments/manage/tournament/create', [TournamentManagementController::class, 'create'])->middleware(['auth', 'verified'])->name('tournaments.create');
+Route::post('/tournaments/manage/tournament/create', [TournamentManagementController::class, 'store'])->middleware(['auth', 'verified'])->name('tournaments.store');
 
 
 Route::middleware(['tournaments.tournamentaccess'])->group(function () {

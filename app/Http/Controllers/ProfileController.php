@@ -200,10 +200,14 @@ class ProfileController extends Controller {
         }
 
         // Build response - only include what's needed
+        $visitor = auth()->user();
+        $visitorGlobalPrefs = $visitor?->global_profile_preferences;
+
         $response = Inertia::render('Profile')
             ->with('user', $user)
             ->with('type', $type)
             ->with('hasProfile', true)
+            ->with('visitorGlobalPreferences', $visitorGlobalPrefs)
             ->with('hasMapperProfile', $user->hasMapperProfile())
             ->with('hasModelerProfile', $user->hasModelerProfile())
             ->with('creatorClaimNames', $user->mapperClaims()->select('name', 'type')->get())
@@ -354,11 +358,15 @@ class ProfileController extends Controller {
             'clan' => null,
         ];
 
+        $visitor = auth()->user();
+        $visitorGlobalPrefs = $visitor?->global_profile_preferences;
+
         return Inertia::render('Profile')
             ->with('vq3Records', $vq3Records)
             ->with('cpmRecords', $cpmRecords)
             ->with('user', $linkedUser)
             ->with('type', $type)
+            ->with('visitorGlobalPreferences', $visitorGlobalPrefs)
             ->with('cpm_world_records', $stats['cpm_world_records'])
             ->with('vq3_world_records', $stats['vq3_world_records'])
             ->with('profile', $user)

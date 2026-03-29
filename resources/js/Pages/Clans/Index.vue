@@ -238,6 +238,32 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
         });
     };
 
+    // Create Clan modal
+    const showCreateClanModal = ref(false);
+    const createClanForm = useForm({ _method: 'POST', name: '', image: null });
+    const createClanImagePreview = ref(null);
+    const createClanImageInput = ref(null);
+
+    const selectCreateClanImage = () => createClanImageInput.value?.click();
+    const updateCreateClanImage = () => {
+        const image = createClanImageInput.value?.files[0];
+        if (!image || !image.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => { createClanImagePreview.value = e.target.result; };
+        reader.readAsDataURL(image);
+        createClanForm.image = image;
+    };
+    const submitCreateClan = () => {
+        createClanForm.post(route('clans.manage.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showCreateClanModal.value = false;
+                createClanForm.reset();
+                createClanImagePreview.value = null;
+            }
+        });
+    };
+
     // Request to Join from Index page
     const showRequestJoinModal = ref(false);
     const requestJoinClanId = ref([]);
@@ -500,27 +526,34 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
                                 <span v-if="invitations.length > 0" class="px-2 py-0.5 bg-blue-500 rounded-full text-xs font-bold">{{ invitations.length }}</span>
                             </button>
 
-                            <button
-                                v-if="! myClan"
-                                @click="showRequestJoinModal = true"
-                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600/20 to-green-800/20 hover:from-green-600/30 hover:to-green-800/30 border border-green-500/30 hover:border-green-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
-                                </svg>
-                                <span>Request to Join</span>
-                            </button>
+                            <template v-if="!$page.props.isVerified">
+                                <Link href="/email/verify" class="flex items-center gap-2 px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-xl transition-all duration-300 text-sm">
+                                    Verify Email to Join or Create
+                                </Link>
+                            </template>
+                            <template v-else>
+                                <button
+                                    v-if="! myClan"
+                                    @click="showRequestJoinModal = true"
+                                    class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600/20 to-green-800/20 hover:from-green-600/30 hover:to-green-800/30 border border-green-500/30 hover:border-green-500/50 rounded-xl text-white transition-all duration-300 hover:scale-105"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+                                    </svg>
+                                    <span>Request to Join</span>
+                                </button>
 
-                            <Link
-                                v-if="! myClan"
-                                :href="route('clans.manage.create')"
-                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/50"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Create New Clan
-                            </Link>
+                                <button
+                                    v-if="! myClan"
+                                    @click="showCreateClanModal = true"
+                                    class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl text-white font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Create New Clan
+                                </button>
+                            </template>
                         </template>
                         <Link
                             v-else
@@ -1539,6 +1572,55 @@ import PlayerSelectDefrag from '@/Components/Basic/PlayerSelectDefrag2.vue';
             :invitations="invitations"
             :myClan="myClan"
         />
+
+        <!-- Create Clan Modal -->
+        <Teleport to="body">
+            <div v-if="showCreateClanModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" @click.self="showCreateClanModal = false">
+                    <div class="fixed inset-0 bg-black/60"></div>
+                    <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-white">Create New Clan</h3>
+                            <button @click="showCreateClanModal = false" class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        <form @submit.prevent="submitCreateClan" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-300 mb-1" v-html="'Clan Name ' + (createClanForm.name ? '(' + q3tohtml(createClanForm.name) + ')' : '')"></label>
+                                <input v-model="createClanForm.name" type="text" required autofocus
+                                    class="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-all"
+                                    placeholder="Q3 color codes supported: ^1Red^2Green" />
+                            </div>
+                            <div>
+                                <input ref="createClanImageInput" type="file" class="hidden" accept="image/*" @change="updateCreateClanImage" />
+                                <label class="block text-sm font-bold text-gray-300 mb-1">Clan Avatar</label>
+                                <div class="flex items-center gap-3">
+                                    <div v-if="createClanImagePreview" class="shrink-0">
+                                        <img :src="createClanImagePreview" class="rounded-full h-14 w-14 object-cover border-2 border-white/20">
+                                    </div>
+                                    <div v-else class="shrink-0 w-14 h-14 rounded-full bg-gray-700 border-2 border-dashed border-white/20 flex items-center justify-center">
+                                        <span class="text-[10px] text-gray-500">No image</span>
+                                    </div>
+                                    <button type="button" @click="selectCreateClanImage" class="px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 text-sm rounded-lg transition-all">
+                                        Select Image
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 pt-2">
+                                <button type="submit" :disabled="createClanForm.processing"
+                                    class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
+                                    {{ createClanForm.processing ? 'Creating...' : 'Create Clan' }}
+                                </button>
+                                <button type="button" @click="showCreateClanModal = false"
+                                    class="px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+        </Teleport>
 
         <!-- Request to Join Clan Modal -->
         <Teleport to="body">

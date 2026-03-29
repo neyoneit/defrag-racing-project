@@ -1400,6 +1400,20 @@ watch(selectedPhysics, () => {
                         </Link>
                     </div>
 
+                    <!-- Logged in but email not verified -->
+                    <div v-else-if="!$page.props.isVerified" class="relative">
+                        <div class="border-2 border-dashed border-red-500/30 rounded-xl p-6 text-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-10 h-10 text-red-400 mx-auto mb-3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                            </svg>
+                            <p class="text-red-400 font-bold text-lg mb-1">Verify your email to upload demos</p>
+                            <p class="text-gray-500 text-sm mb-3">Email verification is required before you can upload demos</p>
+                            <Link href="/email/verify" class="inline-block px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors">
+                                Verify Email
+                            </Link>
+                        </div>
+                    </div>
+
                     <!-- Logged in but can't upload (restricted / not enough records) -->
                     <div v-else-if="!canUpload" class="bg-red-500/10 border border-red-500/50 rounded-lg p-4 mb-4">
                         <p class="text-red-400">

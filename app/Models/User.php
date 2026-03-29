@@ -90,6 +90,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'default_show_offline',
         'default_physics_order',
         'profile_layout',
+        'global_profile_preferences',
         'last_login_at',
     ];
 
@@ -120,6 +121,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'default_show_offline' => 'boolean',
         'default_physics_order' => 'string',
         'profile_layout' => 'array',
+        'global_profile_preferences' => 'array',
         'avatar_effects_intensity' => 'integer',
         'name_effects_intensity' => 'integer',
         'avatar_effects_speed' => 'integer',

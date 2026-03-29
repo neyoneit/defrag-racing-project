@@ -18,6 +18,11 @@ window.axios.interceptors.response.use(
             axiosCsrfReloaded = true;
             window.location.reload();
         }
+        // Redirect to email verification on 403 from verified middleware
+        if (error.response?.status === 403 && error.response?.data?.message === 'Your email address is not verified.') {
+            window.location.href = '/email/verify';
+            return new Promise(() => {});
+        }
         return Promise.reject(error);
     }
 );

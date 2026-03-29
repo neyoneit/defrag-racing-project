@@ -11,8 +11,8 @@ Route::middleware(['web'])->group(function () {
     Route::get('/marketplace/creators/{user}', [MarketplaceController::class, 'creatorProfile'])->name('marketplace.creator');
     Route::get('/marketplace/{listing}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 
-    // Authenticated routes
-    Route::middleware(['auth'])->group(function () {
+    // Authenticated routes (verified required)
+    Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/marketplace/listing/create', [MarketplaceController::class, 'createListing'])->name('marketplace.create');
         Route::post('/marketplace/listing', [MarketplaceController::class, 'storeListing'])->name('marketplace.store');
         Route::post('/marketplace/{listing}/status', [MarketplaceController::class, 'updateListingStatus'])->name('marketplace.status');

@@ -289,7 +289,12 @@ const getModelTypeBadgeClass = (type) => {
                     </div>
                     <div class="flex items-center gap-3">
                     <div class="relative group">
-                        <Link v-if="$page.props.auth.user"
+                        <Link v-if="$page.props.auth.user && !$page.props.isVerified"
+                              href="/email/verify"
+                              class="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-xl transition-all shadow-lg inline-block text-sm">
+                            Verify Email to Upload
+                        </Link>
+                        <Link v-else-if="$page.props.auth.user"
                               :href="route('models.create')"
                               class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg hover:shadow-blue-500/50 inline-block">
                             <span class="flex items-center gap-2">

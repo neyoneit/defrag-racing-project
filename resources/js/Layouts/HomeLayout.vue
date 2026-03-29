@@ -397,8 +397,10 @@
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
                                             <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
-                                            <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
-                                            <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications</Link>
+                                            <template v-if="$page.props.auth.user.email_verified_at">
+                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-400 hover:text-purple-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Customize</Link>
+                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications</Link>
+                                            </template>
                                             <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
                                         <div class="mx-3 border-t border-white/10 mb-1" />

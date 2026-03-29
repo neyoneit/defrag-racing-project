@@ -313,43 +313,35 @@ function currentViewerModel() {
     <Head title="Upload Model" />
     <div class="">
         <!-- Header -->
-        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-16">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-4 pb-96 pointer-events-none">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                <Link :href="route('models.index')" class="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                    </svg>
-                    Back to Models
-                </Link>
-
                 <h1 class="text-4xl font-black text-white mb-2">Upload Model</h1>
                 <p class="text-gray-400">Share your custom Quake 3 models with the community</p>
-
-                <!-- Step indicator -->
-                <div class="flex items-center gap-4 mt-6">
-                    <div class="flex items-center gap-2">
-                        <div :class="[step >= 1 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">1</div>
-                        <span class="text-sm" :class="step >= 1 ? 'text-white' : 'text-gray-500'">Upload</span>
-                    </div>
-                    <div class="w-8 h-px" :class="step >= 2 ? 'bg-blue-500' : 'bg-white/10'"></div>
-                    <div class="flex items-center gap-2">
-                        <div :class="[step >= 2 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">2</div>
-                        <span class="text-sm" :class="step >= 2 ? 'text-white' : 'text-gray-500'">Preview & GIFs</span>
-                    </div>
-                    <div class="w-8 h-px" :class="step >= 3 ? 'bg-blue-500' : 'bg-white/10'"></div>
-                    <div class="flex items-center gap-2">
-                        <div :class="[step >= 3 ? 'bg-green-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">3</div>
-                        <span class="text-sm" :class="step >= 3 ? 'text-green-400' : 'text-gray-500'">Done</span>
-                    </div>
-                </div>
             </div>
         </div>
 
         <!-- Content -->
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 py-6">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4" style="margin-top: -24rem;">
+            <!-- Step indicator -->
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <div class="flex items-center gap-2">
+                    <div :class="[step >= 1 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">1</div>
+                    <span class="text-sm" :class="step >= 1 ? 'text-white' : 'text-gray-500'">Upload</span>
+                </div>
+                <div class="w-12 h-px" :class="step >= 2 ? 'bg-blue-500' : 'bg-white/10'"></div>
+                <div class="flex items-center gap-2">
+                    <div :class="[step >= 2 ? 'bg-blue-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">2</div>
+                    <span class="text-sm" :class="step >= 2 ? 'text-white' : 'text-gray-500'">Preview & GIFs</span>
+                </div>
+                <div class="w-12 h-px" :class="step >= 3 ? 'bg-blue-500' : 'bg-white/10'"></div>
+                <div class="flex items-center gap-2">
+                    <div :class="[step >= 3 ? 'bg-green-500' : 'bg-white/10', 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white']">3</div>
+                    <span class="text-sm" :class="step >= 3 ? 'text-green-400' : 'text-gray-500'">Done</span>
+                </div>
+            </div>
 
             <!-- ==================== STEP 1: Upload Form ==================== -->
-            <div v-if="step === 1" class="bg-black/40 rounded-xl border border-white/5 p-8 shadow-2xl">
+            <div v-if="step === 1" class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-8 shadow-2xl">
                 <!-- Error -->
                 <div v-if="uploadError" class="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400">
                     <div class="flex items-center gap-3">
@@ -690,7 +682,7 @@ function currentViewerModel() {
             </div>
 
             <!-- ==================== STEP 3: Done ==================== -->
-            <div v-if="step === 3" class="bg-black/40 rounded-xl border border-green-500/20 p-8 shadow-2xl text-center">
+            <div v-if="step === 3" class="bg-black/40 backdrop-blur-sm rounded-xl border border-green-500/20 p-8 shadow-2xl text-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-16 h-16 text-green-400 mx-auto mb-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -709,6 +701,7 @@ function currentViewerModel() {
                     </Link>
                 </div>
             </div>
+
         </div>
     </div>
 </template>

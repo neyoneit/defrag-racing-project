@@ -681,23 +681,27 @@
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
                                             My Profile
                                         </DropdownLink>
-                                        <DropdownLink :href="route('notifications.index')">
-                                            Notification Center
-                                        </DropdownLink>
-                                        <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
-                                            Play Later
-                                        </DropdownLink>
+                                        <template v-if="$page.props.auth.user.email_verified_at">
+                                            <DropdownLink :href="route('notifications.index')">
+                                                Notification Center
+                                            </DropdownLink>
+                                            <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
+                                                Play Later
+                                            </DropdownLink>
+                                        </template>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <DropdownLink :href="route('settings.show')">
                                             Settings
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
                                             <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
-                                            <Link :href="route('settings.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Creator</Link>
-                                            <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Customize</Link>
-                                            <Link :href="route('settings.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Global Customize</Link>
-                                            <Link :href="route('settings.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
-                                            <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
+                                            <template v-if="$page.props.auth.user.email_verified_at">
+                                                <Link :href="route('settings.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Creator</Link>
+                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Customize</Link>
+                                                <Link :href="route('settings.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Global Customize</Link>
+                                                <Link :href="route('settings.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
+                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
+                                            </template>
                                             <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                         </div>
                                         <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" target="_blank" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
@@ -920,8 +924,26 @@
                 </div>
             </div>
 
-            <!-- Link Account Banner (unlinked users) -->
-            <div v-if="$page.props.auth?.user && !$page.props.auth.user.mdd_id" class="bg-gradient-to-r from-yellow-500/10 via-amber-500/15 to-yellow-500/10 border-b border-yellow-500/20">
+            <!-- Verify Email Banner (unverified users) -->
+            <div v-if="$page.props.auth?.user && !$page.props.auth.user.email_verified_at" class="bg-gradient-to-r from-red-500/10 via-red-500/15 to-red-500/10 border-b border-red-500/20">
+                <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+                    <Link href="/email/verify" class="flex items-center justify-between gap-4 py-2.5 group">
+                        <div class="flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-red-400 shrink-0">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                            </svg>
+                            <span class="text-sm font-bold text-red-400">Verify your email address</span>
+                            <span class="text-xs text-gray-400 hidden sm:inline">to unlock all features including demo uploads, map tagging, and more</span>
+                        </div>
+                        <svg class="w-4 h-4 text-red-400/50 group-hover:translate-x-1 transition-transform shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Link Account Banner (unlinked users, only if email verified) -->
+            <div v-if="$page.props.auth?.user && $page.props.auth.user.email_verified_at && !$page.props.auth.user.mdd_id" class="bg-gradient-to-r from-yellow-500/10 via-amber-500/15 to-yellow-500/10 border-b border-yellow-500/20">
                 <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
                     <Link href="/link-account" class="flex items-center justify-between gap-4 py-2.5 group">
                         <div class="flex items-center gap-3">
