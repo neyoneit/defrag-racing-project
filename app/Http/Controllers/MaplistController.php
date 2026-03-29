@@ -596,10 +596,15 @@ class MaplistController extends Controller
     {
         $query = $request->get('q', '');
 
-        $maps = Map::where('name', 'like', '%' . $query . '%')
-            ->orWhere('author', 'like', '%' . $query . '%')
-            ->limit(20)
-            ->get(['id', 'name', 'author', 'thumbnail']);
+        $maps = Map::search($query)
+            ->take(20)
+            ->get()
+            ->map(fn($map) => [
+                'id' => $map->id,
+                'name' => $map->name,
+                'author' => $map->author,
+                'thumbnail' => $map->thumbnail,
+            ]);
 
         return response()->json($maps);
     }

@@ -189,11 +189,9 @@ class HeadhunterController extends Controller
 
     public function create()
     {
-        $userRecordsCount = Record::where('user_id', auth()->id())->count();
-
-        if ($userRecordsCount < 30) {
+        if (!auth()->user()->mdd_id) {
             return redirect()->route('headhunter.index')
-                ->withDanger("You need at least 30 records to create a challenge. You currently have {$userRecordsCount}.");
+                ->withDanger('You need to link your account to create a challenge.');
         }
 
         $isBanned = HeadhunterChallenge::where('creator_id', auth()->id())
@@ -212,11 +210,9 @@ class HeadhunterController extends Controller
 
     public function store(Request $request)
     {
-        $userRecordsCount = Record::where('user_id', auth()->id())->count();
-
-        if ($userRecordsCount < 30) {
+        if (!auth()->user()->mdd_id) {
             return redirect()->back()
-                ->withDanger("You need at least 30 records to create a challenge. You currently have {$userRecordsCount}.");
+                ->withDanger('You need to link your account to create a challenge.');
         }
 
         $isBanned = HeadhunterChallenge::where('creator_id', auth()->id())

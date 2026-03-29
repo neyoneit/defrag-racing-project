@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Tournament;
 use App\Models\Organizer;
-use App\Models\Record;
 use App\Models\Round;
 use Carbon\Carbon;
 
@@ -14,18 +13,12 @@ class TournamentsController extends Controller {
     public function index(Request $request) {
         $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
 
-        $records = 0;
-        if ($request->user()) {
-            $records = Record::where('user_id', $request->user()->id)->count();
-        }
-
         if (!$isPartial) {
             return Inertia::render('Tournaments/Index')
                 ->with('tournaments', null)
                 ->with('activeTournaments', null)
                 ->with('upcomingTournaments', null)
-                ->with('pastTournaments', null)
-                ->with('records', $records);
+                ->with('pastTournaments', null);
         }
 
         $tournaments = Tournament::query()
@@ -63,8 +56,7 @@ class TournamentsController extends Controller {
             ->with('tournaments', $tournaments)
             ->with('activeTournaments', $activeTournaments)
             ->with('upcomingTournaments', $upcomingTournaments)
-            ->with('pastTournaments', $pastTournaments)
-            ->with('records', $records);
+            ->with('pastTournaments', $pastTournaments);
     }
 
     public function show(Tournament $tournament, Request $request) {

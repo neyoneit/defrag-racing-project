@@ -7,7 +7,6 @@ const props = defineProps({
     listings: Object,
     filters: Object,
     canPost: Boolean,
-    recordCount: Number,
 });
 
 const listingsLoaded = ref(false);
@@ -120,13 +119,16 @@ const selectStatus = (value) => {
                         >
                             Create Listing
                         </Link>
-                        <div
-                            v-else-if="$page.props.auth.user && !canPost"
-                            class="px-4 py-3 bg-gray-700/30 border border-white/5 text-gray-500 font-bold rounded-lg text-sm cursor-not-allowed"
-                            :title="`You need at least 50 records to post. You have ${recordCount}.`"
+                        <Link
+                            v-else-if="$page.props.auth.user"
+                            :href="route('settings.show')"
+                            class="px-6 py-3 bg-gray-700/50 border border-white/10 text-gray-400 font-bold rounded-lg transition-all duration-300 hover:bg-gray-600/50 hover:text-gray-300 flex items-center gap-2"
                         >
-                            50 records required
-                        </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+                            </svg>
+                            Link Account to Post
+                        </Link>
                         <Link
                             v-else
                             :href="route('login')"

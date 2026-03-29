@@ -5,10 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceReview;
 use App\Models\MarketplaceCreatorProfile;
-use App\Models\Record;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
@@ -17,21 +15,13 @@ class MarketplaceController extends Controller
     {
         $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
 
-        $canPost = false;
-        $recordCount = 0;
-        if (auth()->check()) {
-            $recordCount = Cache::remember('marketplace:records:' . auth()->id(), 3600, function () {
-                return Record::where('user_id', auth()->id())->count();
-            });
-            $canPost = $recordCount >= 50;
-        }
+        $canPost = auth()->check() && auth()->user()->mdd_id;
 
         if (!$isPartial) {
             return Inertia::render('Marketplace/Index', [
                 'listings' => null,
                 'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
                 'canPost' => $canPost,
-                'recordCount' => $recordCount,
             ]);
         }
 
@@ -55,7 +45,6 @@ class MarketplaceController extends Controller
             'listings' => $listings,
             'filters' => $request->only(['tab', 'work_type', 'status', 'search']),
             'canPost' => $canPost,
-            'recordCount' => $recordCount,
         ]);
     }
 
@@ -93,11 +82,9 @@ class MarketplaceController extends Controller
 
     public function createListing()
     {
-        $userRecordsCount = Record::where('user_id', auth()->id())->count();
-
-        if ($userRecordsCount < 50) {
+        if (!auth()->user()->mdd_id) {
             return redirect()->route('marketplace.index')
-                ->withDanger("You need at least 50 records to post on the Marketplace. You currently have {$userRecordsCount}.");
+                ->withDanger('You need to link your account to post on the Marketplace.');
         }
 
         return Inertia::render('Marketplace/Create');
@@ -105,11 +92,9 @@ class MarketplaceController extends Controller
 
     public function storeListing(Request $request)
     {
-        $userRecordsCount = Record::where('user_id', auth()->id())->count();
-
-        if ($userRecordsCount < 50) {
+        if (!auth()->user()->mdd_id) {
             return redirect()->back()
-                ->withDanger("You need at least 50 records to post on the Marketplace. You currently have {$userRecordsCount}.");
+                ->withDanger('You need to link your account to post on the Marketplace.');
         }
 
         $validated = $request->validate([
@@ -157,10 +142,9 @@ class MarketplaceController extends Controller
             return redirect()->back()->withDanger('You cannot take your own listing.');
         }
 
-        $userRecordsCount = Record::where('user_id', auth()->id())->count();
-        if ($userRecordsCount < 50) {
+        if (!auth()->user()->mdd_id) {
             return redirect()->back()
-                ->withDanger("You need at least 50 records to take commissions. You currently have {$userRecordsCount}.");
+                ->withDanger('You need to link your account to take commissions.');
         }
 
         $listing->update([
