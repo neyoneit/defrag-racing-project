@@ -505,7 +505,7 @@
                 </span>
                 <span
                     v-else
-                    class="ml-2 relative inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/50 cursor-help"
+                    class="ml-2 relative inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/50 cursor-help"
                     @mouseenter="showRecTooltip = true; recTooltipPos = { x: $event.clientX, y: $event.clientY }"
                     @mousemove="recTooltipPos = { x: $event.clientX, y: $event.clientY }"
                     @mouseleave="showRecTooltip = false"
@@ -513,8 +513,8 @@
                     rec.
                     <Teleport to="body" v-if="showRecTooltip">
                         <div class="fixed z-[9999] pointer-events-none" :style="{ top: recTooltipPos.y + 'px', left: recTooltipPos.x + 'px' }">
-                            <div class="bg-gray-900 border border-green-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
-                                <div class="text-green-400 font-semibold text-xs">Online Record</div>
+                            <div class="bg-gray-900 border border-amber-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
+                                <div class="text-amber-400 font-semibold text-xs">Online Record</div>
                                 <div class="text-gray-300 text-xs mt-0.5">No demo attached - not verified</div>
                             </div>
                         </div>

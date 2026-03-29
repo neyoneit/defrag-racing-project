@@ -135,6 +135,8 @@
         recordsSliderMax.value = 100;
         lengthSliderMin.value = 0;
         lengthSliderMax.value = 100;
+        rankSliderMin.value = 1;
+        rankSliderMax.value = 100;
     };
 
     const openSections = ref({
@@ -169,55 +171,77 @@
     });
 
     const sliderToValue = (sliderPos, max) => {
+        if (sliderPos <= 0) return 0;
         const normalized = sliderPos / 100;
-        return Math.round(Math.pow(normalized, 2.5) * max);
+        return Math.max(1, Math.round(Math.pow(normalized, 2.5) * max));
     };
 
     const valueToSlider = (value, max) => {
+        if (value <= 0) return 0;
         const normalized = value / max;
-        return Math.round(Math.pow(normalized, 1/2.5) * 100);
+        return Math.max(1, Math.round(Math.pow(normalized, 1/2.5) * 100));
     };
 
     const recordsSliderMin = ref(valueToSlider(form.records_count[0], 1000));
     const recordsSliderMax = ref(valueToSlider(form.records_count[1], 1000));
+    const recordsMinOnTop = ref(Number(recordsSliderMin.value) > 50);
     const lengthSliderMin = ref(valueToSlider(form.average_length[0], 1000));
     const lengthSliderMax = ref(valueToSlider(form.average_length[1], 1000));
+    const lengthMinOnTop = ref(Number(lengthSliderMin.value) > 50);
+
+    const rankToSlider = (rank) => {
+        if (rank <= 1) return 1;
+        return Math.max(1, Math.round(Math.pow(rank / 999, 1/2.5) * 100));
+    };
+    const sliderToRank = (pos) => {
+        if (pos <= 1) return 1;
+        return Math.max(1, Math.round(Math.pow(pos / 100, 2.5) * 999));
+    };
+    const rankSliderMin = ref(rankToSlider(form.rank_min));
+    const rankSliderMax = ref(rankToSlider(form.rank_max));
+    const rankMinOnTop = ref(Number(rankSliderMin.value) > 50);
+
+    const updateRankMin = () => {
+        if (Number(rankSliderMin.value) > Number(rankSliderMax.value)) {
+            rankSliderMin.value = rankSliderMax.value;
+        }
+        form.rank_min = sliderToRank(rankSliderMin.value);
+    };
+    const updateRankMax = () => {
+        if (Number(rankSliderMax.value) < Number(rankSliderMin.value)) {
+            rankSliderMax.value = rankSliderMin.value;
+        }
+        form.rank_max = sliderToRank(rankSliderMax.value);
+    };
 
     const updateRecordsMin = () => {
-        const value = sliderToValue(recordsSliderMin.value, 1000);
-        form.records_count[0] = value;
-        if (form.records_count[0] > form.records_count[1]) {
-            form.records_count[0] = form.records_count[1];
-            recordsSliderMin.value = valueToSlider(form.records_count[0], 1000);
+        if (Number(recordsSliderMin.value) > Number(recordsSliderMax.value)) {
+            recordsSliderMin.value = recordsSliderMax.value;
         }
+        form.records_count[0] = sliderToValue(recordsSliderMin.value, 1000);
     };
 
     const updateRecordsMax = () => {
-        const value = sliderToValue(recordsSliderMax.value, 1000);
-        form.records_count[1] = value;
-        if (form.records_count[1] < form.records_count[0]) {
-            form.records_count[1] = form.records_count[0];
-            recordsSliderMax.value = valueToSlider(form.records_count[1], 1000);
+        if (Number(recordsSliderMax.value) < Number(recordsSliderMin.value)) {
+            recordsSliderMax.value = recordsSliderMin.value;
         }
+        form.records_count[1] = sliderToValue(recordsSliderMax.value, 1000);
     };
 
     const updateLengthMin = () => {
-        const value = sliderToValue(lengthSliderMin.value, 1000);
-        form.average_length[0] = value;
-        if (form.average_length[0] > form.average_length[1]) {
-            form.average_length[0] = form.average_length[1];
-            lengthSliderMin.value = valueToSlider(form.average_length[0], 1000);
+        if (Number(lengthSliderMin.value) > Number(lengthSliderMax.value)) {
+            lengthSliderMin.value = lengthSliderMax.value;
         }
+        form.average_length[0] = sliderToValue(lengthSliderMin.value, 1000);
     };
 
     const updateLengthMax = () => {
-        const value = sliderToValue(lengthSliderMax.value, 1000);
-        form.average_length[1] = value;
-        if (form.average_length[1] < form.average_length[0]) {
-            form.average_length[1] = form.average_length[0];
-            lengthSliderMax.value = valueToSlider(form.average_length[1], 1000);
+        if (Number(lengthSliderMax.value) < Number(lengthSliderMin.value)) {
+            lengthSliderMax.value = lengthSliderMin.value;
         }
+        form.average_length[1] = sliderToValue(lengthSliderMax.value, 1000);
     };
+
 </script>
 
 <template>
@@ -293,11 +317,15 @@
                             <label class="field-label">World Record</label>
                             <PlayerSelect :options="profiles" :multi="false" v-model="form.world_record" :values="form.world_record" />
                         </div>
-                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                            <input type="number" v-model.number="form.rank_min" min="1" max="999" placeholder="Min rank"
-                                class="w-full px-3 py-1.5 bg-grayop-900 border-2 border-grayop-700 rounded-md text-sm text-gray-300 focus:outline-none focus:border-blue-600 transition shadow-sm" />
-                            <input type="number" v-model.number="form.rank_max" min="1" max="999" placeholder="Max rank"
-                                class="w-full px-3 py-1.5 bg-grayop-900 border-2 border-grayop-700 rounded-md text-sm text-gray-300 focus:outline-none focus:border-blue-600 transition shadow-sm" />
+                        <div class="slider-group pt-2 border-t border-white/5">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="field-label !mb-0">Rank Range</label>
+                                <span class="slider-value">{{ form.rank_min }} - {{ form.rank_max === 999 ? '&infin;' : form.rank_max }}</span>
+                            </div>
+                            <div class="slider-track">
+                                <input type="range" :min="1" :max="100" v-model="rankSliderMin" class="slider" :class="rankMinOnTop ? 'slider-top' : 'slider-bottom'" @input="updateRankMin" @mousedown="rankMinOnTop = true" @touchstart="rankMinOnTop = true" />
+                                <input type="range" :min="1" :max="100" v-model="rankSliderMax" class="slider" :class="rankMinOnTop ? 'slider-bottom' : 'slider-top'" @input="updateRankMax" @mousedown="rankMinOnTop = false" @touchstart="rankMinOnTop = false" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -338,8 +366,8 @@
                                 <span class="slider-value">{{ form.records_count[0] }} - {{ form.records_count[1] === 1000 ? '&infin;' : form.records_count[1] }}</span>
                             </div>
                             <div class="slider-track">
-                                <input type="range" :min="0" :max="100" v-model="recordsSliderMin" class="slider slider-under" @input="updateRecordsMin" />
-                                <input type="range" :min="0" :max="100" v-model="recordsSliderMax" class="slider slider-over" @input="updateRecordsMax" />
+                                <input type="range" :min="0" :max="100" v-model="recordsSliderMin" class="slider" :class="recordsMinOnTop ? 'slider-top' : 'slider-bottom'" @input="updateRecordsMin" @mousedown="recordsMinOnTop = true" @touchstart="recordsMinOnTop = true" />
+                                <input type="range" :min="0" :max="100" v-model="recordsSliderMax" class="slider" :class="recordsMinOnTop ? 'slider-bottom' : 'slider-top'" @input="updateRecordsMax" @mousedown="recordsMinOnTop = false" @touchstart="recordsMinOnTop = false" />
                             </div>
                         </div>
                         <div class="slider-group">
@@ -348,8 +376,8 @@
                                 <span class="slider-value">{{ form.average_length[0] }} - {{ form.average_length[1] === 1000 ? '&infin;' : form.average_length[1] }}</span>
                             </div>
                             <div class="slider-track">
-                                <input type="range" :min="0" :max="100" v-model="lengthSliderMin" class="slider slider-under" @input="updateLengthMin" />
-                                <input type="range" :min="0" :max="100" v-model="lengthSliderMax" class="slider slider-over" @input="updateLengthMax" />
+                                <input type="range" :min="0" :max="100" v-model="lengthSliderMin" class="slider" :class="lengthMinOnTop ? 'slider-top' : 'slider-bottom'" @input="updateLengthMin" @mousedown="lengthMinOnTop = true" @touchstart="lengthMinOnTop = true" />
+                                <input type="range" :min="0" :max="100" v-model="lengthSliderMax" class="slider" :class="lengthMinOnTop ? 'slider-bottom' : 'slider-top'" @input="updateLengthMax" @mousedown="lengthMinOnTop = false" @touchstart="lengthMinOnTop = false" />
                             </div>
                         </div>
                     </div>
@@ -513,6 +541,7 @@
     align-items: center;
 }
 
+
 .slider {
     position: absolute;
     width: 100%;
@@ -569,6 +598,6 @@
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
-.slider-over { z-index: 2; }
-.slider-under { z-index: 3; }
+.slider-top { z-index: 3; }
+.slider-bottom { z-index: 2; }
 </style>
