@@ -107,7 +107,14 @@ const selectStatus = (value) => {
                             Creator Directory
                         </Link>
                         <Link
-                            v-if="$page.props.auth.user && canPost"
+                            v-if="$page.props.auth.user && !$page.props.isVerified"
+                            href="/email/verify"
+                            class="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg transition-all duration-300 text-sm"
+                        >
+                            Verify Email to Post
+                        </Link>
+                        <Link
+                            v-else-if="$page.props.auth.user && canPost"
                             :href="route('marketplace.create')"
                             class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                         >

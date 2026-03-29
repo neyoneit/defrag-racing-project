@@ -14,7 +14,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/requests/{invitation}/cancel', [ClansController::class, 'cancelRequest'])->name('clans.request.cancel');
 });
 
-Route::prefix('manage')->middleware('auth')->group(function () {
+Route::prefix('manage')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/create', [ManageClanController::class, 'create'])->name('clans.manage.create');
     Route::post('/create', [ManageClanController::class, 'store'])->name('clans.manage.store');
 

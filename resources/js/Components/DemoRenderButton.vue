@@ -1,11 +1,14 @@
 <script setup>
     import { ref } from 'vue';
-    import { router } from '@inertiajs/vue3';
+    import { router, usePage } from '@inertiajs/vue3';
+
+    const page = usePage();
 
     const props = defineProps({
         renderedVideo: Object,
         record: Object,
         canRequestRender: Boolean,
+        needsVerify: Boolean,
         renderRequesting: Boolean,
         renderRequested: Boolean,
         renderError: String,
@@ -151,6 +154,18 @@
             </div>
         </Teleport>
     </div>
+
+    <!-- No rendered video, not verified - show verify -->
+    <a
+        v-else-if="needsVerify"
+        href="/email/verify"
+        @click.stop
+        class="inline-flex items-center gap-0.5 py-0.5 px-1.5 border-l transition-all bg-red-500/15 text-red-400 hover:bg-red-500/25 hover:text-red-300 text-[10px] font-bold"
+        :class="borderColor"
+        title="Verify email to request renders"
+    >
+        verify
+    </a>
 
     <!-- No rendered video - request render -->
     <button

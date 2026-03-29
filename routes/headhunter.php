@@ -8,8 +8,8 @@ Route::middleware(['web'])->group(function () {
     Route::get('/headhunter', [HeadhunterController::class, 'index'])->name('headhunter.index');
     Route::get('/headhunter/{challenge}', [HeadhunterController::class, 'show'])->name('headhunter.show');
 
-    // Authenticated routes
-    Route::middleware(['auth'])->group(function () {
+    // Authenticated routes (verified required)
+    Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/headhunter/create/new', [HeadhunterController::class, 'create'])->name('headhunter.create');
         Route::post('/headhunter', [HeadhunterController::class, 'store'])->name('headhunter.store');
         Route::put('/headhunter/{challenge}', [HeadhunterController::class, 'updateChallenge'])->name('headhunter.update');

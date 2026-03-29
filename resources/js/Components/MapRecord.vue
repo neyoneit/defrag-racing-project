@@ -58,8 +58,11 @@
         return null;
     });
 
+    const needsVerify = computed(() => isLoggedIn.value && !page.props.isVerified);
+
     const canRequestRender = computed(() => {
         if (!isLoggedIn.value || renderedVideo.value || renderRequested.value) return false;
+        if (needsVerify.value) return false;
         if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return true;
         if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return true;
         return false;
@@ -450,6 +453,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"
@@ -477,6 +481,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"
@@ -540,6 +545,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"
@@ -602,6 +608,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"
@@ -630,6 +637,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"
@@ -658,6 +666,7 @@
                         :renderedVideo="renderedVideo"
                         :record="record"
                         :canRequestRender="canRequestRender"
+                        :needsVerify="needsVerify"
                         :renderRequesting="renderRequesting"
                         :renderRequested="renderRequested"
                         :renderError="renderError"

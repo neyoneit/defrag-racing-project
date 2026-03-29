@@ -93,7 +93,15 @@
 
                 <!-- Create Tournament Button -->
                 <Link
-                    v-if="$page.props.auth.user && records >= 50"
+                    v-if="$page.props.auth.user && !$page.props.isVerified"
+                    href="/email/verify"
+                    class="flex items-center gap-2 px-4 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg transition-all text-sm"
+                >
+                    Verify Email to Create
+                </Link>
+
+                <Link
+                    v-else-if="$page.props.auth.user && records >= 50"
                     :href="route('tournaments.create')"
                     class="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-500/20"
                 >
@@ -130,8 +138,22 @@
 
         <!-- Modern Tournaments Container -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8" style="margin-top: -22rem;">
-            <!-- Warning Message -->
-            <div v-if="records < 50" class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-8">
+            <!-- Verify Email Warning -->
+            <div v-if="$page.props.auth?.user && !$page.props.isVerified" class="bg-red-500/10 backdrop-blur-sm border border-red-500/30 rounded-xl p-4 mb-8">
+                <div class="flex items-start gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-red-400 shrink-0 mt-0.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-red-400 font-bold mb-1">Email Verification Required</p>
+                        <p class="text-red-300 text-sm">
+                            <Link href="/email/verify" class="text-red-200 hover:text-white underline font-medium">Verify your email</Link> to create and participate in tournaments.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <!-- Records Warning (only for verified users) -->
+            <div v-else-if="$page.props.auth?.user && records < 50" class="bg-yellow-500/10 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 mb-8">
                 <div class="flex items-start gap-3">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400 shrink-0 mt-0.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />

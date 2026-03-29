@@ -295,6 +295,21 @@ class SettingsController extends Controller
         return back();
     }
 
+    public function globalProfilePreferences(Request $request) {
+        $request->validate([
+            'hidden_sections' => ['required', 'array'],
+            'hidden_sections.*' => ['string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
+        ]);
+
+        $user = $request->user();
+        $user->global_profile_preferences = [
+            'hidden_sections' => $request->hidden_sections,
+        ];
+        $user->save();
+
+        return back();
+    }
+
     public function mapperClaims(Request $request)
     {
         $request->validate([

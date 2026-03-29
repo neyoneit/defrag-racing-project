@@ -366,7 +366,10 @@ const createMaplist = async () => {
                         </p>
                     </div>
                     <!-- Create Maplist Button -->
-                    <button v-if="page.props.auth.user" @click="openCreateModal" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2">
+                    <a v-if="page.props.auth.user && !page.props.isVerified" href="/email/verify" class="px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-semibold transition-all flex items-center gap-2 text-sm">
+                        Verify Email to Create
+                    </a>
+                    <button v-else-if="page.props.auth.user" @click="openCreateModal" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>

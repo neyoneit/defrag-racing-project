@@ -99,7 +99,14 @@ const getStatusColor = (status) => {
                         <p class="text-gray-400">Community-created challenges with rewards</p>
                     </div>
                     <Link
-                        v-if="$page.props.auth.user"
+                        v-if="$page.props.auth.user && !$page.props.isVerified"
+                        href="/email/verify"
+                        class="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-lg transition-all duration-300 text-sm"
+                    >
+                        Verify Email to Create
+                    </Link>
+                    <Link
+                        v-else-if="$page.props.auth.user"
                         :href="route('headhunter.create')"
                         class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                     >

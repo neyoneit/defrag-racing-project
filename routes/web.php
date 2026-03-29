@@ -52,8 +52,8 @@ Route::get('/maps', [MapsController::class, 'index'])->name('maps');
 Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filters');
 
 Route::get('/maps/{mapname}/demo-matches', [MapsController::class, 'getDemoMatches'])->name('maps.demoMatches');
-Route::post('/maps/{id}/flag-nsfw', [MapsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.flag-nsfw');
-Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('maps.unflag-nsfw');
+Route::post('/maps/{id}/flag-nsfw', [MapsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('maps.flag-nsfw');
+Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('maps.unflag-nsfw');
 Route::post('/maps/{id}/rate-difficulty', [MapsController::class, 'rateDifficulty'])->where('id', '[0-9]+')->middleware('auth')->name('maps.rate-difficulty');
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
@@ -62,7 +62,7 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
 
 Route::get('/rendered-demos', [YoutubeController::class, 'index'])->name('youtube');
-Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware('auth')->name('render.request');
+Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('render.request');
 Route::post('/api/rendered-videos/{id}/report', [RenderRequestController::class, 'reportFailed'])->middleware('auth')->name('render.report');
 
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
@@ -71,21 +71,21 @@ Route::get('/downloads/{id?}/{slug?}', [BundlesController::class, 'index'])->nam
 
 // Models routes
 Route::get('/models', [ModelsController::class, 'index'])->name('models.index');
-Route::get('/models/create', [ModelsController::class, 'create'])->middleware('auth')->name('models.create');
-Route::post('/models', [ModelsController::class, 'store'])->middleware('auth')->name('models.store');
-Route::post('/models/temp-upload', [ModelsController::class, 'tempUpload'])->middleware('auth')->name('models.tempUpload');
-Route::post('/models/store-with-gifs', [ModelsController::class, 'storeWithGifs'])->middleware('auth')->name('models.storeWithGifs');
-Route::post('/models/delete-temp', [ModelsController::class, 'deleteTempUpload'])->middleware('auth')->name('models.deleteTempUpload');
-Route::get('/models/bulk-upload', [ModelsController::class, 'bulkUploadForm'])->middleware('auth')->name('models.bulk-upload');
-Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->middleware('auth')->name('models.bulk-upload.store');
+Route::get('/models/create', [ModelsController::class, 'create'])->middleware(['auth', 'verified'])->name('models.create');
+Route::post('/models', [ModelsController::class, 'store'])->middleware(['auth', 'verified'])->name('models.store');
+Route::post('/models/temp-upload', [ModelsController::class, 'tempUpload'])->middleware(['auth', 'verified'])->name('models.tempUpload');
+Route::post('/models/store-with-gifs', [ModelsController::class, 'storeWithGifs'])->middleware(['auth', 'verified'])->name('models.storeWithGifs');
+Route::post('/models/delete-temp', [ModelsController::class, 'deleteTempUpload'])->middleware(['auth', 'verified'])->name('models.deleteTempUpload');
+Route::get('/models/bulk-upload', [ModelsController::class, 'bulkUploadForm'])->middleware(['auth', 'verified'])->name('models.bulk-upload');
+Route::post('/models/bulk-upload', [ModelsController::class, 'bulkUpload'])->middleware(['auth', 'verified'])->name('models.bulk-upload.store');
 Route::get('/models/batch-generate-gifs', [ModelsController::class, 'batchGenerateGifs'])->middleware('auth')->name('models.batchGenerateGifs');
 Route::get('/models/{id}/shaders', [ModelsController::class, 'getShaders'])->where('id', '[0-9]+')->name('models.shaders');
 Route::get('/models/{id}/download', [ModelsController::class, 'download'])->where('id', '[0-9]+')->name('models.download');
 Route::get('/models/{model}/download-extras', [ModelsController::class, 'downloadExtras'])->name('models.downloadExtras');
 Route::post('/models/{id}/approve', [ModelsController::class, 'approveModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.approve');
 Route::post('/models/{id}/reject', [ModelsController::class, 'rejectModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.reject');
-Route::post('/models/{id}/flag-nsfw', [ModelsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('models.flag-nsfw');
-Route::post('/models/{id}/unflag-nsfw', [ModelsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware('auth')->name('models.unflag-nsfw');
+Route::post('/models/{id}/flag-nsfw', [ModelsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('models.flag-nsfw');
+Route::post('/models/{id}/unflag-nsfw', [ModelsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('models.unflag-nsfw');
 Route::delete('/models/{id}', [ModelsController::class, 'destroyModel'])->where('id', '[0-9]+')->middleware('auth')->name('models.destroy');
 Route::get('/models/{id}', [ModelsController::class, 'show'])->where('id', '[0-9]+')->name('models.show');
 Route::post('/models/{id}/save-thumbnail', [ModelsController::class, 'saveThumbnail'])->middleware('auth')->name('models.saveThumbnail');
@@ -101,7 +101,7 @@ Route::get('/demos/search-uploaders', [DemosController::class, 'searchUploaders'
 Route::get('/demos/{demo}/download', [DemosController::class, 'download'])->name('demos.download');
 
 // Demo upload routes (requires authentication)
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::match(['get', 'post'], '/demos/status', [DemosController::class, 'status'])->name('demos.status');
     Route::post('/demos/{demo}/reprocess', [DemosController::class, 'reprocess'])->name('demos.reprocess');
     Route::delete('/demos/{demo}', [DemosController::class, 'destroy'])->name('demos.destroy');
@@ -197,7 +197,7 @@ Route::post('/demos/upload', [DemosController::class, 'upload'])->name('demos.up
         });
 
 
-Route::get('/link-account', [SettingsController::class, 'linkAccount'])->name('link-account')->middleware('auth');
+Route::get('/link-account', [SettingsController::class, 'linkAccount'])->name('link-account')->middleware(['auth', 'verified']);
 
 Route::post('/settings/socialmedia', [SettingsController::class, 'socialmedia'])->name('settings.socialmedia');
 Route::post('/settings/preferences', [SettingsController::class, 'preferences'])->name('settings.preferences');
@@ -209,6 +209,7 @@ Route::delete('/settings/background', [SettingsController::class, 'deleteBackgro
 Route::post('/settings/map-view-preferences', [SettingsController::class, 'mapViewPreferences'])->name('settings.map-view-preferences');
 Route::post('/settings/physics-order', [SettingsController::class, 'physicsOrderPreferences'])->name('settings.physics-order');
 Route::post('/settings/profile-layout', [SettingsController::class, 'profileLayout'])->name('settings.profile-layout');
+Route::post('/settings/global-profile-preferences', [SettingsController::class, 'globalProfilePreferences'])->name('settings.global-profile-preferences');
 Route::post('/settings/effects-intensity', [SettingsController::class, 'effectsIntensity'])->name('settings.effects-intensity');
 Route::post('/settings/mapper-claims', [SettingsController::class, 'mapperClaims'])->middleware('auth')->name('settings.mapper-claims');
 Route::get('/settings/mapper-claims', [SettingsController::class, 'getMapperClaims'])->middleware('auth')->name('settings.mapper-claims.get');
@@ -259,7 +260,7 @@ Route::get('/baseq3/{path}', [FileController::class, 'serveBaseq3File'])->where(
 Route::get('/announcements', [ChangelogController::class, 'announcements'])->name('announcements');
 
 // Settings (overrides Jetstream's /user/profile)
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('settings.show');
     Route::redirect('/user/profile', '/user/settings', 301);
 });
@@ -271,8 +272,8 @@ Route::get('/maplists/play-later', [App\Http\Controllers\MaplistController::clas
 Route::get('/maplists/{id}', [App\Http\Controllers\MaplistController::class, 'show'])->where('id', '[0-9]+')->name('maplists.show');
 Route::get('/api/maps/{mapId}/suggested-tags', [App\Http\Controllers\MaplistController::class, 'getSuggestedTagsForMap'])->name('maps.suggestedTags');
 
-// Authenticated maplist routes
-Route::middleware('auth')->group(function () {
+// Authenticated maplist routes (verified required for create/modify)
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/maplists/user', [App\Http\Controllers\MaplistController::class, 'getUserMaplists'])->name('maplists.user');
     Route::get('/api/maplists/drafts', [App\Http\Controllers\MaplistController::class, 'getDrafts'])->name('maplists.drafts');
     Route::post('/api/maplists/save-draft', [App\Http\Controllers\MaplistController::class, 'saveDraft'])->name('maplists.saveDraft');

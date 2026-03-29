@@ -28,6 +28,7 @@ const props = defineProps({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const isVerified = computed(() => !!user.value.email_verified_at);
 
 // Profile Information Form
 const profileForm = useForm({
@@ -200,6 +201,36 @@ const physicsOrderForm = useForm({
 
 const updatePhysicsOrder = () => {
     physicsOrderForm.post(route('settings.physics-order'), { preserveScroll: true });
+};
+
+// Global Profile Preferences Form
+const profileSections = [
+    { id: 'activity_history', label: 'Activity History' },
+    { id: 'records', label: 'Records' },
+    { id: 'rendered_videos', label: 'Rendered Videos' },
+    { id: 'similar_skill_rivals', label: 'Similar Skill Rivals' },
+    { id: 'competitor_comparison', label: 'Competitor Comparison' },
+    { id: 'known_aliases', label: 'Known Aliases' },
+    { id: 'featured_maplists', label: 'Featured Maplists' },
+    { id: 'map_completionist', label: 'Map Completionist' },
+];
+
+const savedHidden = user.value.global_profile_preferences?.hidden_sections || [];
+const globalProfileForm = useForm({
+    hidden_sections: [...savedHidden],
+});
+
+const toggleGlobalSection = (id) => {
+    const idx = globalProfileForm.hidden_sections.indexOf(id);
+    if (idx >= 0) {
+        globalProfileForm.hidden_sections.splice(idx, 1);
+    } else {
+        globalProfileForm.hidden_sections.push(id);
+    }
+};
+
+const updateGlobalProfilePreferences = () => {
+    globalProfileForm.post(route('settings.global-profile-preferences'), { preserveScroll: true });
 };
 
 const avatarEffects = [
@@ -796,6 +827,8 @@ const profileSubTabs = [
 ];
 
 const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(tabId);
+const filteredTabs = computed(() => isVerified.value ? tabs : tabs.filter(t => ['profile', 'security'].includes(t.id)));
+const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs : []);
 </script>
 
 <template>
@@ -820,7 +853,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 <!-- Left Sidebar Navigation -->
                 <div class="hidden lg:block w-48 shrink-0 sticky top-[120px] self-start">
                     <nav class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 p-2 space-y-1">
-                        <template v-for="tab in tabs" :key="tab.id">
+                        <template v-for="tab in filteredTabs" :key="tab.id">
                             <!-- Profile tab with nested Creator & Customize -->
                             <template v-if="tab.id === 'profile'">
                                 <div :class="[
@@ -846,7 +879,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
 
                                     <!-- Profile sub-tabs: Creator & Customize (always expanded) -->
                                     <div class="ml-3 pl-3 border-l border-white/15 space-y-0.5 pb-1">
-                                    <template v-for="subTab in profileSubTabs" :key="subTab.id">
+                                    <template v-for="subTab in filteredProfileSubTabs" :key="subTab.id">
                                         <button
                                             @click="switchTab(subTab.id)"
                                             :class="[
@@ -985,18 +1018,18 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                 </div>
 
                 <!-- Player Aliases -->
-                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
+                <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
                     <ManageAliasesForm :user="user" />
                 </div>
 
                 <!-- Connections -->
-                <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
+                <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
             </div>
 
             <!-- Profile Images Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
+            <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1020,7 +1053,7 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-6">
+                    <div v-if="isVerified" class="grid grid-cols-2 gap-6">
                         <!-- Avatar Upload -->
                         <div>
                             <input ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview" accept="image/*" />
@@ -1904,6 +1937,48 @@ const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(t
                                 <span class="text-xs text-gray-500">/</span>
                                 <span class="text-xs font-black text-blue-400 uppercase bg-blue-400/20 border border-blue-400/30 px-2 py-0.5 rounded">VQ3</span>
                             </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Sections Visibility Card -->
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-600/20 border border-purple-500/30 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-purple-400">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-bold text-white">Hide Profile Sections</h2>
+                                <p class="text-xs text-gray-500">Applies only to profiles that haven't been customized by their owner</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div v-if="globalProfileForm.recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
+                                <svg class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                <span class="text-xs text-green-400 font-medium">Saved</span>
+                            </div>
+                            <PrimaryButton type="button" @click="updateGlobalProfilePreferences" :disabled="globalProfileForm.processing">
+                                <span class="text-xs">Save</span>
+                            </PrimaryButton>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <label v-for="section in profileSections" :key="section.id"
+                            class="flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors"
+                            :class="globalProfileForm.hidden_sections.includes(section.id) ? 'bg-red-500/10 border-red-500/30' : 'bg-white/5 border-white/10 hover:bg-white/10'"
+                        >
+                            <input type="checkbox"
+                                :checked="!globalProfileForm.hidden_sections.includes(section.id)"
+                                @change="toggleGlobalSection(section.id)"
+                                class="w-4 h-4 rounded bg-white/10 border-white/20 text-purple-600"
+                            />
+                            <span class="text-xs font-medium" :class="globalProfileForm.hidden_sections.includes(section.id) ? 'text-red-400 line-through' : 'text-gray-300'">{{ section.label }}</span>
                         </label>
                     </div>
                 </div>
