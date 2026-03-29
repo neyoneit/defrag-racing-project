@@ -24,6 +24,13 @@
 
     const page = usePage();
 
+    const profanityList = ['nigger', 'nigga', 'faggot', 'retard', 'bitch', 'cunt'];
+    const profanityRegex = new RegExp(`(${profanityList.join('|')})`, 'gi');
+    const censorText = (text) => {
+        if (!text) return text;
+        return text.replace(profanityRegex, (match) => match[0] + '*'.repeat(match.length - 2) + match[match.length - 1]);
+    };
+
     // Reactive nav active states (re-evaluate on every page change)
     const navActive = computed(() => {
         const url = page.url; // dependency for reactivity
@@ -213,10 +220,13 @@
                     search: search.value
                 }).then(response => {
                     maps.value = response.data?.maps
+                    if (maps.value?.data) {
+                        maps.value.data = maps.value.data.map(m => ({ ...m, name: censorText(m.name), author: censorText(m.author) }));
+                    }
                     players.value = response.data?.players
                     clans.value = response.data?.clans || []
                     bundles.value = response.data?.bundles || []
-                    models.value = response.data?.models || []
+                    models.value = (response.data?.models || []).map(m => ({ ...m, name: censorText(m.name), author: censorText(m.author) }))
                     showResultsSection.value = true;
                 });
             }

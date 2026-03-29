@@ -278,10 +278,46 @@ class MapFilters {
                 return $maps;
             }
 
-            $maps = $maps->whereHas('records', function (Builder $query) use ($request) {
-                $query->groupBy('mapname')
-                    ->havingRaw('COUNT(DISTINCT mdd_id) BETWEEN ? AND ?', [$request->records_count[0], $request->records_count[1]]);
-            });
+            $min = (int) $request->records_count[0];
+            $max = (int) $request->records_count[1];
+
+            // Determine physics filter for record counting
+            $physics = null;
+            if ($request->filled('physics') && count($request->physics) == 1) {
+                $physics = trim($request->physics[0]);
+            }
+
+            if ($min == 0 && $max == 0) {
+                // Maps with zero records (in selected physics or overall)
+                $maps = $maps->whereDoesntHave('records', function (Builder $query) use ($physics) {
+                    if ($physics) {
+                        $query->where('physics', $physics);
+                    }
+                });
+            } elseif ($min == 0) {
+                // Include maps with 0 records OR maps with records count <= max
+                $maps = $maps->where(function ($query) use ($physics, $max) {
+                    $query->whereDoesntHave('records', function (Builder $q) use ($physics) {
+                        if ($physics) {
+                            $q->where('physics', $physics);
+                        }
+                    })->orWhereHas('records', function (Builder $q) use ($physics, $max) {
+                        if ($physics) {
+                            $q->where('physics', $physics);
+                        }
+                        $q->groupBy('mapname')
+                            ->havingRaw('COUNT(DISTINCT mdd_id) <= ?', [$max]);
+                    });
+                });
+            } else {
+                $maps = $maps->whereHas('records', function (Builder $query) use ($physics, $min, $max) {
+                    if ($physics) {
+                        $query->where('physics', $physics);
+                    }
+                    $query->groupBy('mapname')
+                        ->havingRaw('COUNT(DISTINCT mdd_id) BETWEEN ? AND ?', [$min, $max]);
+                });
+            }
 
             $this->queries['records_count'] = $request->records_count;
         }

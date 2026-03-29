@@ -1,17 +1,18 @@
 use mysql::*;
 use mysql::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::collections::HashMap;
 use rayon::prelude::*;
 
 // Constants
 const MIN_MAP_TOTAL_PARTICIPATORS: usize = 5;
 const MIN_TOP1_TIME: i32 = 500;
-const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected
+#[allow(dead_code)]
+const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected (currently disabled)
 const MAX_TIED_WR_PLAYERS: usize = 3; // 4+ players with same WR = free WR map = unranked
 const MIN_TOTAL_RECORDS: usize = 10;
-const CFG_A: f64 = 1.5;
-const CFG_B: f64 = 2.086;
+const CFG_A: f64 = 1.2;
+const CFG_B: f64 = 1.0;
 const CFG_M: f64 = 0.3;
 const CFG_V: f64 = 0.1;
 const CFG_Q: f64 = 0.5;
@@ -60,6 +61,7 @@ struct MapInfo {
     functions: String,
 }
 
+#[allow(dead_code)]
 struct MapStats {
     times: Vec<i32>,
     mdd_ids: Vec<i32>,
@@ -70,17 +72,19 @@ struct MapStats {
 
 /// Find where the "normal" cluster starts by scanning consecutive time ratios.
 /// Returns the index of the first time in the normal cluster.
-fn find_normal_cluster_start(times: &[i32]) -> usize {
-    if times.len() < 2 {
-        return 0;
-    }
-    for i in 0..times.len() - 1 {
-        let ratio = times[i] as f64 / times[i + 1] as f64;
-        if ratio >= OUTLIER_THRESHOLD {
-            return i;
-        }
-    }
-    times.len() - 1
+/// DISABLED: outlier normalization commented out - rank 1 and 2 get same reward which is wrong
+fn find_normal_cluster_start(_times: &[i32]) -> usize {
+    return 0;
+    // if times.len() < 2 {
+    //     return 0;
+    // }
+    // for i in 0..times.len() - 1 {
+    //     let ratio = times[i] as f64 / times[i + 1] as f64;
+    //     if ratio >= OUTLIER_THRESHOLD {
+    //         return i;
+    //     }
+    // }
+    // times.len() - 1
 }
 
 fn calculate_map_score(reltime: f64) -> f64 {
@@ -142,7 +146,6 @@ fn process_map_records(records: &[Record], stats: &MapStats) -> Vec<ProcessedRec
 
     records.iter().filter_map(|record| {
         let is_in_outlier_group = if ref_index > 0 {
-            // Check if this record's time is in the outlier group (before ref_index)
             let mut found_outlier = false;
             for idx in 0..ref_index {
                 if times[idx] == record.time {
@@ -308,7 +311,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
     // Step 1.5: Filter records by category
     let filtered_records: Vec<Record> = records.into_iter()
         .filter(|record| {
-            maps_map.get(&record.mapname)
+            maps_map.get(&record.mapname.to_lowercase())
                 .map(|map| map_matches_category(map, category))
                 .unwrap_or(false)
         })
@@ -450,7 +453,12 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
              (name, mdd_id, user_id, physics, mode, category, all_players_rank, active_players_rank,
               category_total_participators, player_records_in_category, last_activity, player_rating,
               created_at, updated_at)
-             VALUES ('{}', {}, {}, '{}', '{}', '{}', {}, {}, {}, {}, '{}', {}, NOW(), NOW())",
+             VALUES ('{}', {}, {}, '{}', '{}', '{}', {}, {}, {}, {}, '{}', {}, NOW(), NOW())
+             ON DUPLICATE KEY UPDATE name=VALUES(name), user_id=VALUES(user_id),
+              all_players_rank=VALUES(all_players_rank), active_players_rank=VALUES(active_players_rank),
+              category_total_participators=VALUES(category_total_participators),
+              player_records_in_category=VALUES(player_records_in_category),
+              last_activity=VALUES(last_activity), player_rating=VALUES(player_rating), updated_at=NOW()",
             rating.name.replace("'", "''"),
             rating.mdd_id,
             rating.user_id.map_or("NULL".to_string(), |id| id.to_string()),
@@ -622,7 +630,7 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
 
             let filtered: Vec<(f64, &String)> = scores.iter()
                 .filter(|(mapname, _, _)| {
-                    maps_map.get(mapname)
+                    maps_map.get(&mapname.to_lowercase())
                         .map(|map| map_matches_category(map, category))
                         .unwrap_or(false)
                 })
@@ -638,7 +646,7 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
             }
 
             let mut map_scores: Vec<f64> = filtered.iter().map(|(s, _)| *s).collect();
-            let last_activity = filtered.iter().map(|(_, d)| d.clone()).max().unwrap().clone();
+            let last_activity = filtered.iter().map(|(_, d)| (*d).clone()).max().unwrap();
             let record_count = map_scores.len();
             let rating = calculate_player_rating(&mut map_scores);
 
@@ -755,7 +763,7 @@ fn main() -> Result<()> {
         },
     )?;
     let maps_map: HashMap<String, MapInfo> = maps.into_iter()
-        .map(|m| (m.name.clone(), m))
+        .map(|m| (m.name.to_lowercase(), m))
         .collect();
     println!("  Loaded {} maps", maps_map.len());
 
