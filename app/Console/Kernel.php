@@ -65,6 +65,9 @@ class Kernel extends ConsoleKernel
 
         // Calculate community helper leaderboard scores every 30 minutes
         $schedule->command('community:calculate-scores')->withoutOverlapping()->everyThirtyMinutes();
+
+        // Check q3defrag.org for new DeFRaG mod releases every Sunday at 12:00
+        $schedule->command('wiki:check-defrag-releases')->withoutOverlapping()->weeklyOn(0, '12:00');
     }
 
     /**

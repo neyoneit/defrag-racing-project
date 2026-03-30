@@ -1,0 +1,84 @@
+<script setup>
+import { Head, Link } from '@inertiajs/vue3';
+import Pagination from '@/Components/Basic/Pagination.vue';
+
+const props = defineProps({
+    page: Object,
+    revisions: Object,
+    isStaff: Boolean,
+});
+
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+};
+</script>
+
+<template>
+    <div class="pb-4">
+        <Head :title="page.title + ' - History - Wiki'" />
+
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
+                <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                    <span>/</span>
+                    <Link :href="route('wiki.show', page.slug)" class="hover:text-gray-300 transition">{{ page.title }}</Link>
+                    <span>/</span>
+                    <span class="text-gray-400">History</span>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">History: {{ page.title }}</h1>
+            </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
+            <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl overflow-hidden">
+                <div v-if="revisions.data && revisions.data.length > 0">
+                    <div
+                        v-for="(revision, index) in revisions.data"
+                        :key="revision.id"
+                        class="flex items-center gap-4 px-6 py-4 border-b border-gray-700/30 hover:bg-gray-700/20 transition"
+                    >
+                        <div class="flex-shrink-0 w-8 h-8 bg-gray-700/50 rounded-full flex items-center justify-center">
+                            <span class="text-xs text-gray-400">#{{ revision.id }}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm text-gray-300 font-medium">{{ revision.user?.name || revision.user?.username || 'System' }}</span>
+                                <span class="text-xs text-gray-500">{{ formatDate(revision.created_at) }}</span>
+                            </div>
+                            <p v-if="revision.summary" class="text-sm text-gray-500 truncate mt-0.5">{{ revision.summary }}</p>
+                            <p v-else class="text-sm text-gray-600 italic mt-0.5">No summary</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <Link
+                                :href="route('wiki.revision', { slug: page.slug, revision: revision.id })"
+                                class="px-3 py-1.5 text-xs bg-gray-700/60 hover:bg-gray-700 text-gray-300 rounded-lg transition"
+                            >
+                                View
+                            </Link>
+                            <Link
+                                v-if="isStaff"
+                                :href="route('wiki.revert', { slug: page.slug, revision: revision.id })"
+                                method="post"
+                                as="button"
+                                class="px-3 py-1.5 text-xs bg-yellow-600/60 hover:bg-yellow-600 text-white rounded-lg transition"
+                                :confirm="'Revert to this revision?'"
+                            >
+                                Revert
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="text-center py-16 text-gray-500">
+                    No revisions yet. This page hasn't been edited.
+                </div>
+            </div>
+
+            <div v-if="revisions.data && revisions.last_page > 1" class="mt-4">
+                <Pagination :links="revisions.links" />
+            </div>
+        </div>
+    </div>
+</template>
