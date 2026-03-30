@@ -378,11 +378,11 @@ const getFunctionName = (abbr) => {
                 <!-- Filters & Controls -->
                 <div class="mt-6">
                     <div class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/5 p-4 shadow-2xl">
-                <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
                     <!-- Gametype Filter -->
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Gametype:</label>
-                        <div class="flex gap-2">
+                        <div class="flex gap-1.5 flex-wrap">
                             <button @click="filters.gametype = 'all'" :class="filters.gametype === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
                                 All
                             </button>
@@ -404,7 +404,7 @@ const getFunctionName = (abbr) => {
                     <!-- Physics Filter -->
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Physics:</label>
-                        <div class="flex gap-2 flex-1">
+                        <div class="flex gap-1.5">
                             <button @click="filters.physics = 'all'" :class="filters.physics === 'all' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all">
                                 All
                             </button>
@@ -420,7 +420,7 @@ const getFunctionName = (abbr) => {
                     <!-- Sort Options -->
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Sort:</label>
-                        <div class="flex gap-2 flex-1">
+                        <div class="flex gap-1.5">
                             <button @click="toggleSort('popularity')" :class="sorting === 'popularity' ? 'bg-white/20 text-white border-white/30' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="flex-1 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1">
                                 Popularity
                                 <svg v-if="sorting === 'popularity'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" :class="sortingOrder === 'desc' ? 'rotate-0' : 'rotate-180'" class="w-3 h-3 transition-transform">
@@ -437,7 +437,7 @@ const getFunctionName = (abbr) => {
                     </div>
 
                     <!-- Additional Options -->
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 flex-wrap">
                         <label class="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">Options:</label>
                         <button @click="filters.hideEmpty = !filters.hideEmpty" :class="filters.hideEmpty ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'" class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
