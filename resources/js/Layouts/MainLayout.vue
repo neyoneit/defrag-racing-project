@@ -436,7 +436,7 @@
             </AlertBanner>
         </div>
 
-        <div class="min-h-screen flex flex-col bg-gray-900 bg-[url('/images/pattern.svg')] relative">
+        <div class="min-h-screen flex flex-col bg-gray-900 bg-[url('/images/pattern.svg')] relative overflow-x-hidden">
             <canvas ref="dotsCanvas" style="position: fixed; inset: 0; pointer-events: none; z-index: 0;"></canvas>
             <!-- Modern Compact Header -->
             <nav class="bg-white/[0.025] border-b border-white/[0.04] sticky top-0 z-[200] shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md" @click="handleNavClick">

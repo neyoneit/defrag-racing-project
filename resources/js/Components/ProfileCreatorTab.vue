@@ -434,28 +434,41 @@
                             </div>
                         </Link>
                         <div class="p-3">
-                            <Link :href="route('maps.map', map.name)" class="text-sm font-bold text-white hover:text-green-400 transition block truncate">
-                                {{ map.name }}
-                            </Link>
-                            <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                            <div class="flex items-center justify-between gap-2">
+                                <Link :href="route('maps.map', map.name)" class="text-sm font-bold text-white hover:text-green-400 transition truncate">
+                                    {{ map.name }}
+                                </Link>
+                                <span class="text-[10px] text-gray-600 shrink-0">{{ map.date_added?.substring(0, 10) }}</span>
+                            </div>
+                            <div class="flex items-center justify-between mt-1 text-xs text-gray-500">
                                 <span>{{ formatNumber(map.record_count) }} records</span>
                                 <span>{{ formatNumber(map.player_count) }} players</span>
                             </div>
                             <!-- Weapon icons -->
-                            <div v-if="map.weapons" class="flex gap-0.5 mt-1.5">
+                            <div v-if="map.weapons" class="flex flex-wrap justify-center gap-0.5 mt-1.5">
                                 <template v-for="w in (map.weapons || '').split(',').filter(Boolean)" :key="w">
                                     <div :class="`sprite-items sprite-${w.trim()} w-4 h-4`" :title="w.trim()"></div>
                                 </template>
                             </div>
-                            <!-- WR info -->
-                            <div v-if="map.world_records?.length" class="mt-1.5 space-y-0.5">
-                                <div v-for="wr in map.world_records" :key="wr.physics" class="text-xs">
-                                    <span :class="wr.physics === 'vq3' ? 'text-blue-400' : 'text-purple-400'" class="font-bold">{{ wr.physics.toUpperCase() }}:</span>
-                                    <span class="text-gray-400" v-html="q3tohtml(wr.name)"></span>
-                                    <span class="text-gray-500">{{ formatTime(wr.time) }}</span>
+                            <!-- WR info - fixed two columns -->
+                            <div class="grid grid-cols-2 gap-x-3 mt-1.5">
+                                <div class="text-xs">
+                                    <span class="text-blue-400 font-bold">VQ3: </span>
+                                    <template v-if="map.world_records?.find(wr => wr.physics === 'vq3')">
+                                        <span class="text-gray-400" v-html="q3tohtml(map.world_records.find(wr => wr.physics === 'vq3').name)"></span>
+                                        <span class="text-gray-500">{{ formatTime(map.world_records.find(wr => wr.physics === 'vq3').time) }}</span>
+                                    </template>
+                                    <span v-else class="text-gray-600 italic">no records</span>
+                                </div>
+                                <div class="text-xs">
+                                    <span class="text-purple-400 font-bold">CPM: </span>
+                                    <template v-if="map.world_records?.find(wr => wr.physics === 'cpm')">
+                                        <span class="text-gray-400" v-html="q3tohtml(map.world_records.find(wr => wr.physics === 'cpm').name)"></span>
+                                        <span class="text-gray-500">{{ formatTime(map.world_records.find(wr => wr.physics === 'cpm').time) }}</span>
+                                    </template>
+                                    <span v-else class="text-gray-600 italic">no records</span>
                                 </div>
                             </div>
-                            <div class="text-xs text-gray-600 mt-1">{{ map.date_added?.substring(0, 10) }}</div>
                         </div>
                     </div>
                 </div>
