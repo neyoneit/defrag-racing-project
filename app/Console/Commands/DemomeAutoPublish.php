@@ -10,7 +10,7 @@ class DemomeAutoPublish extends Command
 {
     protected $signature = 'demome:auto-publish';
 
-    protected $description = 'Weekly auto-publish: mark all unlisted auto-rendered videos for publishing';
+    protected $description = 'Biweekly auto-publish: mark all unlisted auto-rendered videos for publishing';
 
     public function handle()
     {

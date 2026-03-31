@@ -77,11 +77,20 @@ class DemomeControl extends Page
                 ->where('publish_approved', true)
                 ->whereNull('published_at')
                 ->count(),
-            'next_auto_publish' => Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0),
+            'next_auto_publish' => $this->getNextBiweeklyPublish(),
             'last_auto_publish' => SiteSetting::get('demome:last_auto_publish')
                 ? Carbon::parse(SiteSetting::get('demome:last_auto_publish'))
                 : null,
         ];
+    }
+
+    private function getNextBiweeklyPublish(): Carbon
+    {
+        $next = Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0);
+        if ($next->weekOfYear % 2 !== 0) {
+            $next->addWeek();
+        }
+        return $next;
     }
 
     public function togglePause(): void

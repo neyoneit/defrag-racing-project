@@ -43,6 +43,7 @@
             demos: route().current('demos.*') || route().current('youtube'),
             challenges: route().current('headhunter.*') || route().current('marketplace.*'),
             tournaments: route().current('tournaments.*'),
+            wiki: route().current('wiki.*'),
             bundles: route().current('bundles'),
             // Sub-items
             records: route().current('records'),
@@ -845,7 +846,14 @@
                             </NavLink>
                         </div>
 
-                        <!-- 8. Downloads - visible from xl -->
+                        <!-- 8. Wiki - visible from xl -->
+                        <div class="hidden xl:inline-flex">
+                            <NavLink :href="route('wiki.index')" :active="navActive.wiki">
+                                Wiki
+                            </NavLink>
+                        </div>
+
+                        <!-- 9. Downloads - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('bundles')" :active="navActive.bundles">
                                 Downloads
@@ -896,6 +904,7 @@
                                     <!-- Items always in More (hidden inline below xl) -->
                                     <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
                                     <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">Tournaments</DropdownLink>
+                                    <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">Wiki</DropdownLink>
                                     <DropdownLink :href="route('bundles')" :active="navActive.bundles">Downloads</DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">Beta</DropdownLink>
                                 </template>

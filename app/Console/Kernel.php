@@ -55,8 +55,8 @@ class Kernel extends ConsoleKernel
         // Auto-populate demome render queue when idle
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
-        // Weekly auto-publish unlisted videos (every Sunday at 18:00)
-        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00');
+        // Biweekly auto-publish unlisted videos (every other Sunday at 18:00)
+        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00')->when(fn () => now()->weekOfYear % 2 === 0);
 
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
@@ -65,6 +65,9 @@ class Kernel extends ConsoleKernel
 
         // Calculate community helper leaderboard scores every 30 minutes
         $schedule->command('community:calculate-scores')->withoutOverlapping()->everyThirtyMinutes();
+
+        // Check q3defrag.org for new DeFRaG mod releases every Sunday at 12:00
+        $schedule->command('wiki:check-defrag-releases')->withoutOverlapping()->weeklyOn(0, '12:00');
     }
 
     /**

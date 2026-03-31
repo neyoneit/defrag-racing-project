@@ -387,6 +387,42 @@ Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookControlle
 //     Route::post('/donation-goal', [DonationManagementController::class, 'updateGoal'])->name('defraghq.goal.update');
 // });
 
+// Forum Archive
+Route::prefix('forum-archive')->group(function () {
+    Route::get('/', [App\Http\Controllers\ForumArchiveController::class, 'index'])->name('forum.archive.index');
+    Route::get('/topic/{topicId}', [App\Http\Controllers\ForumArchiveController::class, 'show'])->name('forum.archive.show');
+});
+
+// Wiki
+Route::prefix('wiki')->group(function () {
+    Route::get('/', [App\Http\Controllers\WikiController::class, 'index'])->name('wiki.index');
+    Route::get('/search', [App\Http\Controllers\WikiController::class, 'search'])->name('wiki.search');
+    Route::get('/search-index', [App\Http\Controllers\WikiController::class, 'searchIndex'])->name('wiki.searchIndex');
+    Route::get('/changes', [App\Http\Controllers\WikiController::class, 'globalHistory'])->name('wiki.globalHistory');
+
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::get('/create', [App\Http\Controllers\WikiController::class, 'create'])->name('wiki.create');
+        Route::post('/', [App\Http\Controllers\WikiController::class, 'store'])->name('wiki.store');
+        Route::post('/ban', [App\Http\Controllers\WikiController::class, 'ban'])->name('wiki.ban');
+        Route::post('/unban', [App\Http\Controllers\WikiController::class, 'unban'])->name('wiki.unban');
+        Route::post('/reorder', [App\Http\Controllers\WikiController::class, 'reorder'])->name('wiki.reorder');
+        Route::post('/upload-image', [App\Http\Controllers\WikiController::class, 'uploadImage'])->name('wiki.uploadImage');
+    });
+
+    Route::get('/{slug}', [App\Http\Controllers\WikiController::class, 'show'])->name('wiki.show');
+    Route::get('/{slug}/history', [App\Http\Controllers\WikiController::class, 'history'])->name('wiki.history');
+    Route::get('/{slug}/revision/{revision}', [App\Http\Controllers\WikiController::class, 'revision'])->name('wiki.revision');
+
+    Route::middleware(['auth', 'verified'])->group(function () {
+        Route::get('/{slug}/edit', [App\Http\Controllers\WikiController::class, 'edit'])->name('wiki.edit');
+        Route::put('/{slug}', [App\Http\Controllers\WikiController::class, 'update'])->name('wiki.update');
+        Route::post('/{slug}/revert/{revision}', [App\Http\Controllers\WikiController::class, 'revert'])->name('wiki.revert');
+        Route::delete('/{slug}/revision/{revision}', [App\Http\Controllers\WikiController::class, 'deleteRevision'])->name('wiki.deleteRevision');
+        Route::post('/{slug}/toggle-lock', [App\Http\Controllers\WikiController::class, 'toggleLock'])->name('wiki.toggleLock');
+        Route::delete('/{slug}', [App\Http\Controllers\WikiController::class, 'destroy'])->name('wiki.destroy');
+    });
+});
+
 // Clean URLs for admin-created pages (catch-all, must be last route)
 // Exclude prefixes used by other route files (clans, headhunter, marketplace, tournaments)
-Route::get("/{slug}", [App\Http\Controllers\PagesController::class, "index"])->name("pages.show.clean")->where("slug", "(?!clans|headhunter|marketplace|tournaments)[a-z0-9\\-]+");
+Route::get("/{slug}", [App\Http\Controllers\PagesController::class, "index"])->name("pages.show.clean")->where("slug", "(?!clans|headhunter|marketplace|tournaments|wiki)[a-z0-9\\-]+");
