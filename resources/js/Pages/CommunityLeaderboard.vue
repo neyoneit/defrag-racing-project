@@ -57,6 +57,7 @@
         { key: 'clan_created', label: 'Clans Created', icon: '⚔', desc: 'Clans founded as owner' },
         { key: 'clan_membership', label: 'Clan Member', icon: '🛡', desc: 'Being a member of a clan' },
         { key: 'nsfw_flags', label: 'NSFW Flags', icon: '🔞', desc: 'Maps flagged as NSFW content' },
+        { key: 'wiki_edits', label: 'Wiki Edits', icon: '📖', desc: 'Wiki page revisions contributed' },
         { key: 'records_count', label: 'Records', icon: '🏆', desc: 'Total records set in the game' },
         { key: 'maps_authored', label: 'Maps Authored', icon: '🗺', desc: 'Maps you created as a mapper' },
         { key: 'models_authored', label: 'Models Authored', icon: '🎨', desc: 'Player models you created as a modeler' },
