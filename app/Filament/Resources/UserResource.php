@@ -85,6 +85,7 @@ class UserResource extends Resource
                                 'models' => 'Models (approve/reject)',
                                 'tags' => 'Tags (manage/merge)',
                                 'challenge_disputes' => 'Challenge Disputes',
+                                'wiki' => 'Wiki (edit/manage)',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\WikiPage;
 use App\Models\WikiRevision;
 use App\Models\WikiBan;
@@ -18,11 +19,20 @@ class WikiController extends Controller
             ->with(['children' => fn ($q) => $q->orderBy('title')])
             ->get(['id', 'slug', 'title', 'parent_id', 'sort_order']);
 
-        $isStaff = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isModerator());
+        $isStaff = auth()->check() && (auth()->user()->hasModeratorPermission('wiki'));
+
+        $wikiModerators = User::where(function ($q) {
+                $q->where('admin', true)
+                  ->orWhere(function ($q2) {
+                      $q2->where('is_moderator', true)
+                         ->where('moderator_permissions', 'like', '%wiki%');
+                  });
+            })->get(['id', 'name', 'username', 'profile_photo_path', 'admin']);
 
         return Inertia::render('Wiki/Index', [
             'pages' => $pages,
             'isStaff' => $isStaff,
+            'wikiModerators' => $wikiModerators,
         ]);
     }
 
@@ -58,7 +68,7 @@ class WikiController extends Controller
         $isStaff = false;
         if (auth()->check()) {
             $user = auth()->user();
-            $isStaff = $user->isAdmin() || $user->isModerator();
+            $isStaff = $user->hasModeratorPermission('wiki');
             $canEdit = !$page->is_locked || $isStaff;
             if (!$isStaff && WikiBan::where('user_id', $user->id)->exists()) {
                 $canEdit = false;
@@ -85,7 +95,7 @@ class WikiController extends Controller
         $page = WikiPage::where('slug', $slug)->firstOrFail();
 
         $user = auth()->user();
-        $isStaff = $user->isAdmin() || $user->isModerator();
+        $isStaff = $user->hasModeratorPermission('wiki');
 
         if ($page->is_locked && !$isStaff) {
             abort(403, 'This page is locked.');
@@ -111,7 +121,7 @@ class WikiController extends Controller
     {
         $page = WikiPage::where('slug', $slug)->firstOrFail();
         $user = auth()->user();
-        $isStaff = $user->isAdmin() || $user->isModerator();
+        $isStaff = $user->hasModeratorPermission('wiki');
 
         if ($page->is_locked && !$isStaff) {
             abort(403, 'This page is locked.');
@@ -155,7 +165,7 @@ class WikiController extends Controller
     public function create()
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -171,7 +181,7 @@ class WikiController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -212,7 +222,7 @@ class WikiController extends Controller
         return Inertia::render('Wiki/History', [
             'page' => $page->only('id', 'slug', 'title'),
             'revisions' => $revisions,
-            'isStaff' => auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isModerator()),
+            'isStaff' => auth()->check() && (auth()->user()->hasModeratorPermission('wiki')),
             'isAdmin' => auth()->check() && auth()->user()->isAdmin(),
         ]);
     }
@@ -246,14 +256,14 @@ class WikiController extends Controller
             'revision' => $revision,
             'afterContent' => $afterContent,
             'navigation' => $navigation,
-            'isStaff' => auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isModerator()),
+            'isStaff' => auth()->check() && (auth()->user()->hasModeratorPermission('wiki')),
         ]);
     }
 
     public function revert(Request $request, string $slug, WikiRevision $revision)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -310,7 +320,7 @@ class WikiController extends Controller
     public function ban(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -330,7 +340,7 @@ class WikiController extends Controller
     public function unban(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -346,7 +356,7 @@ class WikiController extends Controller
     public function toggleLock(string $slug)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 
@@ -365,7 +375,7 @@ class WikiController extends Controller
 
         return Inertia::render('Wiki/GlobalHistory', [
             'revisions' => $revisions,
-            'isStaff' => auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isModerator()),
+            'isStaff' => auth()->check() && (auth()->user()->hasModeratorPermission('wiki')),
         ]);
     }
 
@@ -448,7 +458,7 @@ class WikiController extends Controller
     public function reorder(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isModerator()) {
+        if (!$user->hasModeratorPermission('wiki')) {
             abort(403);
         }
 

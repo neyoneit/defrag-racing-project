@@ -1,11 +1,15 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, getCurrentInstance } from 'vue';
 import WikiSearchOverlay from '@/Components/WikiSearchOverlay.vue';
+
+const { proxy } = getCurrentInstance();
+const q3tohtml = proxy.q3tohtml;
 
 const props = defineProps({
     pages: Array,
     isStaff: Boolean,
+    wikiModerators: Array,
 });
 
 const searchOpen = ref(false);
@@ -204,6 +208,29 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
 
                 <div v-if="!pages || pages.length === 0" class="text-center py-20">
                     <p class="text-gray-500 text-lg">No wiki pages yet.</p>
+                </div>
+            </div>
+
+            <!-- Wiki Moderators -->
+            <div v-if="wikiModerators && wikiModerators.length > 0" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl px-5 py-4">
+                <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Wiki Moderators</h3>
+                <div class="flex flex-wrap gap-3">
+                    <Link
+                        v-for="mod in wikiModerators"
+                        :key="mod.id"
+                        :href="route('profile.index', mod.username)"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 hover:bg-gray-700/50 rounded-lg transition group"
+                    >
+                        <img
+                            v-if="mod.profile_photo_path"
+                            :src="'/storage/' + mod.profile_photo_path"
+                            class="w-5 h-5 rounded-full"
+                        />
+                        <div v-else class="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-gray-400">
+                            {{ mod.name?.charAt(0) || '?' }}
+                        </div>
+                        <span class="text-sm text-gray-400 group-hover:text-gray-200 transition" v-html="q3tohtml(mod.name)"></span>
+                    </Link>
                 </div>
             </div>
         </div>
