@@ -44,7 +44,7 @@ const submit = () => {
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
             <form @submit.prevent="submit" class="space-y-4">
-                <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-6">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-400 mb-1">Title</label>

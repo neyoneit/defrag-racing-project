@@ -29,12 +29,27 @@ class WikiController extends Controller
             ->with(['creator:id,name,username', 'updater:id,name,username', 'parent:id,slug,title'])
             ->firstOrFail();
 
-        $children = $page->children()->get(['id', 'slug', 'title', 'sort_order']);
+        $children = $page->children()->orderBy('sort_order')->get(['id', 'slug', 'title', 'sort_order']);
 
         $navigation = WikiPage::whereNull('parent_id')
             ->orderBy('sort_order')
             ->with(['children' => fn ($q) => $q->orderBy('sort_order')->select(['id', 'slug', 'title', 'parent_id', 'sort_order'])])
             ->get(['id', 'slug', 'title', 'parent_id', 'sort_order']);
+
+        // Build siblings + prev/next for sub-pages
+        $siblings = collect();
+        $prevPage = null;
+        $nextPage = null;
+        if ($page->parent_id) {
+            $siblings = WikiPage::where('parent_id', $page->parent_id)
+                ->orderBy('sort_order')
+                ->get(['id', 'slug', 'title', 'sort_order']);
+            $idx = $siblings->search(fn ($s) => $s->id === $page->id);
+            if ($idx !== false) {
+                $prevPage = $idx > 0 ? $siblings[$idx - 1] : null;
+                $nextPage = $idx < $siblings->count() - 1 ? $siblings[$idx + 1] : null;
+            }
+        }
 
         $canEdit = false;
         $isStaff = false;
@@ -51,6 +66,9 @@ class WikiController extends Controller
             'page' => $page,
             'children' => $children,
             'navigation' => $navigation,
+            'siblings' => $siblings,
+            'prevPage' => $prevPage,
+            'nextPage' => $nextPage,
             'canEdit' => $canEdit,
             'isStaff' => $isStaff,
         ]);
@@ -173,6 +191,7 @@ class WikiController extends Controller
             'page' => $page->only('id', 'slug', 'title'),
             'revisions' => $revisions,
             'isStaff' => auth()->check() && (auth()->user()->isAdmin() || auth()->user()->isModerator()),
+            'isAdmin' => auth()->check() && auth()->user()->isAdmin(),
         ]);
     }
 
@@ -222,6 +241,23 @@ class WikiController extends Controller
         ]);
 
         return redirect()->route('wiki.show', $page->slug);
+    }
+
+    public function deleteRevision(string $slug, WikiRevision $revision)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            abort(403);
+        }
+
+        $page = WikiPage::where('slug', $slug)->firstOrFail();
+        if ($revision->wiki_page_id !== $page->id) {
+            abort(404);
+        }
+
+        $revision->delete();
+
+        return redirect()->route('wiki.history', $slug);
     }
 
     public function destroy(string $slug)

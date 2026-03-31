@@ -33,7 +33,7 @@ const props = defineProps({
                 <template v-for="page in pages" :key="page.id">
                     <Link
                         :href="route('wiki.show', page.slug)"
-                        class="block bg-gray-800/60 border border-gray-700/50 rounded-xl p-6 hover:bg-gray-800/80 hover:border-gray-600/50 transition-all duration-300 group"
+                        class="block bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:bg-gray-800/80 hover:border-gray-600/50 transition-all duration-300 group"
                     >
                         <h2 class="text-xl font-bold text-gray-200 group-hover:text-white mb-2">{{ page.title }}</h2>
                         <div v-if="page.children && page.children.length > 0" class="space-y-1">

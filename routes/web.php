@@ -387,6 +387,12 @@ Route::post('/api/paypal/webhook', [\App\Http\Controllers\PayPalWebhookControlle
 //     Route::post('/donation-goal', [DonationManagementController::class, 'updateGoal'])->name('defraghq.goal.update');
 // });
 
+// Forum Archive
+Route::prefix('forum-archive')->group(function () {
+    Route::get('/', [App\Http\Controllers\ForumArchiveController::class, 'index'])->name('forum.archive.index');
+    Route::get('/topic/{topicId}', [App\Http\Controllers\ForumArchiveController::class, 'show'])->name('forum.archive.show');
+});
+
 // Wiki
 Route::prefix('wiki')->group(function () {
     Route::get('/', [App\Http\Controllers\WikiController::class, 'index'])->name('wiki.index');
@@ -407,6 +413,7 @@ Route::prefix('wiki')->group(function () {
         Route::get('/{slug}/edit', [App\Http\Controllers\WikiController::class, 'edit'])->name('wiki.edit');
         Route::put('/{slug}', [App\Http\Controllers\WikiController::class, 'update'])->name('wiki.update');
         Route::post('/{slug}/revert/{revision}', [App\Http\Controllers\WikiController::class, 'revert'])->name('wiki.revert');
+        Route::delete('/{slug}/revision/{revision}', [App\Http\Controllers\WikiController::class, 'deleteRevision'])->name('wiki.deleteRevision');
         Route::post('/{slug}/toggle-lock', [App\Http\Controllers\WikiController::class, 'toggleLock'])->name('wiki.toggleLock');
         Route::delete('/{slug}', [App\Http\Controllers\WikiController::class, 'destroy'])->name('wiki.destroy');
     });

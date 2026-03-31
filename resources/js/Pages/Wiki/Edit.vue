@@ -40,7 +40,12 @@ const submit = () => {
 
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
             <form @submit.prevent="submit" class="space-y-4">
-                <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-6">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                    <!-- Auto-generated page warning (staff only) -->
+                    <div v-if="page.slug === 'defrag-releases'" class="mb-4 bg-red-900/30 border border-red-700/50 rounded-lg px-4 py-3 text-sm text-red-300">
+                        <strong class="text-red-200">Auto-generated page</strong> - The release table is automatically updated every Sunday by <code class="bg-red-900/40 px-1.5 py-0.5 rounded text-red-200 text-xs">wiki:check-defrag-releases</code>. Any edits to the release table will be overwritten on next update. You may safely edit the Installation section and notes below the tables.
+                    </div>
+
                     <!-- Title -->
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-400 mb-1">Title</label>

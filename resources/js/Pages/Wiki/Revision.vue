@@ -1,5 +1,9 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import { getCurrentInstance } from 'vue';
+
+const { proxy } = getCurrentInstance();
+const q3tohtml = proxy.q3tohtml;
 
 const props = defineProps({
     page: Object,
@@ -50,7 +54,7 @@ const formatDate = (date) => {
             <div class="bg-yellow-900/20 border border-yellow-700/30 rounded-xl px-6 py-3 mb-4 flex items-center gap-4 text-sm text-yellow-400">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span>
-                    You are viewing an older revision by <strong>{{ revision.user?.name || revision.user?.username || 'System' }}</strong>
+                    You are viewing an older revision by <Link v-if="revision.user" :href="'/profile/' + revision.user.id" class="font-bold hover:text-yellow-200 transition" v-html="q3tohtml(revision.user.name || revision.user.username)"></Link><strong v-else>System</strong>
                     from {{ formatDate(revision.created_at) }}.
                     <span v-if="revision.summary" class="text-yellow-500">- {{ revision.summary }}</span>
                 </span>
@@ -60,7 +64,7 @@ const formatDate = (date) => {
             <div class="flex gap-6">
                 <!-- Sidebar -->
                 <div class="hidden lg:block w-64 flex-shrink-0">
-                    <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 sticky top-24">
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-4 sticky top-24">
                         <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Pages</h3>
                         <nav class="space-y-1">
                             <template v-for="navPage in navigation" :key="navPage.id">
@@ -88,7 +92,7 @@ const formatDate = (date) => {
 
                 <!-- Content -->
                 <div class="flex-1 min-w-0">
-                    <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-6 md:p-8">
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6 md:p-8">
                         <div class="wiki-content prose prose-invert prose-gray max-w-none" v-html="revision.content"></div>
                     </div>
                 </div>

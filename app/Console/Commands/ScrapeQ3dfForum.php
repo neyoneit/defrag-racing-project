@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
+// Forum archive uses local disk, not S3
+
 class ScrapeQ3dfForum extends Command
 {
     protected $signature = 'scrape:q3df-forum {--limit=50 : Max pages to download per run} {--delay=3 : Seconds between requests}';
@@ -25,13 +27,13 @@ class ScrapeQ3dfForum extends Command
 
         // Step 1: Load or fetch CDX index
         $cdxFile = self::STORAGE_PATH . '/cdx_all.json';
-        if (Storage::exists($cdxFile)) {
-            $urls = json_decode(Storage::get($cdxFile), true);
+        if (Storage::disk('local')->exists($cdxFile)) {
+            $urls = json_decode(Storage::disk('local')->get($cdxFile), true);
             $this->info("Loaded " . count($urls) . " URLs from cache");
         } else {
             $this->info("Fetching CDX index from Wayback Machine...");
             $urls = $this->fetchCdxIndex();
-            Storage::put($cdxFile, json_encode($urls, JSON_PRETTY_PRINT));
+            Storage::disk('local')->put($cdxFile, json_encode($urls, JSON_PRETTY_PRINT));
             $this->info("Cached " . count($urls) . " URLs");
         }
 
@@ -49,7 +51,7 @@ class ScrapeQ3dfForum extends Command
             $filename = $this->urlToFilename($entry['url']);
             $storagePath = self::STORAGE_PATH . '/pages/' . $filename;
 
-            if (Storage::exists($storagePath)) {
+            if (Storage::disk('local')->exists($storagePath)) {
                 $skipped++;
                 continue;
             }
@@ -62,7 +64,7 @@ class ScrapeQ3dfForum extends Command
                     ->get($waybackUrl);
 
                 if ($response->successful() && strlen($response->body()) > 1000) {
-                    Storage::put($storagePath, $response->body());
+                    Storage::disk('local')->put($storagePath, $response->body());
                     $downloaded++;
                     $this->line("  [{$downloaded}/{$limit}] Saved: {$filename} (" . strlen($response->body()) . " bytes)");
                 } else {

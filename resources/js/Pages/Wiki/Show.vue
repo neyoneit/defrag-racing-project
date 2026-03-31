@@ -1,13 +1,30 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import { ref, computed, getCurrentInstance } from 'vue';
+
+const { proxy } = getCurrentInstance();
+const q3tohtml = proxy.q3tohtml;
 
 const props = defineProps({
     page: Object,
     children: Array,
     navigation: Array,
+    siblings: Array,
+    prevPage: Object,
+    nextPage: Object,
     canEdit: Boolean,
     isStaff: Boolean,
 });
+
+// If this is a sub-page, show siblings in sidebar. Otherwise show top-level nav.
+const sidebarItems = computed(() => {
+    if (props.page.parent_id && props.siblings && props.siblings.length > 0) {
+        return { type: 'siblings', parent: props.page.parent, items: props.siblings };
+    }
+    return { type: 'navigation', parent: null, items: props.navigation };
+});
+
+const sidebarCollapsed = ref(false);
 </script>
 
 <template>
@@ -62,27 +79,69 @@ const props = defineProps({
             <div class="flex gap-6">
                 <!-- Sidebar Navigation -->
                 <div class="hidden lg:block w-64 flex-shrink-0">
-                    <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 sticky top-24">
-                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Pages</h3>
-                        <nav class="space-y-1">
-                            <template v-for="navPage in navigation" :key="navPage.id">
-                                <Link
-                                    :href="route('wiki.show', navPage.slug)"
-                                    class="block px-3 py-1.5 text-sm rounded-lg transition"
-                                    :class="navPage.slug === page.slug ? 'bg-blue-600/20 text-blue-400 font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'"
-                                >
-                                    {{ navPage.title }}
-                                </Link>
-                                <template v-if="navPage.children && navPage.children.length > 0">
-                                    <Link
-                                        v-for="child in navPage.children"
-                                        :key="child.id"
-                                        :href="route('wiki.show', child.slug)"
-                                        class="block pl-6 pr-3 py-1.5 text-sm rounded-lg transition"
-                                        :class="child.slug === page.slug ? 'bg-blue-600/20 text-blue-400 font-medium' : 'text-gray-500 hover:text-gray-300 hover:bg-gray-700/50'"
-                                    >
-                                        {{ child.title }}
+                    <div class="sticky top-20 max-h-[calc(100vh-6rem)] flex flex-col bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
+                        <!-- Sidebar header -->
+                        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700/30">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                <template v-if="sidebarItems.type === 'siblings'">
+                                    <Link :href="route('wiki.show', sidebarItems.parent.slug)" class="hover:text-gray-200 transition flex items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                        {{ sidebarItems.parent.title }}
                                     </Link>
+                                </template>
+                                <template v-else>Pages</template>
+                            </h3>
+                            <button
+                                @click="sidebarCollapsed = !sidebarCollapsed"
+                                class="text-gray-500 hover:text-gray-300 transition lg:hidden"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" v-if="!sidebarCollapsed"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" v-else/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Scrollable nav list -->
+                        <nav class="overflow-y-auto overscroll-contain p-2 space-y-0.5 flex-1 sidebar-scroll">
+                            <template v-if="sidebarItems.type === 'siblings'">
+                                <!-- Sub-page siblings list -->
+                                <Link
+                                    v-for="sibling in sidebarItems.items"
+                                    :key="sibling.id"
+                                    :href="route('wiki.show', sibling.slug)"
+                                    class="block px-3 py-1.5 text-sm rounded-lg transition"
+                                    :class="sibling.slug === page.slug
+                                        ? 'bg-blue-600/20 text-blue-400 font-medium'
+                                        : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'"
+                                >
+                                    {{ sibling.title }}
+                                </Link>
+                            </template>
+                            <template v-else>
+                                <!-- Top-level navigation with collapsible children -->
+                                <template v-for="navPage in navigation" :key="navPage.id">
+                                    <Link
+                                        :href="route('wiki.show', navPage.slug)"
+                                        class="block px-3 py-1.5 text-sm rounded-lg transition"
+                                        :class="navPage.slug === page.slug ? 'bg-blue-600/20 text-blue-400 font-medium' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'"
+                                    >
+                                        <span class="flex items-center justify-between">
+                                            {{ navPage.title }}
+                                            <span v-if="navPage.children && navPage.children.length > 0" class="text-gray-600 text-xs">{{ navPage.children.length }}</span>
+                                        </span>
+                                    </Link>
+                                    <!-- Show children only for the currently active parent -->
+                                    <template v-if="navPage.children && navPage.children.length > 0 && navPage.slug === page.slug">
+                                        <Link
+                                            v-for="child in navPage.children"
+                                            :key="child.id"
+                                            :href="route('wiki.show', child.slug)"
+                                            class="block pl-6 pr-3 py-1 text-xs rounded-lg transition text-gray-500 hover:text-gray-300 hover:bg-gray-700/50"
+                                        >
+                                            {{ child.title }}
+                                        </Link>
+                                    </template>
                                 </template>
                             </template>
                         </nav>
@@ -91,7 +150,7 @@ const props = defineProps({
 
                 <!-- Main Content -->
                 <div class="flex-1 min-w-0">
-                    <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-6 md:p-8">
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6 md:p-8">
                         <!-- Page info bar -->
                         <div class="flex items-center gap-4 text-xs text-gray-500 mb-6 pb-4 border-b border-gray-700/50">
                             <span v-if="page.is_locked" class="flex items-center gap-1 text-yellow-500">
@@ -99,14 +158,14 @@ const props = defineProps({
                                 Locked
                             </span>
                             <span v-if="page.updater">
-                                Last edited by <span class="text-gray-400">{{ page.updater.name }}</span>
+                                Last edited by <span class="text-gray-400" v-html="q3tohtml(page.updater.name)"></span>
                             </span>
                             <span v-if="page.updated_at">
-                                {{ new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }}
+                                {{ new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
                             </span>
                         </div>
 
-                        <!-- Rendered Markdown -->
+                        <!-- Rendered Content -->
                         <div class="wiki-content prose prose-invert prose-gray max-w-none" v-html="page.content"></div>
 
                         <!-- Child pages -->
@@ -123,6 +182,27 @@ const props = defineProps({
                                     {{ child.title }}
                                 </Link>
                             </div>
+                        </div>
+
+                        <!-- Prev / Next navigation for sub-pages -->
+                        <div v-if="prevPage || nextPage" class="mt-8 pt-6 border-t border-gray-700/50 flex items-center justify-between gap-4">
+                            <Link
+                                v-if="prevPage"
+                                :href="route('wiki.show', prevPage.slug)"
+                                class="flex items-center gap-2 px-4 py-3 bg-gray-700/30 border border-gray-700/30 rounded-lg hover:bg-gray-700/50 hover:border-gray-600/50 transition text-gray-300 hover:text-white max-w-[48%]"
+                            >
+                                <svg class="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                <span class="truncate">{{ prevPage.title }}</span>
+                            </Link>
+                            <div v-else></div>
+                            <Link
+                                v-if="nextPage"
+                                :href="route('wiki.show', nextPage.slug)"
+                                class="flex items-center gap-2 px-4 py-3 bg-gray-700/30 border border-gray-700/30 rounded-lg hover:bg-gray-700/50 hover:border-gray-600/50 transition text-gray-300 hover:text-white max-w-[48%] ml-auto"
+                            >
+                                <span class="truncate">{{ nextPage.title }}</span>
+                                <svg class="w-4 h-4 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -152,4 +232,18 @@ const props = defineProps({
 .wiki-content img { @apply rounded-lg max-w-full; }
 .wiki-content strong { @apply text-gray-200 font-semibold; }
 .wiki-content em { @apply text-gray-300; }
+
+.sidebar-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.4);
+    border-radius: 2px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 85, 99, 0.7);
+}
 </style>

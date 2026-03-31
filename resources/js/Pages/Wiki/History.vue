@@ -1,11 +1,21 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { getCurrentInstance } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+
+const { proxy } = getCurrentInstance();
+const q3tohtml = proxy.q3tohtml;
+
+const deleteRevision = (revisionId) => {
+    if (!confirm('Delete this revision permanently?')) return;
+    router.delete(route('wiki.deleteRevision', { slug: props.page.slug, revision: revisionId }));
+};
 
 const props = defineProps({
     page: Object,
     revisions: Object,
     isStaff: Boolean,
+    isAdmin: Boolean,
 });
 
 const formatDate = (date) => {
@@ -33,7 +43,7 @@ const formatDate = (date) => {
         </div>
 
         <div class="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 relative z-10" style="margin-top: -24rem;">
-            <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl overflow-hidden">
+            <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
                 <div v-if="revisions.data && revisions.data.length > 0">
                     <div
                         v-for="(revision, index) in revisions.data"
@@ -45,7 +55,8 @@ const formatDate = (date) => {
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-300 font-medium">{{ revision.user?.name || revision.user?.username || 'System' }}</span>
+                                <Link v-if="revision.user" :href="'/profile/' + revision.user.id" class="text-sm text-gray-300 font-medium hover:text-blue-400 transition" v-html="q3tohtml(revision.user.name || revision.user.username)"></Link>
+                                <span v-else class="text-sm text-gray-300 font-medium">System</span>
                                 <span class="text-xs text-gray-500">{{ formatDate(revision.created_at) }}</span>
                             </div>
                             <p v-if="revision.summary" class="text-sm text-gray-500 truncate mt-0.5">{{ revision.summary }}</p>
@@ -64,10 +75,16 @@ const formatDate = (date) => {
                                 method="post"
                                 as="button"
                                 class="px-3 py-1.5 text-xs bg-yellow-600/60 hover:bg-yellow-600 text-white rounded-lg transition"
-                                :confirm="'Revert to this revision?'"
                             >
                                 Revert
                             </Link>
+                            <button
+                                v-if="isAdmin"
+                                @click="deleteRevision(revision.id)"
+                                class="px-3 py-1.5 text-xs bg-red-600/60 hover:bg-red-600 text-white rounded-lg transition"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
