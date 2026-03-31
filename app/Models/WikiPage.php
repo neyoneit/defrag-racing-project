@@ -12,6 +12,7 @@ class WikiPage extends Model
         'slug',
         'title',
         'content',
+        'keywords',
         'parent_id',
         'sort_order',
         'is_locked',

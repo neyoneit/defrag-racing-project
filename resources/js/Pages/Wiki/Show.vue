@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, getCurrentInstance } from 'vue';
+import WikiSearchOverlay from '@/Components/WikiSearchOverlay.vue';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -12,6 +13,7 @@ const props = defineProps({
     siblings: Array,
     prevPage: Object,
     nextPage: Object,
+    revisionCount: Number,
     canEdit: Boolean,
     isStaff: Boolean,
 });
@@ -24,7 +26,38 @@ const sidebarItems = computed(() => {
     return { type: 'navigation', parent: null, items: props.navigation };
 });
 
+// Auto-generate id attributes on headings so anchor links (#section) work
+const processedContent = computed(() => {
+    if (!props.page.content) return '';
+    let html = props.page.content;
+
+    // Add id attributes to h1-h4 headings based on their text content
+    html = html.replace(/<(h[1-4])([^>]*)>(.*?)<\/\1>/gi, (match, tag, attrs, inner) => {
+        // Skip if already has an id
+        if (/\bid\s*=/.test(attrs)) return match;
+        // Generate slug from text content (strip HTML tags)
+        const text = inner.replace(/<[^>]+>/g, '').trim();
+        const id = text.toLowerCase()
+            .replace(/&amp;/g, '').replace(/&[^;]+;/g, '')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '');
+        return `<${tag}${attrs} id="${id}">${inner}</${tag}>`;
+    });
+
+    // Fix anchor links: remove target="_blank" from same-page hash links
+    html = html.replace(/<a([^>]*href="#[^"]*"[^>]*)>/gi, (match, attrs) => {
+        attrs = attrs.replace(/\s*target="_blank"/g, '');
+        attrs = attrs.replace(/\s*rel="[^"]*"/g, '');
+        return `<a${attrs}>`;
+    });
+
+    return html;
+});
+
 const sidebarCollapsed = ref(false);
+const searchOpen = ref(false);
 </script>
 
 <template>
@@ -47,6 +80,14 @@ const sidebarCollapsed = ref(false);
                         <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">{{ page.title }}</h1>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button
+                            @click="searchOpen = true"
+                            class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition flex items-center gap-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            <span class="hidden sm:inline">Search</span>
+                            <kbd class="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] text-gray-500 bg-gray-800 border border-gray-700 rounded">Ctrl+K</kbd>
+                        </button>
                         <Link
                             :href="route('wiki.history', page.slug)"
                             class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition"
@@ -158,7 +199,7 @@ const sidebarCollapsed = ref(false);
                                 Locked
                             </span>
                             <span v-if="page.updater">
-                                Last edited by <span class="text-gray-400" v-html="q3tohtml(page.updater.name)"></span>
+                                Last edited by <Link :href="'/profile/' + page.updater.id" class="text-gray-400 hover:text-blue-400 transition" v-html="q3tohtml(page.updater.name)"></Link>
                             </span>
                             <span v-if="page.updated_at">
                                 {{ new Date(page.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
@@ -166,7 +207,7 @@ const sidebarCollapsed = ref(false);
                         </div>
 
                         <!-- Rendered Content -->
-                        <div class="wiki-content prose prose-invert prose-gray max-w-none" v-html="page.content"></div>
+                        <div class="wiki-content prose prose-invert prose-gray max-w-none" v-html="processedContent"></div>
 
                         <!-- Child pages -->
                         <div v-if="children && children.length > 0" class="mt-8 pt-6 border-t border-gray-700/50">
@@ -208,6 +249,8 @@ const sidebarCollapsed = ref(false);
                 </div>
             </div>
         </div>
+
+        <WikiSearchOverlay v-model="searchOpen" />
     </div>
 </template>
 
@@ -217,9 +260,10 @@ const sidebarCollapsed = ref(false);
 .wiki-content h3 { @apply text-xl font-semibold text-gray-300 mt-6 mb-2; }
 .wiki-content h4 { @apply text-lg font-semibold text-gray-300 mt-4 mb-2; }
 .wiki-content p { @apply text-gray-400 leading-relaxed mb-4; }
-.wiki-content ul { @apply list-disc list-inside text-gray-400 mb-4 space-y-1; }
-.wiki-content ol { @apply list-decimal list-inside text-gray-400 mb-4 space-y-1; }
+.wiki-content ul { @apply list-disc ml-6 text-gray-400 mb-4 space-y-1; }
+.wiki-content ol { @apply list-decimal ml-6 text-gray-400 mb-4 space-y-1; }
 .wiki-content li { @apply text-gray-400; }
+.wiki-content li p { @apply mb-1; }
 .wiki-content a { @apply text-blue-400 hover:text-blue-300 underline; }
 .wiki-content code { @apply bg-gray-900/60 text-green-400 px-1.5 py-0.5 rounded text-sm; }
 .wiki-content pre { @apply bg-gray-900/80 border border-gray-700/50 rounded-lg p-4 mb-4 overflow-x-auto; }

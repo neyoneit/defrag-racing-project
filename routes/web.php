@@ -397,12 +397,16 @@ Route::prefix('forum-archive')->group(function () {
 Route::prefix('wiki')->group(function () {
     Route::get('/', [App\Http\Controllers\WikiController::class, 'index'])->name('wiki.index');
     Route::get('/search', [App\Http\Controllers\WikiController::class, 'search'])->name('wiki.search');
+    Route::get('/search-index', [App\Http\Controllers\WikiController::class, 'searchIndex'])->name('wiki.searchIndex');
+    Route::get('/changes', [App\Http\Controllers\WikiController::class, 'globalHistory'])->name('wiki.globalHistory');
 
     Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create', [App\Http\Controllers\WikiController::class, 'create'])->name('wiki.create');
         Route::post('/', [App\Http\Controllers\WikiController::class, 'store'])->name('wiki.store');
         Route::post('/ban', [App\Http\Controllers\WikiController::class, 'ban'])->name('wiki.ban');
         Route::post('/unban', [App\Http\Controllers\WikiController::class, 'unban'])->name('wiki.unban');
+        Route::post('/reorder', [App\Http\Controllers\WikiController::class, 'reorder'])->name('wiki.reorder');
+        Route::post('/upload-image', [App\Http\Controllers\WikiController::class, 'uploadImage'])->name('wiki.uploadImage');
     });
 
     Route::get('/{slug}', [App\Http\Controllers\WikiController::class, 'show'])->name('wiki.show');

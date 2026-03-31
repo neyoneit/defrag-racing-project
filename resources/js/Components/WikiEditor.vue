@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue';
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
+import axios from 'axios';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import { Table } from '@tiptap/extension-table';
@@ -21,22 +22,68 @@ const emit = defineEmits(['update:modelValue']);
 const sourceMode = ref(false);
 const sourceCode = ref('');
 
+// Upload a file (File object) and insert into editor
+async function uploadAndInsert(file) {
+    imageUploading.value = true;
+    try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const { data } = await axios.post(route('wiki.uploadImage'), formData);
+        editor.value.chain().focus().setImage({ src: data.url }).run();
+    } catch (err) {
+        alert('Upload failed: ' + (err.response?.data?.message || err.message));
+    }
+    imageUploading.value = false;
+}
+
 const editor = useEditor({
     content: props.modelValue,
     extensions: [
-        StarterKit,
+        StarterKit.configure({
+            link: false,
+            underline: false,
+        }),
         Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-blue-400 underline' } }),
         Table.configure({ resizable: true }),
         TableRow,
         TableCell,
         TableHeader,
-        Image,
+        Image.configure({ inline: false, allowBase64: false }),
         Underline,
         TextAlign.configure({ types: ['heading', 'paragraph'] }),
         Placeholder.configure({ placeholder: 'Start writing...' }),
     ],
     onUpdate: ({ editor }) => {
         emit('update:modelValue', editor.getHTML());
+    },
+    editorProps: {
+        handlePaste(view, event) {
+            const items = event.clipboardData?.items;
+            if (!items) return false;
+
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    event.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) uploadAndInsert(file);
+                    return true;
+                }
+            }
+            return false;
+        },
+        handleDrop(view, event) {
+            const files = event.dataTransfer?.files;
+            if (!files?.length) return false;
+
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    event.preventDefault();
+                    uploadAndInsert(file);
+                    return true;
+                }
+            }
+            return false;
+        },
     },
 });
 
@@ -62,18 +109,83 @@ const updateSource = (e) => {
     emit('update:modelValue', sourceCode.value);
 };
 
-const addLink = () => {
-    const url = window.prompt('URL:');
-    if (url) {
-        editor.value.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+const showLinkDialog = ref(false);
+const linkUrl = ref('');
+const linkDialogRef = ref(null);
+
+watch(showLinkDialog, async (open) => {
+    if (open) {
+        // Pre-fill with existing link if cursor is on one
+        const attrs = editor.value?.getAttributes('link');
+        linkUrl.value = attrs?.href || '';
+        await nextTick();
+        linkDialogRef.value?.querySelector('input')?.focus();
     }
+});
+
+const addLink = () => {
+    showLinkDialog.value = true;
 };
 
-const addImage = () => {
-    const url = window.prompt('Image URL:');
-    if (url) {
-        editor.value.chain().focus().setImage({ src: url }).run();
+const insertLink = () => {
+    if (linkUrl.value) {
+        editor.value.chain().focus().extendMarkRange('link').setLink({ href: linkUrl.value }).run();
+    } else {
+        editor.value.chain().focus().extendMarkRange('link').unsetLink().run();
     }
+    linkUrl.value = '';
+    showLinkDialog.value = false;
+};
+
+const removeLink = () => {
+    editor.value.chain().focus().extendMarkRange('link').unsetLink().run();
+    linkUrl.value = '';
+    showLinkDialog.value = false;
+};
+
+const imageUploading = ref(false);
+const imageInputRef = ref(null);
+
+const addImage = () => {
+    showImageDialog.value = true;
+};
+
+const showImageDialog = ref(false);
+const imageDialogRef = ref(null);
+
+watch(showImageDialog, async (open) => {
+    if (open) {
+        await nextTick();
+        imageDialogRef.value?.focus();
+    }
+});
+const imageUrl = ref('');
+
+const insertImageFromUrl = async () => {
+    if (!imageUrl.value) return;
+    imageUploading.value = true;
+    try {
+        // Download image server-side and get local URL
+        const { data } = await axios.post(route('wiki.uploadImage'), { url: imageUrl.value });
+        editor.value.chain().focus().setImage({ src: data.url }).run();
+        imageUrl.value = '';
+        showImageDialog.value = false;
+    } catch (err) {
+        alert('Failed to download image: ' + (err.response?.data?.error || err.message));
+    }
+    imageUploading.value = false;
+};
+
+const triggerFileUpload = () => {
+    imageInputRef.value?.click();
+};
+
+const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadAndInsert(file);
+    showImageDialog.value = false;
+    e.target.value = '';
 };
 
 const addTable = () => {
@@ -161,6 +273,92 @@ onBeforeUnmount(() => {
             rows="30"
             class="w-full bg-gray-900/60 border border-t-0 border-gray-700/50 rounded-b-lg px-4 py-3 text-gray-200 font-mono text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-y"
         ></textarea>
+        <!-- Link dialog -->
+        <Teleport to="body">
+            <div v-if="showLinkDialog" ref="linkDialogRef" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" @click.self="showLinkDialog = false" @keydown.esc="showLinkDialog = false" tabindex="-1">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showLinkDialog = false"></div>
+                <div class="relative bg-gray-900 border border-white/15 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                    <h3 class="text-lg font-bold text-gray-200 mb-4">Insert Link</h3>
+                    <div class="space-y-3">
+                        <input
+                            v-model="linkUrl"
+                            type="text"
+                            placeholder="https://example.com"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-gray-200 focus:border-blue-500 outline-none"
+                            @keydown.enter="insertLink"
+                        />
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="insertLink" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition">
+                                {{ linkUrl ? 'Apply Link' : 'Remove Link' }}
+                            </button>
+                            <button v-if="editor?.isActive('link')" type="button" @click="removeLink" class="px-4 py-2 bg-red-600/60 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition">
+                                Remove
+                            </button>
+                            <button type="button" @click="showLinkDialog = false" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" @click="showLinkDialog = false" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Hidden file input for image upload -->
+        <input ref="imageInputRef" type="file" accept="image/*" class="hidden" @change="handleImageUpload" />
+
+        <!-- Image dialog -->
+        <Teleport to="body">
+            <div v-if="showImageDialog" class="fixed inset-0 z-[9999] flex items-center justify-center px-4" @click.self="showImageDialog = false" @keydown.esc="showImageDialog = false" tabindex="-1" ref="imageDialogRef">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showImageDialog = false"></div>
+                <div class="relative bg-gray-900 border border-white/15 rounded-xl shadow-2xl p-6 w-full max-w-md">
+                    <h3 class="text-lg font-bold text-gray-200 mb-4">Insert Image</h3>
+
+                    <!-- Upload button -->
+                    <button
+                        type="button"
+                        @click="triggerFileUpload"
+                        :disabled="imageUploading"
+                        class="w-full mb-4 px-4 py-8 border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-lg text-gray-400 hover:text-blue-400 transition flex flex-col items-center gap-2"
+                    >
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span v-if="imageUploading" class="text-sm">Uploading...</span>
+                        <span v-else class="text-sm">Click to upload an image</span>
+                        <span class="text-xs text-gray-600">Max 5MB - JPG, PNG, GIF, WebP</span>
+                    </button>
+
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="flex-1 h-px bg-gray-700"></div>
+                        <span class="text-xs text-gray-600">or paste URL</span>
+                        <div class="flex-1 h-px bg-gray-700"></div>
+                    </div>
+
+                    <!-- URL input -->
+                    <div class="flex gap-2">
+                        <input
+                            v-model="imageUrl"
+                            type="text"
+                            placeholder="https://example.com/image.png"
+                            class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-blue-500 outline-none"
+                            @keydown.enter="insertImageFromUrl"
+                        />
+                        <button
+                            type="button"
+                            @click="insertImageFromUrl"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+                        >
+                            Insert
+                        </button>
+                    </div>
+
+                    <button type="button" @click="showImageDialog = false" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -194,7 +392,17 @@ onBeforeUnmount(() => {
 .wiki-editor-content .tiptap hr { @apply border-gray-700/50 my-4; }
 .wiki-editor-content .tiptap strong { @apply text-gray-200 font-semibold; }
 .wiki-editor-content .tiptap em { @apply text-gray-300; }
-.wiki-editor-content .tiptap img { @apply rounded-lg max-w-full my-3; }
+.wiki-editor-content .tiptap img {
+    @apply rounded-lg max-w-full my-3 cursor-pointer;
+}
+.wiki-editor-content .tiptap img.ProseMirror-selectednode {
+    outline: 3px solid rgb(59, 130, 246);
+    outline-offset: 2px;
+}
+.wiki-editor-content .tiptap img:hover {
+    outline: 2px solid rgba(59, 130, 246, 0.4);
+    outline-offset: 2px;
+}
 
 /* Table styles */
 .wiki-editor-content .tiptap table { @apply w-full border-collapse mb-3; }
