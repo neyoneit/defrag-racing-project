@@ -46,6 +46,7 @@ class CommunityScoreService
         $this->addClanCreated($scores);
         $this->addClanMembership($scores);
         $this->addNsfwFlags($scores);
+        $this->addWikiEdits($scores);
         $this->addDifficultyRatings($scores);
         $this->addRecordsCount($scores);
         $this->addMapsAuthored($scores);
@@ -89,6 +90,7 @@ class CommunityScoreService
                 'clan_created' => 0,
                 'clan_membership' => false,
                 'nsfw_flags' => 0,
+                'wiki_edits' => 0,
                 'difficulty_ratings' => 0,
                 'records_count' => 0,
                 'maps_authored' => 0,
@@ -372,6 +374,18 @@ class CommunityScoreService
                 $scores->put($row->user_id, $data);
             }
         }
+    }
+
+    private function addWikiEdits(Collection &$scores): void
+    {
+        $counts = DB::table('wiki_revisions')
+            ->whereNull('deleted_at')
+            ->whereNotNull('user_id')
+            ->groupBy('user_id')
+            ->select('user_id', DB::raw('COUNT(*) as cnt'))
+            ->get();
+
+        $this->mergeGroupedCounts($scores, 'wiki_edits', $counts);
     }
 
     private function addDifficultyRatings(Collection &$scores): void
