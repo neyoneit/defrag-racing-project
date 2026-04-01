@@ -129,6 +129,10 @@ const submit = () => {
                     </div>
 
                     <!-- WYSIWYG Editor -->
+                    <div class="flex items-center gap-2 mb-2 px-3 py-2 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+                        <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-sm text-blue-300/80">You can paste images directly with <kbd class="px-1.5 py-0.5 text-xs bg-blue-900/40 border border-blue-700/50 rounded">Ctrl+V</kbd> or drag & drop them into the editor.</p>
+                    </div>
                     <WikiEditor v-model="form.content" />
                     <p v-if="form.errors.content" class="text-red-400 text-sm mt-1">{{ form.errors.content }}</p>
 
@@ -145,7 +149,7 @@ const submit = () => {
 
                     <!-- Actions -->
                     <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-700/50">
-                        <Link :href="route('wiki.show', page.slug)" class="text-gray-400 hover:text-gray-200 text-sm transition">Cancel</Link>
+                        <Link :href="route('wiki.show', page.slug)" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition">Cancel</Link>
                         <div class="flex items-center gap-3">
                             <span v-show="noChangesMessage" class="text-sm text-yellow-400">No changes to save.</span>
                             <button

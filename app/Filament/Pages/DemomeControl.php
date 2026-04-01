@@ -87,7 +87,7 @@ class DemomeControl extends Page
     private function getNextBiweeklyPublish(): Carbon
     {
         $next = Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0);
-        if ($next->weekOfYear % 2 !== 0) {
+        while ($next->weekOfYear % 3 !== 0) {
             $next->addWeek();
         }
         return $next;
