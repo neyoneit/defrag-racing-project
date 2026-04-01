@@ -314,6 +314,12 @@ async function removeTask(demoId, taskType) {
         completingSlot.value = null;
     }
 
+    // Preload when last phase (rating) is running low
+    const totalRemaining = assignmentQueue.value.length + verificationQueue.value.length + ratingQueue.value.length;
+    if (totalRemaining <= 2) {
+        preloadNextRound();
+    }
+
     // Phase transitions - move to next phase or load more
     if (phase.value === 'assignment' && assignmentQueue.value.length === 0) {
         await sleep(400);
@@ -334,19 +340,38 @@ async function removeTask(demoId, taskType) {
     }
 }
 
+let preloadedData = null;
+let preloadPromise = null;
+
+function preloadNextRound() {
+    if (preloadPromise || preloadedData) return;
+    preloadPromise = axios.post('/community-tasks/refresh')
+        .then(({ data }) => { preloadedData = data; })
+        .catch(() => {})
+        .finally(() => { preloadPromise = null; });
+}
+
 async function loadNextRound() {
     if (loadingMore.value) return;
     loadingMore.value = true;
     roundNumber.value++;
 
-    // Auto-save current progress
     await autoSaveSession();
 
     try {
-        const { data } = await axios.post('/community-tasks/refresh');
+        // Use preloaded data if available, otherwise fetch now
+        if (!preloadedData) {
+            if (preloadPromise) await preloadPromise;
+            else {
+                const { data } = await axios.post('/community-tasks/refresh');
+                preloadedData = data;
+            }
+        }
+
+        const data = preloadedData;
+        preloadedData = null;
 
         if (data.assignmentTasks.length === 0 && (!data.verificationTasks || data.verificationTasks.length === 0) && data.difficultyTasks.length === 0) {
-            // No more tasks available
             phase.value = 'summary';
             triggerFinalCelebration();
             return;
@@ -358,7 +383,6 @@ async function loadNextRound() {
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
 
-        // Go to first available phase
         if (assignmentQueue.value.length > 0) {
             phase.value = 'assignment';
         } else if (verificationQueue.value.length > 0) {
@@ -397,7 +421,11 @@ async function rateMap(map, level) {
             ratingQueue.value.splice(idx, 1);
         }
 
-        // Check if rating phase is done - load more
+        // Preload when running low
+        if (ratingQueue.value.length <= 2) {
+            preloadNextRound();
+        }
+
         if (ratingQueue.value.length === 0) {
             await sleep(400);
             await loadNextRound();
