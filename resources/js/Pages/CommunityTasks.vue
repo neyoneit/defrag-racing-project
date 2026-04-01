@@ -42,6 +42,7 @@ const confirmingRecord = ref(null);
 const assigning = ref(false);
 const completingSlot = ref(null);
 const assignHints = ref({}); // { demoId: 'message' }
+const pinnedDemoSlot = ref(null); // pin for assignment/verification (0/1/2)
 
 // Verification state
 const verificationQueue = ref([...(props.verificationTasks || [])]);
@@ -69,6 +70,8 @@ const showLeaderboardModal = ref(false);
 const fullLeaderboard = ref([]);
 const loadingLeaderboard = ref(false);
 const sessionSaved = ref(false);
+const loadingMore = ref(false);
+const roundNumber = ref(1);
 
 // Audio
 let audioCtx = null;
@@ -301,36 +304,129 @@ function tryBetterMatch(task) {
     confirmingRecord.value = record;
 }
 
+// ─── Pin ───────────────────────────────────────────────
+function toggleDemoPin(slotIdx) {
+    pinnedDemoSlot.value = pinnedDemoSlot.value === slotIdx ? null : slotIdx;
+}
+
+
 // ─── Task removal ──────────────────────────────────────
 async function removeTask(demoId, taskType) {
     const queue = taskType === 'verification' ? verificationQueue : assignmentQueue;
+    const visibleCount = 3;
+    const pin = pinnedDemoSlot.value;
     const idx = queue.value.findIndex(t => t.demo.id === demoId);
-    if (idx !== -1) {
-        completingSlot.value = demoId;
-        await sleep(600);
+    if (idx === -1) return;
+
+    completingSlot.value = demoId;
+    await sleep(600);
+
+    if (pin === null) {
+        // No pin - normal behavior, just remove
         queue.value.splice(idx, 1);
-        completingSlot.value = null;
+    } else {
+        // Pin active: replace completed task with next from backup,
+        // then ensure the new/remaining content is at pin position
+        const hadBackup = queue.value.length > visibleCount;
+        queue.value.splice(idx, 1);
+
+        if (hadBackup) {
+            // A new item slid into visible range at visibleCount-1
+            // Move it to pin position
+            const newIdx = visibleCount - 1;
+            if (newIdx !== pin && newIdx < queue.value.length) {
+                const task = queue.value.splice(newIdx, 1)[0];
+                queue.value.splice(Math.min(pin, queue.value.length), 0, task);
+            }
+        }
+        // Always ensure pin position is populated if possible:
+        // If items exist but pin is past the end, pad with nulls won't work...
+        // Instead, just keep items left-aligned but visually show which slot is pinned
+    }
+    completingSlot.value = null;
+
+    // Preload when last phase (rating) is running low
+    const totalRemaining = assignmentQueue.value.length + verificationQueue.value.length + ratingQueue.value.length;
+    if (totalRemaining <= 2) {
+        preloadNextRound();
     }
 
-    // Phase transitions
+    // Phase transitions - move to next phase or load more
     if (phase.value === 'assignment' && assignmentQueue.value.length === 0) {
-        await sleep(800);
+        await sleep(400);
         if (verificationQueue.value.length > 0) {
             phase.value = 'verification';
         } else if (ratingQueue.value.length > 0) {
             phase.value = 'rating';
         } else {
-            phase.value = 'summary';
-            triggerFinalCelebration();
+            await loadNextRound();
         }
     } else if (phase.value === 'verification' && verificationQueue.value.length === 0) {
-        await sleep(800);
+        await sleep(400);
         if (ratingQueue.value.length > 0) {
             phase.value = 'rating';
         } else {
+            await loadNextRound();
+        }
+    }
+}
+
+let preloadedData = null;
+let preloadPromise = null;
+
+function preloadNextRound() {
+    if (preloadPromise || preloadedData) return;
+    preloadPromise = axios.post('/community-tasks/refresh')
+        .then(({ data }) => { preloadedData = data; })
+        .catch(() => {})
+        .finally(() => { preloadPromise = null; });
+}
+
+async function loadNextRound() {
+    if (loadingMore.value) return;
+    loadingMore.value = true;
+    roundNumber.value++;
+
+    await autoSaveSession();
+
+    try {
+        // Use preloaded data if available, otherwise fetch now
+        if (!preloadedData) {
+            if (preloadPromise) await preloadPromise;
+            else {
+                const { data } = await axios.post('/community-tasks/refresh');
+                preloadedData = data;
+            }
+        }
+
+        const data = preloadedData;
+        preloadedData = null;
+
+        if (data.assignmentTasks.length === 0 && (!data.verificationTasks || data.verificationTasks.length === 0) && data.difficultyTasks.length === 0) {
             phase.value = 'summary';
             triggerFinalCelebration();
+            return;
         }
+
+        assignmentQueue.value.push(...data.assignmentTasks);
+        verificationQueue.value.push(...(data.verificationTasks || []));
+        ratingQueue.value.push(...data.difficultyTasks);
+        personalBest.value = data.personalBest;
+        leaderboardTop.value = data.leaderboard;
+
+        if (assignmentQueue.value.length > 0) {
+            phase.value = 'assignment';
+        } else if (verificationQueue.value.length > 0) {
+            phase.value = 'verification';
+        } else {
+            phase.value = 'rating';
+        }
+    } catch (err) {
+        console.error('Failed to load more tasks:', err);
+        phase.value = 'summary';
+        triggerFinalCelebration();
+    } finally {
+        loadingMore.value = false;
     }
 }
 
@@ -349,18 +445,19 @@ async function rateMap(map, level) {
         const points = (props.weights?.difficulty_ratings || 1);
         awardPoints(points);
 
-        // Remove from queue after delay
-        await sleep(800);
-        const idx = ratingQueue.value.findIndex(m => m.id === map.id);
-        if (idx !== -1) {
-            ratingQueue.value.splice(idx, 1);
-        }
-
-        // Check if rating phase is done
-        if (ratingQueue.value.length === 0) {
+        // Check if all visible ratings are done
+        const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
+        if (allRated) {
             await sleep(600);
-            phase.value = 'summary';
-            triggerFinalCelebration();
+            // Remove all rated from queue at once
+            ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
+            if (ratingQueue.value.length <= 2) {
+                preloadNextRound();
+            }
+            if (ratingQueue.value.length === 0) {
+                await sleep(400);
+                await loadNextRound();
+            }
         }
     } catch (err) {
         console.error('Rating failed:', err);
@@ -374,16 +471,19 @@ async function skipRating(map) {
     streak.value = 0;
     awardPoints(1);
     completedRatings.value++;
+    ratedMapIds.value.add(map.id); // mark as done so it fades
 
-    const idx = ratingQueue.value.findIndex(m => m.id === map.id);
-    if (idx !== -1) {
-        ratingQueue.value.splice(idx, 1);
-    }
-
-    if (ratingQueue.value.length === 0) {
+    const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
+    if (allRated) {
         await sleep(600);
-        phase.value = 'summary';
-        triggerFinalCelebration();
+        ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
+        if (ratingQueue.value.length <= 2) {
+            preloadNextRound();
+        }
+        if (ratingQueue.value.length === 0) {
+            await sleep(400);
+            await loadNextRound();
+        }
     }
 }
 
@@ -528,13 +628,14 @@ function triggerFinalCelebration() {
     for (let i = 0; i < 5; i++) {
         setTimeout(() => triggerConfetti(60, 2), i * 300);
     }
-    saveSession();
+    autoSaveSession();
 }
 
 // ─── Session management ────────────────────────────────
-async function saveSession() {
-    if (sessionSaved.value || sessionPoints.value === 0) return;
-    sessionSaved.value = true;
+let lastSavedPoints = 0;
+
+async function autoSaveSession() {
+    if (sessionPoints.value === 0 || sessionPoints.value === lastSavedPoints) return;
 
     try {
         const { data } = await axios.post('/community-tasks/save-session', {
@@ -542,12 +643,18 @@ async function saveSession() {
             assignments_completed: completedAssignments.value,
             ratings_completed: completedRatings.value,
         });
+        lastSavedPoints = sessionPoints.value;
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
     } catch (err) {
         console.error('Failed to save session:', err);
-        sessionSaved.value = false;
     }
+}
+
+async function endSession() {
+    await autoSaveSession();
+    phase.value = 'summary';
+    triggerFinalCelebration();
 }
 
 async function startNewSession() {
@@ -564,7 +671,8 @@ async function startNewSession() {
         ratedValues.value = {};
         sessionPoints.value = 0;
         streak.value = 0;
-        sessionSaved.value = false;
+        lastSavedPoints = 0;
+        roundNumber.value = 1;
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
         phase.value = data.assignmentTasks.length > 0 ? 'assignment'
@@ -595,9 +703,23 @@ function sleep(ms) {
 }
 
 // ─── Lifecycle ─────────────────────────────────────────
+function handleBeforeUnload() {
+    if (sessionPoints.value > 0 && sessionPoints.value !== lastSavedPoints) {
+        navigator.sendBeacon('/community-tasks/save-session',
+            new Blob([JSON.stringify({
+                points: sessionPoints.value,
+                assignments_completed: completedAssignments.value,
+                ratings_completed: completedRatings.value,
+                _token: document.querySelector('meta[name="csrf-token"]')?.content,
+            })], { type: 'application/json' })
+        );
+    }
+}
+
 onMounted(() => {
     totalPointsEver.value = props.communityScore?.total_score || 0;
-    // Smart phase selection based on available tasks
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     if (props.assignmentTasks.length === 0) {
         if (props.verificationTasks?.length > 0) {
             phase.value = 'verification';
@@ -612,6 +734,8 @@ onMounted(() => {
 onUnmounted(() => {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (audioCtx) audioCtx.close();
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    autoSaveSession();
 });
 </script>
 
@@ -638,8 +762,17 @@ onUnmounted(() => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-4">
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-black text-gray-200">Community Tasks</h1>
-                    <p class="text-gray-500 text-sm mt-1">Earn points by assigning demos and rating map difficulty</p>
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-3xl font-black text-gray-200">Community Tasks</h1>
+                        <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Round {{ roundNumber }}</span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-1">
+                        <p class="text-gray-500 text-sm">Earn points by assigning demos and rating map difficulty</p>
+                        <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
+                            class="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500/30 px-2 py-0.5 rounded transition-colors">
+                            End Session
+                        </button>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-4 flex-wrap">
@@ -748,14 +881,32 @@ onUnmounted(() => {
         <!-- ═══ ASSIGNMENT PHASE ═══ -->
         <div v-if="phase === 'assignment'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleAssignments.length === 0" class="text-center py-16 text-gray-500">
-                No demos available for assignment right now. Skipping to difficulty ratings...
+                {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
+            </div>
+
+            <!-- Pin selector row -->
+            <div v-if="visibleAssignments.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                <button v-for="i in visibleAssignments.length" :key="'pin-a-'+i"
+                    @click="toggleDemoPin(i-1)"
+                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
+                    :class="pinnedDemoSlot === i-1
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
+                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
+                    <span>&#x1F4CC;</span>
+                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned - tasks fill here' : 'Pin this slot' }}</span>
+                </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="task in visibleAssignments" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 relative transition-all duration-300"
-                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+                    <div v-for="(task, slotIdx) in visibleAssignments" :key="task.demo.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
+                        :class="[
+                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
+                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-gray-700/40'
+                        ]"
+                        :style="pinnedDemoSlot !== null && visibleAssignments.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+                    >
 
                         <!-- ── Confirm overlay (only after clicking Assign) ── -->
                         <Transition name="confirm-slide">
@@ -951,14 +1102,32 @@ onUnmounted(() => {
         <!-- ═══ VERIFICATION PHASE ═══ -->
         <div v-if="phase === 'verification'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleVerifications.length === 0" class="text-center py-16 text-gray-500">
-                No demos to verify. Moving to ratings...
+                {{ loadingMore ? 'Loading more tasks...' : 'No demos to verify.' }}
+            </div>
+
+            <!-- Pin selector row -->
+            <div v-if="visibleVerifications.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                <button v-for="i in visibleVerifications.length" :key="'pin-v-'+i"
+                    @click="toggleDemoPin(i-1)"
+                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
+                    :class="pinnedDemoSlot === i-1
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
+                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
+                    <span>&#x1F4CC;</span>
+                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned' : 'Pin' }}</span>
+                </button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="task in visibleVerifications" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-emerald-700/30 relative transition-all duration-300"
-                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+                    <div v-for="(task, slotIdx) in visibleVerifications" :key="task.demo.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
+                        :class="[
+                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
+                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-emerald-700/30'
+                        ]"
+                        :style="pinnedDemoSlot !== null && visibleVerifications.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+                    >
 
                         <!-- Confirm overlay (for Better Match) -->
                         <Transition name="confirm-slide">
@@ -1069,12 +1238,15 @@ onUnmounted(() => {
                                     class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
-                                        : record.time_diff === 0
-                                            ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
-                                            : 'hover:bg-white/5'">
+                                        : task.current_record?.id === record.id
+                                            ? 'bg-emerald-500/15 ring-1 ring-emerald-400/30'
+                                            : record.time_diff === 0
+                                                ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
+                                                : 'hover:bg-white/5'">
                                     <div class="flex items-center gap-1.5 min-w-0">
-                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
-                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
+                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1085,7 +1257,46 @@ onUnmounted(() => {
                                                     : 'text-red-400'">
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
-                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
+                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-300' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Separator -->
+                        <div class="mx-2.5 border-t border-gray-700/20 my-1.5" />
+
+                        <!-- All records -->
+                        <div class="px-2.5 pb-2.5">
+                            <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                                All records ({{ task.all_records.length }})
+                            </div>
+                            <div class="max-h-44 overflow-y-auto custom-scrollbar">
+                                <button v-for="record in task.all_records" :key="'va-' + record.id"
+                                    @click="selectRecord(task, record)"
+                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    :class="selectedRecords[task.demo.id]?.id === record.id
+                                        ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
+                                        : task.current_record?.id === record.id
+                                            ? 'bg-emerald-500/15 ring-1 ring-emerald-400/30'
+                                            : record.time_diff === 0
+                                                ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
+                                                : 'hover:bg-white/5'">
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
+                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                        <span class="text-[9px]"
+                                            :class="record.time_diff === 0
+                                                ? 'bg-green-500/20 text-green-400 font-bold px-1 rounded'
+                                                : record.time < task.demo.time_ms
+                                                    ? 'text-green-400'
+                                                    : 'text-red-400'">
+                                            {{ formatSignedDiff(record.time, task.demo.time_ms) }}
+                                        </span>
+                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
                                     </div>
                                 </button>
                             </div>
@@ -1129,14 +1340,17 @@ onUnmounted(() => {
         <!-- ═══ RATING PHASE ═══ -->
         <div v-if="phase === 'rating'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleRatings.length === 0" class="text-center py-16 text-gray-500">
-                No maps available for rating right now.
+                {{ loadingMore ? 'Loading more tasks...' : 'No maps available for rating.' }}
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="map in visibleRatings" :key="map.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden transition-all duration-500"
-                        :class="ratedMapIds.has(map.id) ? 'scale-95 opacity-40' : ''">
+                    <div v-for="(map, slotIdx) in visibleRatings" :key="map.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border overflow-hidden transition-all duration-500 relative"
+                        :class="[
+                            ratedMapIds.has(map.id) ? 'scale-95 opacity-40' : '',
+                            'border-gray-700/40'
+                        ]">
                         <!-- Thumbnail - full aspect ratio -->
                         <div class="relative">
                             <img v-if="map.thumbnail"
@@ -1295,7 +1509,6 @@ onUnmounted(() => {
 }
 .task-card-leave-active {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: absolute;
 }
 .task-card-enter-from {
     opacity: 0;

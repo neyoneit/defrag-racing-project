@@ -12,6 +12,7 @@ use App\Models\RenderedVideo;
 use App\Models\UploadedDemo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -26,7 +27,7 @@ class CommunityTasksController extends Controller
 
         return Inertia::render('CommunityTasks', [
             'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 2),
+            'verificationTasks' => $this->generateVerificationTasks($user, 3),
             'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
             'communityScore' => $communityScore,
             'tiers' => config('community-scores.tiers'),
@@ -42,7 +43,7 @@ class CommunityTasksController extends Controller
 
         return response()->json([
             'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 2),
+            'verificationTasks' => $this->generateVerificationTasks($user, 3),
             'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
             'communityScore' => CommunityHelperScore::where('user_id', $user->id)->first(),
             'personalBest' => $this->getPersonalBest($user->id),
@@ -220,6 +221,7 @@ class CommunityTasksController extends Controller
     {
         // Get demo IDs this user already voted on
         $votedDemoIds = CommunityTaskVote::where('user_id', $user->id)->pluck('demo_id');
+        $lockedDemoIds = $this->getLockedDemoIds($user->id);
 
         // Priority 1: Demos with "not_sure" votes that need more reviewers (re-review)
         $reReviewDemoIds = DB::table('community_task_votes')
@@ -227,6 +229,7 @@ class CommunityTasksController extends Controller
             ->where('vote_type', 'not_sure')
             ->whereNull('consensus_status')
             ->whereNotIn('demo_id', $votedDemoIds)
+            ->whereNotIn('demo_id', $lockedDemoIds)
             ->groupBy('demo_id')
             ->havingRaw('COUNT(*) < 3')
             ->pluck('demo_id');
@@ -243,6 +246,7 @@ class CommunityTasksController extends Controller
             ->whereNotNull('map_name')
             ->whereNotNull('physics')
             ->whereNotIn('id', $votedDemoIds)
+            ->whereNotIn('id', $lockedDemoIds)
             ->whereNotIn('id', $reReviewDemoIds)
             ->inRandomOrder()
             ->limit($count * 4)
@@ -262,11 +266,12 @@ class CommunityTasksController extends Controller
 
             $task = $this->buildDemoTask($demo, 'assignment');
             if ($task) {
-                // Check if this is a re-review
                 $task['is_re_review'] = $reReviewDemoIds->contains($demo->id);
                 $tasks[] = $task;
             }
         }
+
+        $this->lockDemos(collect($tasks)->pluck('demo.id')->toArray(), $user->id);
 
         return $tasks;
     }
@@ -274,14 +279,12 @@ class CommunityTasksController extends Controller
     private function generateVerificationTasks($user, int $count): array
     {
         $votedDemoIds = CommunityTaskVote::where('user_id', $user->id)->pluck('demo_id');
+        $lockedDemoIds = $this->getLockedDemoIds($user->id);
 
-        // Demos already confirmed correct (1x correct = done, never show again)
         $confirmedDemoIds = CommunityTaskVote::where('vote_type', 'correct')
             ->distinct()
             ->pluck('demo_id');
 
-        // Find assigned demos that haven't been verified yet
-        // Exclude demos the user uploaded themselves
         $demos = UploadedDemo::query()
             ->whereNotNull('record_id')
             ->where('status', 'assigned')
@@ -289,6 +292,7 @@ class CommunityTasksController extends Controller
             ->whereNotNull('map_name')
             ->whereNotNull('physics')
             ->whereNotIn('id', $votedDemoIds)
+            ->whereNotIn('id', $lockedDemoIds)
             ->whereNotIn('id', $confirmedDemoIds)
             ->where(function ($q) use ($user) {
                 $q->where('user_id', '!=', $user->id)
@@ -316,6 +320,8 @@ class CommunityTasksController extends Controller
                 $tasks[] = $task;
             }
         }
+
+        $this->lockDemos(collect($tasks)->pluck('demo.id')->toArray(), $user->id);
 
         return $tasks;
     }
@@ -474,6 +480,33 @@ class CommunityTasksController extends Controller
                 'total_points' => (int) $entry->total_points,
             ];
         }, $entries);
+    }
+
+    private function getLockedDemoIds(int $excludeUserId): array
+    {
+        $locks = Cache::get('community_task_locks', []);
+        $now = now()->timestamp;
+
+        // Clean expired locks
+        $active = collect($locks)->filter(fn ($data) => $data['expires'] > $now && $data['user'] !== $excludeUserId);
+
+        return $active->keys()->map(fn ($k) => (int) $k)->toArray();
+    }
+
+    private function lockDemos(array $demoIds, int $userId): void
+    {
+        $locks = Cache::get('community_task_locks', []);
+        $now = now()->timestamp;
+
+        // Clean expired
+        $locks = collect($locks)->filter(fn ($data) => $data['expires'] > $now)->toArray();
+
+        // Add new locks
+        foreach ($demoIds as $id) {
+            $locks[$id] = ['user' => $userId, 'expires' => now()->addMinutes(30)->timestamp];
+        }
+
+        Cache::put('community_task_locks', $locks, now()->addHours(2));
     }
 
     private function resolveGametype(UploadedDemo $demo): string
