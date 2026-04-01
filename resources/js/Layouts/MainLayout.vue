@@ -41,7 +41,7 @@
             rankings: route().current('ranking') || route().current('community'),
             mapsmodels: route().current('maps') || route().current('models.*'),
             demos: route().current('demos.*') || route().current('youtube'),
-            challenges: route().current('headhunter.*') || route().current('marketplace.*'),
+            challenges: route().current('headhunter.*') || route().current('marketplace.*') || route().current('community.tasks'),
             tournaments: route().current('tournaments.*'),
             wiki: route().current('wiki.*'),
             bundles: route().current('bundles'),
@@ -57,6 +57,7 @@
             youtube: route().current('youtube'),
             headhunter: route().current('headhunter.*'),
             marketplace: route().current('marketplace.*'),
+            communityTasks: route().current('community.tasks'),
         };
     });
 
@@ -835,6 +836,7 @@
                                 <template #content>
                                     <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
                                     <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
+                                    <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -899,6 +901,7 @@
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Challenges</div>
                                         <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
                                         <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
+                                        <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items always in More (hidden inline below xl) -->
