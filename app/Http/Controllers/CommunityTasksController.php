@@ -27,7 +27,7 @@ class CommunityTasksController extends Controller
 
         return Inertia::render('CommunityTasks', [
             'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 2),
+            'verificationTasks' => $this->generateVerificationTasks($user, 3),
             'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
             'communityScore' => $communityScore,
             'tiers' => config('community-scores.tiers'),
@@ -43,7 +43,7 @@ class CommunityTasksController extends Controller
 
         return response()->json([
             'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 2),
+            'verificationTasks' => $this->generateVerificationTasks($user, 3),
             'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
             'communityScore' => CommunityHelperScore::where('user_id', $user->id)->first(),
             'personalBest' => $this->getPersonalBest($user->id),

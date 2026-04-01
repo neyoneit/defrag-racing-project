@@ -1191,6 +1191,42 @@ onUnmounted(() => {
                             </div>
                         </div>
 
+                        <!-- Separator -->
+                        <div class="mx-2.5 border-t border-gray-700/20 my-1.5" />
+
+                        <!-- All records -->
+                        <div class="px-2.5 pb-2.5">
+                            <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                                All records ({{ task.all_records.length }})
+                            </div>
+                            <div class="max-h-44 overflow-y-auto custom-scrollbar">
+                                <button v-for="record in task.all_records" :key="'va-' + record.id"
+                                    @click="selectRecord(task, record)"
+                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    :class="selectedRecords[task.demo.id]?.id === record.id
+                                        ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
+                                        : record.time_diff === 0
+                                            ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
+                                            : 'hover:bg-white/5'">
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
+                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                        <span class="text-[9px]"
+                                            :class="record.time_diff === 0
+                                                ? 'bg-green-500/20 text-green-400 font-bold px-1 rounded'
+                                                : record.time < task.demo.time_ms
+                                                    ? 'text-green-400'
+                                                    : 'text-red-400'">
+                                            {{ formatSignedDiff(record.time, task.demo.time_ms) }}
+                                        </span>
+                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Bottom action buttons -->
                         <div class="px-2.5 pb-2.5 pt-1.5 border-t border-gray-700/30 mt-1">
                             <Transition name="hint-fade">
@@ -1395,7 +1431,6 @@ onUnmounted(() => {
 }
 .task-card-leave-active {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: absolute;
 }
 .task-card-enter-from {
     opacity: 0;
