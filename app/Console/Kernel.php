@@ -52,11 +52,14 @@ class Kernel extends ConsoleKernel
         // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
         $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
 
-        // Auto-populate demome render queue when idle
+        // Auto-populate demome render queue when idle (fallback, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
-        // Biweekly auto-publish unlisted videos (every other Sunday at 18:00)
-        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00')->when(fn () => now()->weekOfYear % 2 === 0);
+        // Daily full queue rebuild: WR first, then fastest per map+physics
+        $schedule->command('demome:build-queue')->withoutOverlapping()->dailyAt('03:00');
+
+        // Auto-publish unlisted videos every 3 weeks on Sunday at 18:00
+        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00')->when(fn () => now()->weekOfYear % 3 === 0);
 
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);

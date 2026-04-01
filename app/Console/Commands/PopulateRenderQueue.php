@@ -38,13 +38,13 @@ class PopulateRenderQueue extends Command
 
         // Check if there are already pending items
         $pendingCount = RenderedVideo::where('status', 'pending')->count();
-        if ($pendingCount >= 10) {
+        if ($pendingCount >= 5) {
             $this->info("Already {$pendingCount} pending items. Skipping.");
             return;
         }
 
         $added = 0;
-        $limit = 10 - $pendingCount;
+        $limit = 5 - $pendingCount;
 
         // Priority 1: Verified World Records (rank=1, has demo, has online record link)
         if ($limit > 0) {

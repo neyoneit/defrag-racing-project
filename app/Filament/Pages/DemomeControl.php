@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\RenderedVideo;
+use App\Models\UploadedDemo;
 use App\Models\SiteSetting;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
@@ -81,16 +82,67 @@ class DemomeControl extends Page
             'last_auto_publish' => SiteSetting::get('demome:last_auto_publish')
                 ? Carbon::parse(SiteSetting::get('demome:last_auto_publish'))
                 : null,
+            'backlog' => $this->getBacklogStats(),
         ];
     }
 
     private function getNextBiweeklyPublish(): Carbon
     {
         $next = Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0);
-        if ($next->weekOfYear % 2 !== 0) {
+        while ($next->weekOfYear % 3 !== 0) {
             $next->addWeek();
         }
         return $next;
+    }
+
+    private function getBacklogStats(): array
+    {
+        $wrRemaining = UploadedDemo::whereNotNull('record_id')
+            ->whereHas('record', fn ($q) => $q->where('rank', 1)->whereNull('deleted_at'))
+            ->whereDoesntHave('renderedVideo')
+            ->count();
+
+        $wrGameplayMs = UploadedDemo::whereNotNull('record_id')
+            ->whereHas('record', fn ($q) => $q->where('rank', 1)->whereNull('deleted_at'))
+            ->whereDoesntHave('renderedVideo')
+            ->sum('time_ms');
+
+        $nonWrRemaining = UploadedDemo::whereNotNull('record_id')
+            ->whereHas('record', fn ($q) => $q->where('rank', '>', 1)->whereNull('deleted_at'))
+            ->whereDoesntHave('renderedVideo')
+            ->count();
+
+        $offlineRemaining = UploadedDemo::whereNull('record_id')
+            ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
+            ->where('time_ms', '>', 0)
+            ->whereDoesntHave('renderedVideo')
+            ->count();
+
+        $todayAuto = RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->whereDate('created_at', today())
+            ->count();
+
+        $todayGameplayMs = RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->whereDate('created_at', today())
+            ->sum('time_ms');
+
+        $todayRenderSec = RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->whereDate('created_at', today())
+            ->sum('render_duration_seconds');
+
+        return [
+            'wr_remaining' => $wrRemaining,
+            'wr_gameplay_hours' => round($wrGameplayMs / 3600000, 1),
+            'non_wr_remaining' => $nonWrRemaining,
+            'offline_remaining' => $offlineRemaining,
+            'total_remaining' => $wrRemaining + $nonWrRemaining + $offlineRemaining,
+            'today_auto' => $todayAuto,
+            'today_gameplay_hours' => round($todayGameplayMs / 3600000, 1),
+            'today_render_hours' => round($todayRenderSec / 3600, 1),
+        ];
     }
 
     public function togglePause(): void

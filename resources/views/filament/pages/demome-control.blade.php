@@ -107,6 +107,44 @@
         </div>
     </x-filament::section>
 
+    {{-- Render Backlog --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">Render Backlog</x-slot>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+                <span class="text-gray-500 dark:text-gray-400 block">WR Demos</span>
+                <span class="text-xl font-bold text-yellow-500">{{ number_format($backlog['wr_remaining']) }}</span>
+                <span class="text-gray-500 text-xs">({{ $backlog['wr_gameplay_hours'] }}h gameplay)</span>
+            </div>
+            <div>
+                <span class="text-gray-500 dark:text-gray-400 block">Non-WR (online)</span>
+                <span class="text-xl font-bold text-blue-500">{{ number_format($backlog['non_wr_remaining']) }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500 dark:text-gray-400 block">Offline Demos</span>
+                <span class="text-xl font-bold text-gray-400">{{ number_format($backlog['offline_remaining']) }}</span>
+            </div>
+            <div>
+                <span class="text-gray-500 dark:text-gray-400 block">Total Remaining</span>
+                <span class="text-xl font-bold text-white">{{ number_format($backlog['total_remaining']) }}</span>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t border-gray-700/30 flex items-center gap-6 text-sm">
+            <div>
+                <span class="text-gray-500 dark:text-gray-400">Today (auto):</span>
+                <span class="font-medium text-green-400">{{ $backlog['today_auto'] }} demos</span>
+            </div>
+            <div>
+                <span class="text-gray-500 dark:text-gray-400">Today gameplay:</span>
+                <span class="text-gray-300">{{ $backlog['today_gameplay_hours'] }}h</span>
+            </div>
+            <div>
+                <span class="text-gray-500 dark:text-gray-400">Today render time:</span>
+                <span class="text-gray-300">{{ $backlog['today_render_hours'] }}h</span>
+            </div>
+        </div>
+    </x-filament::section>
+
     {{-- Auto-Publish Schedule --}}
     <x-filament::section class="mt-4">
         <x-slot name="heading">Auto-Publish Schedule</x-slot>

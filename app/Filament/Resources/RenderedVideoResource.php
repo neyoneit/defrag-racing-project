@@ -120,6 +120,8 @@ class RenderedVideoResource extends Resource
     {
         return $table
             ->striped()
+            ->paginated([10, 25, 50])
+            ->defaultPaginationPageOption(25)
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->sortable(),

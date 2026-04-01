@@ -26,6 +26,7 @@ use App\Http\Controllers\DemoReportController;
 use App\Http\Controllers\YoutubeController;
 use App\Http\Controllers\RenderRequestController;
 use App\Http\Controllers\CommunityLeaderboardController;
+use App\Http\Controllers\CommunityTasksController;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +61,11 @@ Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
+Route::get('/community-tasks', [CommunityTasksController::class, 'index'])->middleware(['auth', 'verified'])->name('community.tasks');
+Route::post('/community-tasks/refresh', [CommunityTasksController::class, 'refresh'])->middleware(['auth', 'verified'])->name('community.tasks.refresh');
+Route::post('/community-tasks/vote', [CommunityTasksController::class, 'vote'])->middleware(['auth', 'verified'])->name('community.tasks.vote');
+Route::post('/community-tasks/save-session', [CommunityTasksController::class, 'saveSession'])->middleware(['auth', 'verified'])->name('community.tasks.save');
+Route::get('/community-tasks/leaderboard', [CommunityTasksController::class, 'fullLeaderboard'])->middleware(['auth', 'verified'])->name('community.tasks.leaderboard');
 
 Route::get('/rendered-demos', [YoutubeController::class, 'index'])->name('youtube');
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('render.request');
