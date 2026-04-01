@@ -69,6 +69,8 @@ const showLeaderboardModal = ref(false);
 const fullLeaderboard = ref([]);
 const loadingLeaderboard = ref(false);
 const sessionSaved = ref(false);
+const loadingMore = ref(false);
+const roundNumber = ref(1);
 
 // Audio
 let audioCtx = null;
@@ -312,25 +314,64 @@ async function removeTask(demoId, taskType) {
         completingSlot.value = null;
     }
 
-    // Phase transitions
+    // Phase transitions - move to next phase or load more
     if (phase.value === 'assignment' && assignmentQueue.value.length === 0) {
-        await sleep(800);
+        await sleep(400);
         if (verificationQueue.value.length > 0) {
             phase.value = 'verification';
         } else if (ratingQueue.value.length > 0) {
             phase.value = 'rating';
         } else {
-            phase.value = 'summary';
-            triggerFinalCelebration();
+            await loadNextRound();
         }
     } else if (phase.value === 'verification' && verificationQueue.value.length === 0) {
-        await sleep(800);
+        await sleep(400);
         if (ratingQueue.value.length > 0) {
             phase.value = 'rating';
         } else {
+            await loadNextRound();
+        }
+    }
+}
+
+async function loadNextRound() {
+    if (loadingMore.value) return;
+    loadingMore.value = true;
+    roundNumber.value++;
+
+    // Auto-save current progress
+    await autoSaveSession();
+
+    try {
+        const { data } = await axios.post('/community-tasks/refresh');
+
+        if (data.assignmentTasks.length === 0 && (!data.verificationTasks || data.verificationTasks.length === 0) && data.difficultyTasks.length === 0) {
+            // No more tasks available
             phase.value = 'summary';
             triggerFinalCelebration();
+            return;
         }
+
+        assignmentQueue.value.push(...data.assignmentTasks);
+        verificationQueue.value.push(...(data.verificationTasks || []));
+        ratingQueue.value.push(...data.difficultyTasks);
+        personalBest.value = data.personalBest;
+        leaderboardTop.value = data.leaderboard;
+
+        // Go to first available phase
+        if (assignmentQueue.value.length > 0) {
+            phase.value = 'assignment';
+        } else if (verificationQueue.value.length > 0) {
+            phase.value = 'verification';
+        } else {
+            phase.value = 'rating';
+        }
+    } catch (err) {
+        console.error('Failed to load more tasks:', err);
+        phase.value = 'summary';
+        triggerFinalCelebration();
+    } finally {
+        loadingMore.value = false;
     }
 }
 
@@ -356,11 +397,10 @@ async function rateMap(map, level) {
             ratingQueue.value.splice(idx, 1);
         }
 
-        // Check if rating phase is done
+        // Check if rating phase is done - load more
         if (ratingQueue.value.length === 0) {
-            await sleep(600);
-            phase.value = 'summary';
-            triggerFinalCelebration();
+            await sleep(400);
+            await loadNextRound();
         }
     } catch (err) {
         console.error('Rating failed:', err);
@@ -381,9 +421,8 @@ async function skipRating(map) {
     }
 
     if (ratingQueue.value.length === 0) {
-        await sleep(600);
-        phase.value = 'summary';
-        triggerFinalCelebration();
+        await sleep(400);
+        await loadNextRound();
     }
 }
 
@@ -528,13 +567,14 @@ function triggerFinalCelebration() {
     for (let i = 0; i < 5; i++) {
         setTimeout(() => triggerConfetti(60, 2), i * 300);
     }
-    saveSession();
+    autoSaveSession();
 }
 
 // ─── Session management ────────────────────────────────
-async function saveSession() {
-    if (sessionSaved.value || sessionPoints.value === 0) return;
-    sessionSaved.value = true;
+let lastSavedPoints = 0;
+
+async function autoSaveSession() {
+    if (sessionPoints.value === 0 || sessionPoints.value === lastSavedPoints) return;
 
     try {
         const { data } = await axios.post('/community-tasks/save-session', {
@@ -542,12 +582,18 @@ async function saveSession() {
             assignments_completed: completedAssignments.value,
             ratings_completed: completedRatings.value,
         });
+        lastSavedPoints = sessionPoints.value;
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
     } catch (err) {
         console.error('Failed to save session:', err);
-        sessionSaved.value = false;
     }
+}
+
+async function endSession() {
+    await autoSaveSession();
+    phase.value = 'summary';
+    triggerFinalCelebration();
 }
 
 async function startNewSession() {
@@ -564,7 +610,8 @@ async function startNewSession() {
         ratedValues.value = {};
         sessionPoints.value = 0;
         streak.value = 0;
-        sessionSaved.value = false;
+        lastSavedPoints = 0;
+        roundNumber.value = 1;
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
         phase.value = data.assignmentTasks.length > 0 ? 'assignment'
@@ -595,9 +642,23 @@ function sleep(ms) {
 }
 
 // ─── Lifecycle ─────────────────────────────────────────
+function handleBeforeUnload() {
+    if (sessionPoints.value > 0 && sessionPoints.value !== lastSavedPoints) {
+        navigator.sendBeacon('/community-tasks/save-session',
+            new Blob([JSON.stringify({
+                points: sessionPoints.value,
+                assignments_completed: completedAssignments.value,
+                ratings_completed: completedRatings.value,
+                _token: document.querySelector('meta[name="csrf-token"]')?.content,
+            })], { type: 'application/json' })
+        );
+    }
+}
+
 onMounted(() => {
     totalPointsEver.value = props.communityScore?.total_score || 0;
-    // Smart phase selection based on available tasks
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     if (props.assignmentTasks.length === 0) {
         if (props.verificationTasks?.length > 0) {
             phase.value = 'verification';
@@ -612,6 +673,8 @@ onMounted(() => {
 onUnmounted(() => {
     if (animFrameId) cancelAnimationFrame(animFrameId);
     if (audioCtx) audioCtx.close();
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    autoSaveSession();
 });
 </script>
 
@@ -638,8 +701,17 @@ onUnmounted(() => {
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-8 pb-4">
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-black text-gray-200">Community Tasks</h1>
-                    <p class="text-gray-500 text-sm mt-1">Earn points by assigning demos and rating map difficulty</p>
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-3xl font-black text-gray-200">Community Tasks</h1>
+                        <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Round {{ roundNumber }}</span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-1">
+                        <p class="text-gray-500 text-sm">Earn points by assigning demos and rating map difficulty</p>
+                        <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
+                            class="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500/30 px-2 py-0.5 rounded transition-colors">
+                            End Session
+                        </button>
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-4 flex-wrap">
@@ -748,7 +820,7 @@ onUnmounted(() => {
         <!-- ═══ ASSIGNMENT PHASE ═══ -->
         <div v-if="phase === 'assignment'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleAssignments.length === 0" class="text-center py-16 text-gray-500">
-                No demos available for assignment right now. Skipping to difficulty ratings...
+                {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -951,7 +1023,7 @@ onUnmounted(() => {
         <!-- ═══ VERIFICATION PHASE ═══ -->
         <div v-if="phase === 'verification'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleVerifications.length === 0" class="text-center py-16 text-gray-500">
-                No demos to verify. Moving to ratings...
+                {{ loadingMore ? 'Loading more tasks...' : 'No demos to verify.' }}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1129,7 +1201,7 @@ onUnmounted(() => {
         <!-- ═══ RATING PHASE ═══ -->
         <div v-if="phase === 'rating'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="visibleRatings.length === 0" class="text-center py-16 text-gray-500">
-                No maps available for rating right now.
+                {{ loadingMore ? 'Loading more tasks...' : 'No maps available for rating.' }}
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
