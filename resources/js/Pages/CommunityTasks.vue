@@ -42,6 +42,7 @@ const confirmingRecord = ref(null);
 const assigning = ref(false);
 const completingSlot = ref(null);
 const assignHints = ref({}); // { demoId: 'message' }
+const pinnedDemoSlot = ref(null); // pin for assignment/verification (0/1/2)
 
 // Verification state
 const verificationQueue = ref([...(props.verificationTasks || [])]);
@@ -303,16 +304,46 @@ function tryBetterMatch(task) {
     confirmingRecord.value = record;
 }
 
+// ─── Pin ───────────────────────────────────────────────
+function toggleDemoPin(slotIdx) {
+    pinnedDemoSlot.value = pinnedDemoSlot.value === slotIdx ? null : slotIdx;
+}
+
+
 // ─── Task removal ──────────────────────────────────────
 async function removeTask(demoId, taskType) {
     const queue = taskType === 'verification' ? verificationQueue : assignmentQueue;
+    const visibleCount = 3;
+    const pin = pinnedDemoSlot.value;
     const idx = queue.value.findIndex(t => t.demo.id === demoId);
-    if (idx !== -1) {
-        completingSlot.value = demoId;
-        await sleep(600);
+    if (idx === -1) return;
+
+    completingSlot.value = demoId;
+    await sleep(600);
+
+    if (pin === null) {
+        // No pin - normal behavior, just remove
         queue.value.splice(idx, 1);
-        completingSlot.value = null;
+    } else {
+        // Pin active: replace completed task with next from backup,
+        // then ensure the new/remaining content is at pin position
+        const hadBackup = queue.value.length > visibleCount;
+        queue.value.splice(idx, 1);
+
+        if (hadBackup) {
+            // A new item slid into visible range at visibleCount-1
+            // Move it to pin position
+            const newIdx = visibleCount - 1;
+            if (newIdx !== pin && newIdx < queue.value.length) {
+                const task = queue.value.splice(newIdx, 1)[0];
+                queue.value.splice(Math.min(pin, queue.value.length), 0, task);
+            }
+        }
+        // Always ensure pin position is populated if possible:
+        // If items exist but pin is past the end, pad with nulls won't work...
+        // Instead, just keep items left-aligned but visually show which slot is pinned
     }
+    completingSlot.value = null;
 
     // Preload when last phase (rating) is running low
     const totalRemaining = assignmentQueue.value.length + verificationQueue.value.length + ratingQueue.value.length;
@@ -414,21 +445,19 @@ async function rateMap(map, level) {
         const points = (props.weights?.difficulty_ratings || 1);
         awardPoints(points);
 
-        // Remove from queue after delay
-        await sleep(800);
-        const idx = ratingQueue.value.findIndex(m => m.id === map.id);
-        if (idx !== -1) {
-            ratingQueue.value.splice(idx, 1);
-        }
-
-        // Preload when running low
-        if (ratingQueue.value.length <= 2) {
-            preloadNextRound();
-        }
-
-        if (ratingQueue.value.length === 0) {
-            await sleep(400);
-            await loadNextRound();
+        // Check if all visible ratings are done
+        const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
+        if (allRated) {
+            await sleep(600);
+            // Remove all rated from queue at once
+            ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
+            if (ratingQueue.value.length <= 2) {
+                preloadNextRound();
+            }
+            if (ratingQueue.value.length === 0) {
+                await sleep(400);
+                await loadNextRound();
+            }
         }
     } catch (err) {
         console.error('Rating failed:', err);
@@ -442,15 +471,19 @@ async function skipRating(map) {
     streak.value = 0;
     awardPoints(1);
     completedRatings.value++;
+    ratedMapIds.value.add(map.id); // mark as done so it fades
 
-    const idx = ratingQueue.value.findIndex(m => m.id === map.id);
-    if (idx !== -1) {
-        ratingQueue.value.splice(idx, 1);
-    }
-
-    if (ratingQueue.value.length === 0) {
-        await sleep(400);
-        await loadNextRound();
+    const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
+    if (allRated) {
+        await sleep(600);
+        ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
+        if (ratingQueue.value.length <= 2) {
+            preloadNextRound();
+        }
+        if (ratingQueue.value.length === 0) {
+            await sleep(400);
+            await loadNextRound();
+        }
     }
 }
 
@@ -851,11 +884,29 @@ onUnmounted(() => {
                 {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
             </div>
 
+            <!-- Pin selector row -->
+            <div v-if="visibleAssignments.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                <button v-for="i in visibleAssignments.length" :key="'pin-a-'+i"
+                    @click="toggleDemoPin(i-1)"
+                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
+                    :class="pinnedDemoSlot === i-1
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
+                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
+                    <span>&#x1F4CC;</span>
+                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned - tasks fill here' : 'Pin this slot' }}</span>
+                </button>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="task in visibleAssignments" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 relative transition-all duration-300"
-                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+                    <div v-for="(task, slotIdx) in visibleAssignments" :key="task.demo.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
+                        :class="[
+                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
+                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-gray-700/40'
+                        ]"
+                        :style="pinnedDemoSlot !== null && visibleAssignments.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+                    >
 
                         <!-- ── Confirm overlay (only after clicking Assign) ── -->
                         <Transition name="confirm-slide">
@@ -1054,11 +1105,29 @@ onUnmounted(() => {
                 {{ loadingMore ? 'Loading more tasks...' : 'No demos to verify.' }}
             </div>
 
+            <!-- Pin selector row -->
+            <div v-if="visibleVerifications.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                <button v-for="i in visibleVerifications.length" :key="'pin-v-'+i"
+                    @click="toggleDemoPin(i-1)"
+                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
+                    :class="pinnedDemoSlot === i-1
+                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
+                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
+                    <span>&#x1F4CC;</span>
+                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned' : 'Pin' }}</span>
+                </button>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="task in visibleVerifications" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-emerald-700/30 relative transition-all duration-300"
-                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+                    <div v-for="(task, slotIdx) in visibleVerifications" :key="task.demo.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
+                        :class="[
+                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
+                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-emerald-700/30'
+                        ]"
+                        :style="pinnedDemoSlot !== null && visibleVerifications.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+                    >
 
                         <!-- Confirm overlay (for Better Match) -->
                         <Transition name="confirm-slide">
@@ -1169,12 +1238,15 @@ onUnmounted(() => {
                                     class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
-                                        : record.time_diff === 0
-                                            ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
-                                            : 'hover:bg-white/5'">
+                                        : task.current_record?.id === record.id
+                                            ? 'bg-emerald-500/15 ring-1 ring-emerald-400/30'
+                                            : record.time_diff === 0
+                                                ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
+                                                : 'hover:bg-white/5'">
                                     <div class="flex items-center gap-1.5 min-w-0">
-                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
-                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
+                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1185,7 +1257,7 @@ onUnmounted(() => {
                                                     : 'text-red-400'">
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
-                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
+                                        <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-300' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
                                     </div>
                                 </button>
                             </div>
@@ -1205,12 +1277,15 @@ onUnmounted(() => {
                                     class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
-                                        : record.time_diff === 0
-                                            ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
-                                            : 'hover:bg-white/5'">
+                                        : task.current_record?.id === record.id
+                                            ? 'bg-emerald-500/15 ring-1 ring-emerald-400/30'
+                                            : record.time_diff === 0
+                                                ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
+                                                : 'hover:bg-white/5'">
                                     <div class="flex items-center gap-1.5 min-w-0">
-                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
-                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
+                                        <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px]"
@@ -1270,9 +1345,12 @@ onUnmounted(() => {
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <TransitionGroup name="task-card">
-                    <div v-for="map in visibleRatings" :key="map.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden transition-all duration-500"
-                        :class="ratedMapIds.has(map.id) ? 'scale-95 opacity-40' : ''">
+                    <div v-for="(map, slotIdx) in visibleRatings" :key="map.id"
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border overflow-hidden transition-all duration-500 relative"
+                        :class="[
+                            ratedMapIds.has(map.id) ? 'scale-95 opacity-40' : '',
+                            'border-gray-700/40'
+                        ]">
                         <!-- Thumbnail - full aspect ratio -->
                         <div class="relative">
                             <img v-if="map.thumbnail"
