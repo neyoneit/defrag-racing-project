@@ -316,6 +316,7 @@ class CommunityTasksController extends Controller
                     'player_name' => $demo->record->user?->name ?? $demo->record->name,
                     'rank' => $demo->record->rank,
                     'time_diff' => abs($demo->record->time - $demo->time_ms),
+                    'youtube_url' => $demo->record->renderedVideos?->first()?->youtube_url,
                 ] : null;
                 $tasks[] = $task;
             }
@@ -332,7 +333,7 @@ class CommunityTasksController extends Controller
         $records = Record::where('mapname', $demo->map_name)
             ->where('gametype', $gametype)
             ->whereNull('deleted_at')
-            ->with('user:id,name')
+            ->with(['user:id,name', 'uploadedDemos:id,record_id', 'renderedVideos:id,record_id,youtube_url,youtube_video_id'])
             ->orderBy('time')
             ->limit(100)
             ->get();
@@ -357,13 +358,7 @@ class CommunityTasksController extends Controller
             'map_items' => $map?->items,
             'map_functions' => $map?->functions,
             'closest_matches' => $this->getClosestMatches($demo->time_ms, $records, 5),
-            'all_records' => $records->map(fn ($r) => [
-                'id' => $r->id,
-                'time' => $r->time,
-                'player_name' => $r->user?->name ?? $r->name,
-                'rank' => $r->rank,
-                'time_diff' => abs($r->time - $demo->time_ms),
-            ])->values()->toArray(),
+            'all_records' => $records->map(fn ($r) => $this->mapRecord($r, $demo->time_ms))->values()->toArray(),
         ];
     }
 
@@ -380,14 +375,24 @@ class CommunityTasksController extends Controller
         return $records->filter(fn ($r) => isset($uniqueTimes[$r->time]))
             ->sortBy(fn ($r) => [abs($r->time - $demoTime), $r->rank])
             ->values()
-            ->map(fn ($r) => [
-                'id' => $r->id,
-                'time' => $r->time,
-                'player_name' => $r->user?->name ?? $r->name,
-                'rank' => $r->rank,
-                'time_diff' => abs($r->time - $demoTime),
-            ])
+            ->map(fn ($r) => $this->mapRecord($r, $demoTime))
             ->toArray();
+    }
+
+    private function mapRecord($r, int $demoTime): array
+    {
+        $demo = $r->uploadedDemos->first();
+        $video = $r->renderedVideos->first();
+
+        return [
+            'id' => $r->id,
+            'time' => $r->time,
+            'player_name' => $r->user?->name ?? $r->name,
+            'rank' => $r->rank,
+            'time_diff' => abs($r->time - $demoTime),
+            'demo_id' => $demo?->id,
+            'youtube_url' => $video?->youtube_url,
+        ];
     }
 
     private function generateDifficultyTasks($user, int $count): array

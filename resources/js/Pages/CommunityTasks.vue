@@ -987,7 +987,10 @@ onUnmounted(() => {
                         <!-- Demo info -->
                         <div class="px-3 py-2.5 border-b border-gray-700/30 flex items-center justify-between">
                             <span class="text-lg font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></span>
-                            <div class="text-white font-mono text-xl font-black flex-shrink-0 ml-2">{{ formatTime(task.demo.time_ms) }}</div>
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                <span class="text-white font-mono text-xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
+                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                            </div>
                         </div>
 
                         <!-- Closest matches -->
@@ -1018,6 +1021,8 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1054,6 +1059,8 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1202,7 +1209,10 @@ onUnmounted(() => {
                         <!-- Demo info -->
                         <div class="px-3 py-2.5 border-b border-gray-700/30 flex items-center justify-between">
                             <span class="text-lg font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></span>
-                            <div class="text-white font-mono text-xl font-black flex-shrink-0 ml-2">{{ formatTime(task.demo.time_ms) }}</div>
+                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                                <span class="text-white font-mono text-xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
+                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                            </div>
                         </div>
 
                         <!-- Current assignment highlight -->
@@ -1223,6 +1233,7 @@ onUnmounted(() => {
                                         {{ formatSignedDiff(task.current_record.time, task.demo.time_ms) }}
                                     </span>
                                     <span class="text-white font-mono text-sm font-bold">{{ formatTime(task.current_record.time) }}</span>
+                                    <a v-if="task.current_record.youtube_url" :href="task.current_record.youtube_url" target="_blank" class="text-gray-500 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                 </div>
                             </div>
                         </div>
@@ -1258,6 +1269,8 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-300' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1297,6 +1310,8 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
