@@ -41,4 +41,6 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
     Route::get('/lookup-by-hash/{hash}', [\App\Http\Controllers\Api\DemomeController::class, 'lookupByHash']);
     Route::post('/swap-video/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'swapVideo']);
     Route::get('/upload-counts-today', [\App\Http\Controllers\Api\DemomeController::class, 'uploadCountsToday']);
+    Route::get('/publish-counts-today', [\App\Http\Controllers\Api\DemomeController::class, 'publishCountsToday']);
+    Route::post('/auto-approve-publish', [\App\Http\Controllers\Api\DemomeController::class, 'autoApprovePublish']);
 });

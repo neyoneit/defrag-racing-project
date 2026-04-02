@@ -659,6 +659,43 @@ class DemomeController extends Controller
         return $result;
     }
 
+    public function autoApprovePublish(Request $request)
+    {
+        $count = min((int) $request->input('count', 2), 5);
+
+        $videos = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_video_id')
+            ->whereNotNull('youtube_url')
+            ->where('is_visible', true)
+            ->whereNull('published_at')
+            ->where(function ($q) {
+                $q->whereNull('publish_approved')
+                  ->orWhere('publish_approved', false);
+            })
+            ->where('source', 'auto')
+            ->orderBy('created_at')
+            ->limit($count)
+            ->get();
+
+        $approved = 0;
+        foreach ($videos as $video) {
+            $video->update(['publish_approved' => true]);
+            $approved++;
+        }
+
+        return response()->json(['approved' => $approved]);
+    }
+
+    public function publishCountsToday()
+    {
+        return response()->json([
+            'published_today' => RenderedVideo::where('status', 'completed')
+                ->whereNotNull('published_at')
+                ->whereDate('published_at', today())
+                ->count(),
+        ]);
+    }
+
     public function uploadCountsToday()
     {
         $today = now()->toDateString();
