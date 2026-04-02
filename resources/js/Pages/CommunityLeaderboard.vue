@@ -58,6 +58,7 @@
         { key: 'clan_membership', label: 'Clan Member', icon: '🛡', desc: 'Being a member of a clan' },
         { key: 'nsfw_flags', label: 'NSFW Flags', icon: '🔞', desc: 'Maps flagged as NSFW content' },
         { key: 'wiki_edits', label: 'Wiki Edits', icon: '📖', desc: 'Wiki page revisions contributed' },
+        { key: 'community_tasks_completed', label: 'Community Tasks', icon: '🎰', desc: 'Tasks completed in Community Tasks (assigns, verifications, ratings, tags)' },
         { key: 'records_count', label: 'Records', icon: '🏆', desc: 'Total records set in the game' },
         { key: 'maps_authored', label: 'Maps Authored', icon: '🗺', desc: 'Maps you created as a mapper' },
         { key: 'models_authored', label: 'Models Authored', icon: '🎨', desc: 'Player models you created as a modeler' },
@@ -164,7 +165,11 @@
                         </div>
                     </div>
                 </div>
-                <p class="text-gray-500 text-sm bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">Who contributes the most to our community? This leaderboard celebrates those who go beyond just playing - the ones who upload demos, tag maps, create content, help moderate, and make defrag a better experience for everyone.</p>
+                <div class="text-sm bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2 space-y-1.5">
+                    <p class="text-gray-400">This is the <span class="text-white font-semibold">Community</span> Leaderboard - it rewards user-generated content and contributions that make defrag better for everyone. Uploading demos, tagging maps, writing reviews, creating maplists, and helping moderate all earn significant points here.</p>
+                    <p class="text-gray-500">Records are included with a minimal weight (0.1) because competitive performance already has its own dedicated <a :href="route('ranking')" class="text-blue-400 hover:text-blue-300 underline">Rankings page</a> with a specialized scoring formula. Here, community contributions matter most.</p>
+                    <p class="text-gray-500">Your <span class="text-yellow-400 font-semibold">badge tier</span> is calculated from community score <span class="text-gray-400">without records</span> - purely based on how much you contribute to the community.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -177,25 +182,20 @@
                 <span class="text-xs text-gray-500 hover:text-gray-300 cursor-help transition border-b border-dashed border-gray-600">How it works</span>
                 <div class="absolute right-0 top-full mt-2 hidden group-hover/how:block bg-gray-900/95 border border-white/20 rounded-lg px-4 py-3 text-xs text-gray-200 shadow-xl z-50 pointer-events-none w-80">
                     <div class="font-bold text-white mb-2">How scoring works</div>
-                    <div class="text-gray-400 mb-2">Points are earned by contributing to the community. Each action has a different weight:</div>
+                    <div class="text-gray-400 mb-2">Points are earned by contributing to the community. Each action has a weight:</div>
                     <div class="text-gray-300 space-y-0.5">
-                        <div>+ Demos uploaded, tags added to maps</div>
-                        <div>+ Maplists created, maps curated</div>
-                        <div>+ Alias & demo reports (only approved)</div>
-                        <div>+ Headhunter challenges & completions</div>
-                        <div>+ Models uploaded & approved</div>
-                        <div>+ Marketplace listings & reviews</div>
-                        <div>+ Record flags (only approved)</div>
-                        <div>+ Map difficulty ratings</div>
-                        <div>+ Video render requests (completed)</div>
-                        <div>+ Clan creation & membership</div>
-                        <div>+ Profile customization, social connections</div>
-                        <div>+ Donations, map/model authoring</div>
+                        <div><span class="text-yellow-400">5 pts:</span> Headhunter challenges, models/maps authored</div>
+                        <div><span class="text-yellow-400">3 pts:</span> Demo assigns, alias reports, maplists, marketplace listings/reviews, record flags, clan creation, wiki edits</div>
+                        <div><span class="text-yellow-400">2 pts:</span> Demos uploaded, maplist maps, render requests, NSFW flags, avatar, background</div>
+                        <div><span class="text-yellow-400">1 pt:</span> Tags, maplist likes/favs, play later, difficulty ratings, clan membership, socials, layout, effects</div>
+                        <div><span class="text-yellow-400">0.5 pt:</span> Donations (per EUR)</div>
+                        <div><span class="text-yellow-400">0.1 pt:</span> Community Tasks completed (50 tasks = 5 pts)</div>
                     </div>
-                    <div class="mt-2 pt-2 border-t border-white/10 text-gray-500">
-                        <div>Records count with very low weight (0.1).</div>
-                        <div>Badge tier is based on score excluding records.</div>
-                        <div>Scores recalculated daily. Click a row for full breakdown.</div>
+                    <div class="mt-2 pt-2 border-t border-white/10">
+                        <div class="text-amber-400 font-semibold mb-1">Badge tier vs Total score</div>
+                        <div class="text-gray-400"><span class="text-white">Total score</span> = everything above + records (0.1 pts each). Used for leaderboard ranking.</div>
+                        <div class="text-gray-400"><span class="text-white">Badge tier</span> = total score <span class="text-red-400">minus records</span>. Only community contributions determine your badge color.</div>
+                        <div class="text-gray-500 mt-1">Scores recalculated every 30 min. Click a row for full breakdown.</div>
                     </div>
                 </div>
             </div>

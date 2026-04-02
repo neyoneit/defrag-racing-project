@@ -66,6 +66,7 @@ Route::post('/community-tasks/refresh', [CommunityTasksController::class, 'refre
 Route::post('/community-tasks/vote', [CommunityTasksController::class, 'vote'])->middleware(['auth', 'verified'])->name('community.tasks.vote');
 Route::post('/community-tasks/save-session', [CommunityTasksController::class, 'saveSession'])->middleware(['auth', 'verified'])->name('community.tasks.save');
 Route::get('/community-tasks/leaderboard', [CommunityTasksController::class, 'fullLeaderboard'])->middleware(['auth', 'verified'])->name('community.tasks.leaderboard');
+Route::post('/community-tasks/request-render', [CommunityTasksController::class, 'requestDifficultyRender'])->middleware(['auth', 'verified'])->name('community.tasks.request-render');
 
 Route::get('/rendered-demos', [YoutubeController::class, 'index'])->name('youtube');
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('render.request');

@@ -23,6 +23,7 @@ return [
         'clan_membership' => 1,
         'nsfw_flags' => 2,
         'wiki_edits' => 3,
+        'community_tasks_completed' => 0.1, // 50 tasks = 5 pts, 200 tasks = 20 pts
         'difficulty_ratings' => 1,
         'records_count' => 0.1,
         'maps_authored' => 5,

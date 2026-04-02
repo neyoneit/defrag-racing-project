@@ -26,9 +26,10 @@ class CommunityTasksController extends Controller
         $communityScore = CommunityHelperScore::where('user_id', $user->id)->first();
 
         return Inertia::render('CommunityTasks', [
-            'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 3),
-            'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
+            'assignmentTasks' => $this->generateAssignmentTasks($user, 1),
+            'verificationTasks' => $this->generateVerificationTasks($user, 1),
+            'difficultyTasks' => $this->generateDifficultyTasks($user, 1),
+            'tagTasks' => $this->generateTagTasks($user, 1),
             'communityScore' => $communityScore,
             'tiers' => config('community-scores.tiers'),
             'weights' => config('community-scores.weights'),
@@ -42,9 +43,10 @@ class CommunityTasksController extends Controller
         $user = Auth::user();
 
         return response()->json([
-            'assignmentTasks' => $this->generateAssignmentTasks($user, 3),
-            'verificationTasks' => $this->generateVerificationTasks($user, 3),
-            'difficultyTasks' => $this->generateDifficultyTasks($user, 6),
+            'assignmentTasks' => $this->generateAssignmentTasks($user, 1),
+            'verificationTasks' => $this->generateVerificationTasks($user, 1),
+            'difficultyTasks' => $this->generateDifficultyTasks($user, 1),
+            'tagTasks' => $this->generateTagTasks($user, 1),
             'communityScore' => CommunityHelperScore::where('user_id', $user->id)->first(),
             'personalBest' => $this->getPersonalBest($user->id),
             'leaderboard' => $this->getLeaderboard(),
@@ -404,8 +406,19 @@ class CommunityTasksController extends Controller
 
         $ratedMapIds = MapDifficultyRating::where('user_id', $user->id)->pluck('map_id');
 
+        // Exclude maps with active render cooldown (requested render, wait 1 day)
+        $cooldownMapIds = collect();
+        $cooldownKeys = Cache::get('difficulty_render_cooldown_maps', []);
+        foreach ($cooldownKeys as $mapId => $expiresAt) {
+            if ($expiresAt > now()->timestamp) {
+                $cooldownMapIds->push($mapId);
+            }
+        }
+
+        $excludeIds = $ratedMapIds->merge($cooldownMapIds);
+
         $maps = Map::whereIn('name', $userMapNames)
-            ->whereNotIn('id', $ratedMapIds)
+            ->whereNotIn('id', $excludeIds)
             ->whereNotNull('thumbnail')
             ->inRandomOrder()
             ->limit($count)
@@ -413,7 +426,7 @@ class CommunityTasksController extends Controller
 
         if ($maps->count() < $count) {
             $remaining = $count - $maps->count();
-            $existingIds = $maps->pluck('id')->merge($ratedMapIds);
+            $existingIds = $maps->pluck('id')->merge($excludeIds);
 
             $extraMaps = Map::whereNotIn('id', $existingIds)
                 ->whereNotNull('thumbnail')
@@ -424,14 +437,119 @@ class CommunityTasksController extends Controller
             $maps = $maps->concat($extraMaps);
         }
 
-        return $maps->map(fn ($map) => [
-            'id' => $map->id,
-            'name' => $map->name,
-            'thumbnail' => $map->thumbnail,
-            'weapons' => $map->weapons,
-            'items' => $map->items,
-            'functions' => $map->functions,
-        ])->values()->toArray();
+        $mapNames = $maps->pluck('name');
+        $videos = RenderedVideo::whereIn('map_name', $mapNames)
+            ->where('status', 'completed')
+            ->where('is_visible', true)
+            ->whereNotNull('youtube_url')
+            ->select('map_name', 'physics', 'gametype', 'youtube_url', 'youtube_video_id', 'player_name', 'time_ms')
+            ->orderBy('time_ms')
+            ->get()
+            ->groupBy('map_name');
+
+        return $maps->map(function ($map) use ($videos) {
+            $mapVideos = $videos->get($map->name, collect());
+
+            $videosByPhysics = [];
+            foreach (['vq3', 'cpm'] as $phys) {
+                $physVideos = $mapVideos->filter(fn ($v) => strtolower($v->physics) === $phys);
+                if ($physVideos->isNotEmpty()) {
+                    $videosByPhysics[$phys] = $physVideos->map(fn ($v) => [
+                        'youtube_url' => $v->youtube_url,
+                        'youtube_video_id' => $v->youtube_video_id,
+                        'player_name' => $v->player_name,
+                        'time_ms' => $v->time_ms,
+                        'gametype' => $v->gametype,
+                    ])->values()->toArray();
+                }
+            }
+
+            return [
+                'id' => $map->id,
+                'name' => $map->name,
+                'thumbnail' => $map->thumbnail,
+                'weapons' => $map->weapons,
+                'items' => $map->items,
+                'functions' => $map->functions,
+                'videos' => $videosByPhysics,
+            ];
+        })->values()->toArray();
+    }
+
+    private function generateTagTasks($user, int $count): array
+    {
+        // Find maps with few tags that this user hasn't tagged yet
+        $userTaggedMapIds = DB::table('map_tag')
+            ->where('user_id', $user->id)
+            ->pluck('map_id');
+
+        $maps = Map::query()
+            ->whereNotNull('thumbnail')
+            ->whereNotIn('id', $userTaggedMapIds)
+            ->withCount('tags')
+            ->having('tags_count', '<', 5)
+            ->inRandomOrder()
+            ->limit($count * 3)
+            ->get();
+
+        // If not enough low-tag maps, get any untagged-by-user maps
+        if ($maps->count() < $count) {
+            $remaining = $count - $maps->count();
+            $existingIds = $maps->pluck('id')->merge($userTaggedMapIds);
+
+            $extraMaps = Map::whereNotIn('id', $existingIds)
+                ->whereNotNull('thumbnail')
+                ->inRandomOrder()
+                ->limit($remaining)
+                ->get();
+
+            $maps = $maps->concat($extraMaps);
+        }
+
+        $selectedMaps = $maps->take($count);
+        $mapNames = $selectedMaps->pluck('name');
+        $videos = RenderedVideo::whereIn('map_name', $mapNames)
+            ->where('status', 'completed')
+            ->where('is_visible', true)
+            ->whereNotNull('youtube_url')
+            ->select('map_name', 'physics', 'gametype', 'youtube_url', 'youtube_video_id', 'player_name', 'time_ms')
+            ->orderBy('time_ms')
+            ->get()
+            ->groupBy('map_name');
+
+        return $selectedMaps->map(function ($map) use ($videos) {
+            $tags = $map->tags()->select('tags.id', 'tags.display_name', 'tags.category')->get();
+            $mapVideos = $videos->get($map->name, collect());
+
+            $videosByPhysics = [];
+            foreach (['vq3', 'cpm'] as $phys) {
+                $physVideos = $mapVideos->filter(fn ($v) => strtolower($v->physics) === $phys);
+                if ($physVideos->isNotEmpty()) {
+                    $videosByPhysics[$phys] = $physVideos->map(fn ($v) => [
+                        'youtube_url' => $v->youtube_url,
+                        'youtube_video_id' => $v->youtube_video_id,
+                        'player_name' => $v->player_name,
+                        'time_ms' => $v->time_ms,
+                        'gametype' => $v->gametype,
+                    ])->values()->toArray();
+                }
+            }
+
+            return [
+                'id' => $map->id,
+                'name' => $map->name,
+                'thumbnail' => $map->thumbnail,
+                'weapons' => $map->weapons,
+                'items' => $map->items,
+                'functions' => $map->functions,
+                'videos' => $videosByPhysics,
+                'tags' => $tags->map(fn ($t) => [
+                    'id' => $t->id,
+                    'display_name' => $t->display_name,
+                    'category' => $t->category,
+                ])->toArray(),
+            ];
+        })->values()->toArray();
     }
 
     // ─── Helpers ───────────────────────────────────────────
@@ -520,5 +638,80 @@ class CommunityTasksController extends Controller
             return $demo->gametype;
         }
         return 'run_' . strtolower($demo->physics ?? 'vq3');
+    }
+
+    public function requestDifficultyRender(Request $request)
+    {
+        $request->validate(['map_id' => 'required|exists:maps,id']);
+        $user = Auth::user();
+        $map = Map::findOrFail($request->map_id);
+
+        // Rate limit: 5 render requests per day from community tasks
+        $cacheKey = "ct_render_requests_{$user->id}_" . now()->format('Y-m-d');
+        $todayCount = Cache::get($cacheKey, 0);
+        if ($todayCount >= 5) {
+            return response()->json(['error' => 'Daily render request limit reached (5/day)'], 429);
+        }
+
+        $created = [];
+
+        foreach (['vq3', 'cpm'] as $physics) {
+            // Find WR record with a demo for this map+physics (any gametype including ctf)
+            $record = Record::where('mapname', $map->name)
+                ->where('physics', $physics)
+                ->whereNull('deleted_at')
+                ->whereHas('uploadedDemos')
+                ->orderBy('time')
+                ->first();
+
+            if (!$record) continue;
+
+            $demo = $record->uploadedDemos()->first();
+            if (!$demo) continue;
+
+            // Check if already rendered or in queue
+            $existing = RenderedVideo::where('demo_id', $demo->id)
+                ->whereIn('status', ['pending', 'rendering', 'uploading', 'completed'])
+                ->exists();
+
+            if ($existing) continue;
+
+            $demoUrl = config('app.url') . "/api/demome/download-demo/{$demo->id}";
+
+            RenderedVideo::create([
+                'map_name' => $map->name,
+                'player_name' => $demo->player_name ?? $record->name,
+                'physics' => $physics,
+                'time_ms' => $demo->time_ms ?? $record->time,
+                'gametype' => $record->gametype,
+                'record_id' => $record->id,
+                'demo_id' => $demo->id,
+                'user_id' => $user->id,
+                'source' => 'community_tasks',
+                'requested_by' => $user->plain_name ?? $user->name,
+                'status' => 'pending',
+                'priority' => 0,
+                'demo_url' => $demoUrl,
+                'demo_filename' => $demo->original_filename,
+            ]);
+
+            $created[] = $physics;
+        }
+
+        if (empty($created)) {
+            return response()->json(['error' => 'No demos available for rendering on this map'], 404);
+        }
+
+        // Set 1-day cooldown for this map in difficulty tasks
+        $cooldowns = Cache::get('difficulty_render_cooldown_maps', []);
+        $cooldowns[$map->id] = now()->addDay()->timestamp;
+        Cache::put('difficulty_render_cooldown_maps', $cooldowns, now()->addDays(2));
+
+        Cache::put($cacheKey, $todayCount + 1, now()->endOfDay());
+
+        return response()->json([
+            'success' => true,
+            'rendered_physics' => $created,
+        ]);
     }
 }
