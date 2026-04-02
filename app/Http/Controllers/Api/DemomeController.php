@@ -658,4 +658,39 @@ class DemomeController extends Controller
 
         return $result;
     }
+
+    public function uploadCountsToday()
+    {
+        $today = now()->toDateString();
+
+        $total = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_url')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        $auto = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_url')
+            ->where('source', 'auto')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        $web = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_url')
+            ->where('source', 'web')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        $discord = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_url')
+            ->where('source', 'discord')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        return response()->json([
+            'total' => $total,
+            'auto' => $auto,
+            'web' => $web,
+            'discord' => $discord,
+        ]);
+    }
 }
