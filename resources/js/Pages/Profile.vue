@@ -123,6 +123,10 @@
             type: Object,
             default: null
         },
+        playerRankings: {
+            type: Array,
+            default: () => []
+        },
         load_times: Object,
         renderStats: {
             type: Object,
@@ -217,6 +221,8 @@
         { id: 'badge_community', visible: true, row: 1 },
         { id: 'badge_tagger', visible: true, row: 1 },
         { id: 'badge_assigner', visible: true, row: 1 },
+        { id: 'player_rank', visible: true, row: 1 },
+        { id: 'community_rank', visible: true, row: 1 },
         { id: 'clan', visible: true, row: 1 },
         { id: 'wr_counters', visible: true, row: 1 },
         { id: 'socials', visible: true, row: 2 },
@@ -255,6 +261,36 @@
     };
     const hasRow1Items = computed(() => headerItems.value.some(h => h.visible && h.row === 1));
     const hasRow2Items = computed(() => headerItems.value.some(h => h.visible && h.row === 2));
+    const hasRow3Items = computed(() => headerItems.value.some(h => h.visible && h.row === 3));
+
+    // Player rankings helpers
+    const getRanking = (physics, mode, category = 'overall') => props.playerRankings.find(r => r.physics === physics && r.mode === mode && r.category === category);
+    const hasPlayerRank = computed(() => props.playerRankings.length > 0);
+
+    // Score tooltip (teleported to body to avoid overflow clipping)
+    const scoreTooltip = ref(null);
+    const scoreTooltipStyle = computed(() => {
+        if (!scoreTooltip.value?.el) return {};
+        const rect = scoreTooltip.value.el.getBoundingClientRect();
+        return {
+            position: 'fixed',
+            left: rect.left + rect.width / 2 + 'px',
+            top: rect.top - 8 + 'px',
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999,
+        };
+    });
+    const getDisplayRank = (physics, mode, category = 'overall') => {
+        const r = getRanking(physics, mode, category);
+        if (!r) return null;
+        return (r.active_players_rank && r.active_players_rank > 0) ? r.active_players_rank : r.all_players_rank;
+    };
+    const vq3RunRank = computed(() => getDisplayRank('vq3', 'run'));
+    const cpmRunRank = computed(() => getDisplayRank('cpm', 'run'));
+    const rankModes = ['run', 'ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'];
+    const rankCategories = ['overall', 'strafe', 'rocket', 'plasma', 'grenade', 'bfg', 'slick', 'tele', 'lg'];
+    const activeModes = computed(() => rankModes.filter(m => props.playerRankings.some(r => r.mode === m)));
+    const activeCategories = computed(() => rankCategories.filter(c => props.playerRankings.some(r => r.category === c)));
     const orderedSections = computed(() => {
         const saved = layout.value.sections;
         if (!saved || !saved.length) return defaultSections;
@@ -868,9 +904,9 @@
         <Head title="Profile" />
 
         <!-- Profile Header with Background -->
-        <div class="relative h-[280px] overflow-hidden">
+        <div class="relative h-[280px] z-30">
             <!-- Background Image -->
-            <div v-if="user?.profile_background_path" class="absolute inset-0">
+            <div v-if="user?.profile_background_path" class="absolute inset-0 overflow-hidden">
                 <div class="absolute inset-0 flex justify-center">
                     <div class="relative w-full max-w-[1920px] h-full bg-top bg-no-repeat" :style="`background-image: url('/storage/${user.profile_background_path}'); background-size: 1920px auto;`">
                         <!-- Fade left edge of image -->
@@ -1001,6 +1037,54 @@
                                     Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
                             </div>
+                            <!-- Player Rank -->
+                            <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
+                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
+                                <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
+                                <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
+                                <span v-if="cpmRunRank" class="text-xs font-semibold text-purple-300 uppercase tracking-wider">CPM</span>
+                                <span v-if="cpmRunRank" class="text-sm font-black text-orange-400">#{{ cpmRunRank }}</span>
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 rounded-lg bg-black/95 border border-white/10 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-2xl z-[100] min-w-[340px]">
+                                    <template v-for="mode in activeModes" :key="mode">
+                                        <div class="font-bold text-white mb-1.5" :class="mode !== activeModes[0] ? 'mt-3 pt-2 border-t border-white/10' : ''">{{ mode.toUpperCase() }}</div>
+                                        <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-0.5">
+                                            <div class="text-gray-500 font-semibold text-[10px] uppercase">Category</div>
+                                            <div class="text-blue-400 font-semibold text-[10px] uppercase text-right">VQ3</div>
+                                            <div class="text-blue-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <div class="text-purple-400 font-semibold text-[10px] uppercase text-right">CPM</div>
+                                            <div class="text-purple-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <template v-for="cat in activeCategories.filter(c => getRanking('vq3', mode, c) || getRanking('cpm', mode, c))" :key="mode+'-'+cat">
+                                                <div class="text-gray-300" :class="cat === 'overall' ? 'font-semibold' : ''">{{ cat.charAt(0).toUpperCase() + cat.slice(1) }}</div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('vq3', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('vq3', mode, cat) ? '#' + getDisplayRank('vq3', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('vq3', mode, cat)?.all_players_rank ? '#' + getRanking('vq3', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('cpm', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('cpm', mode, cat) ? '#' + getDisplayRank('cpm', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('cpm', mode, cat)?.all_players_rank ? '#' + getRanking('cpm', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Community Rank -->
+                            <Link v-if="communityTier && showHeaderItem('community_rank') && headerItemRow('community_rank') === 1" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm group relative hover:scale-105 transition-transform" :style="{ order: headerItemOrder('community_rank') }">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Rank</span>
+                                <span class="text-sm font-black text-emerald-400">#{{ communityTier.rank }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Community Rank</div>
+                                    <div class="text-gray-400">Score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Tier: <span class="font-semibold" :style="{ color: communityTier.color }">{{ communityTier.name }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for leaderboard</div>
+                                </div>
+                            </Link>
                             <!-- Clan -->
                             <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 1" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
@@ -1090,6 +1174,54 @@
                                     Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
                             </div>
+                            <!-- Player Rank -->
+                            <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 2" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
+                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
+                                <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
+                                <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
+                                <span v-if="cpmRunRank" class="text-xs font-semibold text-purple-300 uppercase tracking-wider">CPM</span>
+                                <span v-if="cpmRunRank" class="text-sm font-black text-orange-400">#{{ cpmRunRank }}</span>
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 rounded-lg bg-black/95 border border-white/10 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-2xl z-[100] min-w-[340px]">
+                                    <template v-for="mode in activeModes" :key="mode">
+                                        <div class="font-bold text-white mb-1.5" :class="mode !== activeModes[0] ? 'mt-3 pt-2 border-t border-white/10' : ''">{{ mode.toUpperCase() }}</div>
+                                        <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-0.5">
+                                            <div class="text-gray-500 font-semibold text-[10px] uppercase">Category</div>
+                                            <div class="text-blue-400 font-semibold text-[10px] uppercase text-right">VQ3</div>
+                                            <div class="text-blue-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <div class="text-purple-400 font-semibold text-[10px] uppercase text-right">CPM</div>
+                                            <div class="text-purple-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <template v-for="cat in activeCategories.filter(c => getRanking('vq3', mode, c) || getRanking('cpm', mode, c))" :key="mode+'-'+cat">
+                                                <div class="text-gray-300" :class="cat === 'overall' ? 'font-semibold' : ''">{{ cat.charAt(0).toUpperCase() + cat.slice(1) }}</div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('vq3', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('vq3', mode, cat) ? '#' + getDisplayRank('vq3', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('vq3', mode, cat)?.all_players_rank ? '#' + getRanking('vq3', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('cpm', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('cpm', mode, cat) ? '#' + getDisplayRank('cpm', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('cpm', mode, cat)?.all_players_rank ? '#' + getRanking('cpm', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Community Rank -->
+                            <Link v-if="communityTier && showHeaderItem('community_rank') && headerItemRow('community_rank') === 2" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm group relative hover:scale-105 transition-transform" :style="{ order: headerItemOrder('community_rank') }">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Rank</span>
+                                <span class="text-sm font-black text-emerald-400">#{{ communityTier.rank }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Community Rank</div>
+                                    <div class="text-gray-400">Score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Tier: <span class="font-semibold" :style="{ color: communityTier.color }">{{ communityTier.name }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for leaderboard</div>
+                                </div>
+                            </Link>
                             <!-- Clan -->
                             <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 2" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
                                 <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
@@ -1151,6 +1283,143 @@
                                     </div>
                                 </Teleport>
                             </div>
+                        </div>
+
+                        <!-- Header Row 3 -->
+                        <div v-if="hasRow3Items" class="flex items-center gap-2 flex-wrap">
+                            <!-- Admin Badge -->
+                            <div v-if="user?.admin && showHeaderItem('badge_admin') && headerItemRow('badge_admin') === 3" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/70 border border-red-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_admin') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Admin">
+                                <span class="text-xs font-bold text-red-300 uppercase tracking-wider">Admin</span>
+                            </div>
+                            <!-- Moderator Badge -->
+                            <div v-if="user?.is_moderator && !user?.admin && showHeaderItem('badge_moderator') && headerItemRow('badge_moderator') === 3" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('badge_moderator') }">
+                                <img src="/images/svg/badge-moderator.svg" class="w-4 h-4" alt="Moderator">
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Moderator</span>
+                            </div>
+                            <!-- Donor Badge -->
+                            <div v-if="donorTier && showHeaderItem('badge_donor') && headerItemRow('badge_donor') === 3" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_donor') }"
+                                :class="{ 'bg-pink-950/70 border border-pink-400/50': donorTier === 'supporter', 'bg-amber-950/70 border border-amber-400/50': donorTier === 'gold', 'bg-cyan-950/70 border border-cyan-400/50': donorTier === 'diamond' }">
+                                <img :src="donorTier === 'diamond' ? '/images/svg/badge-donor-diamond.svg' : donorTier === 'gold' ? '/images/svg/badge-donor-gold.svg' : '/images/svg/badge-donor.svg'" class="w-4 h-4" alt="Supporter">
+                                <span class="text-xs font-bold uppercase tracking-wider" :class="{ 'text-pink-300': donorTier === 'supporter', 'text-amber-300': donorTier === 'gold', 'text-cyan-300': donorTier === 'diamond' }">
+                                    {{ donorTier === 'diamond' ? 'Diamond' : donorTier === 'gold' ? 'Gold' : '' }} Supporter
+                                </span>
+                                <div v-if="Object.keys(donationTotal).length" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Donated {{ Object.entries(donationTotal).map(([c, a]) => `${parseFloat(a).toFixed(0)} ${c}`).join(' + ') }}
+                                </div>
+                            </div>
+                            <!-- Community/Defragger Badge -->
+                            <Link v-if="communityTier && showHeaderItem('badge_community') && headerItemRow('badge_community') === 3" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg shadow-xl backdrop-blur-sm group relative border hover:scale-105 transition-transform" :style="{ order: headerItemOrder('badge_community'), borderColor: communityTier.color + '90', backgroundColor: communityTier.color + '35' }">
+                                <img src="/images/svg/badge-defragger.png" class="w-4 h-4" :style="{ filter: `drop-shadow(0 0 3px ${communityTier.color})` }" alt="Defragger">
+                                <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: communityTier.color }">{{ communityTier.name }}</span>
+                                <span class="text-xs font-black" :style="{ color: communityTier.color }">{{ communityTier.score }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Defragger Score</div>
+                                    <div class="text-gray-400">Community contribution score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Rank: <span class="text-white font-semibold">#{{ communityTier.rank }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for more info</div>
+                                </div>
+                            </Link>
+                            <!-- Tagger Badge -->
+                            <div v-if="tagCount > 0 && showHeaderItem('badge_tagger') && headerItemRow('badge_tagger') === 3" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_tagger') }">
+                                <img src="/images/svg/badge-tagger.svg" class="w-4 h-4" alt="Tagger">
+                                <span class="text-xs font-bold text-amber-300 uppercase tracking-wider">Tagger</span>
+                                <span class="text-xs font-black text-amber-400">{{ tagCount }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Contributed {{ tagCount }} {{ tagCount === 1 ? 'tag' : 'tags' }} to maps and maplists
+                                </div>
+                            </div>
+                            <!-- Assigner Badge -->
+                            <div v-if="(assignedDemoCounts.offline + assignedDemoCounts.online) > 0 && showHeaderItem('badge_assigner') && headerItemRow('badge_assigner') === 3" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-lime-950/70 border border-lime-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('badge_assigner') }">
+                                <svg class="w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M1 8a2 2 0 0 1 2-2h.93a2 2 0 0 0 1.664-.89l.812-1.22A2 2 0 0 1 8.07 3h3.86a2 2 0 0 1 1.664.89l.812 1.22A2 2 0 0 0 16.07 6H17a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8Zm13.5 3a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM10 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" /></svg>
+                                <span class="text-xs font-bold text-lime-300 uppercase tracking-wider">Assigner</span>
+                                <span class="text-xs font-black text-lime-400">{{ assignedDemoCounts.offline + assignedDemoCounts.online }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                    Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
+                                </div>
+                            </div>
+                            <!-- Player Rank -->
+                            <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 3" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
+                                <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
+                                <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
+                                <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
+                                <span v-if="cpmRunRank" class="text-xs font-semibold text-purple-300 uppercase tracking-wider">CPM</span>
+                                <span v-if="cpmRunRank" class="text-sm font-black text-orange-400">#{{ cpmRunRank }}</span>
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-4 py-3 rounded-lg bg-black/95 border border-white/10 text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-2xl z-[100] min-w-[340px]">
+                                    <template v-for="mode in activeModes" :key="mode">
+                                        <div class="font-bold text-white mb-1.5" :class="mode !== activeModes[0] ? 'mt-3 pt-2 border-t border-white/10' : ''">{{ mode.toUpperCase() }}</div>
+                                        <div class="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-0.5">
+                                            <div class="text-gray-500 font-semibold text-[10px] uppercase">Category</div>
+                                            <div class="text-blue-400 font-semibold text-[10px] uppercase text-right">VQ3</div>
+                                            <div class="text-blue-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <div class="text-purple-400 font-semibold text-[10px] uppercase text-right">CPM</div>
+                                            <div class="text-purple-400/40 font-semibold text-[10px] uppercase text-right">All</div>
+                                            <template v-for="cat in activeCategories.filter(c => getRanking('vq3', mode, c) || getRanking('cpm', mode, c))" :key="mode+'-'+cat">
+                                                <div class="text-gray-300" :class="cat === 'overall' ? 'font-semibold' : ''">{{ cat.charAt(0).toUpperCase() + cat.slice(1) }}</div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('vq3', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('vq3', mode, cat) ? '#' + getDisplayRank('vq3', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('vq3', mode, cat)?.all_players_rank ? '#' + getRanking('vq3', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                                <div class="text-right font-semibold" :class="getDisplayRank('cpm', mode, cat) ? 'text-white' : 'text-gray-600'">
+                                                    {{ getDisplayRank('cpm', mode, cat) ? '#' + getDisplayRank('cpm', mode, cat) : '-' }}
+                                                </div>
+                                                <div class="text-right text-gray-500">
+                                                    {{ getRanking('cpm', mode, cat)?.all_players_rank ? '#' + getRanking('cpm', mode, cat).all_players_rank : '-' }}
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Community Rank -->
+                            <Link v-if="communityTier && showHeaderItem('community_rank') && headerItemRow('community_rank') === 3" :href="route('community')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-400/50 shadow-xl backdrop-blur-sm group relative hover:scale-105 transition-transform" :style="{ order: headerItemOrder('community_rank') }">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                                <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider">Rank</span>
+                                <span class="text-sm font-black text-emerald-400">#{{ communityTier.rank }}</span>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/10 text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-xl">
+                                    <div class="font-bold text-white mb-1">Community Rank</div>
+                                    <div class="text-gray-400">Score: <span class="text-white font-semibold">{{ communityTier.score }} pts</span></div>
+                                    <div class="text-gray-400">Tier: <span class="font-semibold" :style="{ color: communityTier.color }">{{ communityTier.name }}</span></div>
+                                    <div class="text-gray-500 mt-1 text-[10px]">Click for leaderboard</div>
+                                </div>
+                            </Link>
+                            <!-- Clan -->
+                            <Link v-if="user?.clan && showHeaderItem('clan') && headerItemRow('clan') === 3" :href="route('clans.show', user.clan.id)" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/50 hover:border-blue-300/60 hover:bg-blue-900/70 transition-all hover:scale-105 shadow-xl backdrop-blur-sm group" :style="{ order: headerItemOrder('clan') }">
+                                <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-lg shadow-blue-500/50"></div>
+                                <span class="text-xs font-bold text-blue-300 uppercase tracking-wider">Clan</span>
+                                <span class="text-sm font-black text-white group-hover:text-blue-100 transition" v-html="q3tohtml(user.clan.name)"></span>
+                            </Link>
+                            <!-- WR Counters -->
+                            <template v-if="showHeaderItem('wr_counters') && headerItemRow('wr_counters') === 3">
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-950/70 border border-purple-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-purple-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">CPM</span>
+                                    <span class="text-sm font-black text-purple-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ cpm_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                </div>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/70 border border-blue-400/40 shadow-xl backdrop-blur-sm" :style="{ order: headerItemOrder('wr_counters') }">
+                                    <span class="text-xs text-blue-300 font-semibold uppercase tracking-wider" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">VQ3</span>
+                                    <span class="text-sm font-black text-blue-400" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">{{ vq3_world_records }}</span>
+                                    <svg class="w-3.5 h-3.5 text-blue-400" viewBox="0 0 20 20" fill="currentColor"><use href="/images/svg/icons.svg#icon-trophy"></use></svg>
+                                </div>
+                            </template>
+                            <!-- Socials -->
+                            <template v-if="showHeaderItem('socials') && headerItemRow('socials') === 3">
+                                <a v-if="user?.twitch_id" :href="`https://www.twitch.tv/` + user?.twitch_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-purple-950/60 border border-purple-400/50 hover:border-purple-300/60 hover:bg-purple-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-purple-300 transition group-hover:text-purple-200" width="800px" height="800px" viewBox="-0.5 0 20 20" version="1.1" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M97,7249 L99,7249 L99,7244 L97,7244 L97,7249 Z M92,7249 L94,7249 L94,7244 L92,7244 L92,7249 Z M102,7250.307 L102,7241 L88,7241 L88,7253 L92,7253 L92,7255.953 L94.56,7253 L99.34,7253 L102,7250.307 Z M98.907,7256 L94.993,7256 L92.387,7259 L90,7259 L90,7256 L85,7256 L85,7242.48 L86.3,7239 L104,7239 L104,7251.173 L98.907,7256 Z" transform="translate(-85 -7239)"/></g></svg>
+                                    <span class="text-xs font-bold text-purple-200 transition group-hover:text-white">TWITCH</span>
+                                </a>
+                                <a v-if="user?.discord_id" :href="`https://discordapp.com/users/${user.discord_id}`" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-400/50 hover:border-indigo-300/60 hover:bg-indigo-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-indigo-300 transition group-hover:text-indigo-200" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M18.59 5.88997C17.36 5.31997 16.05 4.89997 14.67 4.65997C14.5 4.95997 14.3 5.36997 14.17 5.69997C12.71 5.47997 11.26 5.47997 9.83001 5.69997C9.69001 5.36997 9.49001 4.95997 9.32001 4.65997C7.94001 4.89997 6.63001 5.31997 5.40001 5.88997C2.92001 9.62997 2.25001 13.28 2.58001 16.87C4.23001 18.1 5.82001 18.84 7.39001 19.33C7.78001 18.8 8.12001 18.23 8.42001 17.64C7.85001 17.43 7.31001 17.16 6.80001 16.85C6.94001 16.75 7.07001 16.64 7.20001 16.54C10.33 18 13.72 18 16.81 16.54C16.94 16.65 17.07 16.75 17.21 16.85C16.7 17.16 16.15 17.42 15.59 17.64C15.89 18.23 16.23 18.8 16.62 19.33C18.19 18.84 19.79 18.1 21.43 16.87C21.82 12.7 20.76 9.08997 18.61 5.88997H18.59ZM8.84001 14.67C7.90001 14.67 7.13001 13.8 7.13001 12.73C7.13001 11.66 7.88001 10.79 8.84001 10.79C9.80001 10.79 10.56 11.66 10.55 12.73C10.55 13.79 9.80001 14.67 8.84001 14.67ZM15.15 14.67C14.21 14.67 13.44 13.8 13.44 12.73C13.44 11.66 14.19 10.79 15.15 10.79C16.11 10.79 16.87 11.66 16.86 12.73C16.86 13.79 16.11 14.67 15.15 14.67Z"/></svg>
+                                    <span class="text-xs font-bold text-indigo-200 transition group-hover:text-white">{{ user.discord_name }}</span>
+                                </a>
+                                <a v-if="user?.twitter_name" :href="`https://www.x.com/` + user?.twitter_name" target="_blank" class="group relative px-3 py-1.5 rounded-lg bg-sky-950/60 border border-sky-400/50 hover:border-sky-300/60 hover:bg-sky-900/60 transition-all hover:scale-110 shadow-xl backdrop-blur-sm flex items-center gap-1.5" :style="{ order: headerItemOrder('socials') }">
+                                    <svg class="w-4 h-4 text-sky-300 transition group-hover:text-sky-200" viewBox="0 -2 20 20" xmlns="http://www.w3.org/2000/svg"><g fill="currentColor"><path d="M10.29,7377 C17.837,7377 21.965,7370.84365 21.965,7365.50546 C21.965,7365.33021 21.965,7365.15595 21.953,7364.98267 C22.756,7364.41163 23.449,7363.70276 24,7362.8915 C23.252,7363.21837 22.457,7363.433 21.644,7363.52751 C22.5,7363.02244 23.141,7362.2289 23.448,7361.2926 C22.642,7361.76321 21.761,7362.095 20.842,7362.27321 C19.288,7360.64674 16.689,7360.56798 15.036,7362.09796 C13.971,7363.08447 13.518,7364.55538 13.849,7365.95835 C10.55,7365.79492 7.476,7364.261 5.392,7361.73762 C4.303,7363.58363 4.86,7365.94457 6.663,7367.12996 C6.01,7367.11125 5.371,7366.93797 4.8,7366.62489 L4.8,7366.67608 C4.801,7368.5989 6.178,7370.2549 8.092,7370.63591 C7.488,7370.79836 6.854,7370.82199 6.24,7370.70483 C6.777,7372.35099 8.318,7373.47829 10.073,7373.51078 C8.62,7374.63513 6.825,7375.24554 4.977,7375.24358 C4.651,7375.24259 4.325,7375.22388 4,7375.18549 C5.877,7376.37088 8.06,7377 10.29,7376.99705" transform="translate(-4 -7361)"/></g></svg>
+                                    <span class="text-xs font-bold text-sky-200 transition group-hover:text-white">TWITTER</span>
+                                </a>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -1271,7 +1540,7 @@
 
 
             <!-- Stats Grid - Clean Text Layout -->
-            <div v-if="hasProfile && profile" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div v-if="hasProfile && profile" class="relative z-[1] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div v-if="showStatBox('performance')" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5" :style="{ order: statBoxOrder('performance') }">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="text-sm font-bold text-white uppercase tracking-wide">Performance</h3>
@@ -1909,7 +2178,12 @@
 
                                         <!-- Map Score -->
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
-                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                                            <div v-if="record.map_score"
+                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
+                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
+                                                @mouseleave="scoreTooltip = null">
+                                                {{ Math.round(record.map_score) }}
+                                            </div>
                                         </div>
 
                                         <!-- Date -->
@@ -2031,7 +2305,12 @@
 
                                         <!-- Map Score -->
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
-                                            <div v-if="record.map_score" class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                                            <div v-if="record.map_score"
+                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
+                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
+                                                @mouseleave="scoreTooltip = null">
+                                                {{ Math.round(record.map_score) }}
+                                            </div>
                                         </div>
 
                                         <!-- Date -->
@@ -2682,6 +2961,16 @@
             @close="showFlagModal = false"
         />
     </div>
+
+    <!-- Score tooltip (teleported to avoid overflow clipping) -->
+    <Teleport to="body">
+        <div v-if="scoreTooltip" :style="scoreTooltipStyle"
+            class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
+            <div>Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
+            <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
+            <div v-if="scoreTooltip.multiplier != null">Multiplier: <span class="text-green-400">{{ scoreTooltip.multiplier }}</span></div>
+        </div>
+    </Teleport>
 </template>
 
 <style scoped>

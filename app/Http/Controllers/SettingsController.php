@@ -274,9 +274,9 @@ class SettingsController extends Controller
             'sections.*.id' => ['required', 'string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
             'sections.*.visible' => ['required', 'boolean'],
             'header_items' => ['sometimes', 'array'],
-            'header_items.*.id' => ['required', 'string', 'in:badge_admin,badge_moderator,badge_donor,badge_community,badge_tagger,badge_assigner,clan,wr_counters,socials'],
+            'header_items.*.id' => ['required', 'string', 'in:badge_admin,badge_moderator,badge_donor,badge_community,badge_tagger,badge_assigner,clan,wr_counters,socials,player_rank,community_rank'],
             'header_items.*.visible' => ['required', 'boolean'],
-            'header_items.*.row' => ['required', 'integer', 'in:1,2'],
+            'header_items.*.row' => ['required', 'integer', 'in:1,2,3'],
         ]);
 
         $user = $request->user();

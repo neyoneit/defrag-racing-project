@@ -12,6 +12,7 @@ use App\Models\MddProfile;
 use App\Models\RenderedVideo;
 use App\Models\CommunityHelperScore;
 use App\Models\PlayerMapScore;
+use App\Models\PlayerRating;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -54,7 +55,8 @@ class ProfileController extends Controller {
                         'score' => round((float) $score->community_badge_score, 1),
                         'rank' => $score->rank,
                     ]);
-                })());
+                })())
+                ->with('playerRankings', []);
         }
 
         // Check which props Inertia is requesting (partial reload)
@@ -223,7 +225,13 @@ class ProfileController extends Controller {
                         'score' => round((float) $score->community_badge_score, 1),
                         'rank' => $score->rank,
                     ]);
-                })());
+                })())
+            ->with('playerRankings', $user->mdd_id
+                ? PlayerRating::where('mdd_id', $user->mdd_id)
+                    ->select('physics', 'mode', 'category', 'all_players_rank', 'active_players_rank', 'player_rating')
+                    ->get()
+                    ->toArray()
+                : []);
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -323,6 +331,10 @@ class ProfileController extends Controller {
         }
         $cpmRecords = $cpmRecords->paginate(20, ['*'], 'cpm_page')->withQueryString();
 
+        // Attach map scores to records (same as linked profiles)
+        $this->attachProfileMapScores($vq3Records, $user->id, 'vq3');
+        $this->attachProfileMapScores($cpmRecords, $user->id, 'cpm');
+
         // Add cached stats to profile data
         foreach ($stats as $key => $value) {
             $user->$key = $value;
@@ -390,7 +402,11 @@ class ProfileController extends Controller {
             ->with('donorTier', null)
             ->with('donationTotal', [])
             ->with('tagCount', 0)
-            ->with('communityTier', null);
+            ->with('communityTier', null)
+            ->with('playerRankings', PlayerRating::where('mdd_id', $user->id)
+                ->select('physics', 'mode', 'category', 'all_players_rank', 'active_players_rank', 'player_rating')
+                ->get()
+                ->toArray());
     }
 
     public function latestRecords($mddId) {
@@ -1195,6 +1211,7 @@ class ProfileController extends Controller {
             $score = $scores->get($key);
             $record->map_score = $score ? round($score->map_score, 2) : null;
             $record->reltime = $score ? round($score->reltime, 4) : null;
+            $record->multiplier = $score ? round($score->multiplier, 4) : null;
             $record->is_outlier = $score ? $score->is_outlier : false;
             $record->score_rank = $scoreRanks[$record->mapname] ?? null;
             $record->score_rank_total = $totalMaps;

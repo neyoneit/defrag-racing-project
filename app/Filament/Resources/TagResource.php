@@ -138,6 +138,14 @@ class TagResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->label('Tag'),
+                Tables\Columns\TextColumn::make('note')
+                    ->wrap()
+                    ->lineClamp(1)
+                    ->tooltip(fn (Tag $record): ?string => $record->note)
+                    ->label('Note')
+                    ->color('gray')
+                    ->placeholder('-')
+                    ->grow(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable()

@@ -12,11 +12,18 @@ const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected (curr
 const MAX_TIED_WR_PLAYERS: usize = 3; // 4+ players with same WR = free WR map = unranked
 const MIN_TOTAL_RECORDS: usize = 10;
 const CFG_A: f64 = 1.2;
-const CFG_B: f64 = 1.0;
+const CFG_B: f64 = 1.33;
 const CFG_M: f64 = 0.3;
 const CFG_V: f64 = 0.1;
 const CFG_Q: f64 = 0.5;
 const CFG_D: f64 = 0.02;
+
+// Map score multiplier (Logistic/Hill function)
+// F(x) = (L * x^n) / (k^n + x^n)
+// x = number of records/players on given map
+// k = median(x) / 2 for the given physics+mode+category
+const MULT_L: f64 = 1.0;  // limit (max multiplier value)
+const MULT_N: f64 = 2.0;  // steepness
 
 #[derive(Debug, Clone)]
 struct Record {
@@ -35,6 +42,7 @@ struct ProcessedRecord {
     record: Record,
     reltime: f64,
     map_score: f64,
+    multiplier: f64,
     is_outlier: bool,
 }
 
@@ -91,6 +99,30 @@ fn calculate_map_score(reltime: f64) -> f64 {
     1000.0 * (CFG_A + (-CFG_A / (1.0 + CFG_Q * (-CFG_B * (reltime - CFG_M)).exp()).powf(1.0 / CFG_V)))
 }
 
+/// Map score multiplier based on number of records/players on given map.
+/// Uses Hill/Logistic function: F(x) = (L * x^n) / (k^n + x^n)
+/// where x = number of records/players on given map, k = median/2 for the category.
+/// Maps with more players get a multiplier closer to L (1.0),
+/// maps with few players get penalized towards 0.
+fn calculate_map_multiplier(num_records: usize, category_median: f64) -> f64 {
+    let k = (category_median / 2.0).max(1.0); // middle point, minimum 1 to avoid division issues
+    let x = num_records as f64;
+    (MULT_L * x.powf(MULT_N)) / (k.powf(MULT_N) + x.powf(MULT_N))
+}
+
+/// Calculate median of a sorted slice
+fn median(sorted: &[usize]) -> f64 {
+    let len = sorted.len();
+    if len == 0 {
+        return 0.0;
+    }
+    if len % 2 == 0 {
+        (sorted[len / 2 - 1] + sorted[len / 2]) as f64 / 2.0
+    } else {
+        sorted[len / 2] as f64
+    }
+}
+
 fn map_matches_category(map: &MapInfo, category: &str) -> bool {
     match category {
         "overall" => true,
@@ -106,10 +138,12 @@ fn map_matches_category(map: &MapInfo, category: &str) -> bool {
             if weapons_lower.is_empty() {
                 return true;
             }
+            // These weapons are allowed on strafe maps - they don't disqualify
             !weapons_lower.split(',')
                 .any(|w| {
                     let w = w.trim();
                     !w.is_empty() && w != "mg" && w != "sg" && w != "gt"
+                        && w != "gauntlet" && w != "hook" && w != "rg"
                 })
         },
         _ => true,
@@ -135,7 +169,8 @@ fn is_free_wr_map(times: &[i32], mdd_ids: &[i32]) -> bool {
 }
 
 /// Process records for a map and return ProcessedRecords
-fn process_map_records(records: &[Record], stats: &MapStats) -> Vec<ProcessedRecord> {
+/// category_median: median number of records/players across all ranked maps in this category
+fn process_map_records(records: &[Record], stats: &MapStats, category_median: f64) -> Vec<ProcessedRecord> {
     if !stats.is_ranked {
         return Vec::new();
     }
@@ -175,12 +210,16 @@ fn process_map_records(records: &[Record], stats: &MapStats) -> Vec<ProcessedRec
             record.time as f64 / ref_time
         };
 
-        let map_score = calculate_map_score(reltime);
+        let base_score = calculate_map_score(reltime);
+        // Apply map multiplier based on number of records/players on given map
+        let multiplier = calculate_map_multiplier(stats.total_participators, category_median);
+        let map_score = base_score * multiplier;
 
         Some(ProcessedRecord {
             record: record.clone(),
             reltime,
             map_score,
+            multiplier,
             is_outlier: is_in_outlier_group,
         })
     }).collect()
@@ -268,7 +307,7 @@ fn save_map_scores(conn: &mut PooledConn, processed: &[ProcessedRecord], physics
         let mut values: Vec<String> = Vec::new();
         for rec in chunk {
             values.push(format!(
-                "({}, {}, '{}', '{}', '{}', {}, {}, {}, {}, NOW(), NOW())",
+                "({}, {}, '{}', '{}', '{}', {}, {}, {}, {}, {}, NOW(), NOW())",
                 rec.record.mdd_id,
                 rec.record.user_id.map_or("NULL".to_string(), |id| id.to_string()),
                 rec.record.mapname.replace("'", "''"),
@@ -277,12 +316,13 @@ fn save_map_scores(conn: &mut PooledConn, processed: &[ProcessedRecord], physics
                 rec.record.time,
                 rec.reltime,
                 rec.map_score,
+                rec.multiplier,
                 if rec.is_outlier { 1 } else { 0 },
             ));
         }
 
         let query = format!(
-            "INSERT INTO player_map_scores (mdd_id, user_id, mapname, physics, mode, time, reltime, map_score, is_outlier, created_at, updated_at) VALUES {} ON DUPLICATE KEY UPDATE time=VALUES(time), reltime=VALUES(reltime), map_score=VALUES(map_score), is_outlier=VALUES(is_outlier), user_id=VALUES(user_id), updated_at=NOW()",
+            "INSERT INTO player_map_scores (mdd_id, user_id, mapname, physics, mode, time, reltime, map_score, multiplier, is_outlier, created_at, updated_at) VALUES {} ON DUPLICATE KEY UPDATE time=VALUES(time), reltime=VALUES(reltime), map_score=VALUES(map_score), multiplier=VALUES(multiplier), is_outlier=VALUES(is_outlier), user_id=VALUES(user_id), updated_at=NOW()",
             values.join(",")
         );
 
@@ -346,10 +386,20 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
             .push(record.clone());
     }
 
+    // Calculate median number of records/players per ranked map for this category
+    // Used as the basis for the logistic map score multiplier (k = median / 2)
+    let mut ranked_participators: Vec<usize> = map_stats.iter()
+        .filter(|(_, s)| s.is_ranked)
+        .map(|(_, s)| s.total_participators)
+        .collect();
+    ranked_participators.sort_unstable();
+    let category_median = median(&ranked_participators);
+    println!("  Ranked maps median records/players: {}, k (median/2): {:.1}", category_median, (category_median / 2.0).max(1.0));
+
     let mut all_processed: Vec<ProcessedRecord> = Vec::new();
     for (mapname, map_records) in &records_by_map {
         if let Some(stats) = map_stats.get(mapname) {
-            let processed = process_map_records(map_records, stats);
+            let processed = process_map_records(map_records, stats, category_median);
             all_processed.extend(processed);
         }
     }
@@ -551,9 +601,21 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
         println!("  Outlier detected: {} outlier player(s), ref_index={}", stats.ref_index, stats.ref_index);
     }
 
-    // Step 3: Process records for this map
-    let processed = process_map_records(&records, stats);
-    println!("  Processed {} records", processed.len());
+    // Step 3: Calculate category median for map multiplier
+    // For incremental recalc, query median number of records/players per ranked map from DB
+    // We use the same physics+mode; category filtering would require map info which we skip here for performance
+    let all_map_counts: Vec<i64> = conn.query(&format!(
+        "SELECT COUNT(DISTINCT mdd_id) as cnt FROM records WHERE physics = '{}' AND mode = '{}' AND deleted_at IS NULL GROUP BY mapname HAVING cnt >= {} ORDER BY cnt",
+        physics, mode, MIN_MAP_TOTAL_PARTICIPATORS
+    ))?;
+    let all_map_counts_usize: Vec<usize> = all_map_counts.iter().map(|&c| c as usize).collect();
+    let category_median = median(&all_map_counts_usize);
+
+    // Process records with logistic multiplier
+    let processed = process_map_records(&records, stats, category_median);
+    let multiplier = calculate_map_multiplier(stats.total_participators, category_median);
+    println!("  Processed {} records (map multiplier: {:.3}, map players: {}, category median: {:.1}, k: {:.1})",
+        processed.len(), multiplier, stats.total_participators, category_median, (category_median / 2.0).max(1.0));
 
     // Step 4: Save map scores
     conn.query_drop(&format!(

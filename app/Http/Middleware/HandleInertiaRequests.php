@@ -136,6 +136,10 @@ class HandleInertiaRequests extends Middleware
         $demoCounts = $user->getAssignedDemoCounts();
         if (($demoCounts['offline'] + $demoCounts['online']) > 0) $badges[] = 'badge_assigner';
 
+        if (\App\Models\PlayerRating::where('mdd_id', $user->mdd_id)->exists()) $badges[] = 'player_rank';
+
+        if ($communityScore && $communityScore->rank) $badges[] = 'community_rank';
+
         // Always available
         $badges[] = 'clan';
         $badges[] = 'wr_counters';
