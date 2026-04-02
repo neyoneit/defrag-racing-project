@@ -223,11 +223,18 @@ const statBoxItems = [
     { id: 'renders', label: 'Renders' },
 ];
 
+const aboutMeForm = useForm({ content: user.value.about_me || '' });
+const submitAboutMeSettings = () => {
+    aboutMeForm.post(route('profile.about-me.submit', user.value.id), { preserveScroll: true });
+};
+
 const savedHidden = user.value.global_profile_preferences?.hidden_sections || [];
 const savedHiddenStatBoxes = user.value.global_profile_preferences?.hidden_stat_boxes || [];
+const savedDateFormat = user.value.global_profile_preferences?.date_format || 'ymd';
 const globalProfileForm = useForm({
     hidden_sections: [...savedHidden],
     hidden_stat_boxes: [...savedHiddenStatBoxes],
+    date_format: savedDateFormat,
 });
 
 const toggleGlobalSection = (id) => {
@@ -1988,6 +1995,67 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 <span class="text-xs font-black text-blue-400 uppercase bg-blue-400/20 border border-blue-400/30 px-2 py-0.5 rounded">VQ3</span>
                             </div>
                         </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Me Card -->
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/30 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-amber-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">About Me</h2>
+                            <p class="text-xs text-gray-500">Visible on hover over your name on your profile. All changes reviewed by moderators.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <textarea v-model="aboutMeForm.content"
+                            class="w-full bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
+                            rows="3" maxlength="500"
+                            placeholder="Write something about yourself..."></textarea>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-[10px] text-gray-600">{{ aboutMeForm.content?.length || 0 }}/500</span>
+                            <button @click="submitAboutMeSettings" :disabled="aboutMeForm.processing || !aboutMeForm.content?.trim()"
+                                class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded-lg transition-colors">
+                                {{ aboutMeForm.processing ? 'Submitting...' : 'Submit for Review' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date Format Card -->
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-cyan-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">Date Format</h2>
+                            <p class="text-xs text-gray-500">Choose how dates are displayed in record tables</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="globalProfileForm.date_format = 'ymd'; saveGlobalPreferencesDebounced()"
+                            class="flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.date_format === 'ymd' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            YY/MM/DD
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">26/04/02</div>
+                        </button>
+                        <button @click="globalProfileForm.date_format = 'dmy'; saveGlobalPreferencesDebounced()"
+                            class="flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.date_format === 'dmy' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            DD/MM/YY
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">02/04/26</div>
+                        </button>
                     </div>
                 </div>
             </div>

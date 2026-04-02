@@ -1,6 +1,15 @@
 <script setup>
-    import { Link } from '@inertiajs/vue3';
+    import { Link, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+
+    const page = usePage();
+    const fmtDate = (dateStr) => {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+    };
 
     const props = defineProps({
         rating: {
@@ -104,7 +113,7 @@
                 @mouseleave="onDateLeave"
             >
                 <div class="text-[8px] sm:text-[10px] text-gray-300 group-hover:text-white font-mono transition-all drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">
-                    {{ new Date(rating.last_activity).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                    {{ fmtDate(rating.last_activity) }}
                 </div>
             </div>
         </div>

@@ -194,4 +194,9 @@ class RankingController extends Controller
 
         \Log::info('Ranking page caches cleared');
     }
+
+    public function howItWorks()
+    {
+        return Inertia::render('RankingHowItWorks');
+    }
 }

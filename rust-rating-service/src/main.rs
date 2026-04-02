@@ -4,26 +4,54 @@ use serde::Serialize;
 use std::collections::HashMap;
 use rayon::prelude::*;
 
-// Constants
-const MIN_MAP_TOTAL_PARTICIPATORS: usize = 5;
-const MIN_TOP1_TIME: i32 = 500;
+// Constants - read from environment variables (shared with PHP via .env)
+// Fallback defaults match config/ratings.php
 #[allow(dead_code)]
 const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected (currently disabled)
-const MAX_TIED_WR_PLAYERS: usize = 3; // 4+ players with same WR = free WR map = unranked
-const MIN_TOTAL_RECORDS: usize = 10;
-const CFG_A: f64 = 1.2;
-const CFG_B: f64 = 1.33;
-const CFG_M: f64 = 0.3;
-const CFG_V: f64 = 0.1;
-const CFG_Q: f64 = 0.5;
-const CFG_D: f64 = 0.02;
 
-// Map score multiplier (Logistic/Hill function)
-// F(x) = (L * x^n) / (k^n + x^n)
-// x = number of records/players on given map
-// k = median(x) / 2 for the given physics+mode+category
-const MULT_L: f64 = 1.0;  // limit (max multiplier value)
-const MULT_N: f64 = 2.0;  // steepness
+fn env_f64(key: &str, default: f64) -> f64 {
+    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+}
+fn env_usize(key: &str, default: usize) -> usize {
+    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+}
+fn env_i32(key: &str, default: i32) -> i32 {
+    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+}
+
+struct RatingConfig {
+    min_map_total_participators: usize,
+    min_top1_time: i32,
+    max_tied_wr_players: usize,
+    min_total_records: usize,
+    cfg_a: f64,
+    cfg_b: f64,
+    cfg_m: f64,
+    cfg_v: f64,
+    cfg_q: f64,
+    cfg_d: f64,
+    mult_l: f64,
+    mult_n: f64,
+}
+
+impl RatingConfig {
+    fn from_env() -> Self {
+        Self {
+            min_map_total_participators: env_usize("RATING_MIN_MAP_PLAYERS", 5),
+            min_top1_time: env_i32("RATING_MIN_TOP1_TIME", 500),
+            max_tied_wr_players: env_usize("RATING_MAX_TIED_WR", 3),
+            min_total_records: env_usize("RATING_MIN_TOTAL_RECORDS", 10),
+            cfg_a: env_f64("RATING_CFG_A", 1.2),
+            cfg_b: env_f64("RATING_CFG_B", 1.33),
+            cfg_m: env_f64("RATING_CFG_M", 0.3),
+            cfg_v: env_f64("RATING_CFG_V", 0.1),
+            cfg_q: env_f64("RATING_CFG_Q", 0.5),
+            cfg_d: env_f64("RATING_CFG_D", 0.0001),
+            mult_l: env_f64("RATING_MULT_L", 1.0),
+            mult_n: env_f64("RATING_MULT_N", 2.0),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Record {
@@ -95,19 +123,15 @@ fn find_normal_cluster_start(_times: &[i32]) -> usize {
     // times.len() - 1
 }
 
-fn calculate_map_score(reltime: f64) -> f64 {
-    1000.0 * (CFG_A + (-CFG_A / (1.0 + CFG_Q * (-CFG_B * (reltime - CFG_M)).exp()).powf(1.0 / CFG_V)))
+fn calculate_map_score(reltime: f64, cfg: &RatingConfig) -> f64 {
+    1000.0 * (cfg.cfg_a + (-cfg.cfg_a / (1.0 + cfg.cfg_q * (-cfg.cfg_b * (reltime - cfg.cfg_m)).exp()).powf(1.0 / cfg.cfg_v)))
 }
 
 /// Map score multiplier based on number of records/players on given map.
-/// Uses Hill/Logistic function: F(x) = (L * x^n) / (k^n + x^n)
-/// where x = number of records/players on given map, k = median/2 for the category.
-/// Maps with more players get a multiplier closer to L (1.0),
-/// maps with few players get penalized towards 0.
-fn calculate_map_multiplier(num_records: usize, category_median: f64) -> f64 {
-    let k = (category_median / 2.0).max(1.0); // middle point, minimum 1 to avoid division issues
+fn calculate_map_multiplier(num_records: usize, category_median: f64, cfg: &RatingConfig) -> f64 {
+    let k = (category_median / 2.0).max(1.0);
     let x = num_records as f64;
-    (MULT_L * x.powf(MULT_N)) / (k.powf(MULT_N) + x.powf(MULT_N))
+    (cfg.mult_l * x.powf(cfg.mult_n)) / (k.powf(cfg.mult_n) + x.powf(cfg.mult_n))
 }
 
 /// Calculate median of a sorted slice
@@ -151,7 +175,7 @@ fn map_matches_category(map: &MapInfo, category: &str) -> bool {
 }
 
 /// Check if a map is a "free WR" map (4+ players tied at WR time)
-fn is_free_wr_map(times: &[i32], mdd_ids: &[i32]) -> bool {
+fn is_free_wr_map(times: &[i32], mdd_ids: &[i32], cfg: &RatingConfig) -> bool {
     if times.is_empty() {
         return false;
     }
@@ -165,19 +189,19 @@ fn is_free_wr_map(times: &[i32], mdd_ids: &[i32]) -> bool {
             unique_wr_players.push(mdd_ids[i]);
         }
     }
-    unique_wr_players.len() > MAX_TIED_WR_PLAYERS
+    unique_wr_players.len() > cfg.max_tied_wr_players
 }
 
 /// Process records for a map and return ProcessedRecords
 /// category_median: median number of records/players across all ranked maps in this category
-fn process_map_records(records: &[Record], stats: &MapStats, category_median: f64) -> Vec<ProcessedRecord> {
+fn process_map_records(records: &[Record], stats: &MapStats, category_median: f64, cfg: &RatingConfig) -> Vec<ProcessedRecord> {
     if !stats.is_ranked {
         return Vec::new();
     }
 
     let times = &stats.times;
     let ref_index = stats.ref_index;
-    let ref_time = times[ref_index].max(MIN_TOP1_TIME) as f64;
+    let ref_time = times[ref_index].max(cfg.min_top1_time) as f64;
 
     records.iter().filter_map(|record| {
         let is_in_outlier_group = if ref_index > 0 {
@@ -195,14 +219,14 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
 
         let reltime = if is_in_outlier_group {
             if ref_index + 1 < times.len() {
-                let next_time = times[ref_index + 1].max(MIN_TOP1_TIME) as f64;
+                let next_time = times[ref_index + 1].max(cfg.min_top1_time) as f64;
                 ref_time / next_time
             } else {
                 1.0
             }
         } else if record.time as f64 <= ref_time {
             if ref_index + 1 < times.len() {
-                ref_time / times[ref_index + 1].max(MIN_TOP1_TIME) as f64
+                ref_time / times[ref_index + 1].max(cfg.min_top1_time) as f64
             } else {
                 1.0
             }
@@ -210,9 +234,9 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
             record.time as f64 / ref_time
         };
 
-        let base_score = calculate_map_score(reltime);
+        let base_score = calculate_map_score(reltime, cfg);
         // Apply map multiplier based on number of records/players on given map
-        let multiplier = calculate_map_multiplier(stats.total_participators, category_median);
+        let multiplier = calculate_map_multiplier(stats.total_participators, category_median, cfg);
         let map_score = base_score * multiplier;
 
         Some(ProcessedRecord {
@@ -226,29 +250,29 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
 }
 
 /// Calculate player rating from their map scores
-fn calculate_player_rating(map_scores: &mut Vec<f64>) -> f64 {
+fn calculate_player_rating(map_scores: &mut Vec<f64>, cfg: &RatingConfig) -> f64 {
     map_scores.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
     let mut weighted_sum = 0.0;
     let mut weight_sum = 0.0;
 
     for (rank, &score) in map_scores.iter().enumerate() {
-        let weight = (-CFG_D * (rank as f64 + 1.0)).exp();
+        let weight = (-cfg.cfg_d * (rank as f64 + 1.0)).exp();
         weighted_sum += score * weight;
         weight_sum += weight;
     }
 
     let mut rating = weighted_sum / weight_sum;
 
-    if map_scores.len() < MIN_TOTAL_RECORDS {
-        rating *= map_scores.len() as f64 / MIN_TOTAL_RECORDS as f64;
+    if map_scores.len() < cfg.min_total_records {
+        rating *= map_scores.len() as f64 / cfg.min_total_records as f64;
     }
 
     rating
 }
 
 /// Build map stats from records
-fn build_map_stats(records: &[Record]) -> HashMap<String, MapStats> {
+fn build_map_stats(records: &[Record], cfg: &RatingConfig) -> HashMap<String, MapStats> {
     let mut map_records: HashMap<String, Vec<(i32, i32)>> = HashMap::new();
 
     for record in records {
@@ -271,14 +295,14 @@ fn build_map_stats(records: &[Record]) -> HashMap<String, MapStats> {
         };
 
         let top1_time = times[0];
-        if total_participators < MIN_MAP_TOTAL_PARTICIPATORS || top1_time < MIN_TOP1_TIME {
+        if total_participators < cfg.min_map_total_participators || top1_time < cfg.min_top1_time {
             map_stats.insert(mapname, MapStats {
                 times, mdd_ids, total_participators, ref_index: 0, is_ranked: false,
             });
             continue;
         }
 
-        if is_free_wr_map(&times, &mdd_ids) {
+        if is_free_wr_map(&times, &mdd_ids, cfg) {
             map_stats.insert(mapname, MapStats {
                 times, mdd_ids, total_participators, ref_index: 0, is_ranked: false,
             });
@@ -334,7 +358,7 @@ fn save_map_scores(conn: &mut PooledConn, processed: &[ProcessedRecord], physics
 }
 
 /// Full recalculation mode
-fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str, maps_map: &HashMap<String, MapInfo>) -> Result<()> {
+fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str, maps_map: &HashMap<String, MapInfo>, cfg: &RatingConfig) -> Result<()> {
     // Step 1: Load all records for this physics/mode
     println!("Step 1: Loading records from database...");
     let records: Vec<Record> = conn.query_map(
@@ -360,7 +384,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
 
     // Step 2: Build map stats
     println!("Step 2: Calculating map statistics...");
-    let map_stats = build_map_stats(&filtered_records);
+    let map_stats = build_map_stats(&filtered_records, cfg);
 
     let ranked_maps: Vec<String> = map_stats.iter()
         .filter(|(_, s)| s.is_ranked)
@@ -370,7 +394,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
         .filter(|(_, s)| s.is_ranked && s.ref_index > 0)
         .count();
     let free_wr_count = map_stats.iter()
-        .filter(|(_, s)| !s.is_ranked && s.total_participators >= MIN_MAP_TOTAL_PARTICIPATORS && s.times.first().map_or(false, |&t| t >= MIN_TOP1_TIME))
+        .filter(|(_, s)| !s.is_ranked && s.total_participators >= cfg.min_map_total_participators && s.times.first().map_or(false, |&t| t >= cfg.min_top1_time))
         .count();
 
     println!("  Ranked maps: {}, outlier-normalized: {}, free WR excluded: {}",
@@ -399,7 +423,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
     let mut all_processed: Vec<ProcessedRecord> = Vec::new();
     for (mapname, map_records) in &records_by_map {
         if let Some(stats) = map_stats.get(mapname) {
-            let processed = process_map_records(map_records, stats, category_median);
+            let processed = process_map_records(map_records, stats, category_median, cfg);
             all_processed.extend(processed);
         }
     }
@@ -431,7 +455,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
     let player_ratings: Vec<PlayerRating> = player_records.par_iter()
         .map(|(mdd_id, records)| {
             let mut map_scores: Vec<f64> = records.iter().map(|r| r.map_score).collect();
-            let rating = calculate_player_rating(&mut map_scores);
+            let rating = calculate_player_rating(&mut map_scores, cfg);
 
             let last_activity = records.iter()
                 .map(|r| r.record.date_set.clone())
@@ -542,7 +566,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
         }
 
         let free_wr_excluded: Vec<String> = map_stats.iter()
-            .filter(|(_, s)| !s.is_ranked && s.total_participators >= MIN_MAP_TOTAL_PARTICIPATORS && s.times.first().map_or(false, |&t| t >= MIN_TOP1_TIME))
+            .filter(|(_, s)| !s.is_ranked && s.total_participators >= cfg.min_map_total_participators && s.times.first().map_or(false, |&t| t >= cfg.min_top1_time))
             .map(|(n, _)| n.clone())
             .collect();
 
@@ -557,7 +581,7 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
 }
 
 /// Incremental recalculation for a single map
-fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name: &str, maps_map: &HashMap<String, MapInfo>) -> Result<()> {
+fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name: &str, maps_map: &HashMap<String, MapInfo>, cfg: &RatingConfig) -> Result<()> {
     println!("Incremental recalc for map '{}' ({} {})...", map_name, physics, mode);
 
     // Step 1: Load records for this map only
@@ -579,7 +603,7 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
     }
 
     // Step 2: Build map stats for this map
-    let map_stats = build_map_stats(&records);
+    let map_stats = build_map_stats(&records, cfg);
     let stats = match map_stats.get(map_name) {
         Some(s) => s,
         None => {
@@ -606,14 +630,14 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
     // We use the same physics+mode; category filtering would require map info which we skip here for performance
     let all_map_counts: Vec<i64> = conn.query(&format!(
         "SELECT COUNT(DISTINCT mdd_id) as cnt FROM records WHERE physics = '{}' AND mode = '{}' AND deleted_at IS NULL GROUP BY mapname HAVING cnt >= {} ORDER BY cnt",
-        physics, mode, MIN_MAP_TOTAL_PARTICIPATORS
+        physics, mode, cfg.min_map_total_participators
     ))?;
     let all_map_counts_usize: Vec<usize> = all_map_counts.iter().map(|&c| c as usize).collect();
     let category_median = median(&all_map_counts_usize);
 
     // Process records with logistic multiplier
-    let processed = process_map_records(&records, stats, category_median);
-    let multiplier = calculate_map_multiplier(stats.total_participators, category_median);
+    let processed = process_map_records(&records, stats, category_median, cfg);
+    let multiplier = calculate_map_multiplier(stats.total_participators, category_median, cfg);
     println!("  Processed {} records (map multiplier: {:.3}, map players: {}, category median: {:.1}, k: {:.1})",
         processed.len(), multiplier, stats.total_participators, category_median, (category_median / 2.0).max(1.0));
 
@@ -710,7 +734,7 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
             let mut map_scores: Vec<f64> = filtered.iter().map(|(s, _)| *s).collect();
             let last_activity = filtered.iter().map(|(_, d)| (*d).clone()).max().unwrap();
             let record_count = map_scores.len();
-            let rating = calculate_player_rating(&mut map_scores);
+            let rating = calculate_player_rating(&mut map_scores, cfg);
 
             let (name, user_id) = player_info_map.get(&mdd_id)
                 .cloned()
@@ -793,6 +817,12 @@ fn main() -> Result<()> {
     let physics = &args[1];
     let mode = &args[2];
 
+    // Load rating config from environment
+    let cfg = RatingConfig::from_env();
+    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
+        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n,
+        cfg.min_map_total_participators, cfg.min_top1_time, cfg.max_tied_wr_players, cfg.min_total_records);
+
     // Check for --map= flag (incremental mode)
     let map_flag: Option<String> = args.iter()
         .find(|a| a.starts_with("--map="))
@@ -831,11 +861,11 @@ fn main() -> Result<()> {
 
     if let Some(map_name) = map_flag {
         // Incremental mode
-        incremental_recalc(&mut conn, physics, mode, &map_name, &maps_map)?;
+        incremental_recalc(&mut conn, physics, mode, &map_name, &maps_map, &cfg)?;
     } else {
         // Full recalc mode
         println!("Calculating ratings for {} {} [{}]...", physics, mode, category);
-        full_recalc(&mut conn, physics, mode, category, &maps_map)?;
+        full_recalc(&mut conn, physics, mode, category, &maps_map, &cfg)?;
     }
 
     let duration = start.elapsed();

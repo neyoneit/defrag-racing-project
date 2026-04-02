@@ -8,6 +8,19 @@
     const page = usePage();
     const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
+    const scoreTooltip = ref(null);
+    const scoreTooltipStyle = computed(() => {
+        if (!scoreTooltip.value?.el) return {};
+        const rect = scoreTooltip.value.el.getBoundingClientRect();
+        return {
+            position: 'fixed',
+            left: rect.left + rect.width / 2 + 'px',
+            top: rect.top - 8 + 'px',
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999,
+        };
+    });
+
     const props = defineProps({
         vq3Records: Object,
         cpmRecords: Object
@@ -190,7 +203,7 @@
                                 <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
                             </div>
                         </div>
-                        <Record v-for="record in vq3Records.data" :key="record.id" :record="record" />
+                        <Record v-for="record in vq3Records.data" :key="record.id" :record="record" @scoreHover="scoreTooltip = $event" />
                     </div>
                     <!-- VQ3 Pagination -->
                     <div v-if="vq3Records.total > vq3Records.per_page" class="border-t border-blue-500/20 bg-transparent p-4">
@@ -222,7 +235,7 @@
                                 <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
                             </div>
                         </div>
-                        <Record v-for="record in cpmRecords.data" :key="record.id" :record="record" />
+                        <Record v-for="record in cpmRecords.data" :key="record.id" :record="record" @scoreHover="scoreTooltip = $event" />
                     </div>
                     <!-- CPM Pagination -->
                     <div v-if="cpmRecords.total > cpmRecords.per_page" class="border-t border-purple-500/20 bg-transparent p-4">
@@ -235,4 +248,14 @@
 
         <div class="h-4"></div>
     </div>
+
+    <!-- Score tooltip (teleported to body) -->
+    <Teleport to="body">
+        <div v-if="scoreTooltip" :style="scoreTooltipStyle"
+            class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
+            <div>Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
+            <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
+            <div v-if="scoreTooltip.multiplier != null">Multiplier: <span class="text-green-400">{{ scoreTooltip.multiplier }}</span></div>
+        </div>
+    </Teleport>
 </template>

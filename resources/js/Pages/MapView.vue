@@ -1277,28 +1277,37 @@
                     <div class="flex flex-wrap items-center gap-3 mb-3">
                         <!-- Difficulty Rating -->
                         <div class="flex items-center gap-1.5">
-                            <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors">Difficulty</span>
-                            <button
-                                v-for="d in difficultyLabels"
-                                :key="d.level"
-                                @click="rateDifficulty(d.level)"
-                                :disabled="!$page.props.auth?.user || submittingDifficulty"
-                                :class="[
-                                    'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all',
-                                    difficultyData.user_rating === d.level
-                                        ? d.color + ' text-white ' + d.borderColor + ' ring-2 ' + d.activeRing + ' shadow-lg'
-                                        : communityDifficultyLevel === d.level && difficultyData.total > 0 && !$page.props.auth?.user
+                            <div class="relative group/diff">
+                                <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors cursor-help border-b border-dotted border-gray-600">Difficulty</span>
+                                <div class="absolute bottom-full left-0 mb-1.5 w-64 p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-[11px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/diff:opacity-100 group-hover/diff:pointer-events-auto transition-opacity z-50">
+                                    <p class="text-yellow-400 font-bold mb-1">How to rate difficulty</p>
+                                    <p>Rate based on the <strong class="text-white">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.</p>
+                                </div>
+                            </div>
+                            <div v-for="d in difficultyLabels" :key="d.level" class="relative group/btn">
+                                <button
+                                    @click="rateDifficulty(d.level)"
+                                    :disabled="!$page.props.auth?.user || submittingDifficulty"
+                                    :class="[
+                                        'px-2.5 py-1 rounded-lg text-xs font-bold border transition-all',
+                                        difficultyData.user_rating === d.level
                                             ? d.color + ' text-white ' + d.borderColor + ' ring-2 ' + d.activeRing + ' shadow-lg'
-                                            : communityDifficultyLevel === d.level && difficultyData.total > 0 && !difficultyData.user_rating && $page.props.auth?.user
-                                                ? d.color + '/60 text-white ' + d.borderColor + '/70'
-                                            : communityDifficultyLevel === d.level && difficultyData.total > 0
-                                                ? d.color + '/40 text-white ' + d.borderColor + '/50'
-                                                : 'bg-white/5 text-gray-400 border-white/10 ' + ($page.props.auth?.user ? d.hoverColor + '/20 hover:text-white hover:border-white/30 cursor-pointer' : 'cursor-default'),
-                                ]"
-                                :title="d.desc + (difficultyData.distribution[d.level] ? '\n' + difficultyData.distribution[d.level] + ' vote' + (difficultyData.distribution[d.level] > 1 ? 's' : '') : '')"
-                            >
-                                {{ d.label }}
-                            </button>
+                                            : communityDifficultyLevel === d.level && difficultyData.total > 0 && !$page.props.auth?.user
+                                                ? d.color + ' text-white ' + d.borderColor + ' ring-2 ' + d.activeRing + ' shadow-lg'
+                                                : communityDifficultyLevel === d.level && difficultyData.total > 0 && !difficultyData.user_rating && $page.props.auth?.user
+                                                    ? d.color + '/60 text-white ' + d.borderColor + '/70'
+                                                : communityDifficultyLevel === d.level && difficultyData.total > 0
+                                                    ? d.color + '/40 text-white ' + d.borderColor + '/50'
+                                                    : 'bg-white/5 text-gray-400 border-white/10 ' + ($page.props.auth?.user ? d.hoverColor + '/20 hover:text-white hover:border-white/30 cursor-pointer' : 'cursor-default'),
+                                    ]"
+                                >
+                                    {{ d.label }}
+                                </button>
+                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 border border-gray-700 rounded-lg text-[10px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                                    <div class="font-medium text-white">{{ d.desc }}</div>
+                                    <div v-if="difficultyData.distribution[d.level]" class="text-gray-500 mt-0.5">{{ difficultyData.distribution[d.level] }} vote{{ difficultyData.distribution[d.level] > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
                             <span v-if="difficultyData.total > 0" class="text-[10px] text-gray-500 group-hover:text-gray-300 ml-1 transition-colors">
                                 {{ difficultyData.average }} avg
                                 <span class="text-gray-600 group-hover:text-gray-400 transition-colors">({{ difficultyData.total }})</span>

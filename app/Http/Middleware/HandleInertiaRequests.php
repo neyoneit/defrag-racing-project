@@ -113,6 +113,7 @@ class HandleInertiaRequests extends Middleware
             'isVerified'                =>      $request->user() ? $request->user()->hasVerifiedEmail() : false,
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
             'physicsOrder'              =>      $request->user()?->default_physics_order ?? 'vq3_first',
+            'dateFormat'                =>      $request->user()?->global_profile_preferences['date_format'] ?? 'ymd',
             'availableBadges'           =>      $request->user() ? $this->getAvailableBadges($request->user()) : [],
             'globalLatestAnnouncement'  =>      !$request->user() ? Cache::remember('global:latest_announcement', 300, function () {
                 return Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first(['id', 'title', 'created_at']);

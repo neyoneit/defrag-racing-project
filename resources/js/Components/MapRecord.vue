@@ -117,6 +117,14 @@
         return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
     });
 
+    const fmtDate = (dateStr) => {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+    };
+
     const demoIdForYoutubeLink = computed(() => {
         if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return props.record.demo.id;
         if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return props.record.uploaded_demos[0].id;
@@ -838,7 +846,7 @@
         <!-- Date -->
         <div class="w-[50px] flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity text-right">
             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
-                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                {{ fmtDate(record.date_set) }}
             </div>
             <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}

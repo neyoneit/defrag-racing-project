@@ -98,6 +98,17 @@
     });
 
     // ------------------------------------------------------
+    function timeAgo(dateStr) {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}h ${mins % 60}m ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ${hours % 24}h ago`;
+    }
+
     const screenWidth = ref(window.innerWidth);
     const isRotating = ref(false);
     const interval = ref(null);
@@ -184,26 +195,36 @@
                         <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Player Rankings</h1>
                         <div class="flex items-center gap-3 text-gray-500">
                             <div class="relative group">
-                                <button class="flex items-center gap-1.5 text-xs hover:text-gray-300 transition-colors">
+                                <Link href="/ranking/how-it-works" class="flex items-center gap-1.5 text-xs hover:text-gray-300 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                                     </svg>
                                     <span class="text-[11px] font-semibold underline decoration-dotted decoration-gray-500 underline-offset-2">How it works</span>
-                                </button>
+                                </Link>
                                 <div class="absolute left-0 top-full mt-2 w-80 bg-gray-900/95 border border-white/10 rounded-xl px-4 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 shadow-2xl">
-                                    <p class="text-xs text-gray-400 leading-relaxed">
-                                        Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record.
-                                        Scores are then <span class="text-gray-300 font-semibold">weighted exponentially</span> -your best maps count the most, weaker ones are diminished.
-                                        The final rating is a weighted average of all your map scores. Players with fewer than <span class="text-gray-300 font-semibold">10 records</span> receive a proportional penalty.
-                                        Maps with fewer than <span class="text-gray-300 font-semibold">5 players</span> or very short top times are excluded.
-                                    </p>
+                                    <div class="text-xs text-gray-400 leading-relaxed space-y-1.5">
+                                        <p>Each record is scored using a <span class="text-gray-300 font-semibold">logistic curve</span> based on how close the time is to the world record (reltime).</p>
+                                        <p>Map scores are then multiplied by a <span class="text-gray-300 font-semibold">map multiplier</span> - maps with more active players count fully, maps with few players are penalized proportionally using a Hill function based on the category median.</p>
+                                        <p>Your best maps are <span class="text-gray-300 font-semibold">weighted exponentially</span> - top scores count the most, weaker ones are diminished. The final rating is a weighted average.</p>
+                                        <p>Players with fewer than <span class="text-gray-300 font-semibold">10 records</span> receive a proportional penalty. Maps with fewer than <span class="text-gray-300 font-semibold">5 players</span> or 4+ tied WR times are excluded.</p>
+                                        <p>Rankings <span class="text-gray-300 font-semibold">update in real-time</span> with every new record, plus a full recalculation runs daily.</p>
+                                    </div>
+                                    <Link href="/ranking/how-it-works" class="block mt-2 pt-2 border-t border-white/10 text-blue-400 hover:text-blue-300 text-[11px] font-semibold">
+                                        Read full explanation with examples &#x2192;
+                                    </Link>
                                 </div>
                             </div>
-                            <div v-if="lastRecalculation" class="flex items-center gap-1.5 text-[11px]">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
-                                </svg>
-                                <span>{{ new Date(lastRecalculation).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }} {{ new Date(lastRecalculation).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}</span>
+                            <div v-if="lastRecalculation" class="relative group/recalc">
+                                <div class="flex items-center gap-1.5 text-[11px] cursor-help">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 text-green-500">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                                    </svg>
+                                    <span class="text-green-400/80">Rankings update automatically with every new record</span>
+                                </div>
+                                <div class="absolute top-full left-0 mt-1.5 w-72 p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-[11px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/recalc:opacity-100 group-hover/recalc:pointer-events-auto transition-opacity z-50">
+                                    <p class="text-white font-medium mb-1">Always up-to-date</p>
+                                    <p>Rankings are recalculated instantly every time a new record is submitted. A full recalculation across all maps also runs once daily.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
