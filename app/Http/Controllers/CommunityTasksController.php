@@ -447,7 +447,15 @@ class CommunityTasksController extends Controller
             ->get()
             ->groupBy('map_name');
 
-        return $maps->map(function ($map) use ($videos) {
+        // Check which maps have demos available for rendering
+        $mapsWithDemos = Record::whereIn('mapname', $mapNames)
+            ->whereNull('deleted_at')
+            ->whereHas('uploadedDemos')
+            ->distinct()
+            ->pluck('mapname')
+            ->flip();
+
+        return $maps->map(function ($map) use ($videos, $mapsWithDemos) {
             $mapVideos = $videos->get($map->name, collect());
 
             $videosByPhysics = [];
@@ -472,6 +480,7 @@ class CommunityTasksController extends Controller
                 'items' => $map->items,
                 'functions' => $map->functions,
                 'videos' => $videosByPhysics,
+                'has_demos' => $mapsWithDemos->has($map->name),
             ];
         })->values()->toArray();
     }
@@ -517,7 +526,14 @@ class CommunityTasksController extends Controller
             ->get()
             ->groupBy('map_name');
 
-        return $selectedMaps->map(function ($map) use ($videos) {
+        $mapsWithDemos = Record::whereIn('mapname', $mapNames)
+            ->whereNull('deleted_at')
+            ->whereHas('uploadedDemos')
+            ->distinct()
+            ->pluck('mapname')
+            ->flip();
+
+        return $selectedMaps->map(function ($map) use ($videos, $mapsWithDemos) {
             $tags = $map->tags()->select('tags.id', 'tags.display_name', 'tags.category')->get();
             $mapVideos = $videos->get($map->name, collect());
 
@@ -543,6 +559,7 @@ class CommunityTasksController extends Controller
                 'items' => $map->items,
                 'functions' => $map->functions,
                 'videos' => $videosByPhysics,
+                'has_demos' => $mapsWithDemos->has($map->name),
                 'tags' => $tags->map(fn ($t) => [
                     'id' => $t->id,
                     'display_name' => $t->display_name,

@@ -1462,7 +1462,7 @@ onUnmounted(() => {
                                 class="w-full mt-1.5 py-1.5 bg-gray-700/50 hover:bg-gray-700/70 text-gray-400 hover:text-gray-300 rounded text-xs font-medium transition-all border border-gray-600/30">
                                 Skip
                             </button>
-                            <button v-if="!ratedMapIds.has(map.id) && !(map.videos?.vq3?.length || map.videos?.cpm?.length)"
+                            <button v-if="!ratedMapIds.has(map.id) && !(map.videos?.vq3?.length || map.videos?.cpm?.length) && map.has_demos"
                                 @click="requestRenderAndSkip(map)"
                                 :disabled="renderRequesting === map.id"
                                 class="w-full mt-1.5 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
@@ -1571,7 +1571,7 @@ onUnmounted(() => {
                                 </div>
                                 <div v-else class="text-xs text-gray-600">No tags yet - be the first!</div>
                                 <!-- Request render button when no videos -->
-                                <button v-if="!(currentTagMap.videos?.vq3?.length || currentTagMap.videos?.cpm?.length)"
+                                <button v-if="!(currentTagMap.videos?.vq3?.length || currentTagMap.videos?.cpm?.length) && currentTagMap.has_demos"
                                     @click="requestTagRenderAndSkip(currentTagMap)"
                                     :disabled="renderRequesting === currentTagMap.id"
                                     class="w-full mt-2 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
