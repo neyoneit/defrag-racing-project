@@ -245,6 +245,36 @@ class RenderedVideoResource extends Resource
             ])
             ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
             ->actions([
+                Tables\Actions\Action::make('copyYoutubeInfo')
+                    ->label('YT Info')
+                    ->icon('heroicon-o-clipboard-document')
+                    ->color('gray')
+                    ->modalHeading('YouTube Title & Description')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->modalContent(function (RenderedVideo $record) {
+                        $physics = strtoupper($record->physics ?? '');
+                        $time = $record->formatted_time ?? ($record->time_ms ? sprintf('%d:%02d.%03d', floor($record->time_ms / 60000), floor(($record->time_ms % 60000) / 1000), $record->time_ms % 1000) : '');
+                        $player = $record->player_name ?? '';
+                        $map = $record->map_name ?? '';
+                        $demoUrl = $record->demo_id ? config('app.url') . "/api/demome/download-demo/{$record->demo_id}" : ($record->demo_url ?? '');
+
+                        $title = "{$map} | {$time} by {$player} ({$physics}) - Quake 3 DeFRaG";
+                        $description = "Nickname: {$player}\nTime: {$time}\nPhysics: {$physics}\nMap: {$map}\n\nDemo download: {$demoUrl}\nMap page: https://defrag.racing/maps/{$map}\nWebsite: https://defrag.racing/\nDiscord: https://discord.defrag.racing/\n\nQuake 3 DeFRaG speedrun on {$map}. DeFRaG is a Quake III Arena modification focused on movement and trickjumping. Strafe jumping, rocket jumping, plasma climbing, circle jumping.\n#defrag #quake3 #speedrun #trickjump #strafejump";
+
+                        return new \Illuminate\Support\HtmlString("
+                            <div class='space-y-3'>
+                                <div>
+                                    <label class='text-xs font-bold text-gray-400 uppercase'>Title</label>
+                                    <input type='text' value='" . htmlspecialchars($title, ENT_QUOTES) . "' class='w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono' onclick='this.select()' readonly />
+                                </div>
+                                <div>
+                                    <label class='text-xs font-bold text-gray-400 uppercase'>Description</label>
+                                    <textarea class='w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono' rows='12' onclick='this.select()' readonly>" . htmlspecialchars($description, ENT_QUOTES) . "</textarea>
+                                </div>
+                            </div>
+                        ");
+                    }),
                 Tables\Actions\Action::make('rerender')
                     ->label('Re-render')
                     ->icon('heroicon-o-arrow-path')
