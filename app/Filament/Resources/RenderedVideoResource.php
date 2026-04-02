@@ -165,11 +165,22 @@ class RenderedVideoResource extends Resource
                         default => 'Normal',
                     }),
 
+                Tables\Columns\TextColumn::make('time_ms')
+                    ->label('Time')
+                    ->formatStateUsing(function ($state) {
+                        if (!$state) return '-';
+                        $m = floor($state / 60000);
+                        $s = floor(($state % 60000) / 1000);
+                        $ms = $state % 1000;
+                        return sprintf('%d:%02d.%03d', $m, $s, $ms);
+                    })
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('youtube_url')
-                    ->label('YouTube')
+                    ->label('YT')
                     ->url(fn ($record) => $record->youtube_url)
                     ->openUrlInNewTab()
-                    ->limit(20)
+                    ->limit(10)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('requested_by')
