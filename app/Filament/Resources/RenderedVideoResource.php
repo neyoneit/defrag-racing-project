@@ -214,6 +214,7 @@ class RenderedVideoResource extends Resource
                         'discord' => 'Discord',
                         'web' => 'Web',
                         'auto' => 'Auto',
+                        'community_tasks' => 'Community Tasks',
                     ]),
                 Tables\Filters\SelectFilter::make('priority')
                     ->options([
@@ -221,6 +222,25 @@ class RenderedVideoResource extends Resource
                         1 => 'World Record',
                         2 => 'Verified Record',
                         3 => 'Normal',
+                    ]),
+                Tables\Filters\Filter::make('wr_online')
+                    ->label('WR with online demo')
+                    ->query(function (Builder $query) {
+                        $query->whereHas('record', function ($q) {
+                            $q->where('rank', 1)->whereNull('deleted_at');
+                        })->whereHas('demo');
+                    }),
+                Tables\Filters\Filter::make('wr_or_faster_offline')
+                    ->label('WR or faster (offline demo)')
+                    ->query(function (Builder $query) {
+                        $query->whereHas('demo', function ($dq) {
+                            $dq->whereNull('record_id')->orWhereDoesntHave('record');
+                        })->whereRaw('time_ms <= (SELECT MIN(r.time) FROM records r WHERE r.mapname = rendered_videos.map_name AND r.physics = rendered_videos.physics AND r.deleted_at IS NULL)');
+                    }),
+                Tables\Filters\SelectFilter::make('physics')
+                    ->options([
+                        'vq3' => 'VQ3',
+                        'cpm' => 'CPM',
                     ]),
             ])
             ->filtersLayout(Tables\Enums\FiltersLayout::AboveContent)
@@ -292,6 +312,62 @@ class RenderedVideoResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('bulk_force_render')
+                        ->label('Force render selected')
+                        ->icon('heroicon-o-bolt')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $count = 0;
+                            foreach ($records as $record) {
+                                if (!in_array($record->status, ['pending', 'failed'])) continue;
+                                $demoUrl = $record->demo_url;
+                                if ($record->demo_id) {
+                                    $demoUrl = config('app.url') . "/api/demome/download-demo/{$record->demo_id}";
+                                }
+                                $record->update([
+                                    'status' => 'pending',
+                                    'priority' => -1,
+                                    'demo_url' => $demoUrl,
+                                    'failure_reason' => null,
+                                    'retry_count' => 0,
+                                ]);
+                                $count++;
+                            }
+                            Notification::make()
+                                ->title("Force render queued: {$count} videos")
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\BulkAction::make('bulk_queue')
+                        ->label('Queue selected (normal)')
+                        ->icon('heroicon-o-queue-list')
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $count = 0;
+                            foreach ($records as $record) {
+                                if ($record->status !== 'failed') continue;
+                                $demoUrl = $record->demo_url;
+                                if ($record->demo_id) {
+                                    $demoUrl = config('app.url') . "/api/demome/download-demo/{$record->demo_id}";
+                                }
+                                $record->update([
+                                    'status' => 'pending',
+                                    'priority' => 0,
+                                    'demo_url' => $demoUrl,
+                                    'failure_reason' => null,
+                                    'retry_count' => 0,
+                                ]);
+                                $count++;
+                            }
+                            Notification::make()
+                                ->title("Re-queued: {$count} videos")
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
