@@ -37,11 +37,6 @@ def pipeline_cmds(name):
         "./build-rust.sh",
         "php artisan storage:link",
         "php artisan migrate --force",
-        # Full rating recalc with new logistic multiplier (sequential to avoid deadlock)
-        "php artisan ratings:calculate --physics=vq3 --mode=run --category=overall --full-recalc",
-        "php artisan ratings:calculate --physics=cpm --mode=run --category=overall --full-recalc",
-        "php artisan ratings:calculate --physics=vq3 --mode=run --category=strafe --full-recalc",
-        "php artisan ratings:calculate --physics=cpm --mode=run --category=strafe --full-recalc",
         "php artisan filament:assets",
         "php artisan livewire:publish --assets",
         "php artisan cache:clear",

@@ -19,9 +19,10 @@ fi
 echo "Compiling Rust binary (optimized)..."
 cargo build --release
 
-# Copy binary to Laravel storage/app
-cp target/release/defrag_rating ../storage/app/defrag_rating
-chmod +x ../storage/app/defrag_rating
+# Copy binary to Laravel storage/app (atomic replace to avoid "Text file busy" if running)
+cp target/release/defrag_rating ../storage/app/defrag_rating.new
+chmod +x ../storage/app/defrag_rating.new
+mv -f ../storage/app/defrag_rating.new ../storage/app/defrag_rating
 
 echo "✓ Rust binary built and installed at storage/app/defrag_rating"
 echo "✓ File size: $(du -h ../storage/app/defrag_rating | cut -f1)"
