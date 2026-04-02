@@ -25,6 +25,20 @@
     const showAssignModal = ref(false);
     const assigningRecord = ref(null);
     const assignPhysics = ref('VQ3');
+
+    // Score tooltip
+    const scoreTooltip = ref(null);
+    const scoreTooltipStyle = computed(() => {
+        if (!scoreTooltip.value?.el) return {};
+        const rect = scoreTooltip.value.el.getBoundingClientRect();
+        return {
+            position: 'fixed',
+            left: rect.left + rect.width / 2 + 'px',
+            top: rect.top - 8 + 'px',
+            transform: 'translate(-50%, -100%)',
+            zIndex: 99999,
+        };
+    });
     const availableRecords = ref([]);
     const selectedRecordId = ref(null);
     const loadingRecords = ref(false);
@@ -1389,7 +1403,7 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
-                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
+                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span v-if="getVq3Records.total" class="text-sm font-semibold text-blue-400/60">({{ getVq3Records.total }})</span></h2>
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
@@ -1417,7 +1431,7 @@
                                 <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
                             </div>
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1450,7 +1464,7 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
-                                <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
+                                <h2 class="text-lg font-bold text-purple-400">CPM Records <span v-if="getCpmRecords.total" class="text-sm font-semibold text-purple-400/60">({{ getCpmRecords.total }})</span></h2>
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
@@ -1478,7 +1492,7 @@
                                 <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
                             </div>
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" />
+                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1826,6 +1840,16 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </Teleport>
+
+        <!-- Score tooltip -->
+        <Teleport to="body">
+            <div v-if="scoreTooltip" :style="scoreTooltipStyle"
+                class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
+                <div>Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
+                <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
+                <div v-if="scoreTooltip.multiplier != null">Multiplier: <span class="text-green-400">{{ scoreTooltip.multiplier }}</span></div>
             </div>
         </Teleport>
     </div>

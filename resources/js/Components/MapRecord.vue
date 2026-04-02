@@ -25,7 +25,7 @@
         }
     });
 
-    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record']);
+    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover']);
 
     const page = usePage();
     const showUploaderTooltip = ref(false);
@@ -826,7 +826,13 @@
 
         <!-- Map Score -->
         <div class="w-10 sm:w-12 text-center flex-shrink-0 -ml-1 flex items-start">
-            <div v-if="record.map_score" class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full" style="line-height: 16px;">{{ Math.round(record.map_score) }}</div>
+            <div v-if="record.map_score"
+                class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full cursor-help"
+                style="line-height: 16px;"
+                @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
+                @mouseleave="$emit('scoreHover', null)">
+                {{ Math.round(record.map_score) }}
+            </div>
         </div>
 
         <!-- Date -->

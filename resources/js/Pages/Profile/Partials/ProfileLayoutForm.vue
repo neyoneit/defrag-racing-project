@@ -29,6 +29,8 @@ const allHeaderItems = [
     { id: 'badge_community', label: 'Defragger Badge' },
     { id: 'badge_tagger', label: 'Tagger Badge' },
     { id: 'badge_assigner', label: 'Assigner Badge' },
+    { id: 'player_rank', label: 'Player Rank (VQ3 / CPM)' },
+    { id: 'community_rank', label: 'Community Rank' },
     { id: 'clan', label: 'Clan Tag' },
     { id: 'wr_counters', label: 'WR Counters (CPM / VQ3)' },
     { id: 'socials', label: 'Social Links (Twitch, Discord, Twitter)' },
@@ -41,6 +43,8 @@ const defaultHeaderItems = [
     { id: 'badge_community', visible: true, row: 1 },
     { id: 'badge_tagger', visible: true, row: 1 },
     { id: 'badge_assigner', visible: true, row: 1 },
+    { id: 'player_rank', visible: true, row: 1 },
+    { id: 'community_rank', visible: true, row: 1 },
     { id: 'clan', visible: true, row: 1 },
     { id: 'wr_counters', visible: true, row: 1 },
     { id: 'socials', visible: true, row: 2 },
@@ -111,14 +115,15 @@ const headerItems = ref(
     })()
 );
 
-// Split into Row 1 and Row 2 for two-zone drag-and-drop
+// Split into Row 1, Row 2, and Row 3 for three-zone drag-and-drop
 const row1Items = computed({
     get: () => headerItems.value.filter(h => h.row === 1 && availableBadges.value.includes(h.id)),
     set: (val) => {
         val.forEach(h => h.row = 1);
         const row2 = headerItems.value.filter(h => h.row === 2 && availableBadges.value.includes(h.id));
+        const row3 = headerItems.value.filter(h => h.row === 3 && availableBadges.value.includes(h.id));
         const hidden = headerItems.value.filter(h => !availableBadges.value.includes(h.id));
-        headerItems.value = [...val, ...row2, ...hidden];
+        headerItems.value = [...val, ...row2, ...row3, ...hidden];
     }
 });
 
@@ -127,8 +132,20 @@ const row2Items = computed({
     set: (val) => {
         val.forEach(h => h.row = 2);
         const row1 = headerItems.value.filter(h => h.row === 1 && availableBadges.value.includes(h.id));
+        const row3 = headerItems.value.filter(h => h.row === 3 && availableBadges.value.includes(h.id));
         const hidden = headerItems.value.filter(h => !availableBadges.value.includes(h.id));
-        headerItems.value = [...row1, ...val, ...hidden];
+        headerItems.value = [...row1, ...val, ...row3, ...hidden];
+    }
+});
+
+const row3Items = computed({
+    get: () => headerItems.value.filter(h => h.row === 3 && availableBadges.value.includes(h.id)),
+    set: (val) => {
+        val.forEach(h => h.row = 3);
+        const row1 = headerItems.value.filter(h => h.row === 1 && availableBadges.value.includes(h.id));
+        const row2 = headerItems.value.filter(h => h.row === 2 && availableBadges.value.includes(h.id));
+        const hidden = headerItems.value.filter(h => !availableBadges.value.includes(h.id));
+        headerItems.value = [...row1, ...row2, ...val, ...hidden];
     }
 });
 
@@ -272,7 +289,7 @@ const colorMap = {
                 </div>
 
                 <!-- Row 2 -->
-                <div>
+                <div class="mb-1.5">
                     <p class="text-[9px] font-bold text-purple-400/70 uppercase tracking-widest mb-1">Row 2</p>
                     <draggable
                         v-model="row2Items"
@@ -281,6 +298,46 @@ const colorMap = {
                         ghost-class="opacity-30"
                         animation="150"
                         class="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-lg border border-purple-500/20 bg-purple-950/10"
+                    >
+                        <template #item="{ element }">
+                            <div
+                                :class="[
+                                    'flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-grab active:cursor-grabbing transition-all',
+                                    element.visible
+                                        ? 'bg-black/30 border-white/15 hover:border-white/30'
+                                        : 'bg-black/10 border-white/5 opacity-40'
+                                ]"
+                            >
+                                <span class="text-[11px] font-medium select-none" :class="element.visible ? 'text-gray-200' : 'text-gray-500'">
+                                    {{ getHeaderLabel(element.id) }}
+                                </span>
+                                <button
+                                    @click="toggleHeaderItem(element.id)"
+                                    class="p-0.5 rounded hover:bg-white/10 transition-colors ml-0.5"
+                                >
+                                    <svg v-if="element.visible" class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                    </svg>
+                                    <svg v-else class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.292 4.338 5.31 7.5 10.066 7.5.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                    </draggable>
+                </div>
+
+                <!-- Row 3 -->
+                <div>
+                    <p class="text-[9px] font-bold text-teal-400/70 uppercase tracking-widest mb-1">Row 3</p>
+                    <draggable
+                        v-model="row3Items"
+                        item-key="id"
+                        group="headerItems"
+                        ghost-class="opacity-30"
+                        animation="150"
+                        class="flex flex-wrap gap-1.5 min-h-[36px] p-2 rounded-lg border border-teal-500/20 bg-teal-950/10"
                     >
                         <template #item="{ element }">
                             <div

@@ -9,13 +9,14 @@ export default {
 
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
     assignmentTasks: Array,
     verificationTasks: Array,
     difficultyTasks: Array,
+    tagTasks: Array,
     communityScore: Object,
     tiers: Array,
     weights: Object,
@@ -28,7 +29,7 @@ const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
 
 // ─── State ─────────────────────────────────────────────
-const phase = ref('assignment'); // 'assignment' | 'verification' | 'rating' | 'summary'
+const phase = ref('assignment'); // 'assignment' | 'verification' | 'rating' | 'tagging' | 'summary'
 const sessionPoints = ref(0);
 const streak = ref(0);
 const totalPointsEver = ref(0);
@@ -42,7 +43,6 @@ const confirmingRecord = ref(null);
 const assigning = ref(false);
 const completingSlot = ref(null);
 const assignHints = ref({}); // { demoId: 'message' }
-const pinnedDemoSlot = ref(null); // pin for assignment/verification (0/1/2)
 
 // Verification state
 const verificationQueue = ref([...(props.verificationTasks || [])]);
@@ -54,6 +54,17 @@ const completedRatings = ref(0);
 const ratedMapIds = ref(new Set());
 const ratedValues = ref({});
 const ratingSubmitting = ref(null);
+const renderRequesting = ref(null);
+
+// Tag state
+const tagQueue = ref([...(props.tagTasks || [])]);
+const completedTags = ref(0);
+const tagInput = ref('');
+const tagSuggestions = ref([]);
+const allTags = ref([]);
+const showTagSuggestions = ref(false);
+const addingTag = ref(false);
+const taggedCurrentMap = ref(false);
 
 // Effects state
 const showPointSplash = ref(false);
@@ -110,24 +121,22 @@ const tierProgress = computed(() => {
     return Math.min(((totalScore.value - current) / (next - current)) * 100, 100);
 });
 
-const visibleAssignments = computed(() => {
-    return assignmentQueue.value.slice(0, 3);
+const currentTask = computed(() => {
+    if (phase.value === 'assignment') return assignmentQueue.value[0] || null;
+    if (phase.value === 'verification') return verificationQueue.value[0] || null;
+    return null;
 });
 
-const visibleVerifications = computed(() => {
-    return verificationQueue.value.slice(0, 3);
-});
-
-const visibleRatings = computed(() => {
-    return ratingQueue.value.slice(0, 6);
-});
+const currentRating = computed(() => ratingQueue.value[0] || null);
+const currentTagMap = computed(() => tagQueue.value[0] || null);
 
 const totalTasks = computed(() => {
-    return props.assignmentTasks.length + (props.verificationTasks?.length || 0) + props.difficultyTasks.length;
+    return props.assignmentTasks.length + (props.verificationTasks?.length || 0)
+        + props.difficultyTasks.length + (props.tagTasks?.length || 0);
 });
 
 const completedTasks = computed(() => {
-    return completedAssignments.value + completedVerifications.value + completedRatings.value;
+    return completedAssignments.value + completedVerifications.value + completedRatings.value + completedTags.value;
 });
 
 const difficultyLabels = [
@@ -304,70 +313,41 @@ function tryBetterMatch(task) {
     confirmingRecord.value = record;
 }
 
-// ─── Pin ───────────────────────────────────────────────
-function toggleDemoPin(slotIdx) {
-    pinnedDemoSlot.value = pinnedDemoSlot.value === slotIdx ? null : slotIdx;
-}
-
-
 // ─── Task removal ──────────────────────────────────────
 async function removeTask(demoId, taskType) {
     const queue = taskType === 'verification' ? verificationQueue : assignmentQueue;
-    const visibleCount = 3;
-    const pin = pinnedDemoSlot.value;
     const idx = queue.value.findIndex(t => t.demo.id === demoId);
     if (idx === -1) return;
 
     completingSlot.value = demoId;
     await sleep(600);
-
-    if (pin === null) {
-        // No pin - normal behavior, just remove
-        queue.value.splice(idx, 1);
-    } else {
-        // Pin active: replace completed task with next from backup,
-        // then ensure the new/remaining content is at pin position
-        const hadBackup = queue.value.length > visibleCount;
-        queue.value.splice(idx, 1);
-
-        if (hadBackup) {
-            // A new item slid into visible range at visibleCount-1
-            // Move it to pin position
-            const newIdx = visibleCount - 1;
-            if (newIdx !== pin && newIdx < queue.value.length) {
-                const task = queue.value.splice(newIdx, 1)[0];
-                queue.value.splice(Math.min(pin, queue.value.length), 0, task);
-            }
-        }
-        // Always ensure pin position is populated if possible:
-        // If items exist but pin is past the end, pad with nulls won't work...
-        // Instead, just keep items left-aligned but visually show which slot is pinned
-    }
+    queue.value.splice(idx, 1);
     completingSlot.value = null;
 
-    // Preload when last phase (rating) is running low
-    const totalRemaining = assignmentQueue.value.length + verificationQueue.value.length + ratingQueue.value.length;
-    if (totalRemaining <= 2) {
+    // Preload when running low
+    const totalRemaining = assignmentQueue.value.length + verificationQueue.value.length + ratingQueue.value.length + tagQueue.value.length;
+    if (totalRemaining <= 1) {
         preloadNextRound();
     }
 
-    // Phase transitions - move to next phase or load more
+    advancePhase();
+}
+
+function advancePhase() {
     if (phase.value === 'assignment' && assignmentQueue.value.length === 0) {
-        await sleep(400);
-        if (verificationQueue.value.length > 0) {
-            phase.value = 'verification';
-        } else if (ratingQueue.value.length > 0) {
-            phase.value = 'rating';
-        } else {
-            await loadNextRound();
-        }
+        if (verificationQueue.value.length > 0) phase.value = 'verification';
+        else if (ratingQueue.value.length > 0) phase.value = 'rating';
+        else if (tagQueue.value.length > 0) { phase.value = 'tagging'; loadAllTags().then(filterTagSuggestions); }
+        else loadNextRound();
     } else if (phase.value === 'verification' && verificationQueue.value.length === 0) {
-        await sleep(400);
-        if (ratingQueue.value.length > 0) {
-            phase.value = 'rating';
-        } else {
-            await loadNextRound();
-        }
+        if (ratingQueue.value.length > 0) phase.value = 'rating';
+        else if (tagQueue.value.length > 0) { phase.value = 'tagging'; loadAllTags().then(filterTagSuggestions); }
+        else loadNextRound();
+    } else if (phase.value === 'rating' && ratingQueue.value.length === 0) {
+        if (tagQueue.value.length > 0) phase.value = 'tagging';
+        else loadNextRound();
+    } else if (phase.value === 'tagging' && tagQueue.value.length === 0) {
+        loadNextRound();
     }
 }
 
@@ -402,7 +382,10 @@ async function loadNextRound() {
         const data = preloadedData;
         preloadedData = null;
 
-        if (data.assignmentTasks.length === 0 && (!data.verificationTasks || data.verificationTasks.length === 0) && data.difficultyTasks.length === 0) {
+        const hasAny = data.assignmentTasks.length > 0 || (data.verificationTasks?.length > 0)
+            || data.difficultyTasks.length > 0 || (data.tagTasks?.length > 0);
+
+        if (!hasAny) {
             phase.value = 'summary';
             triggerFinalCelebration();
             return;
@@ -411,16 +394,14 @@ async function loadNextRound() {
         assignmentQueue.value.push(...data.assignmentTasks);
         verificationQueue.value.push(...(data.verificationTasks || []));
         ratingQueue.value.push(...data.difficultyTasks);
+        tagQueue.value.push(...(data.tagTasks || []));
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
 
-        if (assignmentQueue.value.length > 0) {
-            phase.value = 'assignment';
-        } else if (verificationQueue.value.length > 0) {
-            phase.value = 'verification';
-        } else {
-            phase.value = 'rating';
-        }
+        if (assignmentQueue.value.length > 0) phase.value = 'assignment';
+        else if (verificationQueue.value.length > 0) phase.value = 'verification';
+        else if (ratingQueue.value.length > 0) phase.value = 'rating';
+        else phase.value = 'tagging';
     } catch (err) {
         console.error('Failed to load more tasks:', err);
         phase.value = 'summary';
@@ -437,28 +418,16 @@ async function rateMap(map, level) {
 
     try {
         await axios.post(`/maps/${map.id}/rate-difficulty`, { rating: level });
-
         ratedMapIds.value.add(map.id);
         ratedValues.value[map.id] = level;
         completedRatings.value++;
         streak.value++;
-        const points = (props.weights?.difficulty_ratings || 1);
-        awardPoints(points);
+        awardPoints(props.weights?.difficulty_ratings || 1);
 
-        // Check if all visible ratings are done
-        const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
-        if (allRated) {
-            await sleep(600);
-            // Remove all rated from queue at once
-            ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
-            if (ratingQueue.value.length <= 2) {
-                preloadNextRound();
-            }
-            if (ratingQueue.value.length === 0) {
-                await sleep(400);
-                await loadNextRound();
-            }
-        }
+        await sleep(600);
+        ratingQueue.value.shift();
+        if (ratingQueue.value.length <= 1) preloadNextRound();
+        advancePhase();
     } catch (err) {
         console.error('Rating failed:', err);
         streak.value = 0;
@@ -471,20 +440,95 @@ async function skipRating(map) {
     streak.value = 0;
     awardPoints(1);
     completedRatings.value++;
-    ratedMapIds.value.add(map.id); // mark as done so it fades
+    ratingQueue.value.shift();
+    if (ratingQueue.value.length <= 1) preloadNextRound();
+    advancePhase();
+}
 
-    const allRated = visibleRatings.value.every(m => ratedMapIds.value.has(m.id));
-    if (allRated) {
-        await sleep(600);
-        ratingQueue.value = ratingQueue.value.filter(m => !ratedMapIds.value.has(m.id));
-        if (ratingQueue.value.length <= 2) {
-            preloadNextRound();
-        }
-        if (ratingQueue.value.length === 0) {
-            await sleep(400);
-            await loadNextRound();
-        }
+async function requestRenderAndSkip(map) {
+    renderRequesting.value = map.id;
+    try {
+        await axios.post('/community-tasks/request-render', { map_id: map.id });
+    } catch (err) {
+        console.warn('Render request failed:', err.response?.data?.error || err.message);
     }
+    renderRequesting.value = null;
+    skipRating(map);
+}
+
+async function requestTagRenderAndSkip(map) {
+    renderRequesting.value = map.id;
+    try {
+        await axios.post('/community-tasks/request-render', { map_id: map.id });
+    } catch (err) {
+        console.warn('Render request failed:', err.response?.data?.error || err.message);
+    }
+    renderRequesting.value = null;
+    skipTag();
+}
+
+// ─── Tag logic ─────────────────────────────────────────
+async function loadAllTags() {
+    if (allTags.value.length > 0) {
+        filterTagSuggestions();
+        return;
+    }
+    try {
+        const { data } = await axios.get('/api/tags');
+        allTags.value = data.tags || data;
+        filterTagSuggestions();
+    } catch (err) {
+        console.error('Failed to load tags:', err);
+    }
+}
+
+function filterTagSuggestions() {
+    const q = tagInput.value.toLowerCase().trim();
+    const currentMap = currentTagMap.value;
+    const existingIds = new Set((currentMap?.tags || []).map(t => t.id));
+    const filtered = allTags.value.filter(t => !existingIds.has(t.id));
+    tagSuggestions.value = q
+        ? filtered.filter(t => t.display_name.toLowerCase().includes(q))
+        : filtered;
+}
+
+async function addTagToMap(tagName) {
+    const map = currentTagMap.value;
+    if (!map || addingTag.value) return;
+    addingTag.value = true;
+
+    try {
+        const { data } = await axios.post('/api/maps/' + map.id + '/tags', { tag_name: tagName });
+        map.tags.push(data.tag);
+        if (data.parent_tag_added && !map.tags.some(t => t.id === data.parent_tag_added.id)) {
+            map.tags.push(data.parent_tag_added);
+        }
+        map.tags.sort((a, b) => a.display_name.localeCompare(b.display_name));
+        tagInput.value = '';
+        taggedCurrentMap.value = true;
+        filterTagSuggestions();
+        streak.value++;
+        awardPoints(props.weights?.tags_added || 1);
+    } catch (err) {
+        console.error('Failed to add tag:', err);
+    } finally {
+        addingTag.value = false;
+    }
+}
+
+async function skipTag() {
+    if (taggedCurrentMap.value) {
+        // Already tagged at least once - count as completed
+    } else {
+        streak.value = 0;
+        awardPoints(1);
+    }
+    completedTags.value++;
+    taggedCurrentMap.value = false;
+    tagInput.value = '';
+    tagQueue.value.shift();
+    if (tagQueue.value.length <= 1) preloadNextRound();
+    advancePhase();
 }
 
 // ─── Points & Effects ──────────────────────────────────
@@ -663,21 +707,26 @@ async function startNewSession() {
         assignmentQueue.value = [...data.assignmentTasks];
         verificationQueue.value = [...(data.verificationTasks || [])];
         ratingQueue.value = [...data.difficultyTasks];
+        tagQueue.value = [...(data.tagTasks || [])];
         completedAssignments.value = 0;
         completedVerifications.value = 0;
         completedRatings.value = 0;
+        completedTags.value = 0;
         selectedRecords.value = {};
         ratedMapIds.value = new Set();
         ratedValues.value = {};
+        taggedCurrentMap.value = false;
         sessionPoints.value = 0;
         streak.value = 0;
         lastSavedPoints = 0;
         roundNumber.value = 1;
         personalBest.value = data.personalBest;
         leaderboardTop.value = data.leaderboard;
-        phase.value = data.assignmentTasks.length > 0 ? 'assignment'
-            : (data.verificationTasks?.length > 0 ? 'verification'
-            : (data.difficultyTasks.length > 0 ? 'rating' : 'summary'));
+        if (data.assignmentTasks.length > 0) phase.value = 'assignment';
+        else if (data.verificationTasks?.length > 0) phase.value = 'verification';
+        else if (data.difficultyTasks.length > 0) phase.value = 'rating';
+        else if (data.tagTasks?.length > 0) phase.value = 'tagging';
+        else phase.value = 'summary';
     } catch (err) {
         console.error('Failed to refresh tasks:', err);
     }
@@ -702,6 +751,12 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+watch(phase, (val) => {
+    if (val === 'tagging') {
+        loadAllTags();
+    }
+});
+
 // ─── Lifecycle ─────────────────────────────────────────
 function handleBeforeUnload() {
     if (sessionPoints.value > 0 && sessionPoints.value !== lastSavedPoints) {
@@ -721,13 +776,10 @@ onMounted(() => {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     if (props.assignmentTasks.length === 0) {
-        if (props.verificationTasks?.length > 0) {
-            phase.value = 'verification';
-        } else if (props.difficultyTasks.length > 0) {
-            phase.value = 'rating';
-        } else {
-            phase.value = 'summary';
-        }
+        if (props.verificationTasks?.length > 0) phase.value = 'verification';
+        else if (props.difficultyTasks.length > 0) phase.value = 'rating';
+        else if (props.tagTasks?.length > 0) { phase.value = 'tagging'; loadAllTags(); }
+        else phase.value = 'summary';
     }
 });
 
@@ -767,11 +819,7 @@ onUnmounted(() => {
                         <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Round {{ roundNumber }}</span>
                     </div>
                     <div class="flex items-center gap-3 mt-1">
-                        <p class="text-gray-500 text-sm">Earn points by assigning demos and rating map difficulty</p>
-                        <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
-                            class="text-[10px] text-gray-500 hover:text-red-400 border border-gray-700 hover:border-red-500/30 px-2 py-0.5 rounded transition-colors">
-                            End Session
-                        </button>
+                        <p class="text-gray-500 text-sm">Assign demos, verify records, rate difficulty, tag maps. All actions earn session points (Tasks Leaderboard). Assigns and ratings also count towards <a :href="route('community')" class="text-gray-400 hover:text-white underline">Community Leaderboard</a>.</p>
                     </div>
                 </div>
 
@@ -863,7 +911,7 @@ onUnmounted(() => {
             </div>
             <div class="mt-1.5 flex items-center justify-between">
                 <span class="text-xs text-gray-400">
-                    {{ phase === 'assignment' ? 'Demo Assignment' : phase === 'verification' ? 'Verify Assignments' : phase === 'rating' ? 'Difficulty Rating' : 'Complete' }}
+                    {{ phase === 'assignment' ? 'Demo Assignment' : phase === 'verification' ? 'Verify Assignments' : phase === 'rating' ? 'Difficulty Rating' : phase === 'tagging' ? 'Map Tagging' : 'Complete' }}
                     <span class="text-gray-500 ml-1">{{ completedTasks }}/{{ totalTasks }}</span>
                 </span>
                 <span v-if="phase === 'assignment'" class="text-xs text-blue-400">
@@ -875,37 +923,26 @@ onUnmounted(() => {
                 <span v-else-if="phase === 'rating'" class="text-xs text-purple-400">
                     +{{ weights?.difficulty_ratings || 1 }} pt per rating
                 </span>
+                <span v-else-if="phase === 'tagging'" class="text-xs text-amber-400">
+                    +{{ weights?.tags_added || 1 }} pt per tag
+                </span>
+                <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
+                    class="text-xs text-gray-400 hover:text-red-400 bg-gray-800/60 hover:bg-red-500/10 border border-gray-700 hover:border-red-500/40 px-3 py-1 rounded-lg transition-all font-medium">
+                    End Session
+                </button>
             </div>
         </div>
 
         <!-- ═══ ASSIGNMENT PHASE ═══ -->
-        <div v-if="phase === 'assignment'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
-            <div v-if="visibleAssignments.length === 0" class="text-center py-16 text-gray-500">
+        <div v-if="phase === 'assignment'" class="max-w-lg mx-auto px-4 md:px-6 lg:px-8 pb-8">
+            <div v-if="!currentTask" class="text-center py-16 text-gray-500">
                 {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
             </div>
 
-            <!-- Pin selector row -->
-            <div v-if="visibleAssignments.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                <button v-for="i in visibleAssignments.length" :key="'pin-a-'+i"
-                    @click="toggleDemoPin(i-1)"
-                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
-                    :class="pinnedDemoSlot === i-1
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
-                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
-                    <span>&#x1F4CC;</span>
-                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned - tasks fill here' : 'Pin this slot' }}</span>
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <TransitionGroup name="task-card">
-                    <div v-for="(task, slotIdx) in visibleAssignments" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
-                        :class="[
-                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
-                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-gray-700/40'
-                        ]"
-                        :style="pinnedDemoSlot !== null && visibleAssignments.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+            <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id">
+                    <div
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 relative transition-all duration-300"
+                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''"
                     >
 
                         <!-- ── Confirm overlay (only after clicking Assign) ── -->
@@ -938,13 +975,29 @@ onUnmounted(() => {
                                     </div>
                                 </div>
 
+                                <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-3 mb-3 text-xs text-yellow-100 space-y-1.5">
+                                    <div class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider mb-1.5">Before confirming, check:</div>
+                                    <div class="flex items-start gap-1.5">
+                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                        <span>Are you sure this is the <strong class="text-yellow-300">same player</strong>? Does the nick in the demo belong to this record's player?</span>
+                                    </div>
+                                    <div class="flex items-start gap-1.5">
+                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                        <span>Is the demo time and record time <strong class="text-yellow-300">matching correctly</strong>? ±1ms rounding differences are <strong class="text-yellow-300">very rare</strong> but can occur - if times don't match exactly, prefer <strong class="text-yellow-300">Not Sure</strong> over a wrong assignment.</span>
+                                    </div>
+                                    <div class="flex items-start gap-1.5">
+                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                        <span>If unsure, press <strong class="text-yellow-300">Cancel</strong> and use <strong class="text-yellow-300">Not Sure</strong> instead.</span>
+                                    </div>
+                                </div>
+
                                 <div class="flex gap-2 mt-auto">
                                     <button @click="confirmAssign" :disabled="assigning"
                                         class="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:text-green-400 text-white rounded-lg font-bold text-sm transition-colors">
                                         {{ assigning ? 'Assigning...' : 'Confirm' }}
                                     </button>
                                     <button @click="cancelConfirm"
-                                        class="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors">
+                                        class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
                                         Cancel
                                     </button>
                                 </div>
@@ -1010,6 +1063,8 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1021,8 +1076,6 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1048,6 +1101,8 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px]"
@@ -1059,8 +1114,6 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1102,38 +1155,19 @@ onUnmounted(() => {
                             </div>
                         </div>
                     </div>
-                </TransitionGroup>
             </div>
         </div>
 
         <!-- ═══ VERIFICATION PHASE ═══ -->
-        <div v-if="phase === 'verification'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
-            <div v-if="visibleVerifications.length === 0" class="text-center py-16 text-gray-500">
+        <div v-if="phase === 'verification'" class="max-w-lg mx-auto px-4 md:px-6 lg:px-8 pb-8">
+            <div v-if="!currentTask" class="text-center py-16 text-gray-500">
                 {{ loadingMore ? 'Loading more tasks...' : 'No demos to verify.' }}
             </div>
 
-            <!-- Pin selector row -->
-            <div v-if="visibleVerifications.length > 1" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                <button v-for="i in visibleVerifications.length" :key="'pin-v-'+i"
-                    @click="toggleDemoPin(i-1)"
-                    class="flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] transition-all"
-                    :class="pinnedDemoSlot === i-1
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40'
-                        : 'text-gray-600 hover:text-gray-400 border border-transparent hover:border-gray-700'">
-                    <span>&#x1F4CC;</span>
-                    <span>{{ pinnedDemoSlot === i-1 ? 'Pinned' : 'Pin' }}</span>
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <TransitionGroup name="task-card">
-                    <div v-for="(task, slotIdx) in visibleVerifications" :key="task.demo.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border relative transition-all duration-300"
-                        :class="[
-                            completingSlot === task.demo.id ? 'scale-95 opacity-0' : '',
-                            pinnedDemoSlot === slotIdx ? 'border-yellow-500/40' : 'border-emerald-700/30'
-                        ]"
-                        :style="pinnedDemoSlot !== null && visibleVerifications.length === 1 ? { gridColumn: pinnedDemoSlot + 1 } : {}"
+            <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id">
+                    <div
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-emerald-700/30 relative transition-all duration-300"
+                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''"
                     >
 
                         <!-- Confirm overlay (for Better Match) -->
@@ -1162,7 +1196,7 @@ onUnmounted(() => {
                                         {{ assigning ? 'Saving...' : 'Confirm' }}
                                     </button>
                                     <button @click="cancelConfirm"
-                                        class="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors">
+                                        class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
                                         Cancel
                                     </button>
                                 </div>
@@ -1258,6 +1292,8 @@ onUnmounted(() => {
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
                                         <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1269,8 +1305,6 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-300' : 'text-gray-500'">{{ formatTime(record.time) }}</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1299,6 +1333,8 @@ onUnmounted(() => {
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
                                         <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px]"
@@ -1310,8 +1346,6 @@ onUnmounted(() => {
                                             {{ formatSignedDiff(record.time, task.demo.time_ms) }}
                                         </span>
                                         <span class="font-mono" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-white font-semibold' : 'text-gray-300'">{{ formatTime(record.time) }}</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                 </button>
                             </div>
@@ -1348,32 +1382,41 @@ onUnmounted(() => {
                             </div>
                         </div>
                     </div>
-                </TransitionGroup>
             </div>
         </div>
 
         <!-- ═══ RATING PHASE ═══ -->
-        <div v-if="phase === 'rating'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
-            <div v-if="visibleRatings.length === 0" class="text-center py-16 text-gray-500">
+        <div v-if="phase === 'rating'" class="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
+            <div v-if="!currentRating" class="text-center py-16 text-gray-500">
                 {{ loadingMore ? 'Loading more tasks...' : 'No maps available for rating.' }}
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <TransitionGroup name="task-card">
-                    <div v-for="(map, slotIdx) in visibleRatings" :key="map.id"
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border overflow-hidden transition-all duration-500 relative"
-                        :class="[
-                            ratedMapIds.has(map.id) ? 'scale-95 opacity-40' : '',
-                            'border-gray-700/40'
-                        ]">
-                        <!-- Thumbnail - full aspect ratio -->
+            <div v-if="currentRating" v-for="map in [currentRating]" :key="map.id" class="flex gap-4">
+                    <!-- Left: Tips -->
+                    <div class="w-56 flex-shrink-0">
+                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-purple-500/20 p-3 space-y-3 text-xs text-gray-400">
+                            <div class="text-purple-400 font-bold text-[11px] uppercase tracking-wider">Rating Tips</div>
+                            <div class="space-y-2">
+                                <p>Rate based on <strong class="text-gray-300">your experience</strong> playing the map, not just how it looks.</p>
+                                <p>Not sure? Check the <strong class="text-gray-300">YouTube video</strong> on the right to see actual gameplay and judge the difficulty.</p>
+                                <p>No video available? Use <strong class="text-gray-300">Skip + Request Render</strong> to queue a render of the best demo - the next person (or you) will have a video to help decide.</p>
+                                <p>When in doubt, <strong class="text-gray-300">Skip</strong> is always fine - you still earn a point!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Map card -->
+                    <div class="flex-1 min-w-0">
+                    <div
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden transition-all duration-500 relative">
+                        <!-- Thumbnail -->
                         <div class="relative">
                             <img v-if="map.thumbnail"
                                 :src="'/storage/' + map.thumbnail"
-                                class="w-full aspect-video object-contain bg-black"
+                                class="w-full aspect-[4/3] object-cover bg-black"
                                 :alt="map.name" />
-                            <div v-else class="w-full aspect-video bg-gray-700/50 flex items-center justify-center">
-                                <span class="text-gray-600 text-xs">No image</span>
+                            <div v-else class="w-full aspect-[4/3] bg-gray-700/50 flex items-center justify-center">
+                                <span class="text-gray-600 text-sm">No image</span>
                             </div>
                             <!-- Items overlay -->
                             <div class="absolute bottom-1 right-1 flex flex-col gap-0.5">
@@ -1412,9 +1455,180 @@ onUnmounted(() => {
                                 class="w-full mt-1.5 py-1.5 bg-gray-700/50 hover:bg-gray-700/70 text-gray-400 hover:text-gray-300 rounded text-xs font-medium transition-all border border-gray-600/30">
                                 Skip
                             </button>
+                            <button v-if="!ratedMapIds.has(map.id) && !(map.videos?.vq3?.length || map.videos?.cpm?.length)"
+                                @click="requestRenderAndSkip(map)"
+                                :disabled="renderRequesting === map.id"
+                                class="w-full mt-1.5 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+                                {{ renderRequesting === map.id ? 'Requesting...' : 'Skip + Request Render' }}
+                            </button>
                         </div>
                     </div>
-                </TransitionGroup>
+                    </div>
+
+                    <!-- Right: YouTube embed videos -->
+                    <div class="w-80 flex-shrink-0 space-y-3">
+                        <template v-if="map.videos && (map.videos.vq3?.length || map.videos.cpm?.length)">
+                            <template v-for="phys in ['vq3', 'cpm']" :key="phys">
+                                <div v-if="map.videos[phys]?.length" class="space-y-2">
+                                    <div class="text-xs font-bold uppercase tracking-wider"
+                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ phys.toUpperCase() }} Videos</div>
+                                    <div v-for="(vid, idx) in map.videos[phys]" :key="idx" class="rounded-lg overflow-hidden border border-gray-700/40">
+                                        <iframe v-if="vid.youtube_video_id"
+                                            :src="`https://www.youtube.com/embed/${vid.youtube_video_id}`"
+                                            class="w-full aspect-video"
+                                            frameborder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen></iframe>
+                                        <div class="bg-gray-800/80 px-2 py-1 text-[10px] text-gray-400">
+                                            {{ vid.player_name || 'Unknown' }} - {{ formatTime(vid.time_ms) }}
+                                            <span v-if="vid.gametype && vid.gametype !== 'run'" class="text-yellow-500/70 ml-1">{{ vid.gametype }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <div v-else class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 p-4 text-center">
+                            <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+                            <div class="text-xs text-gray-500 mb-2">No videos available for this map</div>
+                            <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future ratings</div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+
+        <!-- ═══ TAGGING PHASE ═══ -->
+        <div v-if="phase === 'tagging'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
+            <div v-if="!currentTagMap" class="text-center py-16 text-gray-500">
+                {{ loadingMore ? 'Loading more tasks...' : 'No maps available for tagging.' }}
+            </div>
+
+            <div v-if="currentTagMap" :key="currentTagMap.id">
+                <!-- Top row: Tips left, Map center, Videos right -->
+                <div class="flex gap-4 mb-4 max-w-6xl mx-auto">
+                    <!-- Left: Tips -->
+                    <div class="w-56 flex-shrink-0">
+                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-500/20 p-3 space-y-3 text-xs text-gray-400">
+                            <div class="text-amber-400 font-bold text-[11px] uppercase tracking-wider">Tagging Tips</div>
+                            <div class="space-y-2">
+                                <p>Add tags that describe the map's <strong class="text-gray-300">gameplay style</strong>, mechanics, and theme.</p>
+                                <p>Not sure what the map plays like? Check the <strong class="text-gray-300">YouTube video</strong> on the right to see actual gameplay.</p>
+                                <p>No video available? Use <strong class="text-gray-300">Skip + Request Render</strong> to queue a render - future taggers (or you) will have a video to help.</p>
+                                <p>Look at the <strong class="text-gray-300">weapons and items</strong> on the thumbnail for clues about the map's mechanics.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Center: Map card -->
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-700/30 overflow-hidden">
+                            <!-- Thumbnail -->
+                            <div class="relative">
+                                <img v-if="currentTagMap.thumbnail"
+                                    :src="'/storage/' + currentTagMap.thumbnail"
+                                    class="w-full aspect-[16/9] object-cover bg-black"
+                                    :alt="currentTagMap.name" />
+                                <div v-else class="w-full aspect-[16/9] bg-gray-700/50 flex items-center justify-center">
+                                    <span class="text-gray-600 text-sm">No image</span>
+                                </div>
+                                <div class="absolute bottom-1 right-1 flex flex-col gap-0.5">
+                                    <div v-if="currentTagMap.weapons" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
+                                        <div v-for="w in currentTagMap.weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-3 h-3`"></div>
+                                    </div>
+                                    <div v-if="currentTagMap.items" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
+                                        <div v-for="i in currentTagMap.items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-3 h-3`"></div>
+                                    </div>
+                                    <div v-if="currentTagMap.functions" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
+                                        <div v-for="f in currentTagMap.functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-3 h-3`"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Map name + existing tags + skip -->
+                            <div class="p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <a :href="'/maps/' + encodeURIComponent(currentTagMap.name)" target="_blank"
+                                        class="text-lg font-bold text-white hover:text-blue-400 transition-colors">{{ currentTagMap.name }}</a>
+                                    <button @click="skipTag"
+                                        class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all"
+                                        :class="taggedCurrentMap
+                                            ? 'bg-green-600 hover:bg-green-500 text-white'
+                                            : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600'">
+                                        {{ taggedCurrentMap ? 'Next Map' : 'Skip' }}
+                                    </button>
+                                </div>
+                                <div v-if="currentTagMap.tags.length > 0" class="flex flex-wrap gap-1.5">
+                                    <span v-for="tag in currentTagMap.tags" :key="tag.id"
+                                        class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                        {{ tag.display_name }}
+                                    </span>
+                                </div>
+                                <div v-else class="text-xs text-gray-600">No tags yet - be the first!</div>
+                                <!-- Request render button when no videos -->
+                                <button v-if="!(currentTagMap.videos?.vq3?.length || currentTagMap.videos?.cpm?.length)"
+                                    @click="requestTagRenderAndSkip(currentTagMap)"
+                                    :disabled="renderRequesting === currentTagMap.id"
+                                    class="w-full mt-2 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+                                    {{ renderRequesting === currentTagMap.id ? 'Requesting...' : 'Skip + Request Render' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: YouTube embed videos -->
+                    <div class="w-80 flex-shrink-0 space-y-3">
+                        <template v-if="currentTagMap.videos && (currentTagMap.videos.vq3?.length || currentTagMap.videos.cpm?.length)">
+                            <template v-for="phys in ['vq3', 'cpm']" :key="phys">
+                                <div v-if="currentTagMap.videos[phys]?.length" class="space-y-2">
+                                    <div class="text-xs font-bold uppercase tracking-wider"
+                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ phys.toUpperCase() }} Videos</div>
+                                    <div v-for="(vid, idx) in currentTagMap.videos[phys]" :key="idx" class="rounded-lg overflow-hidden border border-gray-700/40">
+                                        <iframe v-if="vid.youtube_video_id"
+                                            :src="`https://www.youtube.com/embed/${vid.youtube_video_id}`"
+                                            class="w-full aspect-video"
+                                            frameborder="0"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen></iframe>
+                                        <div class="bg-gray-800/80 px-2 py-1 text-[10px] text-gray-400">
+                                            {{ vid.player_name || 'Unknown' }} - {{ formatTime(vid.time_ms) }}
+                                            <span v-if="vid.gametype && vid.gametype !== 'run'" class="text-yellow-500/70 ml-1">{{ vid.gametype }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <div v-else class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 p-4 text-center">
+                            <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+                            <div class="text-xs text-gray-500 mb-2">No videos available for this map</div>
+                            <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future taggers</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search input + Add button -->
+                <div class="mb-3 flex gap-2">
+                    <input v-model="tagInput"
+                        @input="filterTagSuggestions"
+                        @keydown.enter.prevent="tagInput.trim() && addTagToMap(tagInput.trim())"
+                        class="flex-1 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-sm text-white placeholder-gray-500 focus:border-amber-500/50 focus:outline-none"
+                        placeholder="Search tags or type new tag name..." />
+                    <button @click="tagInput.trim() && addTagToMap(tagInput.trim())"
+                        :disabled="!tagInput.trim() || addingTag"
+                        class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold rounded-lg text-sm transition-colors flex-shrink-0">
+                        Add
+                    </button>
+                </div>
+
+                <!-- ALL available tags - full width, no limit -->
+                <div class="flex flex-wrap gap-2">
+                    <button v-for="tag in tagSuggestions" :key="tag.id"
+                        @click="addTagToMap(tag.display_name)"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-800/60 text-gray-300 border border-gray-700/40 hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 transition-all cursor-pointer">
+                        {{ tag.display_name }}
+                    </button>
+                    <div v-if="tagSuggestions.length === 0 && allTags.length > 0" class="text-sm text-gray-600">No matching tags. Press Enter to create "{{ tagInput }}"</div>
+                    <div v-if="allTags.length === 0" class="text-sm text-gray-600">Loading tags...</div>
+                </div>
             </div>
         </div>
 
@@ -1428,7 +1642,7 @@ onUnmounted(() => {
                     +{{ sessionPoints }} pts
                 </div>
                 <div class="text-gray-500 text-sm mb-6">
-                    {{ completedAssignments }} assigned - {{ completedVerifications }} verified - {{ completedRatings }} rated
+                    {{ completedAssignments }} assigned - {{ completedVerifications }} verified - {{ completedRatings }} rated - {{ completedTags }} tagged
                 </div>
 
                 <!-- Tier display -->
