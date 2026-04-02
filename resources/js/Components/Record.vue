@@ -6,8 +6,17 @@
         record: Object
     });
 
+    defineEmits(['scoreHover']);
     const page = usePage();
     const isLoggedIn = computed(() => !!page.props.auth?.user);
+
+    const fmtDate = (dateStr) => {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+    };
 
     const bestrecordCountry = computed(() => {
         let country = props.record.user?.country ?? props.record.country;
@@ -98,11 +107,14 @@
                     <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
                 </div>
                 <div class="w-8 sm:w-10 text-center flex-shrink-0">
-                    <div v-if="record.map_score" class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ Math.round(record.map_score) }}</div>
+                    <div v-if="record.map_score"
+                        class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
+                        @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
+                        @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
                 </div>
                 <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
                     <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
-                        {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                        {{ fmtDate(record.date_set) }}
                     </div>
                     <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
                         {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}

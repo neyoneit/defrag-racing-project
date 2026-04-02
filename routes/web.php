@@ -18,6 +18,7 @@ use App\Http\Controllers\PagesController;
 use App\Http\Controllers\DemosController;
 use App\Http\Controllers\ModelsController;
 use App\Http\Controllers\FileController;
+use App\Http\Controllers\AboutMeController;
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\DefragHQ\DonationManagementController;
 use App\Http\Controllers\AliasController;
@@ -59,6 +60,7 @@ Route::post('/maps/{id}/rate-difficulty', [MapsController::class, 'rateDifficult
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
+Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
 Route::get('/community-tasks', [CommunityTasksController::class, 'index'])->middleware(['auth', 'verified'])->name('community.tasks');
@@ -249,6 +251,9 @@ Route::post('/settings/model-group-order', [\App\Http\Controllers\MapperProfileC
 
 Route::get('/profile/{userId}/progress-bar', [ProfileController::class, 'progressBar'])->name('profile.progressbar');
 Route::get('/api/profile/{mddId}/activity', [ProfileController::class, 'activityData'])->name('profile.activity');
+Route::get('/api/profile/{mddId}/rating-breakdown/{physics}', [ProfileController::class, 'ratingBreakdown'])->middleware(['auth'])->name('profile.rating-breakdown');
+Route::post('/profile/{userId}/about-me', [AboutMeController::class, 'submit'])->middleware(['auth', 'verified'])->name('profile.about-me.submit');
+Route::post('/profile/{userId}/about-me/delete', [AboutMeController::class, 'requestDelete'])->middleware(['auth', 'verified'])->name('profile.about-me.delete');
 Route::get('/profile/mdd/{userId}', [ProfileController::class, 'mdd'])->name('profile.mdd');
 Route::get('/profile/{userId}', [ProfileController::class, 'index'])->name('profile.index');
 

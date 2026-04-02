@@ -118,6 +118,7 @@ class RecordsController extends Controller
             $score = $scores->get($key);
             $record->map_score = $score ? round($score->map_score, 2) : null;
             $record->reltime = $score ? round($score->reltime, 4) : null;
+            $record->multiplier = $score ? round($score->multiplier, 4) : null;
             $record->is_outlier = $score ? $score->is_outlier : false;
         });
 

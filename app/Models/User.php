@@ -54,6 +54,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'notification_settings',
         'created_at',
         'color',
+        'about_me',
         'avatar_effect',
         'name_effect',
         'avatar_border_color',

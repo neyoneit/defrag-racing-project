@@ -22,7 +22,7 @@ class ProfileController extends Controller {
         $user = User::query()
             ->where('id', $userId)
             ->with('clan')
-            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_id', 'discord_name', 'twitch_id', 'twitch_name', 'twitter_name', 'profile_layout', 'admin', 'is_moderator', 'donation_emails', 'is_live']);
+            ->first(['id', 'mdd_id', 'name', 'profile_photo_path', 'profile_background_path', 'country', 'color', 'about_me', 'avatar_effect', 'name_effect', 'avatar_border_color', 'discord_id', 'discord_name', 'twitch_id', 'twitch_name', 'twitter_name', 'profile_layout', 'admin', 'is_moderator', 'donation_emails', 'is_live']);
 
         // Add MDD name if different from site name
         if ($user && $user->mdd_id) {
@@ -231,7 +231,13 @@ class ProfileController extends Controller {
                     ->select('physics', 'mode', 'category', 'all_players_rank', 'active_players_rank', 'player_rating')
                     ->get()
                     ->toArray()
-                : []);
+                : [])
+            ->with('aboutMePending', $visitor
+                ? \App\Models\AboutMeSubmission::where('user_id', $user->id)
+                    ->where('submitted_by', $visitor->id)
+                    ->where('status', 'pending')
+                    ->exists()
+                : false);
 
         if ($needs('vq3Records')) $response->with('vq3Records', $vq3Records ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
         if ($needs('cpmRecords')) $response->with('cpmRecords', $cpmRecords ?? (object)['total' => 0, 'data' => [], 'per_page' => 20]);
@@ -1220,6 +1226,142 @@ class ProfileController extends Controller {
                 $record->score_weight = round(exp(-0.02 * $scoreRanks[$record->mapname]), 4);
             }
             return $record;
+        });
+    }
+
+    public function ratingBreakdown(Request $request, $mddId, $physics)
+    {
+        if (!$request->user()?->isAdmin()) {
+            abort(403);
+        }
+
+        $mode = $request->input('mode', 'run');
+        $category = $request->input('category', 'overall');
+
+        // Get player rating
+        $rating = PlayerRating::where('mdd_id', $mddId)
+            ->where('physics', $physics)
+            ->where('mode', $mode)
+            ->where('category', $category)
+            ->first();
+
+        if (!$rating) {
+            return response()->json(['error' => 'No rating found'], 404);
+        }
+
+        // Get all map scores for this player, sorted by map_score desc
+        $mapScores = PlayerMapScore::where('mdd_id', $mddId)
+            ->where('physics', $physics)
+            ->where('mode', $mode)
+            ->orderByDesc('map_score')
+            ->get();
+
+        // Filter to maps that belong to this category
+        if ($category !== 'overall') {
+            $categoryMaps = $this->getMapsForCategory($category);
+            $mapScores = $mapScores->filter(fn ($s) => $categoryMaps->contains($s->mapname));
+        }
+
+        // Get player's record rank + total players per map (batch query)
+        $mapNames = $mapScores->pluck('mapname')->unique();
+        $recordRanks = Record::where('mdd_id', $mddId)
+            ->where('physics', $physics)
+            ->where('mode', $mode)
+            ->whereIn('mapname', $mapNames)
+            ->whereNull('deleted_at')
+            ->pluck('rank', 'mapname');
+
+        $mapPlayerCounts = DB::table('records')
+            ->where('physics', $physics)
+            ->where('mode', $mode)
+            ->whereIn('mapname', $mapNames)
+            ->whereNull('deleted_at')
+            ->groupBy('mapname')
+            ->select('mapname', DB::raw('COUNT(DISTINCT mdd_id) as total_players'))
+            ->pluck('total_players', 'mapname');
+
+        // Calculate weights exactly like Rust does
+        $CFG_D = config('ratings.cfg_d');
+        $MIN_TOTAL_RECORDS = config('ratings.min_total_records');
+
+        $weightedSum = 0;
+        $weightSum = 0;
+        $breakdown = [];
+
+        foreach ($mapScores->values() as $rank => $score) {
+            $weight = exp(-$CFG_D * ($rank + 1));
+            $contribution = $score->map_score * $weight;
+            $weightedSum += $contribution;
+            $weightSum += $weight;
+
+            $breakdown[] = [
+                'rank' => $rank + 1,
+                'mapname' => $score->mapname,
+                'time' => $score->time,
+                'reltime' => round($score->reltime, 4),
+                'map_score' => round($score->map_score, 2),
+                'base_score' => round(($score->multiplier && $score->multiplier > 0) ? $score->map_score / $score->multiplier : $score->map_score, 2),
+                'multiplier' => round($score->multiplier ?? 1, 4),
+                'weight' => round($weight, 4),
+                'contribution' => round($contribution, 2),
+                'is_outlier' => $score->is_outlier,
+                'record_rank' => $recordRanks[$score->mapname] ?? null,
+                'total_players' => $mapPlayerCounts[$score->mapname] ?? null,
+            ];
+        }
+
+        $rawRating = $weightSum > 0 ? $weightedSum / $weightSum : 0;
+        $numRecords = count($breakdown);
+        $penalty = $numRecords < $MIN_TOTAL_RECORDS ? $numRecords / $MIN_TOTAL_RECORDS : 1.0;
+        $finalRating = $rawRating * $penalty;
+
+        return response()->json([
+            'physics' => $physics,
+            'mode' => $mode,
+            'category' => $category,
+            'player_rating' => round($rating->player_rating, 2),
+            'calculated_rating' => round($finalRating, 2),
+            'raw_rating' => round($rawRating, 2),
+            'num_records' => $numRecords,
+            'penalty' => round($penalty, 4),
+            'all_players_rank' => $rating->all_players_rank,
+            'active_players_rank' => $rating->active_players_rank,
+            'weighted_sum' => round($weightedSum, 2),
+            'weight_sum' => round($weightSum, 4),
+            'breakdown' => $breakdown,
+        ]);
+    }
+
+    private function getMapsForCategory(string $category): \Illuminate\Support\Collection
+    {
+        return Cache::remember("ranking_category_maps:{$category}", 3600, function () use ($category) {
+            $maps = Map::query();
+
+            switch ($category) {
+                case 'rocket': case 'rl':
+                    $maps->where('weapons', 'LIKE', '%rl%'); break;
+                case 'plasma': case 'pg':
+                    $maps->where('weapons', 'LIKE', '%pg%'); break;
+                case 'grenade': case 'gl':
+                    $maps->where('weapons', 'LIKE', '%gl%'); break;
+                case 'bfg':
+                    $maps->where('weapons', 'LIKE', '%bfg%'); break;
+                case 'lg':
+                    $maps->where('weapons', 'LIKE', '%lg%'); break;
+                case 'slick':
+                    $maps->where('functions', 'LIKE', '%slick%'); break;
+                case 'tele':
+                    $maps->where('functions', 'LIKE', '%tele%'); break;
+                case 'strafe':
+                    $maps->where(function ($q) {
+                        $q->whereNull('weapons')
+                          ->orWhere('weapons', '')
+                          ->orWhereRaw("NOT weapons REGEXP '(^|,)(rl|pg|gl|bfg|lg)(,|$)'");
+                    });
+                    break;
+            }
+
+            return $maps->pluck('name');
         });
     }
 }

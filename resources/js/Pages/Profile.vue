@@ -139,6 +139,10 @@
         visitorGlobalPreferences: {
             type: Object,
             default: null
+        },
+        aboutMePending: {
+            type: Boolean,
+            default: false
         }
     });
 
@@ -280,6 +284,68 @@
             zIndex: 99999,
         };
     });
+    // Admin rating breakdown
+    const isAdmin = computed(() => page.props.auth?.user?.is_admin || page.props.auth?.user?.admin);
+    const ratingBreakdownOpen = ref(false);
+    const ratingBreakdownData = ref(null);
+    const ratingBreakdownLoading = ref(false);
+    const ratingBreakdownPhysics = ref('vq3');
+    const ratingBreakdownCategory = ref('overall');
+    const breakdownSortCol = ref('rank');
+    const breakdownSortAsc = ref(true);
+
+    const sortedBreakdown = computed(() => {
+        if (!ratingBreakdownData.value?.breakdown) return [];
+        const col = breakdownSortCol.value;
+        const asc = breakdownSortAsc.value;
+        return [...ratingBreakdownData.value.breakdown].sort((a, b) => {
+            let va = a[col] ?? 0;
+            let vb = b[col] ?? 0;
+            if (typeof va === 'string') return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+            return asc ? va - vb : vb - va;
+        });
+    });
+
+    function sortBreakdown(col) {
+        if (breakdownSortCol.value === col) {
+            breakdownSortAsc.value = !breakdownSortAsc.value;
+        } else {
+            breakdownSortCol.value = col;
+            breakdownSortAsc.value = col === 'rank' || col === 'mapname' || col === 'record_rank';
+        }
+    }
+
+    async function loadRatingBreakdown() {
+        const mddId = props.profile?.id;
+        if (!mddId) return;
+        ratingBreakdownLoading.value = true;
+        try {
+            const res = await fetch(`/api/profile/${mddId}/rating-breakdown/${ratingBreakdownPhysics.value}?category=${ratingBreakdownCategory.value}`);
+            if (res.ok) {
+                ratingBreakdownData.value = await res.json();
+            } else {
+                ratingBreakdownData.value = null;
+            }
+        } catch (e) {
+            ratingBreakdownData.value = null;
+        }
+        ratingBreakdownLoading.value = false;
+    }
+
+    function toggleRatingBreakdown() {
+        ratingBreakdownOpen.value = !ratingBreakdownOpen.value;
+        if (ratingBreakdownOpen.value && !ratingBreakdownData.value) {
+            loadRatingBreakdown();
+        }
+    }
+
+    function formatTimeMs(ms) {
+        const m = Math.floor(ms / 60000);
+        const s = Math.floor((ms % 60000) / 1000);
+        const mil = ms % 1000;
+        return `${m}:${String(s).padStart(2, '0')}.${String(mil).padStart(3, '0')}`;
+    }
+
     const getDisplayRank = (physics, mode, category = 'overall') => {
         const r = getRanking(physics, mode, category);
         if (!r) return null;
@@ -344,6 +410,42 @@
         const updated = [...new Set([...dismissedSections, ...newSections.value])];
         localStorage.setItem('dismissed_new_sections', JSON.stringify(updated));
     }
+    const fmtDate = (dateStr) => {
+        const d = new Date(dateStr);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = String(d.getFullYear()).slice(-2);
+        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+    };
+    // About Me
+    const showAboutMePopup = ref(false);
+    const aboutMeEditing = ref(false);
+    const aboutMeText = ref('');
+    const aboutMeSubmitting = ref(false);
+
+    async function submitAboutMe() {
+        if (!aboutMeText.value.trim() || aboutMeSubmitting.value) return;
+        aboutMeSubmitting.value = true;
+        try {
+            await axios.post(`/profile/${props.user.id}/about-me`, { content: aboutMeText.value.trim() });
+            aboutMeEditing.value = false;
+            aboutMeText.value = '';
+            router.reload({ only: ['user', 'aboutMePending'] });
+        } catch (e) {
+            console.error(e);
+        }
+        aboutMeSubmitting.value = false;
+    }
+
+    async function requestDeleteAboutMe() {
+        try {
+            await axios.post(`/profile/${props.user.id}/about-me/delete`);
+            router.reload({ only: ['user', 'aboutMePending'] });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
     const isOwnProfile = computed(() => page.props.auth?.user?.id === props.user?.id);
     const ownProfileNotVerified = computed(() => isOwnProfile.value && !page.props.auth?.user?.email_verified_at);
     const ownProfileNotLinked = computed(() => isOwnProfile.value && !props.hasProfile);
@@ -974,7 +1076,66 @@
                             <div class="px-1">
                                 <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-8 h-5">
                             </div>
-                            <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)]" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
+                            <div class="relative group/aboutme"
+                                @mouseenter="showAboutMePopup = true"
+                                @mouseleave="showAboutMePopup = false && (aboutMeEditing = false)">
+                                <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)] cursor-default" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
+
+                                <!-- About Me hover popup -->
+                                <div v-show="showAboutMePopup"
+                                    class="absolute top-full left-0 mt-2 w-80 bg-gray-900/95 border border-white/15 rounded-xl shadow-2xl z-50 backdrop-blur-sm overflow-hidden"
+                                    @mouseenter="showAboutMePopup = true"
+                                    @mouseleave="showAboutMePopup = false; aboutMeEditing = false">
+                                    <!-- Existing about me -->
+                                    <div v-if="user?.about_me && !aboutMeEditing" class="p-4">
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">About</div>
+                                        <div class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{{ user.about_me }}</div>
+                                        <!-- Own profile actions -->
+                                        <div v-if="isOwnProfile" class="flex gap-2 mt-3 pt-2 border-t border-white/10">
+                                            <button @click="aboutMeEditing = true; aboutMeText = user.about_me"
+                                                class="text-[10px] text-blue-400 hover:text-blue-300">Edit</button>
+                                            <button @click="requestDeleteAboutMe"
+                                                class="text-[10px] text-red-400 hover:text-red-300">Request Delete</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- No about me yet -->
+                                    <div v-else-if="!aboutMeEditing" class="p-4">
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">About</div>
+                                        <div class="text-xs text-gray-600 italic mb-2">No about me yet.</div>
+                                        <div v-if="aboutMePending" class="text-[10px] text-yellow-500">Your suggestion is pending review.</div>
+                                        <button v-else-if="$page.props.auth?.user"
+                                            @click="aboutMeEditing = true; aboutMeText = ''"
+                                            class="text-[10px] text-amber-400 hover:text-amber-300 font-medium">
+                                            {{ isOwnProfile ? 'Write your about me' : 'Suggest an about me' }}
+                                        </button>
+                                    </div>
+
+                                    <!-- Edit form -->
+                                    <div v-if="aboutMeEditing" class="p-4">
+                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">
+                                            {{ isOwnProfile ? 'Edit About Me' : 'Suggest About Me' }}
+                                        </div>
+                                        <textarea v-model="aboutMeText"
+                                            class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
+                                            rows="4"
+                                            maxlength="500"
+                                            :placeholder="isOwnProfile ? 'Write something about yourself...' : 'Write something nice about this player...'"></textarea>
+                                        <div class="flex items-center justify-between mt-2">
+                                            <span class="text-[10px] text-gray-600">{{ aboutMeText.length }}/500</span>
+                                            <div class="flex gap-2">
+                                                <button @click="aboutMeEditing = false"
+                                                    class="px-3 py-1 text-xs text-gray-400 hover:text-gray-300">Cancel</button>
+                                                <button @click="submitAboutMe" :disabled="!aboutMeText.trim() || aboutMeSubmitting"
+                                                    class="px-3 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded transition-colors">
+                                                    {{ aboutMeSubmitting ? 'Submitting...' : 'Submit for Review' }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="text-[9px] text-gray-600 mt-1">All submissions are reviewed by moderators before publishing.</div>
+                                    </div>
+                                </div>
+                            </div>
                             <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-300 px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
                             <!-- LIVE Badge -->
                             <a v-if="user?.is_live && user?.twitch_id" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
@@ -1538,6 +1699,148 @@
                 </div>
             </div>
 
+
+            <!-- Admin: Rating Breakdown -->
+            <div v-if="isAdmin && hasPlayerRank" class="mb-6">
+                <button @click="toggleRatingBreakdown"
+                    class="flex items-center gap-2 px-4 py-2.5 bg-orange-950/50 border border-orange-500/30 rounded-xl text-sm font-bold text-orange-400 hover:bg-orange-950/70 transition-all w-full">
+                    <svg class="w-4 h-4 transition-transform" :class="ratingBreakdownOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                    Rating Breakdown (Admin)
+                    <span class="text-[10px] text-orange-600 font-normal ml-auto">How the ranking score is calculated from individual map scores</span>
+                </button>
+
+                <div v-if="ratingBreakdownOpen" class="mt-2 bg-black/60 border border-orange-500/20 rounded-xl overflow-hidden">
+                    <!-- Controls -->
+                    <div class="flex items-center gap-3 px-4 py-3 border-b border-orange-500/10">
+                        <div class="flex gap-1">
+                            <button v-for="p in ['vq3', 'cpm']" :key="p"
+                                @click="ratingBreakdownPhysics = p; loadRatingBreakdown()"
+                                class="px-3 py-1 rounded text-xs font-bold transition-all"
+                                :class="ratingBreakdownPhysics === p
+                                    ? (p === 'vq3' ? 'bg-blue-600 text-white' : 'bg-purple-600 text-white')
+                                    : 'bg-gray-800 text-gray-500 hover:text-gray-300'">
+                                {{ p.toUpperCase() }}
+                            </button>
+                        </div>
+                        <select v-model="ratingBreakdownCategory" @change="loadRatingBreakdown()"
+                            class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300">
+                            <option v-for="cat in ['overall','strafe','rocket','plasma','grenade','bfg','slick','tele','lg']" :key="cat" :value="cat">
+                                {{ cat.charAt(0).toUpperCase() + cat.slice(1) }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Loading -->
+                    <div v-if="ratingBreakdownLoading" class="p-6 text-center text-gray-500 text-sm">Loading breakdown...</div>
+
+                    <!-- No data -->
+                    <div v-else-if="!ratingBreakdownData" class="p-6 text-center text-gray-600 text-sm">No rating data for this physics/category</div>
+
+                    <!-- Breakdown data -->
+                    <div v-else>
+                        <!-- Summary -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 px-4 py-3 border-b border-orange-500/10">
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Final Rating</div>
+                                <div class="text-lg font-black text-orange-400">{{ ratingBreakdownData.player_rating }}</div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Calculated</div>
+                                <div class="text-lg font-black text-white">{{ ratingBreakdownData.calculated_rating }}</div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Raw (pre-penalty)</div>
+                                <div class="text-sm font-bold text-gray-300">{{ ratingBreakdownData.raw_rating }}</div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Records</div>
+                                <div class="text-sm font-bold text-gray-300">{{ ratingBreakdownData.num_records }}</div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Penalty</div>
+                                <div class="text-sm font-bold" :class="ratingBreakdownData.penalty < 1 ? 'text-red-400' : 'text-green-400'">
+                                    {{ ratingBreakdownData.penalty < 1 ? (ratingBreakdownData.penalty * 100).toFixed(1) + '%' : 'None' }}
+                                </div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">Active Rank</div>
+                                <div class="text-sm font-bold text-orange-400">#{{ ratingBreakdownData.active_players_rank || '-' }}</div>
+                            </div>
+                            <div class="bg-gray-900/60 rounded-lg p-2 text-center">
+                                <div class="text-[9px] text-gray-500 uppercase">All Rank</div>
+                                <div class="text-sm font-bold text-gray-400">#{{ ratingBreakdownData.all_players_rank }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Formula reminder -->
+                        <div class="px-4 py-2 border-b border-orange-500/10 text-[10px] text-gray-600 font-mono">
+                            rating = sum(score * weight) / sum(weight){{ ratingBreakdownData.penalty < 1 ? ` * ${ratingBreakdownData.num_records}/10` : '' }}
+                            = {{ ratingBreakdownData.weighted_sum }} / {{ ratingBreakdownData.weight_sum }}{{ ratingBreakdownData.penalty < 1 ? ` * ${ratingBreakdownData.penalty}` : '' }}
+                            = <span class="text-orange-400">{{ ratingBreakdownData.calculated_rating }}</span>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="max-h-[500px] overflow-y-auto">
+                            <table class="w-full text-xs">
+                                <thead class="sticky top-0 bg-gray-900 z-10">
+                                    <tr class="text-gray-500 text-[10px] uppercase">
+                                        <th v-for="col in [
+                                            { key: 'rank', label: '#', align: 'left' },
+                                            { key: 'mapname', label: 'Map', align: 'left' },
+                                            { key: 'record_rank', label: 'Rank', align: 'right' },
+                                            { key: 'total_players', label: 'Players', align: 'right' },
+                                            { key: 'time', label: 'Time', align: 'right' },
+                                            { key: 'reltime', label: 'Reltime', align: 'right' },
+                                            { key: 'base_score', label: 'Base', align: 'right' },
+                                            { key: 'multiplier', label: 'Mult', align: 'right' },
+                                            { key: 'map_score', label: 'Score', align: 'right' },
+                                            { key: 'weight', label: 'Weight', align: 'right' },
+                                            { key: 'contribution', label: 'Contrib', align: 'right' },
+                                        ]" :key="col.key"
+                                            @click="sortBreakdown(col.key)"
+                                            class="px-3 py-2 cursor-pointer hover:text-gray-300 transition-colors select-none"
+                                            :class="col.align === 'left' ? 'text-left' : 'text-right'">
+                                            {{ col.label }}
+                                            <span v-if="breakdownSortCol === col.key" class="text-orange-400">{{ breakdownSortAsc ? '&#9650;' : '&#9660;' }}</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="row in sortedBreakdown" :key="row.rank"
+                                        class="border-t border-white/5 hover:bg-white/5 transition-colors"
+                                        :class="row.is_outlier ? 'opacity-50' : ''">
+                                        <td class="px-3 py-1.5 text-gray-600 font-mono">{{ row.rank }}</td>
+                                        <td class="px-3 py-1.5">
+                                            <a :href="'/maps/' + encodeURIComponent(row.mapname)" target="_blank"
+                                                class="text-gray-300 hover:text-blue-400 transition-colors">{{ row.mapname }}</a>
+                                            <span v-if="row.is_outlier" class="ml-1 text-[9px] text-red-500">OUTLIER</span>
+                                        </td>
+                                        <td class="px-3 py-1.5 text-right font-mono" :class="row.record_rank === 1 ? 'text-yellow-400 font-bold' : row.record_rank <= 3 ? 'text-orange-400' : 'text-gray-500'">
+                                            {{ row.record_rank ? '#' + row.record_rank : '-' }}
+                                        </td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-500">{{ row.total_players || '-' }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-400">{{ formatTimeMs(row.time) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono" :class="row.reltime <= 1.05 ? 'text-green-400' : row.reltime <= 1.25 ? 'text-yellow-400' : row.reltime <= 2 ? 'text-orange-400' : 'text-red-400'">
+                                            {{ row.reltime.toFixed(4) }}
+                                        </td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-400">{{ row.base_score?.toFixed(1) || row.map_score.toFixed(1) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono" :class="row.multiplier >= 0.9 ? 'text-green-400' : row.multiplier >= 0.5 ? 'text-yellow-400' : 'text-red-400'">
+                                            {{ (row.multiplier * 100).toFixed(1) }}%
+                                        </td>
+                                        <td class="px-3 py-1.5 text-right font-mono font-bold" :class="row.map_score >= 800 ? 'text-green-400' : row.map_score >= 500 ? 'text-yellow-400' : 'text-gray-400'">
+                                            {{ row.map_score.toFixed(1) }}
+                                        </td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-500">{{ row.weight.toFixed(4) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-orange-400/80">{{ row.contribution.toFixed(2) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Stats Grid - Clean Text Layout -->
             <div v-if="hasProfile && profile" class="relative z-[1] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -2189,7 +2492,7 @@
                                         <!-- Date -->
                                         <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                                {{ fmtDate(record.date_set) }}
                                             </div>
                                             <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
                                                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
@@ -2316,7 +2619,7 @@
                                         <!-- Date -->
                                         <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
-                                                {{ new Date(record.date_set).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }) }}
+                                                {{ fmtDate(record.date_set) }}
                                             </div>
                                             <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
                                                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}

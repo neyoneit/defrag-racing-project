@@ -1396,6 +1396,9 @@ onUnmounted(() => {
                     <div class="w-56 flex-shrink-0">
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-purple-500/20 p-3 space-y-3 text-xs text-gray-400">
                             <div class="text-purple-400 font-bold text-[11px] uppercase tracking-wider">Rating Tips</div>
+                            <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-yellow-200/90 text-[11px]">
+                                Rate based on the <strong class="text-yellow-300">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.
+                            </div>
                             <div class="space-y-2">
                                 <p>Rate based on <strong class="text-gray-300">your experience</strong> playing the map, not just how it looks.</p>
                                 <p>Not sure? Check the <strong class="text-gray-300">YouTube video</strong> on the right to see actual gameplay and judge the difficulty.</p>
@@ -1437,18 +1440,22 @@ onUnmounted(() => {
                             <a :href="'/maps/' + encodeURIComponent(map.name)" target="_blank"
                                 class="text-white text-sm font-bold truncate block mb-2 hover:text-blue-400 transition-colors">{{ map.name }}</a>
                             <div class="flex gap-1.5">
-                                <button v-for="d in difficultyLabels" :key="d.level"
-                                    @click="rateMap(map, d.level)"
-                                    :disabled="ratedMapIds.has(map.id) || ratingSubmitting === map.id"
-                                    class="flex-1 py-1.5 rounded text-[11px] font-bold transition-all border"
-                                    :class="ratedMapIds.has(map.id) && ratedValues[map.id] === d.level
-                                        ? d.color + ' text-white ring-1 ' + d.ring + ' border-transparent'
-                                        : ratedMapIds.has(map.id)
-                                            ? 'bg-gray-800 text-gray-700 border-transparent cursor-default'
-                                            : d.bgSubtle + ' border-gray-700/30 hover:text-white ' + d.hover + ' cursor-pointer'"
-                                    :title="d.desc">
-                                    {{ d.label }}
-                                </button>
+                                <div v-for="d in difficultyLabels" :key="d.level" class="flex-1 relative group/btn">
+                                    <button
+                                        @click="rateMap(map, d.level)"
+                                        :disabled="ratedMapIds.has(map.id) || ratingSubmitting === map.id"
+                                        class="w-full py-1.5 rounded text-[11px] font-bold transition-all border"
+                                        :class="ratedMapIds.has(map.id) && ratedValues[map.id] === d.level
+                                            ? d.color + ' text-white ring-1 ' + d.ring + ' border-transparent'
+                                            : ratedMapIds.has(map.id)
+                                                ? 'bg-gray-800 text-gray-700 border-transparent cursor-default'
+                                                : d.bgSubtle + ' border-gray-700/30 hover:text-white ' + d.hover + ' cursor-pointer'">
+                                        {{ d.label }}
+                                    </button>
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 border border-gray-700 rounded-lg text-[10px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                                        {{ d.desc }}
+                                    </div>
+                                </div>
                             </div>
                             <button v-if="!ratedMapIds.has(map.id)"
                                 @click="skipRating(map)"
