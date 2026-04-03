@@ -1096,7 +1096,7 @@ class ProfileController extends Controller {
     public function progressBar($userId) {
         $user = User::query()
             ->where('id', $userId)
-            ->first(['id', 'mdd_id', 'name']);
+            ->first(['id', 'mdd_id', 'name', 'widget_settings']);
 
         if (!$user || !$user->mdd_id) {
             abort(404);
@@ -1114,6 +1114,7 @@ class ProfileController extends Controller {
             'total_maps' => $totalMaps,
             'played_maps' => $playedMaps,
             'unplayed_maps' => $unplayedMaps,
+            'widget_settings' => $user->widget_settings,
         ]);
     }
 

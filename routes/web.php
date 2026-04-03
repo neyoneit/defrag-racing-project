@@ -221,6 +221,7 @@ Route::post('/settings/physics-order', [SettingsController::class, 'physicsOrder
 Route::post('/settings/profile-layout', [SettingsController::class, 'profileLayout'])->name('settings.profile-layout');
 Route::post('/settings/global-profile-preferences', [SettingsController::class, 'globalProfilePreferences'])->name('settings.global-profile-preferences');
 Route::post('/settings/effects-intensity', [SettingsController::class, 'effectsIntensity'])->name('settings.effects-intensity');
+Route::post('/settings/widget', [SettingsController::class, 'widgetSettings'])->middleware('auth')->name('settings.widget');
 Route::post('/settings/mapper-claims', [SettingsController::class, 'mapperClaims'])->middleware('auth')->name('settings.mapper-claims');
 Route::get('/settings/mapper-claims', [SettingsController::class, 'getMapperClaims'])->middleware('auth')->name('settings.mapper-claims.get');
 Route::post('/settings/mapper-claims/preview', [SettingsController::class, 'previewMapperClaim'])->middleware('auth')->name('settings.mapper-claims.preview');
