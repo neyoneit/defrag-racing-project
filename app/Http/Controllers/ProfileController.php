@@ -1284,18 +1284,32 @@ class ProfileController extends Controller {
         $CFG_D = config('ratings.cfg_d');
         $MIN_TOTAL_RECORDS = config('ratings.min_total_records');
 
+        // First pass: compute weights and sums
         $weightedSum = 0;
         $weightSum = 0;
-        $breakdown = [];
+        $rawBreakdown = [];
 
         foreach ($mapScores->values() as $rank => $score) {
             $weight = exp(-$CFG_D * ($rank + 1));
-            $contribution = $score->map_score * $weight;
-            $weightedSum += $contribution;
+            $weightedSum += $score->map_score * $weight;
             $weightSum += $weight;
+            $rawBreakdown[] = ['rank' => $rank, 'score' => $score, 'weight' => $weight];
+        }
+
+        $numRecords = count($rawBreakdown);
+        $penalty = $numRecords < $MIN_TOTAL_RECORDS ? $numRecords / $MIN_TOTAL_RECORDS : 1.0;
+        $rawRating = $weightSum > 0 ? $weightedSum / $weightSum : 0;
+        $finalRating = $rawRating * $penalty;
+
+        // Second pass: normalized contribution (sums to final rating)
+        $breakdown = [];
+        foreach ($rawBreakdown as $item) {
+            $score = $item['score'];
+            $weight = $item['weight'];
+            $contribution = $weightSum > 0 ? ($score->map_score * $weight / $weightSum) * $penalty : 0;
 
             $breakdown[] = [
-                'rank' => $rank + 1,
+                'rank' => $item['rank'] + 1,
                 'mapname' => $score->mapname,
                 'time' => $score->time,
                 'reltime' => round($score->reltime, 4),
@@ -1304,16 +1318,12 @@ class ProfileController extends Controller {
                 'multiplier' => round($score->multiplier ?? 1, 4),
                 'weight' => round($weight, 4),
                 'contribution' => round($contribution, 2),
+                'pct' => $finalRating > 0 ? round($contribution / $finalRating * 100, 2) : 0,
                 'is_outlier' => $score->is_outlier,
                 'record_rank' => $recordRanks[$score->mapname] ?? null,
                 'total_players' => $mapPlayerCounts[$score->mapname] ?? null,
             ];
         }
-
-        $rawRating = $weightSum > 0 ? $weightedSum / $weightSum : 0;
-        $numRecords = count($breakdown);
-        $penalty = $numRecords < $MIN_TOTAL_RECORDS ? $numRecords / $MIN_TOTAL_RECORDS : 1.0;
-        $finalRating = $rawRating * $penalty;
 
         return response()->json([
             'physics' => $physics,

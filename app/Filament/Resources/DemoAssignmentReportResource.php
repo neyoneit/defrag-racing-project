@@ -24,7 +24,7 @@ class DemoAssignmentReportResource extends Resource
 
     protected static ?string $navigationGroup = 'Moderation';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 5;
 
     public static function canAccess(): bool
     {

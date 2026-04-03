@@ -27,7 +27,7 @@ class ModerationLogResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Moderation Logs';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 99;
 
     protected static bool $shouldSkipAuthorization = true;
 

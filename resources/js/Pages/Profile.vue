@@ -284,8 +284,8 @@
             zIndex: 99999,
         };
     });
-    // Admin rating breakdown
-    const isAdmin = computed(() => page.props.auth?.user?.is_admin || page.props.auth?.user?.admin);
+    // Rating breakdown visibility (admin or moderator with permission)
+    const canViewBreakdown = computed(() => page.props.canViewRatingBreakdown);
     const ratingBreakdownOpen = ref(false);
     const ratingBreakdownData = ref(null);
     const ratingBreakdownLoading = ref(false);
@@ -418,7 +418,6 @@
         return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
     };
     // About Me
-    const showAboutMePopup = ref(false);
     const aboutMeEditing = ref(false);
     const aboutMeText = ref('');
     const aboutMeSubmitting = ref(false);
@@ -1076,66 +1075,7 @@
                             <div class="px-1">
                                 <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${user?.country ?? profile.country}.png`" :title="user?.country ?? profile.country" class="w-8 h-5">
                             </div>
-                            <div class="relative group/aboutme"
-                                @mouseenter="showAboutMePopup = true"
-                                @mouseleave="showAboutMePopup = false && (aboutMeEditing = false)">
-                                <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)] cursor-default" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
-
-                                <!-- About Me hover popup -->
-                                <div v-show="showAboutMePopup"
-                                    class="absolute top-full left-0 mt-2 w-80 bg-gray-900/95 border border-white/15 rounded-xl shadow-2xl z-50 backdrop-blur-sm overflow-hidden"
-                                    @mouseenter="showAboutMePopup = true"
-                                    @mouseleave="showAboutMePopup = false; aboutMeEditing = false">
-                                    <!-- Existing about me -->
-                                    <div v-if="user?.about_me && !aboutMeEditing" class="p-4">
-                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">About</div>
-                                        <div class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{{ user.about_me }}</div>
-                                        <!-- Own profile actions -->
-                                        <div v-if="isOwnProfile" class="flex gap-2 mt-3 pt-2 border-t border-white/10">
-                                            <button @click="aboutMeEditing = true; aboutMeText = user.about_me"
-                                                class="text-[10px] text-blue-400 hover:text-blue-300">Edit</button>
-                                            <button @click="requestDeleteAboutMe"
-                                                class="text-[10px] text-red-400 hover:text-red-300">Request Delete</button>
-                                        </div>
-                                    </div>
-
-                                    <!-- No about me yet -->
-                                    <div v-else-if="!aboutMeEditing" class="p-4">
-                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">About</div>
-                                        <div class="text-xs text-gray-600 italic mb-2">No about me yet.</div>
-                                        <div v-if="aboutMePending" class="text-[10px] text-yellow-500">Your suggestion is pending review.</div>
-                                        <button v-else-if="$page.props.auth?.user"
-                                            @click="aboutMeEditing = true; aboutMeText = ''"
-                                            class="text-[10px] text-amber-400 hover:text-amber-300 font-medium">
-                                            {{ isOwnProfile ? 'Write your about me' : 'Suggest an about me' }}
-                                        </button>
-                                    </div>
-
-                                    <!-- Edit form -->
-                                    <div v-if="aboutMeEditing" class="p-4">
-                                        <div class="text-[10px] text-gray-500 uppercase tracking-wider font-bold mb-1.5">
-                                            {{ isOwnProfile ? 'Edit About Me' : 'Suggest About Me' }}
-                                        </div>
-                                        <textarea v-model="aboutMeText"
-                                            class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
-                                            rows="4"
-                                            maxlength="500"
-                                            :placeholder="isOwnProfile ? 'Write something about yourself...' : 'Write something nice about this player...'"></textarea>
-                                        <div class="flex items-center justify-between mt-2">
-                                            <span class="text-[10px] text-gray-600">{{ aboutMeText.length }}/500</span>
-                                            <div class="flex gap-2">
-                                                <button @click="aboutMeEditing = false"
-                                                    class="px-3 py-1 text-xs text-gray-400 hover:text-gray-300">Cancel</button>
-                                                <button @click="submitAboutMe" :disabled="!aboutMeText.trim() || aboutMeSubmitting"
-                                                    class="px-3 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded transition-colors">
-                                                    {{ aboutMeSubmitting ? 'Submitting...' : 'Submit for Review' }}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="text-[9px] text-gray-600 mt-1">All submissions are reviewed by moderators before publishing.</div>
-                                    </div>
-                                </div>
-                            </div>
+                            <div :class="'name-effect-' + (user?.name_effect || 'none')" :style="`--effect-color: ${user?.color || '#ffffff'}`" class="text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(0,0,0,0.8)] cursor-default" style="text-shadow: 0 0 40px rgba(0,0,0,0.9), 0 4px 20px rgba(0,0,0,0.8);" v-html="q3tohtml(user?.name ?? profile.name)"></div>
                             <div v-if="user?.mdd_name && user.mdd_name !== user.name" class="text-sm text-gray-300 px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">MDD: <span v-html="q3tohtml(user.mdd_name)"></span></div>
                             <!-- LIVE Badge -->
                             <a v-if="user?.is_live && user?.twitch_id" :href="`https://twitch.tv/${user.twitch_name}`" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 border-2 border-red-400 hover:bg-red-500/90 hover:border-red-300 transition-all hover:scale-105 shadow-xl animate-pulse">
@@ -1143,6 +1083,57 @@
                                 <div class="w-2 h-2 rounded-full bg-white"></div>
                                 <span class="text-sm font-black text-white uppercase tracking-wider">LIVE</span>
                             </a>
+                        </div>
+
+                        <!-- About Me -->
+                        <div v-if="user?.about_me || isOwnProfile || $page.props.auth?.user" class="relative group/aboutme">
+                            <!-- Has about me text -->
+                            <div v-if="user?.about_me && !aboutMeEditing" class="flex items-center gap-2">
+                                <div class="text-sm text-gray-400 truncate max-w-md" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9);">{{ user.about_me }}</div>
+                                <div v-if="isOwnProfile" class="flex gap-1 shrink-0 opacity-0 group-hover/aboutme:opacity-100 transition-opacity">
+                                    <button @click="aboutMeEditing = true; aboutMeText = user.about_me"
+                                        class="text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                    </button>
+                                    <button @click="requestDeleteAboutMe"
+                                        class="text-[10px] text-red-400/60 hover:text-red-300 transition-colors">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                                <!-- Full text hover popup -->
+                                <div v-if="user.about_me.length > 60"
+                                    class="absolute top-full left-0 mt-1 w-80 bg-gray-900/95 border border-white/15 rounded-xl shadow-2xl z-50 backdrop-blur-sm p-3 hidden group-hover/aboutme:block">
+                                    <div class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{{ user.about_me }}</div>
+                                </div>
+                            </div>
+                            <!-- No about me - show action -->
+                            <div v-else-if="!aboutMeEditing">
+                                <div v-if="aboutMePending" class="text-[10px] text-yellow-500/80 italic">About me pending review...</div>
+                                <button v-else-if="$page.props.auth?.user"
+                                    @click="aboutMeEditing = true; aboutMeText = ''"
+                                    class="text-xs text-gray-600 hover:text-amber-400 transition-colors">
+                                    {{ isOwnProfile ? '+ Add about me' : '+ Suggest about me' }}
+                                </button>
+                            </div>
+                            <!-- Edit form (inline) -->
+                            <div v-if="aboutMeEditing" class="w-full max-w-md">
+                                <textarea v-model="aboutMeText"
+                                    class="w-full bg-black/60 border border-gray-700 rounded-lg p-2 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none backdrop-blur-sm"
+                                    rows="3"
+                                    maxlength="500"
+                                    :placeholder="isOwnProfile ? 'Write something about yourself...' : 'Write something nice about this player...'"></textarea>
+                                <div class="flex items-center justify-between mt-1">
+                                    <span class="text-[10px] text-gray-600">{{ aboutMeText.length }}/500</span>
+                                    <div class="flex gap-2">
+                                        <button @click="aboutMeEditing = false"
+                                            class="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300">Cancel</button>
+                                        <button @click="submitAboutMe" :disabled="!aboutMeText.trim() || aboutMeSubmitting"
+                                            class="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-[10px] font-bold rounded transition-colors">
+                                            {{ aboutMeSubmitting ? '...' : 'Submit for Review' }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Header Row 1 -->
@@ -1682,26 +1673,9 @@
             </div>
         </div>
 
-        <!-- EPIC REDESIGN - Main Content (Records Tab) -->
-        <div v-show="activeTab === 'records' && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-10">
-            <div v-if="!user?.id && !$page.props.auth?.user?.mdd_id" class="relative z-20 mb-6">
-                <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
-                    <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
-                    <div v-if="!$page.props.auth?.user" class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
-                    <div v-else class="text-lg font-semibold text-orange-200/80">Is this you? Link your account to claim this profile!</div>
-                    <div class="flex justify-center gap-4 mt-4">
-                        <template v-if="!$page.props.auth?.user">
-                            <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
-                            <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
-                        </template>
-                        <Link v-else href="/link-account" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">Link Account</Link>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Admin: Rating Breakdown -->
-            <div v-if="isAdmin && hasPlayerRank" class="mb-6">
+        <!-- Admin: Rating Breakdown -->
+        <div v-if="canViewBreakdown && hasPlayerRank && activeTab === 'records' && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 mt-2 mb-2 relative z-10">
+            <div>
                 <button @click="toggleRatingBreakdown"
                     class="flex items-center gap-2 px-4 py-2.5 bg-orange-950/50 border border-orange-500/30 rounded-xl text-sm font-bold text-orange-400 hover:bg-orange-950/70 transition-all w-full">
                     <svg class="w-4 h-4 transition-transform" :class="ratingBreakdownOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -1798,6 +1772,7 @@
                                             { key: 'map_score', label: 'Score', align: 'right' },
                                             { key: 'weight', label: 'Weight', align: 'right' },
                                             { key: 'contribution', label: 'Contrib', align: 'right' },
+                                            { key: 'pct', label: '%', align: 'right' },
                                         ]" :key="col.key"
                                             @click="sortBreakdown(col.key)"
                                             class="px-3 py-2 cursor-pointer hover:text-gray-300 transition-colors select-none"
@@ -1834,10 +1809,29 @@
                                         </td>
                                         <td class="px-3 py-1.5 text-right font-mono text-gray-500">{{ row.weight.toFixed(4) }}</td>
                                         <td class="px-3 py-1.5 text-right font-mono text-orange-400/80">{{ row.contribution.toFixed(2) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-500">{{ row.pct?.toFixed(2) }}%</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EPIC REDESIGN - Main Content (Records Tab) -->
+        <div v-show="activeTab === 'records' && !ownProfileNotVerified && !ownProfileNotLinked" class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div v-if="!user?.id && !$page.props.auth?.user?.mdd_id" class="relative z-20 mb-6">
+                <div class="bg-gradient-to-r from-orange-500/10 via-orange-500/20 to-orange-500/10 border border-orange-500/30 rounded-2xl px-8 py-6 text-center backdrop-blur-sm">
+                    <div class="text-3xl font-black text-orange-400 mb-2">Not Linked Account</div>
+                    <div v-if="!$page.props.auth?.user" class="text-lg font-semibold text-orange-200/80">Is this you? Register and claim this profile to get full access!</div>
+                    <div v-else class="text-lg font-semibold text-orange-200/80">Is this you? Link your account to claim this profile!</div>
+                    <div class="flex justify-center gap-4 mt-4">
+                        <template v-if="!$page.props.auth?.user">
+                            <a href="/login" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors">Login</a>
+                            <a href="/register" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors">Register</a>
+                        </template>
+                        <Link v-else href="/link-account" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition-colors">Link Account</Link>
                     </div>
                 </div>
             </div>

@@ -86,6 +86,10 @@ class UserResource extends Resource
                                 'tags' => 'Tags (manage/merge)',
                                 'challenge_disputes' => 'Challenge Disputes',
                                 'wiki' => 'Wiki (edit/manage)',
+                                'task_reviews' => 'Task Reviews',
+                                'creator_claim_disputes' => 'Creator Claim Disputes',
+                                'about_me' => 'About Me (moderation)',
+                                'rating_breakdown' => 'Rating Breakdown (view on profiles)',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),

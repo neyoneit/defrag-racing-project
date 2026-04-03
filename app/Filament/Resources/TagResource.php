@@ -27,7 +27,7 @@ class TagResource extends Resource
 
     protected static ?string $navigationGroup = 'Moderation';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 9;
 
     protected static bool $shouldSkipAuthorization = true;
 

@@ -27,7 +27,7 @@ class CommunityTaskReviewResource extends Resource
 
     protected static ?string $navigationGroup = 'Moderation';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 10;
 
     protected static bool $shouldSkipAuthorization = true;
 

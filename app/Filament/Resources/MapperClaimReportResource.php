@@ -21,6 +21,8 @@ class MapperClaimReportResource extends Resource
 
     protected static ?string $navigationLabel = 'Creator Claim Disputes';
 
+    protected static ?int $navigationSort = 4;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->hasModeratorPermission('mapper_claims') ?? false;
