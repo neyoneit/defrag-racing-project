@@ -187,7 +187,7 @@
         <Head title="Ranking" />
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+        <div class="relative z-10 bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     <!-- Left: Title + Info -->
@@ -249,7 +249,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <span class="underline decoration-dotted decoration-gray-500 underline-offset-2">{{ rankingtype === 'active_players' ? 'Recently active players only' : 'All time rankings' }}</span>
-                                <div class="absolute top-full mt-1 left-1/2 -translate-x-1/2 hidden group-hover/hint:block z-20 w-56 p-2 bg-black/95 border border-white/20 rounded-lg text-xs text-gray-300 text-center shadow-lg">
+                                <div class="absolute top-full mt-1 left-1/2 -translate-x-1/2 hidden group-hover/hint:block z-50 w-56 p-2 bg-black/95 border border-white/20 rounded-lg text-xs text-gray-300 text-center shadow-lg">
                                     {{ rankingtype === 'active_players' ? 'Players who set a record in this physics within the last 3 calendar months' : 'All players who have ever set a record in this physics' }}
                                 </div>
                             </div>

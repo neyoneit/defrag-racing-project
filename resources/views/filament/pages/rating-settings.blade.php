@@ -24,12 +24,18 @@
                 <div style="display: flex; flex-direction: column; gap: 16px;">
                     @foreach($left as $groupName)
                         @if(isset($groups[$groupName]))
-                            <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-4">
-                                <h3 style="font-size: 11px; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">{{ $groupName }}</h3>
+                            @php $isDisabled = $groupName === 'Rank Multiplier'; @endphp
+                            <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 p-4" @if($isDisabled) style="opacity: 0.4; pointer-events: none;" @endif>
+                                <h3 style="font-size: 11px; font-weight: 800; color: {{ $isDisabled ? '#6b7280' : '#ea580c' }}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
+                                    {{ $groupName }}
+                                    @if($isDisabled)
+                                        <span style="font-weight: 400; font-size: 10px; color: #6b7280; text-transform: none; letter-spacing: 0;"> - not yet implemented</span>
+                                    @endif
+                                </h3>
                                 @foreach($groups[$groupName] as $key => $label)
                                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                                         <code style="width: 130px; font-size: 11px; color: #9ca3af; flex-shrink: 0;">{{ $key }}</code>
-                                        <input type="text" wire:model.blur="{{ $key }}" onkeydown="if(!/[0-9.\-\b]|Tab|ArrowLeft|ArrowRight|Delete|Backspace/.test(event.key))event.preventDefault()" oninput="this.value=this.value.replace(/[^0-9.\-]/g,'')" style="background: #111; color: #fff; width: 80px; padding: 4px 8px; font-size: 13px; font-family: monospace; border: 1px solid #444; border-radius: 6px; flex-shrink: 0;" />
+                                        <input type="text" wire:model.blur="{{ $key }}" @if($isDisabled) disabled @endif onkeydown="if(!/[0-9.\-\b]|Tab|ArrowLeft|ArrowRight|Delete|Backspace/.test(event.key))event.preventDefault()" oninput="this.value=this.value.replace(/[^0-9.\-]/g,'')" style="background: #111; color: #fff; width: 80px; padding: 4px 8px; font-size: 13px; font-family: monospace; border: 1px solid #444; border-radius: 6px; flex-shrink: 0;" />
                                         <span style="font-size: 11px; color: #6b7280;">{{ $label }}</span>
                                     </div>
                                 @endforeach
@@ -98,6 +104,21 @@
                 </span>
                 <span wire:loading.remove wire:target="runRecalc">RUN RECALCULATION</span>
                 <span wire:loading wire:target="runRecalc">RUNNING...</span>
+            </button>
+
+            <button
+                wire:click="refreshCache"
+                wire:loading.attr="disabled"
+                wire:target="refreshCache"
+                style="background: #2563eb; color: #fff; padding: 12px 32px; font-size: 14px; font-weight: 800; border-radius: 8px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                onmouseover="this.style.background='#3b82f6'"
+                onmouseout="this.style.background='#2563eb'"
+            >
+                <span wire:loading wire:target="refreshCache">
+                    <svg class="animate-spin" style="height:16px;width:16px;" viewBox="0 0 24 24"><circle style="opacity:0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path style="opacity:0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                </span>
+                <span wire:loading.remove wire:target="refreshCache">REFRESH CACHE <span style="font-weight: 400; font-size: 11px; opacity: 0.6; text-transform: none; letter-spacing: 0;">- recalc does this automatically, shouldn't be needed</span></span>
+                <span wire:loading wire:target="refreshCache">REFRESHING...</span>
             </button>
 
             @if($recalcOutput)
