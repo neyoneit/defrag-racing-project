@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\RatingSetting;
+use App\Http\Controllers\RankingController;
 use Filament\Pages\Page;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Artisan;
@@ -112,6 +113,49 @@ class RatingSettings extends Page
 
         Notification::make()
             ->title('Recalculation complete')
+            ->success()
+            ->send();
+    }
+
+    public function refreshCache(): void
+    {
+        $flushed = 0;
+        $rankingTypes = ['active_players', 'all_players'];
+        $categories = ['overall', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg', 'strafe', 'lg'];
+
+        foreach (['vq3', 'cpm'] as $physics) {
+            foreach ($categories as $category) {
+                foreach ($rankingTypes as $rankingtype) {
+                    for ($page = 1; $page <= 50; $page++) {
+                        Cache::forget("ranking:{$physics}:run:{$rankingtype}:{$category}:{$page}");
+                        $flushed++;
+                    }
+                }
+            }
+        }
+
+        Cache::forget('ranking:last_recalculation');
+        Cache::forget('rating_settings');
+
+        // Rebuild first pages
+        $controller = new RankingController();
+        $rebuilt = 0;
+        foreach (['vq3', 'cpm'] as $physics) {
+            foreach ($categories as $category) {
+                foreach ($rankingTypes as $rankingtype) {
+                    for ($page = 1; $page <= RankingController::PREBUILT_PAGES; $page++) {
+                        $cacheKey = "ranking:{$physics}:run:{$rankingtype}:{$category}:{$page}";
+                        $data = $controller->fetchPageFromDb($physics, 'run', $rankingtype, $category, $page);
+                        Cache::put($cacheKey, $data, RankingController::CACHE_TTL);
+                        $rebuilt++;
+                    }
+                }
+            }
+        }
+
+        Notification::make()
+            ->title('Cache refreshed')
+            ->body("Flushed {$flushed} keys, rebuilt {$rebuilt} pages.")
             ->success()
             ->send();
     }
