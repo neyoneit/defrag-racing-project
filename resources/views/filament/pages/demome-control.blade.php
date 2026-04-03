@@ -230,14 +230,18 @@
 
         {{-- Pagination --}}
         @if($unlisted_total_pages > 1)
+            @php
+                $isFirstPage = $this->unlistedPage <= 1;
+                $isLastPage = $this->unlistedPage >= $unlisted_total_pages;
+            @endphp
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <button wire:click="previousUnlistedPage" @if($this->unlistedPage <= 1) disabled @endif
-                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $this->unlistedPage <= 1 ? 'transparent' : '#1f2937' }}; color: {{ $this->unlistedPage <= 1 ? '#4b5563' : '#d1d5db' }}; cursor: {{ $this->unlistedPage <= 1 ? 'not-allowed' : 'pointer' }};">
+                <button wire:click="previousUnlistedPage" {{ $isFirstPage ? 'disabled' : '' }}
+                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $isFirstPage ? 'transparent' : '#1f2937' }}; color: {{ $isFirstPage ? '#4b5563' : '#d1d5db' }}; cursor: {{ $isFirstPage ? 'not-allowed' : 'pointer' }};">
                     Previous
                 </button>
                 <span style="font-size: 12px; color: #6b7280;">Page {{ $this->unlistedPage }} of {{ $unlisted_total_pages }}</span>
-                <button wire:click="nextUnlistedPage" @if($this->unlistedPage >= $unlisted_total_pages) disabled @endif
-                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $this->unlistedPage >= $unlisted_total_pages ? 'transparent' : '#1f2937' }}; color: {{ $this->unlistedPage >= $unlisted_total_pages ? '#4b5563' : '#d1d5db' }}; cursor: {{ $this->unlistedPage >= $unlisted_total_pages ? 'not-allowed' : 'pointer' }};">
+                <button wire:click="nextUnlistedPage" {{ $isLastPage ? 'disabled' : '' }}
+                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $isLastPage ? 'transparent' : '#1f2937' }}; color: {{ $isLastPage ? '#4b5563' : '#d1d5db' }}; cursor: {{ $isLastPage ? 'not-allowed' : 'pointer' }};">
                     Next
                 </button>
             </div>
