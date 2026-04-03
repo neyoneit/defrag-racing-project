@@ -43,4 +43,6 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
     Route::get('/upload-counts-today', [\App\Http\Controllers\Api\DemomeController::class, 'uploadCountsToday']);
     Route::get('/publish-counts-today', [\App\Http\Controllers\Api\DemomeController::class, 'publishCountsToday']);
     Route::post('/auto-approve-publish', [\App\Http\Controllers\Api\DemomeController::class, 'autoApprovePublish']);
+    Route::get('/video-metadata/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'videoMetadata']);
+    Route::get('/videos-needing-metadata-update', [\App\Http\Controllers\Api\DemomeController::class, 'videosNeedingMetadataUpdate']);
 });

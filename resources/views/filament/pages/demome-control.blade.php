@@ -1,50 +1,33 @@
 <x-filament-panels::page>
-    {{-- Top row: Status + Stats + Queue --}}
+    {{-- Row 1: Status + Statistics + Actions --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {{-- Demome Status --}}
+        {{-- Status --}}
         <x-filament::section>
             <x-slot name="heading">Status</x-slot>
             <div class="space-y-2 text-sm">
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Connection</span>
-                    @if($isOnline)
-                        <x-filament::badge color="success">Online</x-filament::badge>
-                    @else
-                        <x-filament::badge color="danger">Offline</x-filament::badge>
-                    @endif
+                    <span class="text-gray-500">Connection</span>
+                    <x-filament::badge :color="$isOnline ? 'success' : 'danger'">{{ $isOnline ? 'Online' : 'Offline' }}</x-filament::badge>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Status</span>
-                    <x-filament::badge :color="match($currentStatus) {
-                        'idle' => 'gray',
-                        'rendering' => 'warning',
-                        'uploading' => 'info',
-                        default => 'gray',
-                    }">{{ ucfirst($currentStatus) }}</x-filament::badge>
+                    <span class="text-gray-500">Status</span>
+                    <x-filament::badge :color="match($currentStatus) { 'idle' => 'gray', 'rendering' => 'warning', 'uploading' => 'info', default => 'gray' }">{{ ucfirst($currentStatus) }}</x-filament::badge>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Heartbeat</span>
-                    <span class="text-gray-700 dark:text-gray-300">{{ $lastHeartbeat }}</span>
+                    <span class="text-gray-500">Heartbeat</span>
+                    <span class="text-gray-300">{{ $lastHeartbeat }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Rendering</span>
-                    @if($isPaused)
-                        <x-filament::badge color="danger">Paused</x-filament::badge>
-                    @else
-                        <x-filament::badge color="success">Active</x-filament::badge>
-                    @endif
+                    <span class="text-gray-500">Rendering</span>
+                    <x-filament::badge :color="$isPaused ? 'danger' : 'success'">{{ $isPaused ? 'Paused' : 'Active' }}</x-filament::badge>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-gray-500 dark:text-gray-400">Auto-Queue</span>
-                    @if($isAutoQueuePaused)
-                        <x-filament::badge color="danger">Disabled</x-filament::badge>
-                    @else
-                        <x-filament::badge color="success">Enabled</x-filament::badge>
-                    @endif
+                    <span class="text-gray-500">Auto-Queue</span>
+                    <x-filament::badge :color="$isAutoQueuePaused ? 'danger' : 'success'">{{ $isAutoQueuePaused ? 'Disabled' : 'Enabled' }}</x-filament::badge>
                 </div>
                 @if($currentVideo)
-                    <div class="pt-2 border-t dark:border-gray-700 text-gray-700 dark:text-gray-300">
-                        <span class="text-gray-500 dark:text-gray-400">Rendering:</span>
+                    <div class="pt-2 border-t dark:border-gray-700 text-gray-300">
+                        <span class="text-gray-500">Rendering:</span>
                         {{ $currentVideo->map_name }} - {{ $currentVideo->player_name }}
                     </div>
                 @endif
@@ -55,204 +38,216 @@
         <x-filament::section>
             <x-slot name="heading">Statistics</x-slot>
             <div class="grid grid-cols-2 gap-2 text-center">
-                <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                <div class="p-2 bg-gray-800 rounded">
                     <div class="text-xl font-bold text-primary-500">{{ $stats['completed_total'] }}</div>
                     <div class="text-xs text-gray-500">Completed</div>
                 </div>
-                <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                <div class="p-2 bg-gray-800 rounded">
                     <div class="text-xl font-bold text-success-500">{{ $stats['completed_today'] }}</div>
                     <div class="text-xs text-gray-500">Today</div>
                 </div>
-                <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                <div class="p-2 bg-gray-800 rounded">
                     <div class="text-xl font-bold text-warning-500">{{ $stats['pending'] }}</div>
                     <div class="text-xs text-gray-500">Pending</div>
                 </div>
-                <div class="p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                <div class="p-2 bg-gray-800 rounded">
                     <div class="text-xl font-bold text-danger-500">{{ $stats['failed'] }}</div>
                     <div class="text-xs text-gray-500">Failed</div>
                 </div>
             </div>
-            <div class="mt-2 text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
+            <div class="mt-2 text-center p-2 bg-gray-800 rounded">
                 <span class="text-sm font-bold text-info-500">{{ $stats['total_render_hours'] }}h</span>
-                <span class="text-xs text-gray-500 ml-1">render time</span>
+                <span class="text-xs text-gray-500 ml-1">total render time</span>
             </div>
         </x-filament::section>
 
-        {{-- Queue by Priority --}}
+        {{-- Actions --}}
+        <x-filament::section>
+            <x-slot name="heading">Actions</x-slot>
+            <div class="grid grid-cols-2 gap-2">
+                <x-filament::button
+                    wire:click="togglePause"
+                    :color="$isPaused ? 'success' : 'danger'"
+                    icon="{{ $isPaused ? 'heroicon-o-play' : 'heroicon-o-pause' }}"
+                    class="w-full"
+                >
+                    {{ $isPaused ? 'Resume' : 'Pause' }}
+                </x-filament::button>
+
+                <x-filament::button
+                    wire:click="toggleAutoQueue"
+                    :color="$isAutoQueuePaused ? 'success' : 'warning'"
+                    icon="{{ $isAutoQueuePaused ? 'heroicon-o-play' : 'heroicon-o-stop' }}"
+                    class="w-full"
+                >
+                    {{ $isAutoQueuePaused ? 'Enable Queue' : 'Disable Queue' }}
+                </x-filament::button>
+
+                <x-filament::button
+                    wire:click="populateQueue"
+                    color="info"
+                    icon="heroicon-o-queue-list"
+                    class="w-full"
+                >
+                    Populate Now
+                </x-filament::button>
+
+                <x-filament::button
+                    wire:click="publishUnlisted"
+                    wire:confirm="Mark {{ $unlisted_count }} unlisted videos for publishing?"
+                    color="success"
+                    icon="heroicon-o-eye"
+                    class="w-full"
+                    :disabled="$unlisted_count === 0"
+                >
+                    Publish ({{ $unlisted_count }})
+                </x-filament::button>
+            </div>
+        </x-filament::section>
+    </div>
+
+    {{-- Row 2: Backlog + Queue Breakdown + Auto-Publish --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {{-- Render Backlog --}}
+        <x-filament::section>
+            <x-slot name="heading">Render Backlog</x-slot>
+            <div class="space-y-1 text-sm">
+                <div class="flex justify-between"><span class="text-yellow-400">Online WR</span><span class="font-bold text-yellow-400">{{ number_format($backlog['wr_remaining']) }}</span></div>
+                <div class="flex justify-between"><span class="text-blue-400">Online Other</span><span class="font-bold text-blue-400">{{ number_format($backlog['non_wr_remaining']) }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Offline</span><span class="font-bold text-gray-300">{{ number_format($backlog['offline_remaining']) }}</span></div>
+                <div class="flex justify-between"><span class="text-purple-400">Longer (10min+)</span><span class="font-bold text-purple-400">{{ number_format($backlog['longer_remaining'] ?? 0) }}</span></div>
+                <div class="flex justify-between pt-2 border-t border-gray-700/50"><span class="text-white font-bold">Total</span><span class="font-bold text-white">{{ number_format($backlog['total_remaining']) }}</span></div>
+            </div>
+        </x-filament::section>
+
+        {{-- Queue Breakdown --}}
         <x-filament::section>
             <x-slot name="heading">Queue Breakdown</x-slot>
-            <div class="space-y-2">
-                <div class="flex items-center justify-between p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
-                    <span class="text-sm text-yellow-700 dark:text-yellow-300">P1: World Records</span>
-                    <span class="text-xl font-bold text-yellow-600 dark:text-yellow-400">{{ $queue_by_priority['wr'] }}</span>
+            <div class="space-y-1 text-sm">
+                <div class="flex items-center justify-between p-1.5 bg-yellow-900/20 rounded border border-yellow-800/50">
+                    <span class="text-yellow-300">P1: World Records</span>
+                    <span class="text-lg font-bold text-yellow-400">{{ $queue_by_priority['wr'] }}</span>
                 </div>
-                <div class="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-                    <span class="text-sm text-blue-700 dark:text-blue-300">P2: Verified</span>
-                    <span class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ $queue_by_priority['verified'] }}</span>
+                <div class="flex items-center justify-between p-1.5 bg-blue-900/20 rounded border border-blue-800/50">
+                    <span class="text-blue-300">P2: Verified</span>
+                    <span class="text-lg font-bold text-blue-400">{{ $queue_by_priority['verified'] }}</span>
                 </div>
-                <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">P3: Normal</span>
-                    <span class="text-xl font-bold text-gray-600 dark:text-gray-400">{{ $queue_by_priority['normal'] }}</span>
+                <div class="flex items-center justify-between p-1.5 bg-gray-800 rounded border border-gray-700/50">
+                    <span class="text-gray-300">P3: Normal</span>
+                    <span class="text-lg font-bold text-gray-400">{{ $queue_by_priority['normal'] }}</span>
+                </div>
+            </div>
+        </x-filament::section>
+
+        {{-- Today + Auto-Publish --}}
+        <x-filament::section>
+            <x-slot name="heading">Today & Publishing</x-slot>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-gray-500">Auto renders</span><span class="font-medium text-green-400">{{ $backlog['today_auto'] }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Gameplay</span><span class="text-gray-300">{{ $backlog['today_gameplay_hours'] }}h</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Render time</span><span class="text-gray-300">{{ $backlog['today_render_hours'] }}h</span></div>
+                <div class="pt-2 border-t border-gray-700/50 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Next auto-publish</span>
+                        <span class="text-gray-300 text-xs">{{ $next_auto_publish->format('D M j, H:i') }}</span>
+                    </div>
+                    @if($last_auto_publish)
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Last</span>
+                            <span class="text-gray-300 text-xs">{{ $last_auto_publish->format('D M j, H:i') }}</span>
+                        </div>
+                    @endif
+                    @if($publishing_count > 0)
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Awaiting demome</span>
+                            <x-filament::badge color="warning">{{ $publishing_count }}</x-filament::badge>
+                        </div>
+                    @endif
                 </div>
             </div>
         </x-filament::section>
     </div>
 
-    {{-- API Token (compact) --}}
+    {{-- Row 3: API Token (compact) --}}
     <x-filament::section class="mt-4">
         <x-slot name="heading">API Token</x-slot>
         <div class="flex items-center gap-4">
-            <code class="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono text-gray-700 dark:text-gray-300 break-all select-all">{{ $apiToken ?: 'Not set' }}</code>
+            <code class="flex-1 px-3 py-2 bg-gray-800 rounded text-sm font-mono text-gray-300 break-all select-all">{{ $apiToken ?: 'Not set' }}</code>
             {{ $this->regenerateTokenAction }}
         </div>
     </x-filament::section>
 
-    {{-- Render Backlog --}}
-    <x-filament::section class="mt-4">
-        <x-slot name="heading">Render Backlog</x-slot>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-                <span class="text-gray-500 dark:text-gray-400 block">WR Demos</span>
-                <span class="text-xl font-bold text-yellow-500">{{ number_format($backlog['wr_remaining']) }}</span>
-                <span class="text-gray-500 text-xs">({{ $backlog['wr_gameplay_hours'] }}h gameplay)</span>
-            </div>
-            <div>
-                <span class="text-gray-500 dark:text-gray-400 block">Non-WR (online)</span>
-                <span class="text-xl font-bold text-blue-500">{{ number_format($backlog['non_wr_remaining']) }}</span>
-            </div>
-            <div>
-                <span class="text-gray-500 dark:text-gray-400 block">Offline Demos</span>
-                <span class="text-xl font-bold text-gray-400">{{ number_format($backlog['offline_remaining']) }}</span>
-            </div>
-            <div>
-                <span class="text-gray-500 dark:text-gray-400 block">Total Remaining</span>
-                <span class="text-xl font-bold text-white">{{ number_format($backlog['total_remaining']) }}</span>
-            </div>
-        </div>
-        <div class="mt-3 pt-3 border-t border-gray-700/30 flex items-center gap-6 text-sm">
-            <div>
-                <span class="text-gray-500 dark:text-gray-400">Today (auto):</span>
-                <span class="font-medium text-green-400">{{ $backlog['today_auto'] }} demos</span>
-            </div>
-            <div>
-                <span class="text-gray-500 dark:text-gray-400">Today gameplay:</span>
-                <span class="text-gray-300">{{ $backlog['today_gameplay_hours'] }}h</span>
-            </div>
-            <div>
-                <span class="text-gray-500 dark:text-gray-400">Today render time:</span>
-                <span class="text-gray-300">{{ $backlog['today_render_hours'] }}h</span>
-            </div>
-        </div>
-    </x-filament::section>
-
-    {{-- Auto-Publish Schedule --}}
-    <x-filament::section class="mt-4">
-        <x-slot name="heading">Auto-Publish Schedule</x-slot>
-        <div class="flex items-center gap-6 text-sm">
-            <div class="flex items-center gap-2">
-                <span class="text-gray-500 dark:text-gray-400">Next auto-publish:</span>
-                <span class="font-medium text-gray-700 dark:text-gray-300">{{ $next_auto_publish->format('D, M j, H:i') }}</span>
-                <x-filament::badge color="info">{{ $next_auto_publish->diffForHumans() }}</x-filament::badge>
-            </div>
-            @if($last_auto_publish)
-                <div class="flex items-center gap-2">
-                    <span class="text-gray-500 dark:text-gray-400">Last:</span>
-                    <span class="text-gray-700 dark:text-gray-300">{{ $last_auto_publish->format('D, M j, H:i') }}</span>
-                </div>
-            @endif
-            @if($publishing_count > 0)
-                <div class="flex items-center gap-2">
-                    <x-filament::badge color="warning">{{ $publishing_count }} awaiting demome</x-filament::badge>
-                </div>
-            @endif
-        </div>
-    </x-filament::section>
-
-    {{-- Unlisted Videos --}}
+    {{-- Row 4: Unlisted Videos grouped by tier --}}
     @if($unlisted_videos->count() > 0)
     <x-filament::section class="mt-4">
         <x-slot name="heading">Unlisted Videos ({{ $unlisted_count }})</x-slot>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="border-b dark:border-gray-700">
-                        <th class="text-left py-2 px-3 text-gray-500 dark:text-gray-400 font-medium">Map</th>
-                        <th class="text-left py-2 px-3 text-gray-500 dark:text-gray-400 font-medium">Player</th>
-                        <th class="text-left py-2 px-3 text-gray-500 dark:text-gray-400 font-medium">Physics</th>
-                        <th class="text-left py-2 px-3 text-gray-500 dark:text-gray-400 font-medium">YouTube</th>
-                        <th class="text-left py-2 px-3 text-gray-500 dark:text-gray-400 font-medium">Created</th>
-                        <th class="text-right py-2 px-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y dark:divide-gray-700">
-                    @foreach($unlisted_videos as $video)
-                    <tr>
-                        <td class="py-2 px-3 text-gray-700 dark:text-gray-300">{{ $video->map_name }}</td>
-                        <td class="py-2 px-3 text-gray-700 dark:text-gray-300">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
-                        <td class="py-2 px-3"><x-filament::badge>{{ strtoupper($video->physics) }}</x-filament::badge></td>
-                        <td class="py-2 px-3">
-                            @if($video->youtube_url)
-                                <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-500 hover:text-blue-400">View</a>
-                            @endif
-                        </td>
-                        <td class="py-2 px-3 text-gray-500 dark:text-gray-400">{{ $video->created_at->diffForHumans() }}</td>
-                        <td class="py-2 px-3 text-right">
-                            <x-filament::button
-                                wire:click="publishSingle({{ $video->id }})"
-                                size="xs"
-                                color="success"
-                                icon="heroicon-o-eye"
-                            >
-                                Publish
-                            </x-filament::button>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        @php
+            $grouped = $unlisted_videos->groupBy(fn($v) => $v->quality_tier ?? 0);
+            $tierLabels = \App\Services\RenderQueueService::TIER_LABELS;
+        @endphp
+        @foreach($tierLabels as $tier => $label)
+            @if(isset($grouped[$tier]) && $grouped[$tier]->count() > 0)
+                <div class="mb-4">
+                    <div style="font-size: 11px; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-left: 12px;">
+                        {{ $label }} ({{ $grouped[$tier]->count() }})
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <tbody class="divide-y divide-gray-700/50">
+                                @foreach($grouped[$tier]->take(10) as $video)
+                                <tr>
+                                    <td class="py-1.5 px-3 text-gray-300" style="width: 200px;">{{ $video->map_name }}</td>
+                                    <td class="py-1.5 px-3 text-gray-300" style="width: 150px;">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
+                                    <td class="py-1.5 px-3" style="width: 60px;"><x-filament::badge :color="$video->physics === 'cpm' ? 'info' : 'success'" size="sm">{{ strtoupper($video->physics) }}</x-filament::badge></td>
+                                    <td class="py-1.5 px-3" style="width: 60px;">
+                                        @if($video->youtube_url)
+                                            <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
+                                        @endif
+                                    </td>
+                                    <td class="py-1.5 px-3 text-gray-500 text-xs">{{ $video->created_at->diffForHumans() }}</td>
+                                    <td class="py-1.5 px-3 text-right">
+                                        <x-filament::button wire:click="publishSingle({{ $video->id }})" size="xs" color="success" icon="heroicon-o-eye">Publish</x-filament::button>
+                                    </td>
+                                </tr>
+                                @endforeach
+                                @if($grouped[$tier]->count() > 10)
+                                    <tr><td colspan="6" class="py-1 px-3 text-gray-600 text-xs italic">... and {{ $grouped[$tier]->count() - 10 }} more</td></tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+        @endforeach
+        @if(isset($grouped[0]) && $grouped[0]->count() > 0)
+            <div class="mb-4">
+                <div style="font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-left: 12px;">
+                    Unclassified ({{ $grouped[0]->count() }})
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <tbody class="divide-y divide-gray-700/50">
+                            @foreach($grouped[0]->take(10) as $video)
+                            <tr>
+                                <td class="py-1.5 px-3 text-gray-300" style="width: 200px;">{{ $video->map_name }}</td>
+                                <td class="py-1.5 px-3 text-gray-300" style="width: 150px;">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
+                                <td class="py-1.5 px-3" style="width: 60px;"><x-filament::badge :color="$video->physics === 'cpm' ? 'info' : 'success'" size="sm">{{ strtoupper($video->physics) }}</x-filament::badge></td>
+                                <td class="py-1.5 px-3" style="width: 60px;">
+                                    @if($video->youtube_url)
+                                        <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
+                                    @endif
+                                </td>
+                                <td class="py-1.5 px-3 text-gray-500 text-xs">{{ $video->created_at->diffForHumans() }}</td>
+                                <td class="py-1.5 px-3 text-right">
+                                    <x-filament::button wire:click="publishSingle({{ $video->id }})" size="xs" color="success" icon="heroicon-o-eye">Publish</x-filament::button>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </x-filament::section>
     @endif
-
-    {{-- Actions --}}
-    <x-filament::section class="mt-4">
-        <x-slot name="heading">Actions</x-slot>
-
-        <div class="flex gap-4">
-            <x-filament::button
-                wire:click="togglePause"
-                :color="$isPaused ? 'success' : 'danger'"
-                icon="{{ $isPaused ? 'heroicon-o-play' : 'heroicon-o-pause' }}"
-            >
-                {{ $isPaused ? 'Resume Rendering' : 'Pause Rendering' }}
-            </x-filament::button>
-
-            <x-filament::button
-                wire:click="toggleAutoQueue"
-                :color="$isAutoQueuePaused ? 'success' : 'warning'"
-                icon="{{ $isAutoQueuePaused ? 'heroicon-o-play' : 'heroicon-o-stop' }}"
-            >
-                {{ $isAutoQueuePaused ? 'Enable Auto-Queue' : 'Disable Auto-Queue' }}
-            </x-filament::button>
-
-            <x-filament::button
-                wire:click="populateQueue"
-                color="info"
-                icon="heroicon-o-queue-list"
-            >
-                Populate Queue Now
-            </x-filament::button>
-
-            <x-filament::button
-                wire:click="publishUnlisted"
-                wire:confirm="This will mark {{ $unlisted_count }} unlisted auto-rendered videos for publishing. Demome will change them to public on next cycle. Continue?"
-                color="success"
-                icon="heroicon-o-eye"
-                :disabled="$unlisted_count === 0"
-            >
-                Publish Unlisted ({{ $unlisted_count }})
-            </x-filament::button>
-        </div>
-    </x-filament::section>
 </x-filament-panels::page>

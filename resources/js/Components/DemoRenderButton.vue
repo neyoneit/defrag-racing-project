@@ -49,7 +49,7 @@
         } else if (status === 'failed') {
             showReportModal.value = true;
         } else if (status === 'pending' || status === 'rendering' || status === 'uploading') {
-            router.visit('/youtube');
+            router.visit('/rendered-demos');
         }
     };
 

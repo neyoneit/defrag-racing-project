@@ -43,11 +43,16 @@ class DemomeController extends Controller
                     'source' => $item->source,
                     'record_id' => $item->record_id,
                     'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
+                    'video_title' => \App\Services\VideoMetadataService::generateTitle($item),
+                    'video_description' => \App\Services\VideoMetadataService::generateDescription($item),
+                    'video_tags' => \App\Services\VideoMetadataService::generateTags($item),
                 ];
             });
 
         // Find stale items stuck in 'rendering' status (crashed uploads)
+        // Exclude items that already have a youtube_url (were completed but status got stuck)
         $staleRendering = RenderedVideo::where('status', 'rendering')
+            ->whereNull('youtube_url')
             ->where('updated_at', '<', now()->subMinutes(5))
             ->get()
             ->map(function ($item) {
@@ -160,6 +165,12 @@ class DemomeController extends Controller
     {
         if ($renderedVideo->status !== 'rendering') {
             return response()->json(['error' => 'Can only reset items in rendering status'], 409);
+        }
+
+        // If already has youtube_url, it was completed - mark as completed, don't reset
+        if ($renderedVideo->youtube_url) {
+            $renderedVideo->update(['status' => 'completed']);
+            return response()->json(['success' => true, 'note' => 'Already had youtube_url, marked as completed']);
         }
 
         $renderedVideo->update([
@@ -683,19 +694,7 @@ class DemomeController extends Controller
     {
         $count = min((int) $request->input('count', 2), 5);
 
-        $videos = RenderedVideo::where('status', 'completed')
-            ->whereNotNull('youtube_video_id')
-            ->whereNotNull('youtube_url')
-            ->where('is_visible', true)
-            ->whereNull('published_at')
-            ->where(function ($q) {
-                $q->whereNull('publish_approved')
-                  ->orWhere('publish_approved', false);
-            })
-            ->where('source', 'auto')
-            ->orderBy('created_at')
-            ->limit($count)
-            ->get();
+        $videos = \App\Services\RenderQueueService::getNextPublishBatch($count);
 
         $approved = 0;
         foreach ($videos as $video) {
@@ -749,5 +748,47 @@ class DemomeController extends Controller
             'web' => $web,
             'discord' => $discord,
         ]);
+    }
+
+    /**
+     * Get video metadata (title, description, tags) for a specific video.
+     * Used by bot to get correct metadata before upload.
+     */
+    public function videoMetadata(RenderedVideo $renderedVideo)
+    {
+        return response()->json([
+            'title' => \App\Services\VideoMetadataService::generateTitle($renderedVideo),
+            'description' => \App\Services\VideoMetadataService::generateDescription($renderedVideo),
+            'tags' => \App\Services\VideoMetadataService::generateTags($renderedVideo),
+        ]);
+    }
+
+    /**
+     * Get batch of videos needing YouTube metadata update.
+     * Bot calls this, updates YouTube, then marks as updated.
+     */
+    public function videosNeedingMetadataUpdate(Request $request)
+    {
+        $lastId = (int) $request->input('after_id', 0);
+        $limit = min((int) $request->input('limit', 20), 50);
+
+        $videos = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_video_id')
+            ->whereNotNull('youtube_url')
+            ->where('id', '>', $lastId)
+            ->orderBy('id', 'asc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'youtube_video_id' => $video->youtube_video_id,
+                    'title' => \App\Services\VideoMetadataService::generateTitle($video),
+                    'description' => \App\Services\VideoMetadataService::generateDescription($video),
+                    'tags' => \App\Services\VideoMetadataService::generateTags($video),
+                ];
+            });
+
+        return response()->json(['videos' => $videos]);
     }
 }

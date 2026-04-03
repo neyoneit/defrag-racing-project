@@ -71,6 +71,7 @@ Route::get('/community-tasks/leaderboard', [CommunityTasksController::class, 'fu
 Route::post('/community-tasks/request-render', [CommunityTasksController::class, 'requestDifficultyRender'])->middleware(['auth', 'verified'])->name('community.tasks.request-render');
 
 Route::get('/rendered-demos', [YoutubeController::class, 'index'])->name('youtube');
+Route::redirect('/youtube', '/rendered-demos', 301);
 Route::post('/render/request', [RenderRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('render.request');
 Route::post('/api/rendered-videos/{id}/report', [RenderRequestController::class, 'reportFailed'])->middleware('auth')->name('render.report');
 

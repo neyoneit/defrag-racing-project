@@ -88,7 +88,7 @@
             renderRequested.value = true;
             // Redirect to YouTube page after short delay
             setTimeout(() => {
-                window.location.href = '/youtube';
+                window.location.href = '/rendered-demos';
             }, 500);
         } catch (e) {
             renderError.value = e.response?.data?.error || 'Failed';

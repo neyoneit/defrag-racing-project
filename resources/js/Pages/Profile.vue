@@ -979,7 +979,7 @@
             const demoId = record.uploaded_demos[0].id;
             await axios.post('/render/request', { record_id: record.id, demo_id: demoId });
             renderStates.value[record.id] = { ...state, requesting: false, requested: true };
-            setTimeout(() => { window.location.href = '/youtube'; }, 500);
+            setTimeout(() => { window.location.href = '/rendered-demos'; }, 500);
         } catch (e) {
             renderStates.value[record.id] = { ...state, requesting: false, error: e.response?.data?.error || 'Failed' };
         }
@@ -2180,7 +2180,7 @@
                         </svg>
                         Rendered Videos
                     </h3>
-                    <a href="/youtube" class="text-xs text-gray-400 hover:text-white transition-colors">View all</a>
+                    <a href="/rendered-demos" class="text-xs text-gray-400 hover:text-white transition-colors">View all</a>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <a
