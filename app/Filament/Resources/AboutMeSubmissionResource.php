@@ -15,7 +15,7 @@ class AboutMeSubmissionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationGroup = 'Moderation';
     protected static ?string $navigationLabel = 'About Me';
-    protected static ?int $navigationSort = 25;
+    protected static ?int $navigationSort = 1;
     protected static bool $shouldSkipAuthorization = true;
 
     public static function canAccess(): bool
@@ -42,10 +42,12 @@ class AboutMeSubmissionResource extends Resource
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Profile')
                     ->searchable()
+                    ->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html()
                     ->url(fn ($record) => "/profile/{$record->user_id}"),
                 Tables\Columns\TextColumn::make('submitter.name')
                     ->label('Submitted By')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html(),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -77,7 +79,7 @@ class AboutMeSubmissionResource extends Resource
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ])
-                    ->default('pending'),
+                    ,
             ])
             ->actions([
                 Tables\Actions\Action::make('approve')

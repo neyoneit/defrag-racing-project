@@ -22,6 +22,8 @@ class ModelResource extends Resource
 
     protected static ?string $navigationLabel = 'Models';
 
+    protected static ?int $navigationSort = 6;
+
     protected static ?string $modelLabel = 'Model';
 
     protected static ?string $pluralModelLabel = 'Models';

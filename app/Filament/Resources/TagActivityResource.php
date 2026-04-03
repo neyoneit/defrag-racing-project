@@ -31,7 +31,7 @@ class TagActivityResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Tag Activities';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 8;
 
     protected static bool $shouldSkipAuthorization = true;
 

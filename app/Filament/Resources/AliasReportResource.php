@@ -24,7 +24,7 @@ class AliasReportResource extends Resource
 
     protected static ?string $navigationGroup = 'Moderation';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function canAccess(): bool
     {

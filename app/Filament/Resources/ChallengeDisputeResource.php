@@ -20,6 +20,8 @@ class ChallengeDisputeResource extends Resource
 
     protected static ?string $navigationLabel = 'Challenge Disputes';
 
+    protected static ?int $navigationSort = 3;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->hasModeratorPermission('challenge_disputes') ?? false;

@@ -20,6 +20,8 @@ class WikiRevisionResource extends Resource
 
     protected static ?string $navigationLabel = 'Wiki Deleted Revisions';
 
+    protected static ?int $navigationSort = 11;
+
     protected static ?string $modelLabel = 'Deleted Wiki Revision';
 
     protected static ?string $pluralModelLabel = 'Deleted Wiki Revisions';
