@@ -9,15 +9,6 @@ use rayon::prelude::*;
 #[allow(dead_code)]
 const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected (currently disabled)
 
-fn env_f64(key: &str, default: f64) -> f64 {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
-}
-fn env_usize(key: &str, default: usize) -> usize {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
-}
-fn env_i32(key: &str, default: i32) -> i32 {
-    std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
-}
 
 struct RatingConfig {
     min_map_total_participators: usize,
@@ -35,20 +26,34 @@ struct RatingConfig {
 }
 
 impl RatingConfig {
-    fn from_env() -> Self {
+    fn from_db(conn: &mut PooledConn) -> Self {
+        let rows: Vec<(String, String)> = conn.query("SELECT `key`, `value` FROM rating_settings")
+            .unwrap_or_default();
+        let map: HashMap<String, String> = rows.into_iter().collect();
+
+        let get_f64 = |key: &str, default: f64| -> f64 {
+            map.get(key).and_then(|v| v.parse().ok()).unwrap_or(default)
+        };
+        let get_usize = |key: &str, default: usize| -> usize {
+            map.get(key).and_then(|v| v.parse().ok()).unwrap_or(default)
+        };
+        let get_i32 = |key: &str, default: i32| -> i32 {
+            map.get(key).and_then(|v| v.parse().ok()).unwrap_or(default)
+        };
+
         Self {
-            min_map_total_participators: env_usize("RATING_MIN_MAP_PLAYERS", 5),
-            min_top1_time: env_i32("RATING_MIN_TOP1_TIME", 500),
-            max_tied_wr_players: env_usize("RATING_MAX_TIED_WR", 3),
-            min_total_records: env_usize("RATING_MIN_TOTAL_RECORDS", 10),
-            cfg_a: env_f64("RATING_CFG_A", 1.2),
-            cfg_b: env_f64("RATING_CFG_B", 1.33),
-            cfg_m: env_f64("RATING_CFG_M", 0.3),
-            cfg_v: env_f64("RATING_CFG_V", 0.1),
-            cfg_q: env_f64("RATING_CFG_Q", 0.5),
-            cfg_d: env_f64("RATING_CFG_D", 0.0001),
-            mult_l: env_f64("RATING_MULT_L", 1.0),
-            mult_n: env_f64("RATING_MULT_N", 2.0),
+            min_map_total_participators: get_usize("min_map_players", 5),
+            min_top1_time: get_i32("min_top1_time", 500),
+            max_tied_wr_players: get_usize("max_tied_wr_players", 3),
+            min_total_records: get_usize("min_total_records", 10),
+            cfg_a: get_f64("cfg_a", 1.2),
+            cfg_b: get_f64("cfg_b", 1.33),
+            cfg_m: get_f64("cfg_m", 0.3),
+            cfg_v: get_f64("cfg_v", 0.1),
+            cfg_q: get_f64("cfg_q", 0.5),
+            cfg_d: get_f64("cfg_d", 0.02),
+            mult_l: get_f64("mult_l", 1.0),
+            mult_n: get_f64("mult_n", 2.0),
         }
     }
 }
@@ -817,12 +822,6 @@ fn main() -> Result<()> {
     let physics = &args[1];
     let mode = &args[2];
 
-    // Load rating config from environment
-    let cfg = RatingConfig::from_env();
-    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
-        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n,
-        cfg.min_map_total_participators, cfg.min_top1_time, cfg.max_tied_wr_players, cfg.min_total_records);
-
     // Check for --map= flag (incremental mode)
     let map_flag: Option<String> = args.iter()
         .find(|a| a.starts_with("--map="))
@@ -845,6 +844,12 @@ fn main() -> Result<()> {
     let opts = mysql::Opts::from_url(&url).expect("Invalid MySQL URL");
     let pool = Pool::new(opts)?;
     let mut conn = pool.get_conn()?;
+
+    // Load rating config from database (rating_settings table)
+    let cfg = RatingConfig::from_db(&mut conn);
+    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
+        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n,
+        cfg.min_map_total_participators, cfg.min_top1_time, cfg.max_tied_wr_players, cfg.min_total_records);
 
     // Load maps for category filtering
     println!("Step 0: Loading maps from database...");
