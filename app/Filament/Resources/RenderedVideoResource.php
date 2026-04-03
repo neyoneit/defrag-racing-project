@@ -160,11 +160,17 @@ class RenderedVideoResource extends Resource
                 Tables\Columns\TextColumn::make('priority')
                     ->sortable()
                     ->formatStateUsing(fn (int $state): string => match($state) {
+                        -1 => 'Force',
                         0 => 'User',
-                        1 => 'WR',
-                        2 => 'Verified',
-                        default => 'Normal',
+                        1 => 'Auto',
+                        default => (string) $state,
                     }),
+
+                Tables\Columns\TextColumn::make('quality_tier')
+                    ->label('Tier')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state): string => $state ? (\App\Services\RenderQueueService::TIER_LABELS[$state] ?? '?') : '-')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('time_ms')
                     ->label('Time')
@@ -196,9 +202,16 @@ class RenderedVideoResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Queued')
+                    ->dateTime('Y-m-d H:i')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Completed')
+                    ->dateTime('Y-m-d H:i')
                     ->sortable()
-                    ->since(),
+                    ->visible(fn ($record) => true)
+                    ->formatStateUsing(fn ($record) => $record->status === 'completed' ? $record->updated_at->format('Y-m-d H:i') : '-'),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -434,6 +447,8 @@ class RenderedVideoResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', 'pending')->count() ?: null;
+        return \Illuminate\Support\Facades\Cache::remember('rendered_videos:pending_count', 60, function () {
+            return static::getModel()::where('status', 'pending')->count() ?: null;
+        });
     }
 }

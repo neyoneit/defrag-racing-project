@@ -35,6 +35,7 @@ class RenderedVideo extends Model
         'published_at',
         'publish_approved',
         'admin_notes',
+        'quality_tier',
     ];
 
     protected $casts = [

@@ -454,7 +454,7 @@
                 <Pagination
                     :last_page="videos.last_page"
                     :current_page="videos.current_page"
-                    link="/youtube"
+                    link="/rendered-demos"
                 />
             </div>
         </div>

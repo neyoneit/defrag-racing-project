@@ -1,0 +1,350 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\RenderedVideo;
+use App\Models\UploadedDemo;
+use Illuminate\Support\Facades\DB;
+
+class RenderQueueService
+{
+    // Quality tiers
+    const TIER_ONLINE_WR = 1;
+    const TIER_OFFLINE_FASTER_WR = 2;
+    const TIER_ONLINE_TOP10 = 3;
+    const TIER_OFFLINE_WITHIN_10 = 4;
+    const TIER_ONLINE_RANK11 = 5;
+    const TIER_OFFLINE_WITHIN_50 = 6;
+    const TIER_LONGER = 7;
+    const TIER_VERY_LONG = 8;
+
+    const TIER_LABELS = [
+        1 => 'Online WR',
+        2 => 'Offline ≤ WR',
+        3 => 'Online Top 2-10',
+        4 => 'Offline ≤ 10%',
+        5 => 'Online Rank 11+',
+        6 => 'Offline ≤ 50%',
+        7 => 'Longer (10-50min)',
+        8 => 'Very long (50min+)',
+    ];
+
+    // Rotation pattern per 12 items (includes 1 longer + 1 very long)
+    const ROTATION = [
+        self::TIER_ONLINE_WR,         // 1
+        self::TIER_OFFLINE_FASTER_WR, // 2
+        self::TIER_OFFLINE_FASTER_WR, // 3
+        self::TIER_ONLINE_TOP10,      // 4
+        self::TIER_ONLINE_TOP10,      // 5
+        self::TIER_OFFLINE_WITHIN_10, // 6
+        self::TIER_OFFLINE_WITHIN_10, // 7
+        self::TIER_ONLINE_RANK11,     // 8
+        self::TIER_OFFLINE_WITHIN_50, // 9
+        self::TIER_OFFLINE_WITHIN_50, // 10
+        self::TIER_LONGER,            // 11
+        self::TIER_VERY_LONG,         // 12
+    ];
+
+    // Publish rotation per 12 items (daily publish target)
+    const PUBLISH_ROTATION = [
+        self::TIER_ONLINE_WR,         // 1
+        self::TIER_OFFLINE_FASTER_WR, // 2
+        self::TIER_OFFLINE_FASTER_WR, // 3
+        self::TIER_ONLINE_TOP10,      // 4
+        self::TIER_ONLINE_TOP10,      // 5
+        self::TIER_OFFLINE_WITHIN_10, // 6
+        self::TIER_OFFLINE_WITHIN_10, // 7
+        self::TIER_ONLINE_RANK11,     // 8
+        self::TIER_OFFLINE_WITHIN_50, // 9
+        self::TIER_OFFLINE_WITHIN_50, // 10
+        self::TIER_LONGER,            // 11
+        self::TIER_VERY_LONG,         // 12
+    ];
+
+    /**
+     * Determine the quality tier for a demo.
+     */
+    public static function detectTier(UploadedDemo $demo): int
+    {
+        // Online (has record_id) - check rank first, time-based tiers only for non-top demos
+        if ($demo->record_id) {
+            $record = $demo->record;
+            if (!$record || $record->deleted_at) {
+                return self::TIER_ONLINE_RANK11;
+            }
+
+            if ($record->rank === 1) return self::TIER_ONLINE_WR;
+            if ($record->rank <= 10) return self::TIER_ONLINE_TOP10;
+            return self::TIER_ONLINE_RANK11;
+        }
+
+        // Offline - compare with WR on that map+physics
+        if ($demo->time_ms && $demo->time_ms > 0 && $demo->map_name && $demo->physics) {
+            $wrTime = DB::table('records')
+                ->where('mapname', $demo->map_name)
+                ->where('physics', $demo->physics)
+                ->where('rank', 1)
+                ->whereNull('deleted_at')
+                ->value('time');
+
+            if ($wrTime && $wrTime > 0) {
+                $ratio = $demo->time_ms / $wrTime;
+                if ($ratio <= 1.0) return self::TIER_OFFLINE_FASTER_WR;
+                if ($ratio <= 1.1) return self::TIER_OFFLINE_WITHIN_10;
+                if ($ratio <= 1.5) return self::TIER_OFFLINE_WITHIN_50;
+            }
+        }
+
+        // Long demos that didn't match any quality tier above
+        if ($demo->time_ms && $demo->time_ms > 3000000) {
+            return self::TIER_VERY_LONG;
+        }
+        if ($demo->time_ms && $demo->time_ms >= 600000) {
+            return self::TIER_LONGER;
+        }
+
+        return self::TIER_OFFLINE_WITHIN_50; // default for unclassifiable
+    }
+
+    /**
+     * Get candidate demos for a specific tier (not yet in rendered_videos).
+     */
+    public static function getCandidatesForTier(int $tier, int $limit = 5): \Illuminate\Support\Collection
+    {
+        $query = UploadedDemo::query()
+            ->whereDoesntHave('renderedVideo')
+            ->where('time_ms', '>', 0)
+            ->whereNotNull('map_name');
+
+        switch ($tier) {
+            case self::TIER_ONLINE_WR:
+                $query->whereNotNull('record_id')
+                    ->whereHas('record', fn($q) => $q->where('rank', 1)->whereNull('deleted_at'))
+                    ->orderBy('time_ms', 'asc');
+                break;
+
+            case self::TIER_OFFLINE_FASTER_WR:
+                $ids = DB::select("
+                    SELECT d.id FROM uploaded_demos d
+                    JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
+                    WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms <= r.time
+                    AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    ORDER BY d.time_ms ASC LIMIT ?
+                ", [$limit]);
+                return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
+
+            case self::TIER_ONLINE_TOP10:
+                $query->whereNotNull('record_id')
+                    ->whereHas('record', fn($q) => $q->where('rank', '>', 1)->where('rank', '<=', 10)->whereNull('deleted_at'))
+                    ->orderByRaw('(SELECT r.rank FROM records r WHERE r.id = uploaded_demos.record_id) ASC')
+                    ->orderBy('time_ms', 'asc');
+                break;
+
+            case self::TIER_OFFLINE_WITHIN_10:
+                $ids = DB::select("
+                    SELECT d.id FROM uploaded_demos d
+                    JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
+                    WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms > r.time AND d.time_ms <= r.time * 1.1
+                    AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    ORDER BY (d.time_ms / r.time) ASC LIMIT ?
+                ", [$limit]);
+                return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
+
+            case self::TIER_ONLINE_RANK11:
+                $query->whereNotNull('record_id')
+                    ->whereHas('record', fn($q) => $q->where('rank', '>', 10)->whereNull('deleted_at'))
+                    ->orderByRaw('(SELECT r.rank FROM records r WHERE r.id = uploaded_demos.record_id) ASC')
+                    ->orderBy('time_ms', 'asc');
+                break;
+
+            case self::TIER_OFFLINE_WITHIN_50:
+                $ids = DB::select("
+                    SELECT d.id FROM uploaded_demos d
+                    JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
+                    WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms > r.time * 1.1 AND d.time_ms <= r.time * 1.5
+                    AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    ORDER BY (d.time_ms / r.time) ASC LIMIT ?
+                ", [$limit]);
+                return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
+
+            case self::TIER_LONGER:
+                // Exclude demos that would qualify for higher tiers (online WR/top10)
+                $query->where('time_ms', '>=', 600000)
+                    ->where('time_ms', '<=', 3000000)
+                    ->where(function ($q) {
+                        $q->whereNull('record_id')
+                          ->orWhereHas('record', fn($r) => $r->where('rank', '>', 10)->whereNull('deleted_at'));
+                    })
+                    ->orderBy('time_ms', 'asc');
+                break;
+
+            case self::TIER_VERY_LONG:
+                $query->where('time_ms', '>', 3000000)
+                    ->where(function ($q) {
+                        $q->whereNull('record_id')
+                          ->orWhereHas('record', fn($r) => $r->where('rank', '>', 10)->whereNull('deleted_at'));
+                    })
+                    ->orderBy('time_ms', 'asc');
+                break;
+        }
+
+        return $query->with('record')->limit($limit)->get();
+    }
+
+    /**
+     * Get the next N items for the render queue using the rotation pattern.
+     */
+    public static function getNextBatch(int $count = 5): array
+    {
+        // Track where we are in the rotation (persisted in site_settings)
+        $rotationIndex = (int) (\App\Models\SiteSetting::get('demome:rotation_index', 0));
+        $items = [];
+        $usedMaps = [];
+        $usedDemoIds = [];
+        $attempts = 0;
+        $maxAttempts = count(self::ROTATION) * 3;
+
+        // Also check recently pending items to avoid same map back-to-back across batches
+        $recentMaps = RenderedVideo::where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->pluck('map_name')
+            ->toArray();
+        $usedMaps = array_flip($recentMaps);
+
+        while (count($items) < $count && $attempts < $maxAttempts) {
+            $tier = self::ROTATION[$rotationIndex % count(self::ROTATION)];
+            $candidates = self::getCandidatesForTier($tier, 10);
+
+            $picked = null;
+            foreach ($candidates as $demo) {
+                if (!isset($usedMaps[$demo->map_name]) && !isset($usedDemoIds[$demo->id])) {
+                    $picked = $demo;
+                    break;
+                }
+            }
+
+            if ($picked) {
+                $items[] = [
+                    'demo' => $picked,
+                    'tier' => $tier,
+                ];
+                $usedMaps[$picked->map_name] = true;
+                $usedDemoIds[$picked->id] = true;
+            }
+
+            $rotationIndex++;
+            $attempts++;
+        }
+
+        \App\Models\SiteSetting::set('demome:rotation_index', $rotationIndex % count(self::ROTATION));
+
+        return $items;
+    }
+
+    /**
+     * Get next videos to auto-publish using the publish rotation pattern.
+     */
+    public static function getNextPublishBatch(int $count): \Illuminate\Support\Collection
+    {
+        $publishIndex = (int) (\App\Models\SiteSetting::get('demome:publish_rotation_index', 0));
+        $items = collect();
+        $usedMaps = [];
+        $attempts = 0;
+        $maxAttempts = count(self::PUBLISH_ROTATION) * 3;
+
+        // Avoid same map as recently published
+        $recentPublishedMaps = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('published_at')
+            ->orderBy('published_at', 'desc')
+            ->limit(10)
+            ->pluck('map_name')
+            ->toArray();
+        $usedMaps = array_flip($recentPublishedMaps);
+
+        while ($items->count() < $count && $attempts < $maxAttempts) {
+            $tier = self::PUBLISH_ROTATION[$publishIndex % count(self::PUBLISH_ROTATION)];
+
+            $excludeMapNames = array_keys($usedMaps);
+            $baseQuery = RenderedVideo::where('status', 'completed')
+                ->whereNotNull('youtube_video_id')
+                ->whereNotNull('youtube_url')
+                ->where('is_visible', true)
+                ->whereNull('published_at')
+                ->where(fn($q) => $q->whereNull('publish_approved')->orWhere('publish_approved', false))
+                ->where('source', 'auto')
+                ->when(!empty($excludeMapNames), fn($q) => $q->whereNotIn('map_name', $excludeMapNames))
+                ->orderBy('created_at');
+
+            $video = $baseQuery->where('quality_tier', $tier)->first();
+
+            if ($video) {
+                $items->push($video);
+                $usedMaps[$video->map_name] = true;
+            }
+
+            $publishIndex++;
+            $attempts++;
+        }
+
+        \App\Models\SiteSetting::set('demome:publish_rotation_index', $publishIndex % count(self::PUBLISH_ROTATION));
+
+        return $items;
+    }
+
+    /**
+     * Get pool counts per tier for the admin preview.
+     */
+    public static function getPoolCounts(): array
+    {
+        $counts = [];
+        foreach (self::TIER_LABELS as $tier => $label) {
+            $counts[$tier] = [
+                'label' => $label,
+                'available' => self::getCandidatesForTier($tier, 1)->count() > 0 ? self::countTierPool($tier) : 0,
+                'rendered' => RenderedVideo::where('quality_tier', $tier)->where('status', 'completed')->count(),
+                'pending' => RenderedVideo::where('quality_tier', $tier)->where('status', 'pending')->count(),
+                'unpublished' => RenderedVideo::where('quality_tier', $tier)->where('status', 'completed')
+                    ->whereNull('published_at')->count(),
+            ];
+        }
+        return $counts;
+    }
+
+    private static function countTierPool(int $tier): int
+    {
+        return \Illuminate\Support\Facades\Cache::remember("tier_pool_count_{$tier}", 3600, function () use ($tier) {
+            $base = "NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id) AND d.time_ms > 0 AND d.map_name IS NOT NULL";
+
+            $sql = match ($tier) {
+                self::TIER_ONLINE_WR => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.id = d.record_id WHERE r.rank = 1 AND r.deleted_at IS NULL AND {$base}",
+                self::TIER_OFFLINE_FASTER_WR => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL WHERE d.record_id IS NULL AND d.time_ms <= r.time AND {$base}",
+                self::TIER_ONLINE_TOP10 => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.id = d.record_id WHERE r.rank > 1 AND r.rank <= 10 AND r.deleted_at IS NULL AND {$base}",
+                self::TIER_OFFLINE_WITHIN_10 => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL WHERE d.record_id IS NULL AND d.time_ms > r.time AND d.time_ms <= r.time * 1.1 AND {$base}",
+                self::TIER_ONLINE_RANK11 => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.id = d.record_id WHERE r.rank > 10 AND r.deleted_at IS NULL AND {$base}",
+                self::TIER_OFFLINE_WITHIN_50 => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL WHERE d.record_id IS NULL AND d.time_ms > r.time * 1.1 AND d.time_ms <= r.time * 1.5 AND {$base}",
+                self::TIER_LONGER => "SELECT COUNT(*) as c FROM uploaded_demos d WHERE d.time_ms >= 600000 AND d.time_ms <= 3000000 AND {$base}",
+                self::TIER_VERY_LONG => "SELECT COUNT(*) as c FROM uploaded_demos d WHERE d.time_ms > 3000000 AND {$base}",
+                default => "SELECT 0 as c",
+            };
+
+            return DB::select($sql)[0]->c;
+        });
+    }
+
+    /**
+     * Preview: get candidates per tier for admin display.
+     */
+    public static function getPreview(int $perTier = 10): array
+    {
+        $preview = [];
+        foreach (self::TIER_LABELS as $tier => $label) {
+            $candidates = self::getCandidatesForTier($tier, $perTier);
+            $preview[$tier] = [
+                'label' => $label,
+                'items' => $candidates,
+            ];
+        }
+        return $preview;
+    }
+}
