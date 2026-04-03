@@ -491,9 +491,10 @@ function filterTagSuggestions() {
     const currentMap = currentTagMap.value;
     const existingIds = new Set((currentMap?.tags || []).map(t => t.id));
     const filtered = allTags.value.filter(t => !existingIds.has(t.id));
-    tagSuggestions.value = q
+    const result = q
         ? filtered.filter(t => t.display_name.toLowerCase().includes(q))
         : filtered;
+    tagSuggestions.value = result.sort((a, b) => a.display_name.localeCompare(b.display_name));
 }
 
 async function addTagToMap(tagName) {
@@ -1456,8 +1457,9 @@ onUnmounted(() => {
                                                 : d.bgSubtle + ' border-gray-700/30 hover:text-white ' + d.hover + ' cursor-pointer'">
                                         {{ d.label }}
                                     </button>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 border border-gray-700 rounded-lg text-[10px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                                        {{ d.desc }}
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 bg-gray-900 border border-yellow-500/30 rounded-lg text-[11px] shadow-2xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 w-52">
+                                        <div class="font-bold text-yellow-400 text-xs">{{ d.desc }}</div>
+                                        <div class="text-gray-300 mt-1">Rate based on the <strong class="text-white">lowest skill needed to complete</strong> the map, not the WR time.</div>
                                     </div>
                                 </div>
                             </div>

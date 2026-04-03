@@ -1095,7 +1095,7 @@
                     </div>
 
                     <!-- Tags Section -->
-                    <div class="mb-4 pt-3 border-t border-white/10 relative z-[60]">
+                    <div class="mb-4 pt-3 border-t border-white/10 relative">
                         <!-- Existing tags row -->
                         <div class="flex flex-wrap items-center gap-1.5 mb-2 min-h-[24px]">
                             <span
@@ -1274,7 +1274,7 @@
                     </div>
 
                     <!-- Difficulty Rating + Controls Row -->
-                    <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <div class="flex flex-wrap items-center gap-3 mb-3 relative z-10">
                         <!-- Difficulty Rating -->
                         <div class="flex items-center gap-1.5">
                             <div class="relative group/diff">
