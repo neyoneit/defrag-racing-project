@@ -64,10 +64,30 @@ class DemomeController extends Controller
                 ];
             });
 
+        // Items that were rendered but upload failed - just need re-upload
+        $uploadPending = RenderedVideo::where('status', 'upload_pending')
+            ->orderBy('updated_at', 'asc')
+            ->limit(5)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'demo_filename' => $item->demo_filename,
+                    'map_name' => $item->map_name,
+                    'player_name' => $item->player_name,
+                    'physics' => $item->physics,
+                    'time_ms' => $item->time_ms,
+                    'source' => $item->source,
+                    'record_id' => $item->record_id,
+                    'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
+                ];
+            });
+
         return response()->json([
             'paused' => $paused,
             'items' => $items,
             'stale_rendering' => $staleRendering,
+            'upload_pending' => $uploadPending,
         ]);
     }
 
