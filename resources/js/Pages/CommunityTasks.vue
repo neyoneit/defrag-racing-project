@@ -92,10 +92,14 @@ const totalScore = computed(() => {
     return (props.communityScore?.total_score || 0) + sessionPoints.value;
 });
 
+const badgeScore = computed(() => {
+    return (props.communityScore?.community_badge_score || 0) + sessionPoints.value;
+});
+
 const currentTier = computed(() => {
     if (!props.tiers) return null;
     let tier = null;
-    const score = totalScore.value;
+    const score = badgeScore.value;
     for (const t of props.tiers) {
         if (score >= t.min_score) tier = t;
     }
@@ -104,7 +108,7 @@ const currentTier = computed(() => {
 
 const nextTier = computed(() => {
     if (!props.tiers) return null;
-    const score = totalScore.value;
+    const score = badgeScore.value;
     for (const t of props.tiers) {
         if (score < t.min_score) return t;
     }
@@ -113,12 +117,12 @@ const nextTier = computed(() => {
 
 const tierProgress = computed(() => {
     if (!currentTier.value && nextTier.value) {
-        return Math.min((totalScore.value / nextTier.value.min_score) * 100, 100);
+        return Math.min((badgeScore.value / nextTier.value.min_score) * 100, 100);
     }
     if (!nextTier.value) return 100;
     const current = currentTier.value?.min_score || 0;
     const next = nextTier.value.min_score;
-    return Math.min(((totalScore.value - current) / (next - current)) * 100, 100);
+    return Math.min(((badgeScore.value - current) / (next - current)) * 100, 100);
 });
 
 const currentTask = computed(() => {
@@ -897,7 +901,7 @@ onUnmounted(() => {
                                 }" />
                         </div>
                         <div class="text-[10px] text-gray-600 mt-0.5 text-center tabular-nums">
-                            {{ Math.round(totalScore) }} / {{ nextTier?.min_score || '--' }} pts
+                            {{ Math.round(badgeScore) }} / {{ nextTier?.min_score || '--' }} pts
                         </div>
                     </div>
                 </div>
@@ -1664,7 +1668,7 @@ onUnmounted(() => {
                                 :style="{ width: tierProgress + '%', background: currentTier.color }" />
                         </div>
                         <div class="text-[10px] text-gray-600 mt-1">
-                            {{ Math.round(nextTier.min_score - totalScore) }} pts to
+                            {{ Math.round(nextTier.min_score - badgeScore) }} pts to
                             <span :style="{ color: nextTier.color }">{{ nextTier.key.charAt(0).toUpperCase() + nextTier.key.slice(1) }}</span>
                         </div>
                     </div>
