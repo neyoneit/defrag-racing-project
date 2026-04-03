@@ -177,75 +177,69 @@
         </div>
     </x-filament::section>
 
-    {{-- Row 4: Unlisted Videos grouped by tier --}}
-    @if($unlisted_videos->count() > 0)
+    {{-- Row 4: Unlisted Videos with tier tabs + pagination --}}
+    @if($unlisted_count > 0)
     <x-filament::section class="mt-4">
         <x-slot name="heading">Unlisted Videos ({{ $unlisted_count }})</x-slot>
-        @php
-            $grouped = $unlisted_videos->groupBy(fn($v) => $v->quality_tier ?? 0);
-            $tierLabels = \App\Services\RenderQueueService::TIER_LABELS;
-        @endphp
-        @foreach($tierLabels as $tier => $label)
-            @if(isset($grouped[$tier]) && $grouped[$tier]->count() > 0)
-                <div class="mb-4">
-                    <div style="font-size: 11px; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-left: 12px;">
-                        {{ $label }} ({{ $grouped[$tier]->count() }})
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <tbody class="divide-y divide-gray-700/50">
-                                @foreach($grouped[$tier]->take(10) as $video)
-                                <tr>
-                                    <td class="py-1.5 px-3 text-gray-300" style="width: 200px;">{{ $video->map_name }}</td>
-                                    <td class="py-1.5 px-3 text-gray-300" style="width: 150px;">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
-                                    <td class="py-1.5 px-3" style="width: 60px;"><x-filament::badge :color="$video->physics === 'cpm' ? 'info' : 'success'" size="sm">{{ strtoupper($video->physics) }}</x-filament::badge></td>
-                                    <td class="py-1.5 px-3" style="width: 60px;">
-                                        @if($video->youtube_url)
-                                            <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
-                                        @endif
-                                    </td>
-                                    <td class="py-1.5 px-3 text-gray-500 text-xs">{{ $video->created_at->diffForHumans() }}</td>
-                                    <td class="py-1.5 px-3 text-right">
-                                        <x-filament::button wire:click="publishSingle({{ $video->id }})" size="xs" color="success" icon="heroicon-o-eye">Publish</x-filament::button>
-                                    </td>
-                                </tr>
-                                @endforeach
-                                @if($grouped[$tier]->count() > 10)
-                                    <tr><td colspan="6" class="py-1 px-3 text-gray-600 text-xs italic">... and {{ $grouped[$tier]->count() - 10 }} more</td></tr>
-                                @endif
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            @endif
-        @endforeach
-        @if(isset($grouped[0]) && $grouped[0]->count() > 0)
-            <div class="mb-4">
-                <div style="font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-left: 12px;">
-                    Unclassified ({{ $grouped[0]->count() }})
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <tbody class="divide-y divide-gray-700/50">
-                            @foreach($grouped[0]->take(10) as $video)
-                            <tr>
-                                <td class="py-1.5 px-3 text-gray-300" style="width: 200px;">{{ $video->map_name }}</td>
-                                <td class="py-1.5 px-3 text-gray-300" style="width: 150px;">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
-                                <td class="py-1.5 px-3" style="width: 60px;"><x-filament::badge :color="$video->physics === 'cpm' ? 'info' : 'success'" size="sm">{{ strtoupper($video->physics) }}</x-filament::badge></td>
-                                <td class="py-1.5 px-3" style="width: 60px;">
-                                    @if($video->youtube_url)
-                                        <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
-                                    @endif
-                                </td>
-                                <td class="py-1.5 px-3 text-gray-500 text-xs">{{ $video->created_at->diffForHumans() }}</td>
-                                <td class="py-1.5 px-3 text-right">
-                                    <x-filament::button wire:click="publishSingle({{ $video->id }})" size="xs" color="success" icon="heroicon-o-eye">Publish</x-filament::button>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+
+        {{-- Tier filter tabs --}}
+        @php $tierLabels = \App\Services\RenderQueueService::TIER_LABELS; @endphp
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+            <button wire:click="selectUnlistedTier(null)"
+                style="padding: 4px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid {{ $this->unlistedTier === null ? '#ea580c' : '#374151' }}; background: {{ $this->unlistedTier === null ? '#ea580c33' : 'transparent' }}; color: {{ $this->unlistedTier === null ? '#ea580c' : '#9ca3af' }}; cursor: pointer;">
+                All ({{ $unlisted_count }})
+            </button>
+            @foreach($unlisted_tier_counts as $tier => $count)
+                <button wire:click="selectUnlistedTier({{ $tier }})"
+                    style="padding: 4px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; border: 1px solid {{ $this->unlistedTier === $tier ? '#ea580c' : '#374151' }}; background: {{ $this->unlistedTier === $tier ? '#ea580c33' : 'transparent' }}; color: {{ $this->unlistedTier === $tier ? '#ea580c' : '#9ca3af' }}; cursor: pointer;">
+                    {{ $tier === 0 ? 'Unclassified' : ($tierLabels[$tier] ?? "Tier {$tier}") }} ({{ $count }})
+                </button>
+            @endforeach
+        </div>
+
+        {{-- Video table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-gray-700/50">
+                    @forelse($unlisted_videos as $video)
+                    <tr>
+                        <td class="py-1.5 px-3 text-gray-300" style="width: 200px;">{{ $video->map_name }}</td>
+                        <td class="py-1.5 px-3 text-gray-300" style="width: 150px;">{!! \App\Filament\Resources\UserResource::q3tohtml($video->player_name) !!}</td>
+                        <td class="py-1.5 px-3" style="width: 60px;"><x-filament::badge :color="$video->physics === 'cpm' ? 'info' : 'success'" size="sm">{{ strtoupper($video->physics) }}</x-filament::badge></td>
+                        <td class="py-1.5 px-3" style="width: 80px;">
+                            @if($this->unlistedTier === null)
+                                <span style="font-size: 10px; color: #6b7280;">{{ $tierLabels[$video->quality_tier] ?? 'N/A' }}</span>
+                            @endif
+                        </td>
+                        <td class="py-1.5 px-3" style="width: 60px;">
+                            @if($video->youtube_url)
+                                <a href="{{ $video->youtube_url }}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs">View</a>
+                            @endif
+                        </td>
+                        <td class="py-1.5 px-3 text-gray-500 text-xs">{{ $video->created_at->diffForHumans() }}</td>
+                        <td class="py-1.5 px-3 text-right">
+                            <x-filament::button wire:click="publishSingle({{ $video->id }})" size="xs" color="success" icon="heroicon-o-eye">Publish</x-filament::button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="7" class="py-4 text-center text-gray-500 text-sm">No videos in this category</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Pagination --}}
+        @if($unlisted_total_pages > 1)
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <button wire:click="previousUnlistedPage" @if($this->unlistedPage <= 1) disabled @endif
+                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $this->unlistedPage <= 1 ? 'transparent' : '#1f2937' }}; color: {{ $this->unlistedPage <= 1 ? '#4b5563' : '#d1d5db' }}; cursor: {{ $this->unlistedPage <= 1 ? 'not-allowed' : 'pointer' }};">
+                    Previous
+                </button>
+                <span style="font-size: 12px; color: #6b7280;">Page {{ $this->unlistedPage }} of {{ $unlisted_total_pages }}</span>
+                <button wire:click="nextUnlistedPage" @if($this->unlistedPage >= $unlisted_total_pages) disabled @endif
+                    style="padding: 6px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid #374151; background: {{ $this->unlistedPage >= $unlisted_total_pages ? 'transparent' : '#1f2937' }}; color: {{ $this->unlistedPage >= $unlisted_total_pages ? '#4b5563' : '#d1d5db' }}; cursor: {{ $this->unlistedPage >= $unlisted_total_pages ? 'not-allowed' : 'pointer' }};">
+                    Next
+                </button>
             </div>
         @endif
     </x-filament::section>

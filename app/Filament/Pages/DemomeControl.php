@@ -24,9 +24,29 @@ class DemomeControl extends Page
 
     protected static string $view = 'filament.pages.demome-control';
 
+    public ?int $unlistedTier = null; // null = all
+    public int $unlistedPage = 1;
+    public int $unlistedPerPage = 20;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public function selectUnlistedTier(?int $tier): void
+    {
+        $this->unlistedTier = $tier;
+        $this->unlistedPage = 1;
+    }
+
+    public function previousUnlistedPage(): void
+    {
+        $this->unlistedPage = max(1, $this->unlistedPage - 1);
+    }
+
+    public function nextUnlistedPage(): void
+    {
+        $this->unlistedPage++;
     }
 
     protected function getViewData(): array
@@ -68,14 +88,9 @@ class DemomeControl extends Page
                 ->whereNull('published_at')
                 ->whereNotNull('youtube_video_id')
                 ->count(),
-            'unlisted_videos' => RenderedVideo::where('status', 'completed')
-                ->where('source', 'auto')
-                ->where('publish_approved', false)
-                ->whereNull('published_at')
-                ->whereNotNull('youtube_video_id')
-                ->orderBy('created_at', 'desc')
-                ->limit(50)
-                ->get(),
+            'unlisted_tier_counts' => $this->getUnlistedTierCounts(),
+            'unlisted_videos' => $this->getUnlistedVideosPaginated(),
+            'unlisted_total_pages' => $this->getUnlistedTotalPages(),
             'publishing_count' => RenderedVideo::where('status', 'completed')
                 ->where('publish_approved', true)
                 ->whereNull('published_at')
@@ -86,6 +101,70 @@ class DemomeControl extends Page
                 : null,
             'backlog' => $this->getBacklogStats(),
         ];
+    }
+
+    private function unlistedBaseQuery()
+    {
+        return RenderedVideo::where('status', 'completed')
+            ->where('source', 'auto')
+            ->where('publish_approved', false)
+            ->whereNull('published_at')
+            ->whereNotNull('youtube_video_id');
+    }
+
+    private function getUnlistedTierCounts(): array
+    {
+        $counts = [];
+        foreach (\App\Services\RenderQueueService::TIER_LABELS as $tier => $label) {
+            $c = $this->unlistedBaseQuery()->where('quality_tier', $tier)->count();
+            if ($c > 0) {
+                $counts[$tier] = $c;
+            }
+        }
+        $unclassified = $this->unlistedBaseQuery()->where(function ($q) {
+            $q->whereNull('quality_tier')->orWhere('quality_tier', 0);
+        })->count();
+        if ($unclassified > 0) {
+            $counts[0] = $unclassified;
+        }
+        return $counts;
+    }
+
+    private function getUnlistedVideosPaginated()
+    {
+        $query = $this->unlistedBaseQuery();
+
+        if ($this->unlistedTier !== null) {
+            if ($this->unlistedTier === 0) {
+                $query->where(function ($q) {
+                    $q->whereNull('quality_tier')->orWhere('quality_tier', 0);
+                });
+            } else {
+                $query->where('quality_tier', $this->unlistedTier);
+            }
+        }
+
+        return $query->orderBy('created_at', 'desc')
+            ->offset(($this->unlistedPage - 1) * $this->unlistedPerPage)
+            ->limit($this->unlistedPerPage)
+            ->get();
+    }
+
+    private function getUnlistedTotalPages(): int
+    {
+        $query = $this->unlistedBaseQuery();
+
+        if ($this->unlistedTier !== null) {
+            if ($this->unlistedTier === 0) {
+                $query->where(function ($q) {
+                    $q->whereNull('quality_tier')->orWhere('quality_tier', 0);
+                });
+            } else {
+                $query->where('quality_tier', $this->unlistedTier);
+            }
+        }
+
+        return (int) ceil($query->count() / $this->unlistedPerPage);
     }
 
     private function getNextBiweeklyPublish(): Carbon

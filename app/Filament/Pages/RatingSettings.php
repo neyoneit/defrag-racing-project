@@ -3,10 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Models\RatingSetting;
+use App\Jobs\RunRatingsRecalcJob;
 use App\Http\Controllers\RankingController;
 use Filament\Pages\Page;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 
 class RatingSettings extends Page
@@ -35,7 +35,6 @@ class RatingSettings extends Page
     // Recalc controls
     public array $selectedPhysics = ['vq3', 'cpm'];
     public array $selectedCategories = ['overall'];
-    public string $recalcOutput = '';
 
     private array $settingKeys = [
         'cfg_a', 'cfg_b', 'cfg_m', 'cfg_v', 'cfg_q', 'cfg_d',
@@ -60,7 +59,6 @@ class RatingSettings extends Page
     public function saveSettings(): void
     {
         foreach ($this->settingKeys as $key) {
-            // Replace comma with dot, strip anything that's not digit/dot/minus
             $this->{$key} = preg_replace('/[^0-9.\-]/', '', str_replace(',', '.', $this->{$key}));
 
             if (!is_numeric($this->{$key})) {
@@ -94,27 +92,42 @@ class RatingSettings extends Page
             return;
         }
 
-        $this->recalcOutput = '';
-        $output = '';
-
-        foreach ($this->selectedPhysics as $physics) {
-            foreach ($this->selectedCategories as $category) {
-                Artisan::call('ratings:calculate', [
-                    '--physics' => $physics,
-                    '--category' => $category,
-                ]);
-
-                $cmdOutput = Artisan::output();
-                $output .= "=== {$physics} / {$category} ===\n{$cmdOutput}\n";
-            }
+        $status = Cache::get('rating_recalc:status');
+        if ($status === 'running') {
+            Notification::make()
+                ->title('Recalculation already running')
+                ->warning()
+                ->send();
+            return;
         }
 
-        $this->recalcOutput = $output;
+        // Clear previous log
+        Cache::forget('rating_recalc:log');
+        Cache::forget('rating_recalc:status');
+
+        RunRatingsRecalcJob::dispatch($this->selectedPhysics, $this->selectedCategories);
 
         Notification::make()
-            ->title('Recalculation complete')
+            ->title('Recalculation dispatched')
+            ->body('Running in background. Progress will appear below.')
             ->success()
             ->send();
+    }
+
+    public function getRecalcLog(): array
+    {
+        return Cache::get('rating_recalc:log', []);
+    }
+
+    public function getRecalcStatus(): ?string
+    {
+        return Cache::get('rating_recalc:status');
+    }
+
+    public function clearLog(): void
+    {
+        Cache::forget('rating_recalc:log');
+        Cache::forget('rating_recalc:status');
     }
 
     public function refreshCache(): void
@@ -137,7 +150,6 @@ class RatingSettings extends Page
         Cache::forget('ranking:last_recalculation');
         Cache::forget('rating_settings');
 
-        // Rebuild first pages
         $controller = new RankingController();
         $rebuilt = 0;
         foreach (['vq3', 'cpm'] as $physics) {
