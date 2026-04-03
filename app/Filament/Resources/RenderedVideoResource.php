@@ -147,6 +147,7 @@ class RenderedVideoResource extends Resource
                         'primary' => 'uploading',
                         'success' => 'completed',
                         'danger' => 'failed',
+                        'primary' => 'upload_pending',
                     ]),
 
                 Tables\Columns\BadgeColumn::make('source')
@@ -208,6 +209,7 @@ class RenderedVideoResource extends Resource
                         'uploading' => 'Uploading',
                         'completed' => 'Completed',
                         'failed' => 'Failed',
+                        'upload_pending' => 'Upload Pending',
                     ]),
                 Tables\Filters\SelectFilter::make('source')
                     ->options([
@@ -274,6 +276,25 @@ class RenderedVideoResource extends Resource
                                 </div>
                             </div>
                         ");
+                    }),
+                Tables\Actions\Action::make('retry_upload')
+                    ->label('Retry Upload')
+                    ->icon('heroicon-o-cloud-arrow-up')
+                    ->color('info')
+                    ->visible(fn (RenderedVideo $record) => $record->status === 'failed')
+                    ->requiresConfirmation()
+                    ->modalHeading('Retry upload for this video?')
+                    ->modalDescription('The rendered file must still exist on the demome PC. This will skip rendering and only retry the YouTube upload.')
+                    ->action(function (RenderedVideo $record) {
+                        $record->update([
+                            'status' => 'upload_pending',
+                            'failure_reason' => null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Queued for re-upload')
+                            ->success()
+                            ->send();
                     }),
                 Tables\Actions\Action::make('rerender')
                     ->label('Re-render')
