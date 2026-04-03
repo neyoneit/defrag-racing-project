@@ -64,7 +64,7 @@ class DemomeControl extends Page
             'currentStatus' => Cache::get('demome:current_status', 'unknown'),
             'lastHeartbeat' => $lastHeartbeat ? Carbon::parse($lastHeartbeat)->diffForHumans() : 'Never',
             'currentVideo' => $currentVideo,
-            'stats' => Cache::remember('demome:control_stats', 120, function () {
+            'stats' => Cache::remember('demome:control_stats', 300, function () {
                 return [
                     'pending' => RenderedVideo::where('status', 'pending')->count(),
                     'rendering' => RenderedVideo::where('status', 'rendering')->count(),
@@ -114,18 +114,14 @@ class DemomeControl extends Page
 
     private function getUnlistedTierCounts(): array
     {
+        $rows = $this->unlistedBaseQuery()
+            ->selectRaw('COALESCE(quality_tier, 0) as tier, COUNT(*) as cnt')
+            ->groupByRaw('COALESCE(quality_tier, 0)')
+            ->pluck('cnt', 'tier');
+
         $counts = [];
-        foreach (\App\Services\RenderQueueService::TIER_LABELS as $tier => $label) {
-            $c = $this->unlistedBaseQuery()->where('quality_tier', $tier)->count();
-            if ($c > 0) {
-                $counts[$tier] = $c;
-            }
-        }
-        $unclassified = $this->unlistedBaseQuery()->where(function ($q) {
-            $q->whereNull('quality_tier')->orWhere('quality_tier', 0);
-        })->count();
-        if ($unclassified > 0) {
-            $counts[0] = $unclassified;
+        foreach ($rows as $tier => $cnt) {
+            $counts[(int) $tier] = (int) $cnt;
         }
         return $counts;
     }
@@ -178,7 +174,7 @@ class DemomeControl extends Page
 
     private function getBacklogStats(): array
     {
-        return Cache::remember('demome:backlog_stats', 300, function () {
+        return Cache::remember('demome:backlog_stats', 1800, function () {
         $poolCounts = \App\Services\RenderQueueService::getPoolCounts();
 
         $wrRemaining = $poolCounts[\App\Services\RenderQueueService::TIER_ONLINE_WR]['available'] ?? 0;

@@ -297,18 +297,30 @@ class RenderQueueService
      */
     public static function getPoolCounts(): array
     {
-        $counts = [];
-        foreach (self::TIER_LABELS as $tier => $label) {
-            $counts[$tier] = [
-                'label' => $label,
-                'available' => self::getCandidatesForTier($tier, 1)->count() > 0 ? self::countTierPool($tier) : 0,
-                'rendered' => RenderedVideo::where('quality_tier', $tier)->where('status', 'completed')->count(),
-                'pending' => RenderedVideo::where('quality_tier', $tier)->where('status', 'pending')->count(),
-                'unpublished' => RenderedVideo::where('quality_tier', $tier)->where('status', 'completed')
-                    ->whereNull('published_at')->count(),
-            ];
-        }
-        return $counts;
+        return \Illuminate\Support\Facades\Cache::remember('demome:pool_counts', 1800, function () {
+            // Batch query rendered_videos counts per tier in 1 query
+            $renderedCounts = RenderedVideo::selectRaw('quality_tier, status, COUNT(*) as cnt, SUM(CASE WHEN published_at IS NULL THEN 1 ELSE 0 END) as unpub')
+                ->whereNotNull('quality_tier')
+                ->groupBy('quality_tier', 'status')
+                ->get()
+                ->groupBy('quality_tier');
+
+            $counts = [];
+            foreach (self::TIER_LABELS as $tier => $label) {
+                $tierData = $renderedCounts->get($tier, collect());
+                $completed = $tierData->firstWhere('status', 'completed');
+                $pending = $tierData->firstWhere('status', 'pending');
+
+                $counts[$tier] = [
+                    'label' => $label,
+                    'available' => self::countTierPool($tier),
+                    'rendered' => $completed ? (int) $completed->cnt : 0,
+                    'pending' => $pending ? (int) $pending->cnt : 0,
+                    'unpublished' => $completed ? (int) $completed->unpub : 0,
+                ];
+            }
+            return $counts;
+        });
     }
 
     private static function countTierPool(int $tier): int
