@@ -5,8 +5,8 @@ export default {
 </script>
 
 <script setup>
-import { computed, getCurrentInstance } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { computed, ref, onMounted, onUnmounted, getCurrentInstance } from 'vue';
+import { Head, router } from '@inertiajs/vue3';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -29,6 +29,17 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+});
+
+// Auto-refresh data every 60 seconds for live streaming
+let refreshInterval = null;
+onMounted(() => {
+    refreshInterval = setInterval(() => {
+        router.reload({ only: ['total_maps', 'played_maps', 'unplayed_maps', 'widget_settings'] });
+    }, 60000);
+});
+onUnmounted(() => {
+    if (refreshInterval) clearInterval(refreshInterval);
 });
 
 const defaults = {
