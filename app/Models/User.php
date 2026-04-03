@@ -131,6 +131,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'model_group_order' => 'array',
         'donation_emails' => 'array',
         'moderator_permissions' => 'array',
+        'widget_settings' => 'array',
     ];
 
     /**

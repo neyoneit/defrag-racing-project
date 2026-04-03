@@ -10,6 +10,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
 
 import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
+import StreamerWidgetForm from '@/Pages/Profile/Partials/StreamerWidgetForm.vue';
 import ProfileLayoutForm from '@/Pages/Profile/Partials/ProfileLayoutForm.vue';
 import EffectsIntensityForm from '@/Pages/Profile/Partials/EffectsIntensityForm.vue';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
@@ -356,7 +357,8 @@ const updateNotifications = () => {
 
 // Resolve initial tab from URL query param ?tab=
 const urlParams = new URLSearchParams(window.location.search);
-const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'global-customize', 'notifications', 'security'];
+const hasTwitch = computed(() => !!user.value.twitch_id);
+const validTabs = ['profile', 'creator', 'marketplace', 'customize', 'global-customize', 'notifications', 'security', ...(user.value.twitch_id ? ['streamer'] : [])];
 const initialTab = validTabs.includes(urlParams.get('tab')) ? urlParams.get('tab') : 'profile';
 const activeTab = ref(initialTab);
 
@@ -856,6 +858,7 @@ const tabs = [
     { id: 'marketplace', label: 'Marketplace', icon: 'M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z' },
     { id: 'notifications', label: 'Notifications', icon: 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0' },
     { id: 'security', label: 'Security', icon: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z' },
+    { id: 'streamer', label: 'Streamer', icon: 'm15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z', requiresTwitch: true },
 ];
 
 const profileSubTabs = [
@@ -864,7 +867,10 @@ const profileSubTabs = [
 ];
 
 const isProfileGroup = (tabId) => ['profile', 'creator', 'customize'].includes(tabId);
-const filteredTabs = computed(() => isVerified.value ? tabs : tabs.filter(t => ['profile', 'security'].includes(t.id)));
+const filteredTabs = computed(() => {
+    let t = isVerified.value ? tabs : tabs.filter(t => ['profile', 'security'].includes(t.id));
+    return t.filter(tab => !tab.requiresTwitch || hasTwitch.value);
+});
 const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs : []);
 </script>
 
@@ -2303,6 +2309,11 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
             <div v-if="$page.props.jetstream.hasAccountDeletionFeatures" class="rounded-xl bg-gradient-to-br from-red-500/5 to-red-600/5 border border-red-500/30 overflow-hidden">
                 <DeleteUserForm />
             </div>
+                </template>
+
+                <!-- ==================== STREAMER TAB ==================== -->
+                <template v-if="activeTab === 'streamer'">
+                    <StreamerWidgetForm />
                 </template>
 
                 </div> <!-- Close Right Content Area -->

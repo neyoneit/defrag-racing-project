@@ -567,4 +567,38 @@ class SettingsController extends Controller
             $user->save();
         }
     }
+
+    public function widgetSettings(Request $request) {
+        $user = $request->user();
+
+        if (!$user->twitch_id) {
+            abort(403, 'Twitch account required');
+        }
+
+        $settings = $request->validate([
+            'bar_width' => 'nullable|integer|min:200|max:1200',
+            'bar_height' => 'nullable|integer|min:20|max:120',
+            'bar_border_color' => 'nullable|string|max:20',
+            'bar_border_width' => 'nullable|integer|min:0|max:8',
+            'bar_border_radius' => 'nullable|integer|min:0|max:60',
+            'bar_bg_color' => 'nullable|string|max:20',
+            'bar_fill_color' => 'nullable|string|max:20',
+            'bar_fill_color2' => 'nullable|string|max:20',
+            'bar_animation' => 'nullable|string|in:none,shimmer,pulse,stripes,gradient,wave',
+            'bg_type' => 'nullable|string|in:transparent,chroma,custom',
+            'bg_color' => 'nullable|string|max:20',
+            'text_player_name' => 'nullable|array',
+            'text_subtitle' => 'nullable|array',
+            'text_count' => 'nullable|array',
+            'text_label' => 'nullable|array',
+            'text_percentage' => 'nullable|array',
+            'text_remaining' => 'nullable|array',
+            'text_position' => 'nullable|string|in:above,inside,below',
+        ]);
+
+        $user->widget_settings = $settings;
+        $user->save();
+
+        return back();
+    }
 }
