@@ -1515,10 +1515,9 @@ onUnmounted(() => {
             </div>
 
             <div v-if="currentTagMap" :key="currentTagMap.id">
-                <!-- Top row: Tips left, Map center, Videos right -->
-                <div class="flex gap-4 mb-4 max-w-6xl mx-auto">
-                    <!-- Left: Tips -->
-                    <div class="w-56 flex-shrink-0">
+                <div class="grid grid-cols-[14rem_1fr_20rem] gap-4 max-w-6xl mx-auto items-start">
+                    <!-- Tips (row 1, col 1) -->
+                    <div>
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-500/20 p-3 space-y-3 text-xs text-gray-400">
                             <div class="text-amber-400 font-bold text-[11px] uppercase tracking-wider">Tagging Tips</div>
                             <div class="space-y-2">
@@ -1530,8 +1529,8 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <!-- Center: Map card -->
-                    <div class="flex-1 min-w-0">
+                    <!-- Map card + search input (row 1, col 2) -->
+                    <div>
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-700/30 overflow-hidden">
                             <!-- Thumbnail -->
                             <div class="relative">
@@ -1584,10 +1583,24 @@ onUnmounted(() => {
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Search input + Add button -->
+                        <div class="mt-3 flex gap-2">
+                            <input v-model="tagInput"
+                                @input="filterTagSuggestions"
+                                @keydown.enter.prevent="tagInput.trim() && addTagToMap(tagInput.trim())"
+                                class="flex-1 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-sm text-white placeholder-gray-500 focus:border-amber-500/50 focus:outline-none"
+                                placeholder="Search tags or type new tag name..." />
+                            <button @click="tagInput.trim() && addTagToMap(tagInput.trim())"
+                                :disabled="!tagInput.trim() || addingTag"
+                                class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold rounded-lg text-sm transition-colors flex-shrink-0">
+                                Add
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Right: YouTube embed videos -->
-                    <div class="w-80 flex-shrink-0 space-y-3">
+                    <!-- Videos (row 1-2, col 3) - scrollable, independent -->
+                    <div class="max-h-[400px] overflow-y-auto space-y-3">
                         <template v-if="currentTagMap.videos && (currentTagMap.videos.vq3?.length || currentTagMap.videos.cpm?.length)">
                             <template v-for="phys in ['vq3', 'cpm']" :key="phys">
                                 <div v-if="currentTagMap.videos[phys]?.length" class="space-y-2">
@@ -1614,24 +1627,11 @@ onUnmounted(() => {
                             <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future taggers</div>
                         </div>
                     </div>
+
                 </div>
 
-                <!-- Search input + Add button -->
-                <div class="mb-3 flex gap-2">
-                    <input v-model="tagInput"
-                        @input="filterTagSuggestions"
-                        @keydown.enter.prevent="tagInput.trim() && addTagToMap(tagInput.trim())"
-                        class="flex-1 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-sm text-white placeholder-gray-500 focus:border-amber-500/50 focus:outline-none"
-                        placeholder="Search tags or type new tag name..." />
-                    <button @click="tagInput.trim() && addTagToMap(tagInput.trim())"
-                        :disabled="!tagInput.trim() || addingTag"
-                        class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold rounded-lg text-sm transition-colors flex-shrink-0">
-                        Add
-                    </button>
-                </div>
-
-                <!-- ALL available tags - full width, no limit -->
-                <div class="flex flex-wrap gap-2">
+                <!-- Tag suggestions - full page content width -->
+                <div class="mt-4 flex flex-wrap gap-2">
                     <button v-for="tag in tagSuggestions" :key="tag.id"
                         @click="addTagToMap(tag.display_name)"
                         class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-800/60 text-gray-300 border border-gray-700/40 hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 transition-all cursor-pointer">
