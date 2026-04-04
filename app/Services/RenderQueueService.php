@@ -29,7 +29,7 @@ class RenderQueueService
         8 => 'Very long (50min+)',
     ];
 
-    // Rotation pattern per 12 items (includes 1 longer + 1 very long)
+    // Rotation pattern for short demos only (longer/very_long are injected daily)
     const ROTATION = [
         self::TIER_ONLINE_WR,         // 1
         self::TIER_OFFLINE_FASTER_WR, // 2
@@ -41,11 +41,13 @@ class RenderQueueService
         self::TIER_ONLINE_RANK11,     // 8
         self::TIER_OFFLINE_WITHIN_50, // 9
         self::TIER_OFFLINE_WITHIN_50, // 10
-        self::TIER_LONGER,            // 11
-        self::TIER_VERY_LONG,         // 12
     ];
 
-    // Publish rotation per 12 items (daily publish target)
+    // Daily limits for long demos
+    const DAILY_LONGER_LIMIT = 3;     // 10-50min demos per day
+    const DAILY_VERY_LONG_LIMIT = 1;  // 50min+ demos per day
+
+    // Publish rotation (short demos only, long demos publish naturally)
     const PUBLISH_ROTATION = [
         self::TIER_ONLINE_WR,         // 1
         self::TIER_OFFLINE_FASTER_WR, // 2
@@ -192,7 +194,27 @@ class RenderQueueService
     }
 
     /**
+     * Count how many longer/very_long demos were queued today.
+     */
+    private static function getLongDemoCounts(): array
+    {
+        $today = now()->startOfDay();
+
+        $counts = RenderedVideo::where('created_at', '>=', $today)
+            ->whereIn('quality_tier', [self::TIER_LONGER, self::TIER_VERY_LONG])
+            ->selectRaw('quality_tier, COUNT(*) as cnt')
+            ->groupBy('quality_tier')
+            ->pluck('cnt', 'quality_tier');
+
+        return [
+            'longer' => $counts->get(self::TIER_LONGER, 0),
+            'very_long' => $counts->get(self::TIER_VERY_LONG, 0),
+        ];
+    }
+
+    /**
      * Get the next N items for the render queue using the rotation pattern.
+     * Short demos follow the rotation, long demos are injected based on daily limits.
      */
     public static function getNextBatch(int $count = 5): array
     {
@@ -212,6 +234,40 @@ class RenderQueueService
             ->toArray();
         $usedMaps = array_flip($recentMaps);
 
+        // Check daily long demo counts and inject if under limit
+        $longCounts = self::getLongDemoCounts();
+
+        // Pending long demos also count (already queued but not yet completed)
+        $pendingLong = RenderedVideo::where('status', 'pending')
+            ->whereIn('quality_tier', [self::TIER_LONGER, self::TIER_VERY_LONG])
+            ->selectRaw('quality_tier, COUNT(*) as cnt')
+            ->groupBy('quality_tier')
+            ->pluck('cnt', 'quality_tier');
+
+        $longerToday = $longCounts['longer'] + $pendingLong->get(self::TIER_LONGER, 0);
+        $veryLongToday = $longCounts['very_long'] + $pendingLong->get(self::TIER_VERY_LONG, 0);
+
+        // Inject long demos first if daily quota not met
+        foreach ([
+            [self::TIER_VERY_LONG, $veryLongToday, self::DAILY_VERY_LONG_LIMIT],
+            [self::TIER_LONGER, $longerToday, self::DAILY_LONGER_LIMIT],
+        ] as [$tier, $current, $limit]) {
+            $needed = $limit - $current;
+            if ($needed > 0 && count($items) < $count) {
+                $candidates = self::getCandidatesForTier($tier, $needed + 5);
+                foreach ($candidates as $demo) {
+                    if ($needed <= 0 || count($items) >= $count) break;
+                    if (!isset($usedMaps[$demo->map_name]) && !isset($usedDemoIds[$demo->id])) {
+                        $items[] = ['demo' => $demo, 'tier' => $tier];
+                        $usedMaps[$demo->map_name] = true;
+                        $usedDemoIds[$demo->id] = true;
+                        $needed--;
+                    }
+                }
+            }
+        }
+
+        // Fill remaining slots with short demo rotation
         while (count($items) < $count && $attempts < $maxAttempts) {
             $tier = self::ROTATION[$rotationIndex % count(self::ROTATION)];
             $candidates = self::getCandidatesForTier($tier, 10);
