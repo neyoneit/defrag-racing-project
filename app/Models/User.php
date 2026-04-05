@@ -277,7 +277,6 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         return \Illuminate\Support\Facades\Cache::remember("profile:assigned_demos:{$this->id}", 3600, function () {
             $counts = \DB::table('uploaded_demos')
                 ->where('user_id', $this->id)
-                ->whereIn('status', ['assigned', 'fallback-assigned'])
                 ->where('manually_assigned', true)
                 ->selectRaw("
                     SUM(CASE WHEN gametype NOT LIKE 'm%' THEN 1 ELSE 0 END) as offline,
