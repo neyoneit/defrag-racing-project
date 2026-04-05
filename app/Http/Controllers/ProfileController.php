@@ -1232,7 +1232,9 @@ class ProfileController extends Controller {
 
     public function ratingBreakdown(Request $request, $mddId, $physics)
     {
-        if (!$request->user()?->isAdmin()) {
+        $user = $request->user();
+        $canView = $user?->admin || ($user?->is_moderator && is_array($user->moderator_permissions) && in_array('rating_breakdown', $user->moderator_permissions));
+        if (!$canView) {
             abort(403);
         }
 

@@ -18,6 +18,7 @@ $defaults = [
     'min_top1_time' => 500,
     'max_tied_wr_players' => 3,
     'rank_exponent' => 1.5,
+    'rank_v' => 2.0,
     'min_total_records' => 10,
 ];
 
@@ -40,5 +41,6 @@ return [
     'min_top1_time' => (int) ($db['min_top1_time'] ?? $defaults['min_top1_time']),
     'max_tied_wr_players' => (int) ($db['max_tied_wr_players'] ?? $defaults['max_tied_wr_players']),
     'rank_exponent' => (float) ($db['rank_exponent'] ?? $defaults['rank_exponent']),
+    'rank_v' => (float) ($db['rank_v'] ?? $defaults['rank_v']),
     'min_total_records' => (int) ($db['min_total_records'] ?? $defaults['min_total_records']),
 ];
