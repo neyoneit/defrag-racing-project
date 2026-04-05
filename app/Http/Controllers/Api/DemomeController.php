@@ -621,6 +621,17 @@ class DemomeController extends Controller
                 ->first();
         }
 
+        // Build a temporary RenderedVideo-like object for metadata generation
+        $metaItem = new \stdClass();
+        $metaItem->map_name = $demo->map_name;
+        $metaItem->player_name = $demo->player_name;
+        $metaItem->physics = $demo->physics;
+        $metaItem->time_ms = $demo->time_ms;
+        $metaItem->gametype = $demo->gametype;
+        $metaItem->record_id = $demo->record_id;
+        $metaItem->demo_id = $demo->id;
+        $metaItem->demo_filename = $demo->processed_filename ?? $demo->original_filename;
+
         $response = [
             'success' => true,
             'demo_id' => $demo->id,
@@ -632,6 +643,9 @@ class DemomeController extends Controller
             'record_id' => $demo->record_id,
             'demo_filename' => $demo->processed_filename ?? $demo->original_filename,
             'download_url' => "https://defrag.racing/demos/{$demo->id}/download",
+            'video_title' => \App\Services\VideoMetadataService::generateTitle($metaItem),
+            'video_description' => \App\Services\VideoMetadataService::generateDescription($metaItem),
+            'video_tags' => \App\Services\VideoMetadataService::generateTags($metaItem),
         ];
 
         if ($existingVideo) {
