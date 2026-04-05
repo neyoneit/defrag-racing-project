@@ -15,7 +15,12 @@
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = String(d.getFullYear()).slice(-2);
-        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+        const yyyy = String(d.getFullYear());
+        const fmt = page.props.dateFormat;
+        if (fmt === 'dmY') return `${dd}/${mm}/${yyyy}`;
+        if (fmt === 'Ymd') return `${yyyy}/${mm}/${dd}`;
+        if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
+        return `${yy}/${mm}/${dd}`;
     };
 
     const bestrecordCountry = computed(() => {
@@ -98,26 +103,28 @@
             </component>
 
             <!-- Map + Time + Score + Date -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 ml-auto">
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-1">
                 <!-- Map Name -->
-                <div class="w-28 sm:w-40 flex-shrink-0">
+                <div class="w-36 sm:w-52 flex-shrink-0">
                     <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
                 </div>
-                <div class="w-[80px] text-right ml-2">
-                    <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
-                </div>
-                <div class="w-8 sm:w-10 text-center flex-shrink-0">
-                    <div v-if="record.map_score"
-                        class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
-                        @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
-                        @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
-                </div>
-                <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
-                    <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
-                        {{ fmtDate(record.date_set) }}
+                <div class="flex items-center gap-0.5 ml-auto -mr-3">
+                    <div class="w-[80px] text-right">
+                        <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
                     </div>
-                    <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
-                        {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                    <div class="w-8 sm:w-10 text-center flex-shrink-0">
+                        <div v-if="record.map_score"
+                            class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
+                            @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
+                            @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
+                    </div>
+                    <div class="w-[72px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                        <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+                            {{ fmtDate(record.date_set) }}
+                        </div>
+                        <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                            {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
+                        </div>
                     </div>
                 </div>
             </div>

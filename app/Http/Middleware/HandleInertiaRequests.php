@@ -114,7 +114,7 @@ class HandleInertiaRequests extends Middleware
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
             'physicsOrder'              =>      $request->user()?->default_physics_order ?? 'vq3_first',
             'canViewRatingBreakdown'    =>      $request->user() ? ($request->user()->admin || (is_array($request->user()->moderator_permissions) && in_array('rating_breakdown', $request->user()->moderator_permissions))) : false,
-            'dateFormat'                =>      $request->user()?->global_profile_preferences['date_format'] ?? 'ymd',
+            'dateFormat'                =>      $request->user()?->global_profile_preferences['date_format'] ?? 'dmY',
             'availableBadges'           =>      $request->user() ? $this->getAvailableBadges($request->user()) : [],
             'globalLatestAnnouncement'  =>      !$request->user() ? Cache::remember('global:latest_announcement', 300, function () {
                 return Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first(['id', 'title', 'created_at']);

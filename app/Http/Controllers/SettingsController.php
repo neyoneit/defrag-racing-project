@@ -301,14 +301,14 @@ class SettingsController extends Controller
             'hidden_sections.*' => ['string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
             'hidden_stat_boxes' => ['present', 'array'],
             'hidden_stat_boxes.*' => ['string', 'in:performance,activity,record_types,map_features,renders'],
-            'date_format' => ['sometimes', 'string', 'in:ymd,dmy'],
+            'date_format' => ['sometimes', 'string', 'in:ymd,dmy,Ymd,dmY'],
         ]);
 
         $user = $request->user();
         $user->global_profile_preferences = [
             'hidden_sections' => $request->hidden_sections,
             'hidden_stat_boxes' => $request->hidden_stat_boxes,
-            'date_format' => $request->date_format ?? $user->global_profile_preferences['date_format'] ?? 'ymd',
+            'date_format' => $request->date_format ?? $user->global_profile_preferences['date_format'] ?? 'dmY',
         ];
         $user->save();
 
