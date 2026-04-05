@@ -23,6 +23,8 @@ struct RatingConfig {
     cfg_d: f64,
     mult_l: f64,
     mult_n: f64,
+    rank_n: f64,
+    rank_v: f64,
 }
 
 impl RatingConfig {
@@ -54,6 +56,8 @@ impl RatingConfig {
             cfg_d: get_f64("cfg_d", 0.02),
             mult_l: get_f64("mult_l", 1.0),
             mult_n: get_f64("mult_n", 2.0),
+            rank_n: get_f64("rank_exponent", 1.5),
+            rank_v: get_f64("rank_v", 2.0),
         }
     }
 }
@@ -76,6 +80,7 @@ struct ProcessedRecord {
     reltime: f64,
     map_score: f64,
     multiplier: f64,
+    rank_multiplier: f64,
     is_outlier: bool,
 }
 
@@ -130,6 +135,22 @@ fn find_normal_cluster_start(_times: &[i32]) -> usize {
 
 fn calculate_map_score(reltime: f64, cfg: &RatingConfig) -> f64 {
     1000.0 * (cfg.cfg_a + (-cfg.cfg_a / (1.0 + cfg.cfg_q * (-cfg.cfg_b * (reltime - cfg.cfg_m)).exp()).powf(1.0 / cfg.cfg_v)))
+}
+
+/// Rank-based multiplier: rewards higher ranks on a map.
+/// rank_multiplier = (((total_players * v) - your_rank) / ((total_players * v) - 1)) ^ n
+fn calculate_rank_multiplier(total_players: usize, your_rank: usize, cfg: &RatingConfig) -> f64 {
+    if cfg.rank_n == 0.0 || cfg.rank_v == 0.0 || total_players <= 1 || your_rank == 0 {
+        return 1.0;
+    }
+    let tp = total_players as f64;
+    let rank = your_rank as f64;
+    let numerator = (tp * cfg.rank_v) - rank;
+    let denominator = (tp * cfg.rank_v) - 1.0;
+    if denominator <= 0.0 {
+        return 1.0;
+    }
+    (numerator / denominator).max(0.0).powf(cfg.rank_n)
 }
 
 /// Map score multiplier based on number of records/players on given map.
@@ -242,13 +263,19 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
         let base_score = calculate_map_score(reltime, cfg);
         // Apply map multiplier based on number of records/players on given map
         let multiplier = calculate_map_multiplier(stats.total_participators, category_median, cfg);
-        let map_score = base_score * multiplier;
+
+        // Apply rank multiplier: find player's rank on this map (1-indexed)
+        let your_rank = times.iter().position(|&t| t == record.time).map(|p| p + 1).unwrap_or(stats.total_participators);
+        let rank_mult = calculate_rank_multiplier(stats.total_participators, your_rank, cfg);
+
+        let map_score = base_score * multiplier * rank_mult;
 
         Some(ProcessedRecord {
             record: record.clone(),
             reltime,
             map_score,
             multiplier,
+            rank_multiplier: rank_mult,
             is_outlier: is_in_outlier_group,
         })
     }).collect()
@@ -336,7 +363,7 @@ fn save_map_scores(conn: &mut PooledConn, processed: &[ProcessedRecord], physics
         let mut values: Vec<String> = Vec::new();
         for rec in chunk {
             values.push(format!(
-                "({}, {}, '{}', '{}', '{}', {}, {}, {}, {}, {}, NOW(), NOW())",
+                "({}, {}, '{}', '{}', '{}', {}, {}, {}, {}, {}, {}, NOW(), NOW())",
                 rec.record.mdd_id,
                 rec.record.user_id.map_or("NULL".to_string(), |id| id.to_string()),
                 rec.record.mapname.replace("'", "''"),
@@ -346,12 +373,13 @@ fn save_map_scores(conn: &mut PooledConn, processed: &[ProcessedRecord], physics
                 rec.reltime,
                 rec.map_score,
                 rec.multiplier,
+                rec.rank_multiplier,
                 if rec.is_outlier { 1 } else { 0 },
             ));
         }
 
         let query = format!(
-            "INSERT INTO player_map_scores (mdd_id, user_id, mapname, physics, mode, time, reltime, map_score, multiplier, is_outlier, created_at, updated_at) VALUES {} ON DUPLICATE KEY UPDATE time=VALUES(time), reltime=VALUES(reltime), map_score=VALUES(map_score), multiplier=VALUES(multiplier), is_outlier=VALUES(is_outlier), user_id=VALUES(user_id), updated_at=NOW()",
+            "INSERT INTO player_map_scores (mdd_id, user_id, mapname, physics, mode, time, reltime, map_score, multiplier, rank_multiplier, is_outlier, created_at, updated_at) VALUES {} ON DUPLICATE KEY UPDATE time=VALUES(time), reltime=VALUES(reltime), map_score=VALUES(map_score), multiplier=VALUES(multiplier), rank_multiplier=VALUES(rank_multiplier), is_outlier=VALUES(is_outlier), user_id=VALUES(user_id), updated_at=NOW()",
             values.join(",")
         );
 
@@ -847,8 +875,8 @@ fn main() -> Result<()> {
 
     // Load rating config from database (rating_settings table)
     let cfg = RatingConfig::from_db(&mut conn);
-    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
-        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n,
+    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, RANK_N={}, RANK_V={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
+        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n, cfg.rank_n, cfg.rank_v,
         cfg.min_map_total_participators, cfg.min_top1_time, cfg.max_tied_wr_players, cfg.min_total_records);
 
     // Load maps for category filtering

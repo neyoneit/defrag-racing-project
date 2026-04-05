@@ -30,6 +30,7 @@ class RatingSettings extends Page
     public string $min_top1_time = '';
     public string $max_tied_wr_players = '';
     public string $rank_exponent = '';
+    public string $rank_v = '';
     public string $min_total_records = '';
 
     // Recalc controls
@@ -40,7 +41,7 @@ class RatingSettings extends Page
         'cfg_a', 'cfg_b', 'cfg_m', 'cfg_v', 'cfg_q', 'cfg_d',
         'mult_l', 'mult_n',
         'min_map_players', 'min_top1_time', 'max_tied_wr_players',
-        'rank_exponent', 'min_total_records',
+        'rank_exponent', 'rank_v', 'min_total_records',
     ];
 
     public static function canAccess(): bool
@@ -101,9 +102,9 @@ class RatingSettings extends Page
             return;
         }
 
-        // Clear previous log
-        Cache::forget('rating_recalc:log');
-        Cache::forget('rating_recalc:status');
+        // Set status immediately so UI starts polling
+        Cache::put('rating_recalc:log', ['[' . now()->format('H:i:s') . '] Dispatched, waiting for worker...'], 86400);
+        Cache::put('rating_recalc:status', 'running', 86400);
 
         RunRatingsRecalcJob::dispatch($this->selectedPhysics, $this->selectedCategories);
 
@@ -198,7 +199,8 @@ class RatingSettings extends Page
                 'min_total_records' => 'Min records before penalty applies',
             ],
             'Rank Multiplier' => [
-                'rank_exponent' => 'Exponent for rank-based multiplier',
+                'rank_exponent' => 'Steepness exponent (n)',
+                'rank_v' => 'Total players modifier (v)',
             ],
         ];
     }

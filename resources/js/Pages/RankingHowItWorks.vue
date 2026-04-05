@@ -10,6 +10,16 @@ const CFG_Q = 0.5;
 const CFG_D = 0.02;
 const MULT_L = 1.0;
 const MULT_N = 2.0;
+const RANK_N = 1.5;
+const RANK_V = 2.0;
+
+function calcRankMultiplier(totalPlayers, yourRank) {
+    if (totalPlayers <= 1 || yourRank === 0) return 1.0;
+    const numerator = (totalPlayers * RANK_V) - yourRank;
+    const denominator = (totalPlayers * RANK_V) - 1;
+    if (denominator <= 0) return 1.0;
+    return Math.pow(Math.max(numerator / denominator, 0), RANK_N);
+}
 
 function calcMapScore(reltime) {
     return 1000 * (CFG_A + (-CFG_A / Math.pow(1 + CFG_Q * Math.exp(-CFG_B * (reltime - CFG_M)), 1 / CFG_V)));
@@ -48,6 +58,11 @@ const exampleFinalScore = exampleBaseScore * exampleMultiplier;
 const exampleSmallMap = calcMultiplier(4, 13);
 const exampleMedMap = calcMultiplier(13, 13);
 const exampleBigMap = calcMultiplier(50, 13);
+
+const exampleRankMult1 = calcRankMultiplier(50, 1);
+const exampleRankMult5 = calcRankMultiplier(50, 5);
+const exampleRankMult25 = calcRankMultiplier(50, 25);
+const exampleRankMult50 = calcRankMultiplier(50, 50);
 
 const exampleScores = [850, 780, 720, 650, 600, 550, 500, 480, 420, 380, 350, 300];
 const exampleRating = calcPlayerRating(exampleScores);
@@ -305,30 +320,66 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 </div>
             </section>
 
-            <!-- 6. Final Score -->
-            <section id="final-score" class="mb-12">
+            <!-- 6. Rank Multiplier -->
+            <section id="rank-multiplier" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">6.</span> Final Map Score
+                    <span class="text-blue-400 text-lg font-mono">6.</span> Rank Multiplier
                 </h2>
-                <p class="mb-3">The final score for each record is simply:</p>
-                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-lg text-white mb-3">
-                    final_score = base_score * multiplier
+                <p class="mb-3">Your rank on each map further scales your score. Higher ranks earn a bigger multiplier:</p>
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
+                    rank_mult = (((total_players * v) - your_rank) / ((total_players * v) - 1)) ^ n
+                </div>
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Current parameters</div>
+                    <div class="text-sm space-y-1">
+                        <div><span class="text-gray-400">n (steepness):</span> <span class="text-white font-mono">{{ RANK_N }}</span></div>
+                        <div><span class="text-gray-400">v (total_players modifier):</span> <span class="text-white font-mono">{{ RANK_V }}</span></div>
+                    </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, VQ3 overall median = 13)</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example: 50 players on a map</div>
+                    <div class="space-y-2">
+                        <div v-for="[rank, label] in [[1, 'Rank #1 (WR)'], [5, 'Rank #5'], [25, 'Rank #25'], [50, 'Rank #50 (last)']]" :key="rank">
+                            <div class="flex justify-between items-center text-sm mb-1">
+                                <span>{{ label }}</span>
+                                <span class="font-mono font-bold" :class="calcRankMultiplier(50, rank) > 0.8 ? 'text-green-400' : calcRankMultiplier(50, rank) > 0.5 ? 'text-yellow-400' : 'text-red-400'">{{ (calcRankMultiplier(50, rank) * 100).toFixed(1) }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-800 rounded-full h-2">
+                                <div class="h-2 rounded-full" :class="calcRankMultiplier(50, rank) > 0.8 ? 'bg-green-500' : calcRankMultiplier(50, rank) > 0.5 ? 'bg-yellow-500' : 'bg-red-500'" :style="`width: ${calcRankMultiplier(50, rank) * 100}%`"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
+                    <strong>Why?</strong> Two players on the same map with similar times could have very different ranks. The rank multiplier ensures that actually beating more players gives a bigger reward, not just having a fast time.
+                </div>
+            </section>
+
+            <!-- 7. Final Score -->
+            <section id="final-score" class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
+                    <span class="text-blue-400 text-lg font-mono">7.</span> Final Map Score
+                </h2>
+                <p class="mb-3">The final score for each record combines all multipliers:</p>
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-lg text-white mb-3">
+                    final_score = base_score * map_multiplier * rank_multiplier
+                </div>
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, rank #3, VQ3 overall median = 13)</div>
                     <div class="text-sm space-y-1">
                         <div>Your reltime: <span class="text-white font-mono">{{ exampleReltime.toFixed(4) }}</span></div>
                         <div>Base score: <span class="text-white font-mono">{{ exampleBaseScore.toFixed(1) }}</span></div>
                         <div>Map multiplier (25 players): <span class="text-white font-mono">{{ exampleMultiplier.toFixed(4) }}</span> ({{ (exampleMultiplier * 100).toFixed(1) }}%)</div>
-                        <div class="pt-1 border-t border-gray-800">Final score: {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ exampleFinalScore.toFixed(1) }}</span></div>
+                        <div>Rank multiplier (rank #3 of 25): <span class="text-white font-mono">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span> ({{ (calcRankMultiplier(25, 3) * 100).toFixed(1) }}%)</div>
+                        <div class="pt-1 border-t border-gray-800">Final score: {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleBaseScore * exampleMultiplier * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
                     </div>
                 </div>
             </section>
 
-            <!-- 7. Player Rating -->
+            <!-- 8. Player Rating -->
             <section id="player-rating" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">7.</span> Player Rating
+                    <span class="text-blue-400 text-lg font-mono">8.</span> Player Rating
                 </h2>
                 <p class="mb-3">A player's overall rating is calculated from all their map scores using <strong class="text-white">exponential weighting</strong>:</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
@@ -378,7 +429,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
             <!-- 8. Categories -->
             <section id="categories" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">8.</span> Categories
+                    <span class="text-blue-400 text-lg font-mono">9.</span> Categories
                 </h2>
                 <p class="mb-3">Rankings are calculated separately for each category. A map belongs to a category based on its weapons and features:</p>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -427,7 +478,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
             <!-- 9. Updates -->
             <section id="updates" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">9.</span> Real-time Updates
+                    <span class="text-blue-400 text-lg font-mono">10.</span> Real-time Updates
                 </h2>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 space-y-3">
                     <div class="flex items-start gap-3">
@@ -458,7 +509,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
             <!-- 10. Full Example -->
             <section id="full-example" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">10.</span> Full Walkthrough Example
+                    <span class="text-blue-400 text-lg font-mono">11.</span> Full Walkthrough Example
                 </h2>
                 <p class="mb-3 text-sm">Let's follow a complete calculation for a player with a record on "run_example" (VQ3 Overall):</p>
 
