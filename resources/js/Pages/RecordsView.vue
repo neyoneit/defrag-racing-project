@@ -201,8 +201,8 @@
                         <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
                             <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
-                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-1">
-                                <div class="w-36 sm:w-52 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
                                     <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                     <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
@@ -235,8 +235,8 @@
                         <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
                             <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
-                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-1">
-                                <div class="w-36 sm:w-52 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
                                     <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                     <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>

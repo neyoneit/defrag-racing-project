@@ -937,7 +937,7 @@
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/95 via-gray-900/90 to-gray-900/95 transition-opacity duration-300 group-hover:opacity-70"></div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-gray-900/85 via-gray-900/75 to-gray-900/85 transition-opacity duration-300 group-hover:opacity-60"></div>
                     </div>
                     <!-- Fallback solid background if no thumbnail -->
                     <div v-else class="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"></div>

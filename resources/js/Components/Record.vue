@@ -108,9 +108,9 @@
             </component>
 
             <!-- Map + Time + Score + Date -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-1">
+            <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <!-- Map Name -->
-                <div class="w-36 sm:w-52 flex-shrink-0">
+                <div class="w-28 sm:w-40 flex-shrink-0">
                     <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
                 </div>
                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
