@@ -68,6 +68,9 @@ class VideoMetadataService
         }
 
         $desc .= "\n";
+        if ($video->demo_id) {
+            $desc .= "Demo download: https://defrag.racing/demos/{$video->demo_id}/download\n";
+        }
         $desc .= "Map page: https://defrag.racing/maps/{$mapName}\n";
         $desc .= "Website: https://defrag.racing/\n";
         $desc .= "Discord: https://discord.defrag.racing/\n";

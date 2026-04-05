@@ -90,6 +90,44 @@ class RenderedVideoResource extends Resource
                             ->label('Visible'),
                     ])->columns(2),
 
+                Forms\Components\Section::make('YouTube Metadata (auto-generated)')
+                    ->schema([
+                        Forms\Components\TextInput::make('yt_title')
+                            ->label('YouTube Title')
+                            ->readOnly()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function ($component, $record) {
+                                if ($record) {
+                                    $component->state(\App\Services\VideoMetadataService::generateTitle($record));
+                                }
+                            })
+                            ->extraInputAttributes(['onclick' => 'this.select()', 'style' => 'font-family:monospace;'])
+                            ->columnSpanFull(),
+                        Forms\Components\Textarea::make('yt_description')
+                            ->label('YouTube Description')
+                            ->readOnly()
+                            ->dehydrated(false)
+                            ->rows(12)
+                            ->afterStateHydrated(function ($component, $record) {
+                                if ($record) {
+                                    $component->state(\App\Services\VideoMetadataService::generateDescription($record));
+                                }
+                            })
+                            ->extraInputAttributes(['onclick' => 'this.select()', 'style' => 'font-family:monospace;'])
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('yt_tags')
+                            ->label('YouTube Tags')
+                            ->readOnly()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function ($component, $record) {
+                                if ($record) {
+                                    $component->state(implode(', ', \App\Services\VideoMetadataService::generateTags($record)));
+                                }
+                            })
+                            ->extraInputAttributes(['onclick' => 'this.select()', 'style' => 'font-family:monospace;'])
+                            ->columnSpanFull(),
+                    ]),
+
                 Forms\Components\Section::make('Details')
                     ->schema([
                         Forms\Components\TextInput::make('demo_url')
@@ -268,24 +306,25 @@ class RenderedVideoResource extends Resource
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close')
                     ->modalContent(function (RenderedVideo $record) {
-                        $physics = strtoupper($record->physics ?? '');
-                        $time = $record->formatted_time ?? ($record->time_ms ? sprintf('%d:%02d.%03d', floor($record->time_ms / 60000), floor(($record->time_ms % 60000) / 1000), $record->time_ms % 1000) : '');
-                        $player = $record->player_name ?? '';
-                        $map = $record->map_name ?? '';
-                        $demoUrl = $record->demo_id ? config('app.url') . "/api/demome/download-demo/{$record->demo_id}" : ($record->demo_url ?? '');
+                        $title = \App\Services\VideoMetadataService::generateTitle($record);
+                        $description = \App\Services\VideoMetadataService::generateDescription($record);
+                        $tags = implode(', ', \App\Services\VideoMetadataService::generateTags($record));
 
-                        $title = "{$map} | {$time} by {$player} ({$physics}) - Quake 3 DeFRaG";
-                        $description = "Nickname: {$player}\nTime: {$time}\nPhysics: {$physics}\nMap: {$map}\n\nDemo download: {$demoUrl}\nMap page: https://defrag.racing/maps/{$map}\nWebsite: https://defrag.racing/\nDiscord: https://discord.defrag.racing/\n\nQuake 3 DeFRaG speedrun on {$map}. DeFRaG is a Quake III Arena modification focused on movement and trickjumping. Strafe jumping, rocket jumping, plasma climbing, circle jumping.\n#defrag #quake3 #speedrun #trickjump #strafejump";
+                        $inputStyle = 'width:100%;background:#1f2937;border:1px solid #4b5563;border-radius:6px;padding:8px 12px;font-size:13px;color:#e5e7eb;font-family:monospace;';
 
                         return new \Illuminate\Support\HtmlString("
-                            <div class='space-y-3'>
+                            <div style='display:flex;flex-direction:column;gap:12px;'>
                                 <div>
-                                    <label class='text-xs font-bold text-gray-400 uppercase'>Title</label>
-                                    <input type='text' value='" . htmlspecialchars($title, ENT_QUOTES) . "' class='w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono' onclick='this.select()' readonly />
+                                    <label style='font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;'>Title</label>
+                                    <input type='text' value='" . htmlspecialchars($title, ENT_QUOTES) . "' style='{$inputStyle}' onclick='this.select()' readonly />
                                 </div>
                                 <div>
-                                    <label class='text-xs font-bold text-gray-400 uppercase'>Description</label>
-                                    <textarea class='w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white font-mono' rows='12' onclick='this.select()' readonly>" . htmlspecialchars($description, ENT_QUOTES) . "</textarea>
+                                    <label style='font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;'>Description</label>
+                                    <textarea style='{$inputStyle}' rows='12' onclick='this.select()' readonly>" . htmlspecialchars($description, ENT_QUOTES) . "</textarea>
+                                </div>
+                                <div>
+                                    <label style='font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;'>Tags</label>
+                                    <input type='text' value='" . htmlspecialchars($tags, ENT_QUOTES) . "' style='{$inputStyle}' onclick='this.select()' readonly />
                                 </div>
                             </div>
                         ");
