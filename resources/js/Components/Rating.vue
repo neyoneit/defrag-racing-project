@@ -131,7 +131,7 @@
                 :style="{ left: dateTooltipPos.x + 15 + 'px', top: dateTooltipPos.y - 40 + 'px' }"
             >
                 <div class="bg-gray-900 border border-white/10 text-gray-200 rounded-lg px-3 py-1.5 shadow-2xl text-xs font-semibold whitespace-nowrap">
-                    <span class="text-gray-500">Last Active:</span> {{ new Date(rating.last_activity).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) }}
+                    <span class="text-gray-500">Last Active:</span> {{ fmtDate(rating.last_activity) }}
                 </div>
             </div>
         </Teleport>
