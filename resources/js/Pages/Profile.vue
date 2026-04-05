@@ -2311,7 +2311,7 @@
                                 <span v-html="q3tohtml(alias.alias_colored || alias.alias)"></span>
                                 <span v-if="alias.usage_count" class="text-[10px] text-gray-500 tabular-nums">({{ alias.usage_count }})</span>
                                 <button
-                                    v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id"
+                                    v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id && alias.source !== 'mdd_import'"
                                     @click="reportAlias(alias)"
                                     class="text-gray-400 hover:text-red-400 transition-colors"
                                     title="Report this alias"

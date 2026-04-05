@@ -10,6 +10,7 @@ use App\Models\MapDifficultyRating;
 use App\Models\Record;
 use App\Models\RenderedVideo;
 use App\Models\UploadedDemo;
+use App\Models\UserAlias;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -344,6 +345,11 @@ class CommunityTasksController extends Controller
 
         $map = Map::where('name', $demo->map_name)->first();
 
+        // Batch-load aliases for all record players and find matches with demo player name
+        $demoPlayerName = $demo->player_name;
+        $mddIds = $records->pluck('mdd_id')->filter()->unique()->values()->toArray();
+        $aliasMatches = $this->findAliasMatches($demoPlayerName, $mddIds);
+
         return [
             'task_type' => $taskType,
             'demo' => [
@@ -359,12 +365,60 @@ class CommunityTasksController extends Controller
             'map_weapons' => $map?->weapons,
             'map_items' => $map?->items,
             'map_functions' => $map?->functions,
-            'closest_matches' => $this->getClosestMatches($demo->time_ms, $records, 5),
-            'all_records' => $records->map(fn ($r) => $this->mapRecord($r, $demo->time_ms))->values()->toArray(),
+            'closest_matches' => $this->getClosestMatches($demo->time_ms, $records, 5, $aliasMatches),
+            'all_records' => $records->map(fn ($r) => $this->mapRecord($r, $demo->time_ms, $aliasMatches))->values()->toArray(),
         ];
     }
 
-    private function getClosestMatches(int $demoTime, $records, int $uniqueTimeCount): array
+    private function findAliasMatches(string $demoPlayerName, array $mddIds): array
+    {
+        if (empty($mddIds) || trim($demoPlayerName) === '') return [];
+
+        $demoClean = $this->stripQ3Colors(strtolower(trim($demoPlayerName)));
+
+        // Load all aliases for these mdd_ids in one query
+        $aliases = UserAlias::whereIn('mdd_id', $mddIds)
+            ->select('mdd_id', 'alias', 'alias_colored')
+            ->get();
+
+        // Group by mdd_id, find best match per player
+        $matches = [];
+        foreach ($aliases->groupBy('mdd_id') as $mddId => $playerAliases) {
+            foreach ($playerAliases as $alias) {
+                $aliasClean = strtolower(trim($alias->alias));
+
+                // Exact match (case-insensitive, Q3 colors stripped)
+                if ($aliasClean === $demoClean) {
+                    $matches[$mddId] = [
+                        'alias' => $alias->alias,
+                        'alias_colored' => $alias->alias_colored,
+                        'type' => 'exact',
+                    ];
+                    break; // Exact match found, no need to check more
+                }
+
+                // Similar match: one contains the other (for clan tags like [gt]neiT vs neiT)
+                if (!isset($matches[$mddId]) && strlen($aliasClean) >= 2 && strlen($demoClean) >= 2) {
+                    if (str_contains($aliasClean, $demoClean) || str_contains($demoClean, $aliasClean)) {
+                        $matches[$mddId] = [
+                            'alias' => $alias->alias,
+                            'alias_colored' => $alias->alias_colored,
+                            'type' => 'similar',
+                        ];
+                    }
+                }
+            }
+        }
+
+        return $matches;
+    }
+
+    private function stripQ3Colors(string $text): string
+    {
+        return preg_replace('/\^[0-9]/', '', $text);
+    }
+
+    private function getClosestMatches(int $demoTime, $records, int $uniqueTimeCount, array $aliasMatches = []): array
     {
         $sorted = $records->sortBy(fn ($r) => abs($r->time - $demoTime));
 
@@ -374,19 +428,30 @@ class CommunityTasksController extends Controller
             if (count($uniqueTimes) >= $uniqueTimeCount) break;
         }
 
-        return $records->filter(fn ($r) => isset($uniqueTimes[$r->time]))
+        $matches = $records->filter(fn ($r) => isset($uniqueTimes[$r->time]))
             ->sortBy(fn ($r) => [abs($r->time - $demoTime), $r->rank])
             ->values()
-            ->map(fn ($r) => $this->mapRecord($r, $demoTime))
+            ->map(fn ($r) => $this->mapRecord($r, $demoTime, $aliasMatches))
             ->toArray();
+
+        // If there's an alias match not already in closest matches, inject it at the top
+        if (!empty($aliasMatches)) {
+            $matchedIds = collect($matches)->pluck('id')->toArray();
+            $aliasHits = $records->filter(fn ($r) => $r->mdd_id && isset($aliasMatches[$r->mdd_id]) && !in_array($r->id, $matchedIds));
+            foreach ($aliasHits as $hit) {
+                array_unshift($matches, $this->mapRecord($hit, $demoTime, $aliasMatches));
+            }
+        }
+
+        return $matches;
     }
 
-    private function mapRecord($r, int $demoTime): array
+    private function mapRecord($r, int $demoTime, array $aliasMatches = []): array
     {
         $demo = $r->uploadedDemos->first();
         $video = $r->renderedVideos->first();
 
-        return [
+        $result = [
             'id' => $r->id,
             'time' => $r->time,
             'player_name' => $r->user?->name ?? $r->name,
@@ -395,6 +460,15 @@ class CommunityTasksController extends Controller
             'demo_id' => $demo?->id,
             'youtube_url' => $video?->youtube_url,
         ];
+
+        // Add alias match info if this record's player has a matching alias
+        if ($r->mdd_id && isset($aliasMatches[$r->mdd_id])) {
+            $result['matched_alias'] = $aliasMatches[$r->mdd_id]['alias'];
+            $result['matched_alias_colored'] = $aliasMatches[$r->mdd_id]['alias_colored'];
+            $result['alias_match_type'] = $aliasMatches[$r->mdd_id]['type'];
+        }
+
+        return $result;
     }
 
     private function generateDifficultyTasks($user, int $count): array

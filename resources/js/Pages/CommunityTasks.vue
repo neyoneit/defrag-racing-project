@@ -43,6 +43,7 @@ const confirmingRecord = ref(null);
 const assigning = ref(false);
 const completingSlot = ref(null);
 const assignHints = ref({}); // { demoId: 'message' }
+const showAssignmentHelp = ref(true);
 
 // Verification state
 const verificationQueue = ref([...(props.verificationTasks || [])]);
@@ -828,7 +829,51 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <div class="flex items-center gap-4 flex-wrap">
+                <!-- Phase progress (fills gap between title and PB) -->
+                <div class="flex-1 self-end pb-1 hidden lg:block">
+                    <div class="flex items-center gap-1 mb-1">
+                        <div v-for="i in totalTasks" :key="i"
+                            class="h-1.5 flex-1 rounded-full transition-all duration-500"
+                            :class="i <= completedTasks ? 'bg-yellow-400/80' : 'bg-gray-800'" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400 whitespace-nowrap">
+                            {{ phase === 'assignment' ? 'Demo Assignment' : phase === 'verification' ? 'Verify Assignments' : phase === 'rating' ? 'Difficulty Rating' : phase === 'tagging' ? 'Map Tagging' : 'Complete' }}
+                            <span class="text-gray-500 ml-1">{{ completedTasks }}/{{ totalTasks }}</span>
+                        </span>
+                        <span v-if="phase === 'assignment'" class="text-xs text-blue-400 whitespace-nowrap ml-2">+3 pts per assign</span>
+                        <span v-else-if="phase === 'verification'" class="text-xs text-emerald-400 whitespace-nowrap ml-2">+3 pts better match</span>
+                        <span v-else-if="phase === 'rating'" class="text-xs text-purple-400 whitespace-nowrap ml-2">+{{ weights?.difficulty_ratings || 1 }} pt per rating</span>
+                        <span v-else-if="phase === 'tagging'" class="text-xs text-amber-400 whitespace-nowrap ml-2">+{{ weights?.tags_added || 1 }} pt per tag</span>
+                    </div>
+                    <div class="flex items-center gap-3 mt-1.5">
+                        <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
+                            class="text-xs text-gray-400 hover:text-red-400 bg-gray-800/60 hover:bg-red-500/10 border border-gray-700 hover:border-red-500/40 px-3 py-1 rounded-lg transition-all font-medium">
+                            End Session
+                        </button>
+                        <!-- Tier progress -->
+                        <div class="flex-1">
+                            <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
+                                <span :style="currentTier ? { color: currentTier.color } : {}">
+                                    {{ currentTier?.name || 'Unranked' }}
+                                </span>
+                                <span v-if="nextTier" :style="{ color: nextTier.color }">{{ nextTier.name }}</span>
+                            </div>
+                            <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                <div class="h-full rounded-full transition-all duration-1000 ease-out"
+                                    :style="{
+                                        width: tierProgress + '%',
+                                        background: currentTier ? `linear-gradient(90deg, ${currentTier.color}, ${nextTier?.color || currentTier.color})` : '#fbbf24'
+                                    }" />
+                            </div>
+                            <div class="text-[10px] text-gray-600 mt-0.5 text-right tabular-nums">
+                                {{ Math.round(badgeScore) }} / {{ nextTier?.min_score || '--' }} pts
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 flex-wrap flex-shrink-0">
                     <!-- Streak -->
                     <div v-if="streak >= 2" class="text-center animate-pulse">
                         <div class="text-2xl">
@@ -886,150 +931,156 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <!-- Tier progress -->
-                    <div class="w-36 hidden lg:block">
-                        <div class="flex justify-between text-[10px] text-gray-500 mb-1">
-                            <span :style="currentTier ? { color: currentTier.color } : {}">
-                                {{ currentTier?.name || 'Unranked' }}
-                            </span>
-                            <span v-if="nextTier" :style="{ color: nextTier.color }">{{ nextTier.name }}</span>
-                        </div>
-                        <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all duration-1000 ease-out"
-                                :style="{
-                                    width: tierProgress + '%',
-                                    background: currentTier ? `linear-gradient(90deg, ${currentTier.color}, ${nextTier?.color || currentTier.color})` : '#fbbf24'
-                                }" />
-                        </div>
-                        <div class="text-[10px] text-gray-600 mt-0.5 text-center tabular-nums">
-                            {{ Math.round(badgeScore) }} / {{ nextTier?.min_score || '--' }} pts
-                        </div>
-                    </div>
                 </div>
-            </div>
-
-            <!-- Phase progress bar -->
-            <div class="mt-4 flex items-center gap-1">
-                <div v-for="i in totalTasks" :key="i"
-                    class="h-1 flex-1 rounded-full transition-all duration-500"
-                    :class="i <= completedTasks ? 'bg-yellow-400/80' : 'bg-gray-800'" />
-            </div>
-            <div class="mt-1.5 flex items-center justify-between">
-                <span class="text-xs text-gray-400">
-                    {{ phase === 'assignment' ? 'Demo Assignment' : phase === 'verification' ? 'Verify Assignments' : phase === 'rating' ? 'Difficulty Rating' : phase === 'tagging' ? 'Map Tagging' : 'Complete' }}
-                    <span class="text-gray-500 ml-1">{{ completedTasks }}/{{ totalTasks }}</span>
-                </span>
-                <span v-if="phase === 'assignment'" class="text-xs text-blue-400">
-                    +3 pts per assign
-                </span>
-                <span v-else-if="phase === 'verification'" class="text-xs text-emerald-400">
-                    +1 pt confirm / +3 pts better match
-                </span>
-                <span v-else-if="phase === 'rating'" class="text-xs text-purple-400">
-                    +{{ weights?.difficulty_ratings || 1 }} pt per rating
-                </span>
-                <span v-else-if="phase === 'tagging'" class="text-xs text-amber-400">
-                    +{{ weights?.tags_added || 1 }} pt per tag
-                </span>
-                <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
-                    class="text-xs text-gray-400 hover:text-red-400 bg-gray-800/60 hover:bg-red-500/10 border border-gray-700 hover:border-red-500/40 px-3 py-1 rounded-lg transition-all font-medium">
-                    End Session
-                </button>
             </div>
         </div>
 
         <!-- ═══ ASSIGNMENT PHASE ═══ -->
-        <div v-if="phase === 'assignment'" class="max-w-lg mx-auto px-4 md:px-6 lg:px-8 pb-8">
+        <div v-if="phase === 'assignment'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
+
             <div v-if="!currentTask" class="text-center py-16 text-gray-500">
                 {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
             </div>
 
-            <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id">
-                    <div
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 relative transition-all duration-300"
-                        :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''"
-                    >
+            <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id" class="flex gap-4 relative">
 
-                        <!-- ── Confirm overlay (only after clicking Assign) ── -->
-                        <Transition name="confirm-slide">
-                            <div v-if="confirmingTask?.demo.id === task.demo.id"
-                                class="absolute inset-0 z-20 bg-gray-900 flex flex-col p-4 rounded-xl overflow-y-auto">
-                                <div class="text-sm font-bold text-gray-400 mb-3 text-center">Confirm Assignment</div>
+                <!-- ── Confirm overlay ── -->
+                <Transition name="confirm-slide">
+                    <div v-if="confirmingTask?.demo.id === task.demo.id"
+                        class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+                    <div class="max-w-md w-full rounded-xl p-5 shadow-2xl overflow-y-auto max-h-[90vh]"
+                        :class="confirmingRecord.time_diff === 0
+                            ? 'bg-gray-900 border border-gray-700'
+                            : 'bg-gray-900 border-2 border-red-500/60'">
+                            <div class="text-sm font-bold mb-4 text-center"
+                                :class="confirmingRecord.time_diff === 0 ? 'text-gray-300' : 'text-red-400'">
+                                Confirm Assignment
+                            </div>
 
-                                <div class="bg-gray-800/80 rounded-lg p-3 mb-2">
-                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">Demo</div>
-                                    <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
-                                    <div class="text-white font-mono text-xl font-black mt-0.5">{{ formatTime(task.demo.time_ms) }}</div>
-                                    <div class="text-gray-500 text-xs mt-0.5">
-                                        {{ task.demo.map_name }} - {{ task.demo.physics }}
-                                    </div>
-                                </div>
-
-                                <div class="text-center text-gray-600 text-lg my-1">&#x2193;</div>
-
-                                <div class="bg-gray-800/80 rounded-lg p-3 mb-3">
-                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">Record #{{ confirmingRecord.rank }}</div>
-                                    <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || 'Unknown')"></div>
-                                    <div class="font-mono text-xl font-black mt-0.5" :class="confirmingRecord.time_diff === 0 ? 'text-green-400' : 'text-white'">{{ formatTime(confirmingRecord.time) }}</div>
-                                    <div class="mt-1">
-                                        <span v-if="confirmingRecord.time_diff === 0"
-                                            class="text-green-400 text-sm font-bold">EXACT MATCH</span>
-                                        <span v-else class="text-yellow-400/80 text-sm">
-                                            {{ formatTimeDiff(confirmingRecord.time_diff) }} difference
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-3 mb-3 text-xs text-yellow-100 space-y-1.5">
-                                    <div class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider mb-1.5">Before confirming, check:</div>
-                                    <div class="flex items-start gap-1.5">
-                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                        <span>Are you sure this is the <strong class="text-yellow-300">same player</strong>? Does the nick in the demo belong to this record's player?</span>
-                                    </div>
-                                    <div class="flex items-start gap-1.5">
-                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                        <span>Is the demo time and record time <strong class="text-yellow-300">matching correctly</strong>? ±1ms rounding differences are <strong class="text-yellow-300">very rare</strong> but can occur - if times don't match exactly, prefer <strong class="text-yellow-300">Not Sure</strong> over a wrong assignment.</span>
-                                    </div>
-                                    <div class="flex items-start gap-1.5">
-                                        <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                        <span>If unsure, press <strong class="text-yellow-300">Cancel</strong> and use <strong class="text-yellow-300">Not Sure</strong> instead.</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-2 mt-auto">
-                                    <button @click="confirmAssign" :disabled="assigning"
-                                        class="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:text-green-400 text-white rounded-lg font-bold text-sm transition-colors">
-                                        {{ assigning ? 'Assigning...' : 'Confirm' }}
-                                    </button>
-                                    <button @click="cancelConfirm"
-                                        class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
-                                        Cancel
-                                    </button>
+                            <!-- TIME MISMATCH WARNING -->
+                            <div v-if="confirmingRecord.time_diff !== 0"
+                                class="bg-red-500/20 border-2 border-red-500/60 rounded-xl p-4 mb-4 text-center">
+                                <div class="text-red-400 text-2xl font-black uppercase tracking-wide mb-1">TIME DOES NOT MATCH</div>
+                                <div class="text-red-300 text-sm font-bold">
+                                    {{ formatTimeDiff(confirmingRecord.time_diff) }} difference - are you absolutely sure this is correct?
                                 </div>
                             </div>
-                        </Transition>
 
-                        <!-- ── Card content ── -->
+                            <div class="bg-gray-800/80 rounded-lg p-3 mb-2">
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">Demo</div>
+                                <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
+                                <div class="text-white font-mono text-xl font-black mt-0.5">{{ formatTime(task.demo.time_ms) }}</div>
+                                <div class="text-gray-400 text-xs mt-0.5">{{ task.demo.map_name }} - {{ task.demo.physics }}</div>
+                            </div>
+
+                            <div class="text-center text-gray-500 text-lg my-1">&#x2193;</div>
+
+                            <div class="rounded-lg p-3 mb-3"
+                                :class="confirmingRecord.time_diff === 0 ? 'bg-gray-800/80' : 'bg-gray-800/80 ring-2 ring-red-500/40'">
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">Record #{{ confirmingRecord.rank }}</div>
+                                <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || 'Unknown')"></div>
+                                <div class="font-mono text-xl font-black mt-0.5" :class="confirmingRecord.time_diff === 0 ? 'text-green-400' : 'text-red-400'">{{ formatTime(confirmingRecord.time) }}</div>
+                                <div class="mt-1">
+                                    <span v-if="confirmingRecord.time_diff === 0" class="text-green-400 text-sm font-bold">EXACT MATCH</span>
+                                    <span v-else class="text-red-400 text-sm font-bold">{{ formatTimeDiff(confirmingRecord.time_diff) }} difference</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-3 mb-4 text-xs text-yellow-100 space-y-1.5">
+                                <div class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider mb-1.5">Before confirming, check:</div>
+                                <div class="flex items-start gap-1.5">
+                                    <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                    <span>Are you sure this is the <strong class="text-yellow-300">same player</strong>?</span>
+                                </div>
+                                <div class="flex items-start gap-1.5">
+                                    <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                    <span>Do the times <strong class="text-yellow-300">match correctly</strong>? ±1ms rounding is very rare but possible.</span>
+                                </div>
+                                <div class="flex items-start gap-1.5">
+                                    <span class="text-yellow-500 mt-0.5">&#x2022;</span>
+                                    <span>If unsure, press <strong class="text-yellow-300">Cancel</strong> and use <strong class="text-yellow-300">Not Sure</strong>.</span>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button @click="confirmAssign" :disabled="assigning"
+                                    class="flex-1 py-2.5 rounded-lg font-bold text-sm transition-colors"
+                                    :class="confirmingRecord.time_diff === 0
+                                        ? 'bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:text-green-400 text-white'
+                                        : 'bg-orange-600 hover:bg-orange-500 disabled:bg-orange-800 disabled:text-orange-400 text-white'">
+                                    {{ assigning ? 'Assigning...' : confirmingRecord.time_diff === 0 ? 'Confirm' : 'Confirm anyway' }}
+                                </button>
+                                <button @click="cancelConfirm"
+                                    class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                    </div>
+                    </div>
+                </Transition>
+
+                <!-- Left: Tips -->
+                <div v-if="showAssignmentHelp" class="w-72 flex-shrink-0 hidden lg:block">
+                    <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-indigo-500/20 p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="text-indigo-300 font-bold text-sm uppercase tracking-wider">How it works</div>
+                            <button @click="showAssignmentHelp = false" class="text-gray-600 hover:text-gray-400 transition-colors p-0.5" title="Dismiss">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
+                            <div class="text-indigo-300 font-bold text-xs uppercase tracking-wider mb-2">Your task</div>
+                            <div class="text-sm text-gray-200 leading-relaxed">
+                                Link each demo file to its <strong class="text-white">leaderboard record</strong>. Compare the <strong class="text-white">player name</strong> and <strong class="text-white">time</strong> from the demo with the records list.
+                            </div>
+                        </div>
+                        <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+                            <div class="flex items-start gap-2">
+                                <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                <p><strong class="text-white">Click a record</strong> on the right to select it, then press <strong class="text-green-400">Assign</strong>.</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                <p>Player not listed? Use <strong class="text-red-400">No Match</strong>.</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                <p>Not sure? Just <strong class="text-yellow-400">Skip</strong> - you still earn a point!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center: Demo + Records grid -->
+                <div class="flex-1 min-w-0">
+                <div class="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-3 transition-all duration-300"
+                    :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+
+                    <!-- ── LEFT: Demo being matched ── -->
+                    <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden">
+                        <div class="mx-2.5 mt-2.5 mb-1 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25">
+                            <div class="text-[11px] text-amber-400 uppercase tracking-wider font-bold">Unassigned Demo</div>
+                            <div class="text-[11px] text-gray-300 mt-0.5">Match this player nick and time to a record on the right.</div>
+                        </div>
+
                         <!-- Map thumbnail -->
-                        <div class="relative h-28 overflow-hidden">
-                            <img v-if="task.map_thumbnail"
-                                :src="'/storage/' + task.map_thumbnail"
-                                class="w-full h-full object-cover"
-                                :alt="task.demo.map_name" />
-                            <div v-else class="w-full h-full bg-gray-700/50 flex items-center justify-center">
+                        <div class="relative overflow-hidden mx-2.5 rounded-lg">
+                            <img v-if="task.map_thumbnail" :src="'/storage/' + task.map_thumbnail" class="w-full aspect-[4/3] object-cover" :alt="task.demo.map_name" />
+                            <div v-else class="w-full aspect-[4/3] bg-gray-700/50 flex items-center justify-center">
                                 <span class="text-gray-600 text-sm">No thumbnail</span>
                             </div>
                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent" />
-                            <!-- Items overlay -->
-                            <div class="absolute bottom-2 right-2 flex flex-col gap-0.5">
-                                <div v-if="task.map_weapons" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="w in task.map_weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-3 h-3`"></div>
+                            <div class="absolute bottom-2 right-2 flex flex-col gap-1">
+                                <div v-if="task.map_weapons" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="w in task.map_weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="task.map_items" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="i in task.map_items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-3 h-3`"></div>
+                                <div v-if="task.map_items" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="i in task.map_items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="task.map_functions" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="f in task.map_functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-3 h-3`"></div>
+                                <div v-if="task.map_functions" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="f in task.map_functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-5 h-5`"></div>
                                 </div>
                             </div>
                             <div class="absolute bottom-0 left-0 p-2.5 flex items-end gap-2">
@@ -1042,32 +1093,52 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <!-- Demo info -->
-                        <div class="px-3 py-2.5 border-b border-gray-700/30 flex items-center justify-between">
-                            <span class="text-lg font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></span>
-                            <div class="flex items-center gap-2 flex-shrink-0 ml-2">
-                                <span class="text-white font-mono text-xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
-                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                        <!-- Player + Time -->
+                        <div class="px-3 py-3 text-center">
+                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mb-1">Player</div>
+                            <div class="text-xl font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
+
+                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mt-3 mb-1">Demo Time</div>
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="text-white font-mono text-2xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
+                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                </a>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- ── RIGHT: Records ── -->
+                    <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 flex flex-col overflow-hidden">
+                        <div class="mx-2.5 mt-2.5 mb-1 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/25">
+                            <div class="text-[11px] text-indigo-300 uppercase tracking-wider font-bold">Find the matching record</div>
+                            <div class="text-[11px] text-gray-300 mt-0.5">Click the record that belongs to the player on the left. Compare name and time.</div>
                         </div>
 
                         <!-- Closest matches -->
-                        <div class="px-2.5 pt-2">
-                            <div class="text-[10px] font-semibold text-yellow-500/80 uppercase tracking-wider mb-1">
-                                Closest matches
+                        <div class="px-2.5 pt-1.5 mx-1 mb-1 rounded-lg bg-yellow-500/5 border border-yellow-500/15 pb-2">
+                            <div class="flex items-baseline gap-2 mb-1.5 pt-1.5">
+                                <div class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">Closest matches</div>
+                                <div class="text-[10px] text-gray-300">records with the most similar time</div>
                             </div>
-                            <div class="max-h-32 overflow-y-auto custom-scrollbar">
+                            <div class="max-h-52 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.closest_matches" :key="'c-' + record.id"
                                     @click="selectRecord(task, record)"
-                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    class="w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
                                         : record.time_diff === 0
                                             ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
-                                            : 'hover:bg-white/5'">
+                                            : record.alias_match_type === 'exact'
+                                                ? 'bg-cyan-500/10 hover:bg-cyan-500/20 ring-1 ring-cyan-500/20'
+                                                : record.alias_match_type === 'similar'
+                                                    ? 'bg-cyan-500/5 hover:bg-cyan-500/10'
+                                                    : 'hover:bg-white/5'">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">alias matches <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">alias similar <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
                                         <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
                                         <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
@@ -1086,26 +1157,30 @@ onUnmounted(() => {
                             </div>
                         </div>
 
-                        <!-- Separator -->
-                        <div class="mx-2.5 border-t border-gray-700/20 my-1.5" />
-
                         <!-- All records -->
-                        <div class="px-2.5 pb-2.5">
-                            <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                                All records ({{ task.all_records.length }})
+                        <div class="px-2.5 pb-2.5 pt-1 flex-1 flex flex-col min-h-0">
+                            <div class="flex items-baseline gap-2 mb-1">
+                                <div class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Full map leaderboard ({{ task.all_records.length }})</div>
+                                <div class="text-[10px] text-gray-400">not found above? search here</div>
                             </div>
-                            <div class="max-h-44 overflow-y-auto custom-scrollbar">
+                            <div class="flex-1 max-h-36 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.all_records" :key="'a-' + record.id"
                                     @click="selectRecord(task, record)"
-                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    class="w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
                                         : record.time_diff === 0
                                             ? 'bg-green-500/10 hover:bg-green-500/20 ring-1 ring-green-500/20'
-                                            : 'hover:bg-white/5'">
+                                            : record.alias_match_type === 'exact'
+                                                ? 'bg-cyan-500/10 hover:bg-cyan-500/20 ring-1 ring-cyan-500/20'
+                                                : record.alias_match_type === 'similar'
+                                                    ? 'bg-cyan-500/5 hover:bg-cyan-500/10'
+                                                    : 'hover:bg-white/5'">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
+                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">alias matches <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">alias similar <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
                                         <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
                                         <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
@@ -1123,43 +1198,65 @@ onUnmounted(() => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- ── Bottom action buttons ── -->
-                        <div class="px-2.5 pb-2.5 pt-1.5 border-t border-gray-700/30 mt-1">
-                            <!-- Hint message -->
-                            <Transition name="hint-fade">
-                                <div v-if="assignHints[task.demo.id]" class="text-[10px] text-yellow-400/80 text-center mb-1.5">
-                                    {{ assignHints[task.demo.id] }}
-                                </div>
-                            </Transition>
-                            <!-- Selected record preview -->
-                            <div v-if="selectedRecords[task.demo.id]" class="text-[10px] text-blue-400/70 text-center mb-1.5 truncate">
-                                Selected: #{{ selectedRecords[task.demo.id].rank }}
-                                <span v-html="q3tohtml(selectedRecords[task.demo.id].player_name)"></span>
-                                - {{ formatTime(selectedRecords[task.demo.id].time) }}
-                            </div>
-                            <div class="flex gap-1.5">
-                                <button @click="tryAssign(task)"
-                                    class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
-                                    :class="selectedRecords[task.demo.id]
-                                        ? 'bg-green-600 hover:bg-green-500 text-white'
-                                        : 'bg-green-600/30 text-green-400/60 hover:bg-green-600/40'">
-                                    Assign
-                                </button>
-                                <button @click="skipTask(task, 'not_sure')"
-                                    class="flex-1 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400/70 hover:text-yellow-400 rounded-lg text-xs transition-all">
-                                    Not Sure
-                                </button>
-                                <button @click="skipTask(task, 'no_match')"
-                                    class="flex-1 py-1.5 rounded-lg text-xs transition-all"
-                                    :class="!hasExactMatch(task) && !selectedRecords[task.demo.id]
-                                        ? 'bg-red-600/40 text-red-300 hover:bg-red-600/50 font-bold animate-pulse-soft'
-                                        : 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-500 hover:text-gray-400'">
-                                    No Match
-                                </button>
-                            </div>
+                <!-- ── Action buttons (full width below grid) ── -->
+                <div class="mt-3 bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 px-3 py-2.5 transition-all duration-300"
+                    :class="completingSlot === task.demo.id ? 'scale-95 opacity-0' : ''">
+
+                    <!-- Step indicator -->
+                    <div class="flex items-center justify-center gap-3 mb-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                :class="selectedRecords[task.demo.id] ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black animate-pulse'">1</span>
+                            <span class="text-[11px] font-semibold" :class="selectedRecords[task.demo.id] ? 'text-green-400' : 'text-yellow-400'">
+                                {{ selectedRecords[task.demo.id] ? 'Record selected' : 'Click a record above' }}
+                            </span>
+                        </div>
+                        <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                                :class="selectedRecords[task.demo.id] ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/50 animate-pulse' : 'bg-gray-700 text-gray-500'">2</span>
+                            <span class="text-[11px] font-semibold" :class="selectedRecords[task.demo.id] ? 'text-green-400' : 'text-gray-500'">
+                                Press Assign below
+                            </span>
                         </div>
                     </div>
+
+                    <Transition name="hint-fade">
+                        <div v-if="assignHints[task.demo.id]" class="text-[10px] text-yellow-400/80 text-center mb-1.5">
+                            {{ assignHints[task.demo.id] }}
+                        </div>
+                    </Transition>
+                    <div v-if="selectedRecords[task.demo.id]" class="text-[11px] text-blue-300 text-center mb-1.5 truncate">
+                        Selected: #{{ selectedRecords[task.demo.id].rank }}
+                        <span v-html="q3tohtml(selectedRecords[task.demo.id].player_name)"></span>
+                        - {{ formatTime(selectedRecords[task.demo.id].time) }}
+                    </div>
+                    <div class="flex gap-1.5 max-w-md mx-auto">
+                        <button @click="tryAssign(task)"
+                            class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
+                            :class="selectedRecords[task.demo.id]
+                                ? 'bg-green-600 hover:bg-green-500 text-white border border-green-400 shadow-[0_0_12px_rgba(34,197,94,0.4)] animate-pulse'
+                                : 'bg-gray-700/30 text-gray-600 border border-gray-700/30 cursor-not-allowed'">
+                            <span v-if="selectedRecords[task.demo.id]">Assign</span>
+                            <span v-else>Select a record first</span>
+                        </button>
+                        <button @click="skipTask(task, 'not_sure')"
+                            class="flex-1 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400/70 hover:text-yellow-400 rounded-lg text-xs transition-all">
+                            Not Sure
+                        </button>
+                        <button @click="skipTask(task, 'no_match')"
+                            class="flex-1 py-1.5 rounded-lg text-xs transition-all"
+                            :class="!hasExactMatch(task) && !selectedRecords[task.demo.id]
+                                ? 'bg-red-600/40 text-red-300 hover:bg-red-600/50 font-bold animate-pulse-soft'
+                                : 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-500 hover:text-gray-400'">
+                            No Match
+                        </button>
+                    </div>
+                </div>
+                </div>
             </div>
         </div>
 
@@ -1224,15 +1321,15 @@ onUnmounted(() => {
                             </div>
                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent" />
                             <!-- Items overlay -->
-                            <div class="absolute bottom-2 right-2 flex flex-col gap-0.5">
-                                <div v-if="task.map_weapons" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="w in task.map_weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-3 h-3`"></div>
+                            <div class="absolute bottom-2 right-2 flex flex-col gap-1">
+                                <div v-if="task.map_weapons" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="w in task.map_weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="task.map_items" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="i in task.map_items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-3 h-3`"></div>
+                                <div v-if="task.map_items" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="i in task.map_items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="task.map_functions" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="f in task.map_functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-3 h-3`"></div>
+                                <div v-if="task.map_functions" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="f in task.map_functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-5 h-5`"></div>
                                 </div>
                             </div>
                             <div class="absolute bottom-0 left-0 p-2.5 flex items-end gap-2">
@@ -1285,7 +1382,7 @@ onUnmounted(() => {
                             <div class="max-h-28 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.closest_matches" :key="'vc-' + record.id"
                                     @click="selectRecord(task, record)"
-                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    class="w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
                                         : task.current_record?.id === record.id
@@ -1326,7 +1423,7 @@ onUnmounted(() => {
                             <div class="max-h-44 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.all_records" :key="'va-' + record.id"
                                     @click="selectRecord(task, record)"
-                                    class="w-full flex items-center justify-between px-1.5 py-1 rounded text-[11px] transition-all group cursor-pointer"
+                                    class="w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-all group cursor-pointer"
                                     :class="selectedRecords[task.demo.id]?.id === record.id
                                         ? 'bg-blue-500/20 ring-1 ring-blue-400/50'
                                         : task.current_record?.id === record.id
@@ -1391,24 +1488,41 @@ onUnmounted(() => {
         </div>
 
         <!-- ═══ RATING PHASE ═══ -->
-        <div v-if="phase === 'rating'" class="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
+        <div v-if="phase === 'rating'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="!currentRating" class="text-center py-16 text-gray-500">
                 {{ loadingMore ? 'Loading more tasks...' : 'No maps available for rating.' }}
             </div>
 
             <div v-if="currentRating" v-for="map in [currentRating]" :key="map.id" class="flex gap-4">
                     <!-- Left: Tips -->
-                    <div class="w-56 flex-shrink-0">
-                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-purple-500/20 p-3 space-y-3 text-xs text-gray-400">
-                            <div class="text-purple-400 font-bold text-[11px] uppercase tracking-wider">Rating Tips</div>
-                            <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-yellow-200/90 text-[11px]">
-                                Rate based on the <strong class="text-yellow-300">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.
+                    <div class="w-80 flex-shrink-0">
+                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-purple-500/20 p-5 space-y-4">
+                            <div class="text-purple-300 font-bold text-sm uppercase tracking-wider">How to rate difficulty</div>
+
+                            <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-4">
+                                <div class="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-2">Most important</div>
+                                <div class="text-sm text-gray-200 leading-relaxed">
+                                    Rate based on the <strong class="text-yellow-300">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.
+                                </div>
                             </div>
-                            <div class="space-y-2">
-                                <p>Rate based on <strong class="text-gray-300">your experience</strong> playing the map, not just how it looks.</p>
-                                <p>Not sure? Check the <strong class="text-gray-300">YouTube video</strong> on the right to see actual gameplay and judge the difficulty.</p>
-                                <p>No video available? Use <strong class="text-gray-300">Skip + Request Render</strong> to queue a render of the best demo - the next person (or you) will have a video to help decide.</p>
-                                <p>When in doubt, <strong class="text-gray-300">Skip</strong> is always fine - you still earn a point!</p>
+
+                            <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>Rate based on <strong class="text-white">your experience</strong> playing the map, not just how it looks.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>Not sure? Check the <strong class="text-white">YouTube video</strong> on the right to see actual gameplay and judge the difficulty.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>No video? Use <strong class="text-white">Skip + Request Render</strong> to queue a render. The next person will have a video to help decide.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine - you still earn a point!</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1416,9 +1530,9 @@ onUnmounted(() => {
                     <!-- Center: Map card -->
                     <div class="flex-1 min-w-0">
                     <div
-                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden transition-all duration-500 relative">
+                        class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-visible transition-all duration-500 relative">
                         <!-- Thumbnail -->
-                        <div class="relative">
+                        <div class="relative overflow-hidden rounded-t-xl">
                             <img v-if="map.thumbnail"
                                 :src="'/storage/' + map.thumbnail"
                                 class="w-full aspect-[4/3] object-cover bg-black"
@@ -1427,15 +1541,15 @@ onUnmounted(() => {
                                 <span class="text-gray-600 text-sm">No image</span>
                             </div>
                             <!-- Items overlay -->
-                            <div class="absolute bottom-1 right-1 flex flex-col gap-0.5">
-                                <div v-if="map.weapons" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="w in map.weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-3 h-3`"></div>
+                            <div class="absolute bottom-2 right-2 flex flex-col gap-1">
+                                <div v-if="map.weapons" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="w in map.weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="map.items" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="i in map.items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-3 h-3`"></div>
+                                <div v-if="map.items" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="i in map.items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-5 h-5`"></div>
                                 </div>
-                                <div v-if="map.functions" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                    <div v-for="f in map.functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-3 h-3`"></div>
+                                <div v-if="map.functions" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                    <div v-for="f in map.functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-5 h-5`"></div>
                                 </div>
                             </div>
                         </div>
@@ -1457,7 +1571,7 @@ onUnmounted(() => {
                                                 : d.bgSubtle + ' border-gray-700/30 hover:text-white ' + d.hover + ' cursor-pointer'">
                                         {{ d.label }}
                                     </button>
-                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 bg-gray-900 border border-yellow-500/30 rounded-lg text-[11px] shadow-2xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 w-52">
+                                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 bg-gray-900 border border-yellow-500/30 rounded-lg text-[11px] shadow-2xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-[100] w-52">
                                         <div class="font-bold text-yellow-400 text-xs">{{ d.desc }}</div>
                                         <div class="text-gray-300 mt-1">Rate based on the <strong class="text-white">lowest skill needed to complete</strong> the map, not the WR time.</div>
                                     </div>
@@ -1480,7 +1594,7 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Right: YouTube embed videos -->
-                    <div class="w-80 flex-shrink-0 space-y-3">
+                    <div class="w-96 flex-shrink-0 space-y-3">
                         <template v-if="map.videos && (map.videos.vq3?.length || map.videos.cpm?.length)">
                             <template v-for="phys in ['vq3', 'cpm']" :key="phys">
                                 <div v-if="map.videos[phys]?.length" class="space-y-2">
@@ -1517,22 +1631,41 @@ onUnmounted(() => {
             </div>
 
             <div v-if="currentTagMap" :key="currentTagMap.id">
-                <div class="grid grid-cols-[14rem_1fr_20rem] gap-4 max-w-6xl mx-auto items-start">
-                    <!-- Tips (row 1, col 1) -->
-                    <div>
-                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-500/20 p-3 space-y-3 text-xs text-gray-400">
-                            <div class="text-amber-400 font-bold text-[11px] uppercase tracking-wider">Tagging Tips</div>
-                            <div class="space-y-2">
-                                <p>Add tags that describe the map's <strong class="text-gray-300">gameplay style</strong>, mechanics, and theme.</p>
-                                <p>Not sure what the map plays like? Check the <strong class="text-gray-300">YouTube video</strong> on the right to see actual gameplay.</p>
-                                <p>No video available? Use <strong class="text-gray-300">Skip + Request Render</strong> to queue a render - future taggers (or you) will have a video to help.</p>
-                                <p>Look at the <strong class="text-gray-300">weapons and items</strong> on the thumbnail for clues about the map's mechanics.</p>
+                <div class="flex gap-4 items-start">
+                    <!-- Tips (left sidebar) -->
+                    <div class="w-80 flex-shrink-0">
+                        <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-500/20 p-5 space-y-4">
+                            <div class="text-amber-300 font-bold text-sm uppercase tracking-wider">How to tag maps</div>
+                            <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                                <div class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-2">Your task</div>
+                                <div class="text-sm text-gray-200 leading-relaxed">
+                                    Add tags that describe the map's <strong class="text-white">gameplay style</strong>, mechanics, and theme.
+                                </div>
+                            </div>
+                            <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>Not sure? Check the <strong class="text-white">YouTube video</strong> on the right to see actual gameplay.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>No video? Use <strong class="text-white">Skip + Request Render</strong> to queue a render for future taggers.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>Look at <strong class="text-white">weapons and items</strong> on the thumbnail for clues about mechanics.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine - you still earn a point!</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Map card + search input (row 1, col 2) -->
-                    <div>
+                    <!-- Map card + videos -->
+                    <div class="flex-1 min-w-0 flex gap-4">
+                    <div class="flex-1 min-w-0">
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-700/30 overflow-hidden">
                             <!-- Thumbnail -->
                             <div class="relative">
@@ -1543,15 +1676,15 @@ onUnmounted(() => {
                                 <div v-else class="w-full aspect-[16/9] bg-gray-700/50 flex items-center justify-center">
                                     <span class="text-gray-600 text-sm">No image</span>
                                 </div>
-                                <div class="absolute bottom-1 right-1 flex flex-col gap-0.5">
-                                    <div v-if="currentTagMap.weapons" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                        <div v-for="w in currentTagMap.weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-3 h-3`"></div>
+                                <div class="absolute bottom-2 right-2 flex flex-col gap-1">
+                                    <div v-if="currentTagMap.weapons" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                        <div v-for="w in currentTagMap.weapons.split(',')" :key="w" :title="w" :class="`sprite-items sprite-${w} w-5 h-5`"></div>
                                     </div>
-                                    <div v-if="currentTagMap.items" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                        <div v-for="i in currentTagMap.items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-3 h-3`"></div>
+                                    <div v-if="currentTagMap.items" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                        <div v-for="i in currentTagMap.items.split(',')" :key="i" :title="i" :class="`sprite-items sprite-${i} w-5 h-5`"></div>
                                     </div>
-                                    <div v-if="currentTagMap.functions" class="flex flex-wrap justify-end gap-0.5 bg-black/70 rounded px-1 py-0.5">
-                                        <div v-for="f in currentTagMap.functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-3 h-3`"></div>
+                                    <div v-if="currentTagMap.functions" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
+                                        <div v-for="f in currentTagMap.functions.split(',')" :key="f" :title="f" :class="`sprite-items sprite-${f} w-5 h-5`"></div>
                                     </div>
                                 </div>
                             </div>
@@ -1601,8 +1734,8 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <!-- Videos (row 1-2, col 3) - scrollable, independent -->
-                    <div class="max-h-[400px] overflow-y-auto space-y-3">
+                    <!-- Videos -->
+                    <div class="w-96 flex-shrink-0 max-h-[500px] overflow-y-auto space-y-3">
                         <template v-if="currentTagMap.videos && (currentTagMap.videos.vq3?.length || currentTagMap.videos.cpm?.length)">
                             <template v-for="phys in ['vq3', 'cpm']" :key="phys">
                                 <div v-if="currentTagMap.videos[phys]?.length" class="space-y-2">
@@ -1628,6 +1761,7 @@ onUnmounted(() => {
                             <div class="text-xs text-gray-500 mb-2">No videos available for this map</div>
                             <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future taggers</div>
                         </div>
+                    </div>
                     </div>
 
                 </div>
