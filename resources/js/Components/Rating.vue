@@ -8,7 +8,12 @@
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = String(d.getFullYear()).slice(-2);
-        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+        const yyyy = String(d.getFullYear());
+        const fmt = page.props.dateFormat;
+        if (fmt === 'dmY') return `${dd}/${mm}/${yyyy}`;
+        if (fmt === 'Ymd') return `${yyyy}/${mm}/${dd}`;
+        if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
+        return `${yy}/${mm}/${dd}`;
     };
 
     const props = defineProps({

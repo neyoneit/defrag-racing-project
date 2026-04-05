@@ -235,4 +235,8 @@ class MddProfile extends Model
     public function user() {
         return $this->belongsTo(User::class);
     }
+
+    public function aliases() {
+        return $this->hasMany(UserAlias::class, 'mdd_id');
+    }
 }

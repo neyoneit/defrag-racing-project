@@ -17,14 +17,15 @@ class ScrapeProfile implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 1;
-    public $maxExceptions = 1;
+    public $tries = 3;
+    public $maxExceptions = 3;
+    public $backoff = [60, 300];
 
     private $mdd_id;
+    private $xpath = null;
 
     public function __construct($mdd_id) {
         $this->mdd_id = $mdd_id;
-        $this->xpath = null;
     }
 
     public function handle(): void {
@@ -38,7 +39,7 @@ class ScrapeProfile implements ShouldQueue
             $result = $this->get_profile($this->mdd_id);
         } catch (\Exception $e) {
             \Log::warning("ScrapeProfile failed for mdd_id={$this->mdd_id}: {$e->getMessage()}");
-            return;
+            throw $e; // retry instead of silently failing
         }
 
         if ($result === null) {

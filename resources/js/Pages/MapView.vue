@@ -241,6 +241,11 @@
     const page = usePage();
     localIsNsfw.value = props.map.is_nsfw;
 
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[62px]' : 'w-[50px]';
+    });
+
     // Difficulty rating
     const difficultyData = ref({ ...props.difficultyRating });
     const submittingDifficulty = ref(false);
@@ -1437,7 +1442,7 @@
                                 <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                                 <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
                                 <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-1">Score</div>
-                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                             </div>
                             <div class="flex-grow">
                                 <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
@@ -1498,7 +1503,7 @@
                                 <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                                 <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-2">Time</div>
                                 <div class="w-10 sm:w-12 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-1">Score</div>
-                                <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                             </div>
                             <div class="flex-grow">
                                 <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />

@@ -48,10 +48,15 @@ class HandleInertiaRequests extends Middleware
         if ($request->user()) {
             $user = $request->user();
 
-            // Load user aliases
-            $aliases = \App\Models\UserAlias::where('user_id', $user->id)
-                ->orderBy('created_at', 'desc')
-                ->get(['id', 'alias', 'is_approved', 'created_at']);
+            // Load user aliases (include MDD aliases via mdd_id)
+            $aliasQuery = \App\Models\UserAlias::where('user_id', $user->id);
+            if ($user->mdd_id) {
+                $aliasQuery = \App\Models\UserAlias::where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->orWhere('mdd_id', $user->mdd_id);
+                });
+            }
+            $aliases = $aliasQuery->orderBy('usage_count', 'desc')->orderBy('created_at', 'desc')
+                ->get(['id', 'alias', 'alias_colored', 'usage_count', 'source', 'is_approved', 'created_at']);
 
             // Filter record notifications based on preview_records setting
             if ($user->preview_records !== 'none') {
@@ -114,7 +119,7 @@ class HandleInertiaRequests extends Middleware
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,
             'physicsOrder'              =>      $request->user()?->default_physics_order ?? 'vq3_first',
             'canViewRatingBreakdown'    =>      $request->user() ? ($request->user()->admin || (is_array($request->user()->moderator_permissions) && in_array('rating_breakdown', $request->user()->moderator_permissions))) : false,
-            'dateFormat'                =>      $request->user()?->global_profile_preferences['date_format'] ?? 'ymd',
+            'dateFormat'                =>      $request->user()?->global_profile_preferences['date_format'] ?? 'dmY',
             'availableBadges'           =>      $request->user() ? $this->getAvailableBadges($request->user()) : [],
             'globalLatestAnnouncement'  =>      !$request->user() ? Cache::remember('global:latest_announcement', 300, function () {
                 return Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first(['id', 'title', 'created_at']);

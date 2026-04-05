@@ -415,8 +415,19 @@
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yy = String(d.getFullYear()).slice(-2);
-        return (page.props.dateFormat === 'dmy') ? `${dd}/${mm}/${yy}` : `${yy}/${mm}/${dd}`;
+        const yyyy = String(d.getFullYear());
+        const fmt = page.props.dateFormat;
+        if (fmt === 'dmY') return `${dd}/${mm}/${yyyy}`;
+        if (fmt === 'Ymd') return `${yyyy}/${mm}/${dd}`;
+        if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
+        return `${yy}/${mm}/${dd}`;
     };
+
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[56px]' : 'w-[50px]';
+    });
+
     // About Me
     const aboutMeEditing = ref(false);
     const aboutMeText = ref('');
@@ -2293,10 +2304,12 @@
                         <div v-if="aliases && aliases.length > 0" class="flex flex-wrap gap-2">
                             <div
                                 v-for="alias in aliases"
-                                :key="alias.alias"
+                                :key="alias.alias_colored || alias.alias"
                                 class="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-sm text-indigo-300 flex items-center gap-2"
+                                :title="alias.usage_count ? alias.usage_count + ' records with this name' : ''"
                             >
-                                <span v-html="q3tohtml(alias.alias)"></span>
+                                <span v-html="q3tohtml(alias.alias_colored || alias.alias)"></span>
+                                <span v-if="alias.usage_count" class="text-[10px] text-gray-500 tabular-nums">({{ alias.usage_count }})</span>
                                 <button
                                     v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id"
                                     @click="reportAlias(alias)"
@@ -2396,9 +2409,11 @@
                                 <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                                     <div class="w-5 sm:w-8 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
                                     <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Map</div>
-                                    <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
-                                    <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                    <div class="flex items-center gap-0.5 ml-auto mr-1">
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                        <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    </div>
                                 </div>
                                 <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
@@ -2468,29 +2483,29 @@
                                             </button>
                                         </div>
 
-                                        <!-- Time -->
+                                        <!-- Time + Score + Date -->
+                                        <div class="flex items-center gap-0.5 ml-auto mr-1">
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-right">
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
                                         </div>
 
-                                        <!-- Map Score -->
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
                                             <div v-if="record.map_score"
-                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
+                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
                                                 @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
                                                 @mouseleave="scoreTooltip = null">
                                                 {{ Math.round(record.map_score) }}
                                             </div>
                                         </div>
 
-                                        <!-- Date -->
-                                        <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                                                 {{ fmtDate(record.date_set) }}
                                             </div>
-                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5 text-right">
                                                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
+                                        </div>
                                         </div>
                                     </div>
 
@@ -2523,9 +2538,11 @@
                                 <div class="flex items-center gap-2 sm:gap-3 mb-1 pb-1 border-b border-white/15">
                                     <div class="w-5 sm:w-8 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">#</div>
                                     <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Map</div>
-                                    <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Score</div>
-                                    <div class="w-[50px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                    <div class="flex items-center gap-0.5 ml-auto mr-1">
+                                        <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                        <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    </div>
                                 </div>
                                 <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
                                     <!-- Background Map Thumbnail -->
@@ -2595,29 +2612,29 @@
                                             </button>
                                         </div>
 
-                                        <!-- Time -->
+                                        <!-- Time + Score + Date -->
+                                        <div class="flex items-center gap-0.5 ml-auto mr-1">
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-right">
                                             <div class="text-[10px] sm:text-sm font-bold tabular-nums text-white transition-colors drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">{{ formatTime(record.time) }}</div>
                                         </div>
 
-                                        <!-- Map Score -->
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
                                             <div v-if="record.map_score"
-                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help"
+                                                class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
                                                 @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
                                                 @mouseleave="scoreTooltip = null">
                                                 {{ Math.round(record.map_score) }}
                                             </div>
                                         </div>
 
-                                        <!-- Date -->
-                                        <div class="w-[50px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                                                 {{ fmtDate(record.date_set) }}
                                             </div>
-                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+                                            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5 text-right">
                                                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
                                             </div>
+                                        </div>
                                         </div>
                                     </div>
 

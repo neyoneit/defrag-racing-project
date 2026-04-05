@@ -19,7 +19,6 @@ class AliasController extends Controller
                 'required',
                 'string',
                 'max:255',
-                'unique:user_aliases,alias',
                 'regex:/^[^^]+$/', // Disallow ^ character (Quake color codes)
             ],
         ], [
@@ -28,10 +27,13 @@ class AliasController extends Controller
 
         $user = Auth::user();
 
-        // Check if user has reached alias limit
-        if ($user->aliases()->count() >= 10) {
+        // Check if alias already exists for this user
+        $exists = $user->mdd_id
+            ? UserAlias::where('mdd_id', $user->mdd_id)->where('alias', $request->alias)->exists()
+            : UserAlias::where('user_id', $user->id)->where('alias', $request->alias)->exists();
+        if ($exists) {
             throw ValidationException::withMessages([
-                'alias' => ['Maximum 10 aliases allowed per account.'],
+                'alias' => ['This alias already exists on your profile.'],
             ]);
         }
 
@@ -41,7 +43,9 @@ class AliasController extends Controller
         // Create alias
         $alias = UserAlias::create([
             'user_id' => $user->id,
+            'mdd_id' => $user->mdd_id,
             'alias' => $request->alias,
+            'source' => 'manual',
             'is_approved' => $isApproved,
         ]);
 

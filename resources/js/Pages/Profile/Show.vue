@@ -231,7 +231,7 @@ const submitAboutMeSettings = () => {
 
 const savedHidden = user.value.global_profile_preferences?.hidden_sections || [];
 const savedHiddenStatBoxes = user.value.global_profile_preferences?.hidden_stat_boxes || [];
-const savedDateFormat = user.value.global_profile_preferences?.date_format || 'ymd';
+const savedDateFormat = user.value.global_profile_preferences?.date_format || 'dmY';
 const globalProfileForm = useForm({
     hidden_sections: [...savedHidden],
     hidden_stat_boxes: [...savedHiddenStatBoxes],
@@ -2049,18 +2049,30 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <p class="text-xs text-gray-500">Choose how dates are displayed in record tables</p>
                         </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="grid grid-cols-2 gap-2">
                         <button @click="globalProfileForm.date_format = 'ymd'; saveGlobalPreferencesDebounced()"
-                            class="flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
                             :class="globalProfileForm.date_format === 'ymd' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
                             YY/MM/DD
                             <div class="text-[10px] font-normal mt-0.5 opacity-70">26/04/02</div>
                         </button>
                         <button @click="globalProfileForm.date_format = 'dmy'; saveGlobalPreferencesDebounced()"
-                            class="flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
                             :class="globalProfileForm.date_format === 'dmy' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
                             DD/MM/YY
                             <div class="text-[10px] font-normal mt-0.5 opacity-70">02/04/26</div>
+                        </button>
+                        <button @click="globalProfileForm.date_format = 'Ymd'; saveGlobalPreferencesDebounced()"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.date_format === 'Ymd' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            YYYY/MM/DD
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">2026/04/02</div>
+                        </button>
+                        <button @click="globalProfileForm.date_format = 'dmY'; saveGlobalPreferencesDebounced()"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.date_format === 'dmY' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            DD/MM/YYYY
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">02/04/2026</div>
                         </button>
                     </div>
                 </div>

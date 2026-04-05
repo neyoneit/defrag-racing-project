@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, getCurrentInstance } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import InputLabel from '@/Components/Laravel/InputLabel.vue';
 import InputError from '@/Components/Laravel/InputError.vue';
@@ -7,8 +7,12 @@ import TextInput from '@/Components/Laravel/TextInput.vue';
 import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
 import SecondaryButton from '@/Components/Laravel/SecondaryButton.vue';
 
+const { proxy } = getCurrentInstance();
+const q3tohtml = proxy.q3tohtml;
 const page = usePage();
 const aliases = computed(() => page.props.aliases || []);
+const mddAliases = computed(() => aliases.value.filter(a => a.source === 'mdd_import'));
+const manualAliases = computed(() => aliases.value.filter(a => a.source !== 'mdd_import'));
 const showAddForm = ref(false);
 const newAlias = ref('');
 const processing = ref(false);
@@ -91,50 +95,69 @@ const cancelAddAlias = () => {
         </div>
 
         <div class="text-xs text-gray-400 mb-4">
-            Add alternative nicknames you've used in Defrag. Aliases help match your demos automatically and make you searchable by any of your past nicknames. Maximum 10 aliases per account.
+            Add alternative nicknames you've used in Defrag. Aliases help match your demos automatically and make you searchable by any of your past nicknames.
         </div>
 
-        <!-- Alias List -->
-        <div v-if="aliases && aliases.length > 0" class="space-y-2 mb-4">
-            <div
-                v-for="alias in aliases"
-                :key="alias.id"
-                class="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 transition"
-            >
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-white">{{ alias.alias }}</span>
-                    <span
-                        v-if="!alias.is_approved"
-                        class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded"
-                    >
-                        Pending Approval
-                    </span>
-                    <span
-                        v-else
-                        class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded"
-                    >
-                        Approved
-                    </span>
-                </div>
-                <button
-                    @click="deleteAlias(alias.id)"
-                    :disabled="processing"
-                    class="text-red-400 hover:text-red-300 transition disabled:opacity-50"
-                    title="Delete alias"
+        <!-- MDD Imported Aliases (read-only) -->
+        <div v-if="mddAliases.length > 0" class="mb-4">
+            <div class="text-[10px] text-blue-400 uppercase tracking-wider font-semibold mb-2">Imported from MDD ({{ mddAliases.length }})</div>
+            <div class="flex flex-wrap gap-1.5">
+                <div
+                    v-for="alias in mddAliases"
+                    :key="alias.id"
+                    class="px-2.5 py-1 rounded-lg bg-blue-500/5 border border-blue-500/15 text-sm text-gray-300 flex items-center gap-1.5"
+                    :title="alias.usage_count + ' records with this name'"
                 >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>
+                    <span v-html="q3tohtml(alias.alias_colored || alias.alias)"></span>
+                    <span v-if="alias.usage_count" class="text-[10px] text-gray-600 tabular-nums">({{ alias.usage_count }})</span>
+                </div>
             </div>
         </div>
 
-        <div v-else class="text-neutral-500 text-sm mb-4 py-6 text-center border border-dashed border-white/10 rounded-lg bg-black/10">
+        <!-- Manual Aliases (editable) -->
+        <div v-if="manualAliases.length > 0" class="mb-4">
+            <div class="text-[10px] text-indigo-400 uppercase tracking-wider font-semibold mb-2">Manual aliases ({{ manualAliases.length }})</div>
+            <div class="space-y-2">
+                <div
+                    v-for="alias in manualAliases"
+                    :key="alias.id"
+                    class="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 transition"
+                >
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-white">{{ alias.alias }}</span>
+                        <span
+                            v-if="!alias.is_approved"
+                            class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded"
+                        >
+                            Pending Approval
+                        </span>
+                        <span
+                            v-else
+                            class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded"
+                        >
+                            Approved
+                        </span>
+                    </div>
+                    <button
+                        @click="deleteAlias(alias.id)"
+                        :disabled="processing"
+                        class="text-red-400 hover:text-red-300 transition disabled:opacity-50"
+                        title="Delete alias"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="aliases.length === 0" class="text-neutral-500 text-sm mb-4 py-6 text-center border border-dashed border-white/10 rounded-lg bg-black/10">
             No aliases added yet
         </div>
 
         <!-- Add Alias Form -->
-        <div v-if="!showAddForm && aliases.length < 10">
+        <div v-if="!showAddForm">
             <button
                 @click="showAddForm = true"
                 class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition text-sm font-semibold"
@@ -168,8 +191,5 @@ const cancelAddAlias = () => {
             </div>
         </form>
 
-        <div v-if="aliases.length >= 10" class="mt-4 text-yellow-400 text-sm p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-            Maximum alias limit reached (10/10)
-        </div>
     </div>
 </template>
