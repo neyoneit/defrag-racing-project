@@ -23,6 +23,11 @@
         return `${yy}/${mm}/${dd}`;
     };
 
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[72px]' : 'w-[50px]';
+    });
+
     const bestrecordCountry = computed(() => {
         let country = props.record.user?.country ?? props.record.country;
         return (country == 'XX') ? '_404' : country;
@@ -118,7 +123,7 @@
                             @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
                             @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
                     </div>
-                    <div class="w-[72px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
                         <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                             {{ fmtDate(record.date_set) }}
                         </div>

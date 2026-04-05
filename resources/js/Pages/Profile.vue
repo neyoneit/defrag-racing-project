@@ -422,6 +422,12 @@
         if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
         return `${yy}/${mm}/${dd}`;
     };
+
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[56px]' : 'w-[50px]';
+    });
+
     // About Me
     const aboutMeEditing = ref(false);
     const aboutMeText = ref('');
@@ -2404,7 +2410,7 @@
                                     <div class="flex items-center gap-0.5 ml-auto mr-1">
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                        <div class="w-[56px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                     </div>
                                 </div>
                                 <Link v-for="record in vq3Records.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
@@ -2490,7 +2496,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="w-[56px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                                                 {{ fmtDate(record.date_set) }}
                                             </div>
@@ -2533,7 +2539,7 @@
                                     <div class="flex items-center gap-0.5 ml-auto mr-1">
                                         <div class="w-12 sm:w-20 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                        <div class="w-[56px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                     </div>
                                 </div>
                                 <Link v-for="record in cpmRecords.data" :key="record.id" :href="`/maps/${encodeURIComponent(record.mapname)}`" class="group relative flex items-center gap-3 py-2 px-4 -mx-4 -my-2 transition-all duration-300 border-b border-white/[0.02] last:border-0 overflow-hidden first:rounded-t-[10px] last:rounded-b-[10px]">
@@ -2619,7 +2625,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="w-[56px] flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity">
+                                        <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
                                             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                                                 {{ fmtDate(record.date_set) }}
                                             </div>

@@ -130,6 +130,11 @@
         return `${yy}/${mm}/${dd}`;
     };
 
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[62px]' : 'w-[50px]';
+    });
+
     const demoIdForYoutubeLink = computed(() => {
         if ((isOfflineRecord.value || isOnlineDemo.value) && props.record.demo) return props.record.demo.id;
         if (props.record.uploaded_demos && props.record.uploaded_demos.length > 0) return props.record.uploaded_demos[0].id;
@@ -849,7 +854,7 @@
         </div>
 
         <!-- Date -->
-        <div class="w-[62px] flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity text-right">
+        <div :class="[dateColWidth, 'flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity text-right']">
             <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                 {{ fmtDate(record.date_set) }}
             </div>

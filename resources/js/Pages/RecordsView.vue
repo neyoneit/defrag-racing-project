@@ -8,6 +8,11 @@
     const page = usePage();
     const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
+    const dateColWidth = computed(() => {
+        const fmt = page.props.dateFormat;
+        return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[72px]' : 'w-[50px]';
+    });
+
     const scoreTooltip = ref(null);
     const scoreTooltipStyle = computed(() => {
         if (!scoreTooltip.value?.el) return {};
@@ -201,7 +206,7 @@
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
                                     <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                     <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div class="w-[72px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                    <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                 </div>
                             </div>
                         </div>
@@ -235,7 +240,7 @@
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
                                     <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
                                     <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div class="w-[72px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Date</div>
+                                    <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                 </div>
                             </div>
                         </div>
