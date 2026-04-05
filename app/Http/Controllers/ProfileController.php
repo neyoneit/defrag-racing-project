@@ -163,11 +163,11 @@ class ProfileController extends Controller {
             $canSuggestAlias = false;
 
             if ($isOwnProfile) {
-                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->orderBy('created_at', 'desc')->get(['id', 'alias', 'is_approved', 'created_at']);
+                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->orderBy('usage_count', 'desc')->orderBy('created_at', 'desc')->get(['id', 'alias', 'alias_colored', 'usage_count', 'source', 'is_approved', 'created_at']);
                 $canManageAliases = true;
                 $aliasSuggestions = \App\Models\AliasSuggestion::where('user_id', $user->id)->where('status', 'pending')->with('suggestedBy:id,name,profile_photo_path')->orderBy('created_at', 'desc')->get();
             } else {
-                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->where('is_approved', true)->orderBy('created_at', 'desc')->get(['alias']);
+                $aliases = \App\Models\UserAlias::where('user_id', $user->id)->where('is_approved', true)->orderBy('usage_count', 'desc')->orderBy('created_at', 'desc')->get(['alias', 'alias_colored', 'usage_count', 'source']);
                 if (auth()->check()) {
                     $canSuggestAlias = auth()->user()->canReportDemos();
                 }
@@ -392,7 +392,7 @@ class ProfileController extends Controller {
             ->with('total_maps', $totalMaps)
             ->with('played_maps_count', $playedMapsCount)
             ->with('hasProfile', true)
-            ->with('aliases', [])
+            ->with('aliases', \App\Models\UserAlias::where('mdd_id', $userId)->where('is_approved', true)->orderBy('usage_count', 'desc')->get(['alias', 'alias_colored', 'usage_count', 'source']))
             ->with('alias_suggestions', [])
             ->with('can_suggest_alias', false)
             ->with('can_manage_aliases', false)

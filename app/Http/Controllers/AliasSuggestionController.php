@@ -34,10 +34,10 @@ class AliasSuggestionController extends Controller
             'alias.regex' => 'Aliases cannot contain Quake 3 color codes (^).',
         ]);
 
-        // Check if alias already exists globally
-        if (UserAlias::where('alias', $request->alias)->exists()) {
+        // Check if alias already exists for this user
+        if ($user->mdd_id && UserAlias::where('mdd_id', $user->mdd_id)->where('alias', $request->alias)->exists()) {
             throw ValidationException::withMessages([
-                'alias' => ['This alias is already taken by another user.'],
+                'alias' => ['This alias already exists on this user\'s profile.'],
             ]);
         }
 
@@ -88,24 +88,23 @@ class AliasSuggestionController extends Controller
             return back()->with('error', 'This suggestion has already been processed.');
         }
 
-        // Check if user has reached alias limit
-        if (Auth::user()->aliases()->count() >= 10) {
-            return back()->with('error', 'Maximum 10 aliases allowed per account.');
-        }
+        $user = Auth::user();
 
-        // Check if alias is still available
-        if (UserAlias::where('alias', $suggestion->alias)->exists()) {
+        // Check if alias already exists for this user's mdd_id
+        if ($user->mdd_id && UserAlias::where('mdd_id', $user->mdd_id)->where('alias', $suggestion->alias)->exists()) {
             $suggestion->update(['status' => 'rejected']);
-            return back()->with('error', 'This alias is no longer available.');
+            return back()->with('error', 'This alias already exists on your profile.');
         }
 
         // Check if user is restricted (requires approval)
-        $isApproved = !Auth::user()->alias_restricted;
+        $isApproved = !$user->alias_restricted;
 
         // Create the alias
         UserAlias::create([
             'user_id' => Auth::id(),
+            'mdd_id' => $user->mdd_id,
             'alias' => $suggestion->alias,
+            'source' => 'manual',
             'is_approved' => $isApproved,
         ]);
 

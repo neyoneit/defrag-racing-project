@@ -212,6 +212,14 @@ class SettingsController extends Controller
             'mdd_id'    =>  $id
         ]);
 
+        // Ensure mdd_profiles record exists, link user_id
+        $mddProfile = \App\Models\MddProfile::find($id);
+        if ($mddProfile) {
+            $mddProfile->update(['user_id' => $request->user()->id]);
+        } else {
+            \App\Jobs\ScrapeProfile::dispatch($id);
+        }
+
         Record::where('mdd_id', $id)->update([
             'user_id'   =>  $request->user()->id
         ]);

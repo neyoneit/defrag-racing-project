@@ -45,9 +45,22 @@ class UserAliasResource extends Resource
                             ->label('Alias')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
                             ->regex('/^[^^]+$/')
                             ->helperText('Aliases cannot contain Quake 3 color codes (^).'),
+
+                        Forms\Components\TextInput::make('mdd_id')
+                            ->label('MDD ID')
+                            ->numeric()
+                            ->nullable(),
+
+                        Forms\Components\TextInput::make('alias_colored')
+                            ->label('Colored Alias')
+                            ->nullable(),
+
+                        Forms\Components\TextInput::make('source')
+                            ->label('Source')
+                            ->default('manual')
+                            ->disabled(),
 
                         Forms\Components\Toggle::make('is_approved')
                             ->label('Approved')
@@ -87,6 +100,22 @@ class UserAliasResource extends Resource
                     ->label('Alias')
                     ->searchable()
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('mdd_id')
+                    ->label('MDD ID')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('source')
+                    ->label('Source')
+                    ->badge()
+                    ->color(fn ($state) => $state === 'mdd_import' ? 'info' : 'gray')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('usage_count')
+                    ->label('Usage')
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_approved')
                     ->label('Approved')

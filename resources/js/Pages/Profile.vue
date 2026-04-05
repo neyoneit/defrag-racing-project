@@ -2304,10 +2304,12 @@
                         <div v-if="aliases && aliases.length > 0" class="flex flex-wrap gap-2">
                             <div
                                 v-for="alias in aliases"
-                                :key="alias.alias"
+                                :key="alias.alias_colored || alias.alias"
                                 class="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-sm text-indigo-300 flex items-center gap-2"
+                                :title="alias.usage_count ? alias.usage_count + ' records with this name' : ''"
                             >
-                                <span v-html="q3tohtml(alias.alias)"></span>
+                                <span v-html="q3tohtml(alias.alias_colored || alias.alias)"></span>
+                                <span v-if="alias.usage_count" class="text-[10px] text-gray-500 tabular-nums">({{ alias.usage_count }})</span>
                                 <button
                                     v-if="$page.props.auth.user && user?.id && $page.props.auth.user.id !== user.id"
                                     @click="reportAlias(alias)"
