@@ -376,6 +376,14 @@ const customizeSections = [
     { id: 'customize-layout', label: 'Profile Layout' },
 ];
 
+const globalCustomizeSections = [
+    { id: 'gc-map-view', label: 'Map View Defaults' },
+    { id: 'gc-physics-order', label: 'Physics Order' },
+    { id: 'gc-date-format', label: 'Date Format' },
+    { id: 'gc-hide-stats', label: 'Hide Stat Boxes' },
+    { id: 'gc-hide-sections', label: 'Hide Sections' },
+];
+
 const switchTab = (tabId) => {
     activeTab.value = tabId;
     const url = new URL(window.location.href);
@@ -960,8 +968,36 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                                 {{ sub.label }}
                                             </button>
                                         </template>
+                                        <div v-if="subTab.id === 'customize'" class="my-1.5 border-t border-white/10 mx-1"></div>
                                     </template>
                                 </div>
+                                </div>
+                            </template>
+
+                            <!-- Global Customize with sub-sections -->
+                            <template v-else-if="tab.id === 'global-customize'">
+                                <div :class="['rounded-lg transition-all', activeTab === 'global-customize' ? 'bg-white/[0.07] border border-white/10' : '']">
+                                    <button
+                                        @click="switchTab('global-customize')"
+                                        :class="[
+                                            'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all text-left',
+                                            activeTab === 'global-customize'
+                                                ? 'bg-blue-500/20 text-white'
+                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                        ]"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" :d="tab.icon" />
+                                        </svg>
+                                        {{ tab.label }}
+                                    </button>
+                                    <div v-if="activeTab === 'global-customize'" class="ml-3 pl-3 border-l border-white/15 space-y-0.5 pb-1">
+                                        <button v-for="sub in globalCustomizeSections" :key="sub.id"
+                                            @click="scrollToSection(sub.id)"
+                                            class="w-full text-left pl-5 pr-3 py-1 rounded-md text-xs transition-all text-gray-300 hover:text-white hover:bg-white/5">
+                                            {{ sub.label }}
+                                        </button>
+                                    </div>
                                 </div>
                             </template>
 
@@ -1011,8 +1047,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                 </div>
             </a>
 
-            <div class="grid grid-cols-3 gap-4">
-                <!-- Profile Card -->
+            <div class="space-y-4">
+                <!-- Profile Card (horizontal) -->
                 <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10">
                     <div class="p-4">
                         <div class="flex items-center justify-between mb-4">
@@ -1037,7 +1073,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
                         </div>
 
-                        <form @submit.prevent="updateProfile" class="space-y-3" data-lpignore="true" data-1p-ignore data-bwignore>
+                        <form @submit.prevent="updateProfile" class="grid grid-cols-2 md:grid-cols-4 gap-3" data-lpignore="true" data-1p-ignore data-bwignore>
                             <div>
                                 <InputLabel for="username" value="Username" />
                                 <TextInput
@@ -1080,12 +1116,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                     </div>
                 </div>
 
-                <!-- Player Aliases -->
-                <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto">
-                    <ManageAliasesForm :user="user" />
-                </div>
-
-                <!-- Connections -->
+                <!-- Connections (full width) -->
                 <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                     <UpdateSocialMediaForm :user="user" />
                 </div>
@@ -1194,6 +1225,41 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <SecondaryButton type="button" @click="cancelBackgroundCrop">
                                 Cancel
                             </SecondaryButton>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Player Aliases -->
+            <div v-if="isVerified" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden max-h-[400px] overflow-y-auto mt-4">
+                <ManageAliasesForm :user="user" />
+            </div>
+
+            <!-- About Me Card -->
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 mt-4">
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/30 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-amber-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">About Me</h2>
+                            <p class="text-xs text-gray-500">Visible on hover over your name on your profile. All changes reviewed by moderators.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <textarea v-model="aboutMeForm.content"
+                            class="w-full bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
+                            rows="3" maxlength="500"
+                            placeholder="Write something about yourself..."></textarea>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-[10px] text-gray-600">{{ aboutMeForm.content?.length || 0 }}/500</span>
+                            <button @click="submitAboutMeSettings" :disabled="aboutMeForm.processing || !aboutMeForm.content?.trim()"
+                                class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded-lg transition-colors">
+                                {{ aboutMeForm.processing ? 'Submitting...' : 'Submit for Review' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1905,7 +1971,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Map View Defaults Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
+            <div id="gc-map-view" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -1958,7 +2024,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
             </div>
 
             <!-- Physics Column Order Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
+            <div id="gc-physics-order" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -2005,38 +2071,8 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                 </div>
             </div>
 
-            <!-- About Me Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
-                <div class="p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/30 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-amber-400">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 class="text-sm font-bold text-white">About Me</h2>
-                            <p class="text-xs text-gray-500">Visible on hover over your name on your profile. All changes reviewed by moderators.</p>
-                        </div>
-                    </div>
-                    <div>
-                        <textarea v-model="aboutMeForm.content"
-                            class="w-full bg-gray-800/60 border border-gray-700/50 rounded-lg p-3 text-sm text-white placeholder-gray-600 focus:border-amber-500/50 focus:outline-none resize-none"
-                            rows="3" maxlength="500"
-                            placeholder="Write something about yourself..."></textarea>
-                        <div class="flex items-center justify-between mt-2">
-                            <span class="text-[10px] text-gray-600">{{ aboutMeForm.content?.length || 0 }}/500</span>
-                            <button @click="submitAboutMeSettings" :disabled="aboutMeForm.processing || !aboutMeForm.content?.trim()"
-                                class="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs font-bold rounded-lg transition-colors">
-                                {{ aboutMeForm.processing ? 'Submitting...' : 'Submit for Review' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Date Format Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
+            <div id="gc-date-format" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
                 <div class="p-4">
                     <div class="flex items-center gap-2 mb-3">
                         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
@@ -2079,7 +2115,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
             </div>
 
             <!-- Hide Stat Boxes Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
+            <div id="gc-hide-stats" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">
@@ -2118,7 +2154,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
             </div>
 
             <!-- Hide Profile Sections Card -->
-            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
+            <div id="gc-hide-sections" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500 md:col-span-2">
                 <div class="p-4">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center gap-2">

@@ -1,6 +1,6 @@
 <script setup>
     import { Link, usePage } from '@inertiajs/vue3';
-    import { computed, ref } from 'vue';
+    import { computed, ref, onMounted, onUnmounted } from 'vue';
 
     const props = defineProps({
         record: Object
@@ -10,6 +10,13 @@
     const page = usePage();
     const isLoggedIn = computed(() => !!page.props.auth?.user);
 
+    const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1280);
+    const onResize = () => { windowWidth.value = window.innerWidth; };
+    onMounted(() => window.addEventListener('resize', onResize));
+    onUnmounted(() => window.removeEventListener('resize', onResize));
+
+    const isCompact = computed(() => windowWidth.value < 500);
+
     const fmtDate = (dateStr) => {
         const d = new Date(dateStr);
         const dd = String(d.getDate()).padStart(2, '0');
@@ -17,6 +24,8 @@
         const yy = String(d.getFullYear()).slice(-2);
         const yyyy = String(d.getFullYear());
         const fmt = page.props.dateFormat;
+        // Under 500px, always use short year
+        if (isCompact.value) return `${dd}/${mm}/${yy}`;
         if (fmt === 'dmY') return `${dd}/${mm}/${yyyy}`;
         if (fmt === 'Ymd') return `${yyyy}/${mm}/${dd}`;
         if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
@@ -24,6 +33,7 @@
     };
 
     const dateColWidth = computed(() => {
+        if (isCompact.value) return 'w-[50px]';
         const fmt = page.props.dateFormat;
         return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[72px]' : 'w-[50px]';
     });
@@ -110,20 +120,20 @@
             <!-- Map + Time + Score + Date -->
             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                 <!-- Map Name -->
-                <div class="w-28 sm:w-40 flex-shrink-0">
+                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0">
                     <div class="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-all truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ record.mapname }}</div>
                 </div>
                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
-                    <div class="w-[80px] text-right">
+                    <div class="w-[60px] min-[500px]:w-[80px] text-right">
                         <div class="text-xs sm:text-sm font-black tabular-nums text-white leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,1)]">{{ formatTime(record.time) }}</div>
                     </div>
-                    <div class="w-8 sm:w-10 text-center flex-shrink-0">
+                    <div class="hidden sm:block w-8 sm:w-10 text-center flex-shrink-0">
                         <div v-if="record.map_score"
                             class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
                             @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
                             @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
                     </div>
-                    <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']">
+                    <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']" v-if="windowWidth >= 400">
                         <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
                             {{ fmtDate(record.date_set) }}
                         </div>
