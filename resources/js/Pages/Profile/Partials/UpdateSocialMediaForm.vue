@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <form @submit.prevent="updateSocialMediaInformation" class="space-y-3">
+        <form @submit.prevent="updateSocialMediaInformation" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div>
                 <InputLabel for="twitch" value="Twitch" />
                 <div v-if="user.twitch_id" class="mt-1 flex items-center gap-2">

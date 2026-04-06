@@ -871,6 +871,9 @@
         }
     };
 
+    // Aliases collapsed by default
+    const aliasesExpanded = ref(false);
+
     // Alias reporting
     const showReportModal = ref(false);
     const reportingAlias = ref(null);
@@ -2228,12 +2231,13 @@
             <div v-if="showSection('known_aliases') && ((aliases && aliases.length > 0) || can_suggest_alias || (alias_suggestions && alias_suggestions.length > 0))" class="mb-6" :style="{ order: sectionOrder('known_aliases') }">
                 <div>
                     <div class="bg-black/40 backdrop-blur-sm rounded-xl p-4 shadow-2xl border border-white/5">
-                        <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center justify-between" :class="aliasesExpanded ? 'mb-3' : ''">
                             <h3 class="text-lg font-bold text-white flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5 text-indigo-400">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                                 </svg>
                                 Known Aliases
+                                <span class="text-sm font-normal text-gray-500">({{ aliases?.length || 0 }})</span>
                             </h3>
                             <div class="flex items-center gap-2">
                                 <!-- Edit button (own profile) -->
@@ -2258,9 +2262,21 @@
                                     </svg>
                                     Suggest Alias
                                 </button>
+                                <!-- Expand/Collapse button -->
+                                <button
+                                    v-if="aliases && aliases.length > 5"
+                                    @click="aliasesExpanded = !aliasesExpanded"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                                    :class="aliasesExpanded ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/40 animate-pulse'"
+                                >
+                                    <svg class="w-4 h-4 transition-transform duration-300" :class="aliasesExpanded ? 'rotate-180' : ''" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                                    {{ aliasesExpanded ? 'Less' : 'Show all' }}
+                                </button>
                             </div>
                         </div>
-                        <p class="text-xs text-gray-400 mb-4">Aliases are alternative nicknames this player has used in Defrag. They help match uploaded demos and make the player searchable by any of their past names.</p>
+                        <div v-show="aliasesExpanded">
+                        <p class="text-xs text-gray-400 mb-3">Aliases are alternative nicknames this player has used in Defrag. They help match uploaded demos and make the player searchable by any of their past names.</p>
+                        </div>
 
                         <!-- Pending Suggestions (only visible on own profile) -->
                         <div v-if="alias_suggestions && alias_suggestions.length > 0" class="mb-4">
@@ -2301,7 +2317,10 @@
                         </div>
 
                         <!-- Approved Aliases -->
-                        <div v-if="aliases && aliases.length > 0" class="flex flex-wrap gap-2">
+                        <div v-if="aliases && aliases.length > 0" class="relative" :class="!aliasesExpanded ? 'mt-3' : ''">
+                        <!-- Fade overlay when collapsed -->
+                        <div v-if="!aliasesExpanded && aliases.length > 5" class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none rounded-b-lg"></div>
+                        <div class="flex flex-wrap gap-2 overflow-hidden transition-all duration-300" :style="aliasesExpanded ? '' : 'max-height: 38px'">
                             <div
                                 v-for="alias in aliases"
                                 :key="alias.alias_colored || alias.alias"
@@ -2322,9 +2341,10 @@
                                 </button>
                             </div>
                         </div>
+                        </div>
 
                         <!-- No aliases message -->
-                        <div v-else class="text-center py-4">
+                        <div v-else-if="!aliases || aliases.length === 0" class="text-center py-4">
                             <p class="text-gray-500 text-sm">No aliases yet</p>
                         </div>
                     </div>

@@ -9,9 +9,25 @@
     const cpmFirst = computed(() => page.props.physicsOrder === 'cpm_first');
 
     const dateColWidth = computed(() => {
+        if (windowWidth.value < 500) return 'w-[50px]';
         const fmt = page.props.dateFormat;
         return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[72px]' : 'w-[50px]';
     });
+
+    // Resolution debug indicator
+    const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 0);
+    const breakpointLabel = computed(() => {
+        const w = windowWidth.value;
+        if (w >= 1536) return `2xl (${w}px)`;
+        if (w >= 1280) return `xl (${w}px)`;
+        if (w >= 1024) return `lg (${w}px)`;
+        if (w >= 768) return `md (${w}px)`;
+        if (w >= 640) return `sm (${w}px)`;
+        return `xs (${w}px)`;
+    });
+    if (typeof window !== 'undefined') {
+        window.addEventListener('resize', () => { windowWidth.value = window.innerWidth; });
+    }
 
     const scoreTooltip = ref(null);
     const scoreTooltipStyle = computed(() => {
@@ -86,6 +102,11 @@
 <template>
     <div class="pb-4">
         <Head title="Records" />
+
+        <!-- Resolution Debug Indicator -->
+        <div class="fixed bottom-2 right-2 z-[99999] bg-black/80 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-mono text-green-400 pointer-events-none">
+            {{ breakpointLabel }}
+        </div>
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96">
@@ -202,11 +223,11 @@
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
                             <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
-                                    <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
+                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                 </div>
                             </div>
                         </div>
@@ -236,11 +257,11 @@
                             <div class="w-5 sm:w-8 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold -ml-3">#</div>
                             <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                             <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                                <div class="w-28 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
+                                <div class="w-16 min-[500px]:w-20 sm:w-40 flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-left">Map</div>
                                 <div class="flex items-center gap-0.5 ml-auto -mr-3">
-                                    <div class="w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
-                                    <div class="w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
-                                    <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                    <div class="w-[60px] min-[500px]:w-[80px] text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right">Time</div>
+                                    <div class="hidden sm:block w-8 sm:w-10 flex-shrink-0 text-center text-[10px] text-gray-400 uppercase tracking-wider font-semibold" style="padding-left: 5px">Score</div>
+                                    <div v-if="windowWidth >= 400" :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                                 </div>
                             </div>
                         </div>
