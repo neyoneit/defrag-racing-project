@@ -39,7 +39,7 @@
 
     const physics = {
         'vq3': { value: 'VQ3', color: 'bg-blue-600' },
-        'cpm': { value: 'CPM', color: 'bg-green-600' },
+        'cpm': { value: 'CPM', color: 'bg-purple-600' },
     };
 
     const weapons = [
@@ -92,6 +92,7 @@
     ];
 
     const form = useForm({
+        sort: props.queries?.sort ?? 'newest',
         search: props.queries?.search ?? '',
         author: props.queries?.author ?? '',
         difficulty: props.queries?.difficulty ?? [],
@@ -116,6 +117,7 @@
     };
 
     const resetFilters = () => {
+        form.sort = 'newest';
         form.search = '';
         form.author = '';
         form.difficulty = [];
@@ -264,8 +266,21 @@
         <!-- Scrollable sections -->
         <div class="sidebar-body">
 
-            <!-- Search inputs (always visible, no accordion) -->
+            <!-- Search + Sort (always visible, no accordion) -->
             <div class="px-3 py-2.5 space-y-2 border-b border-white/5">
+                <div class="flex gap-1">
+                    <button v-for="opt in [
+                        { value: 'newest', label: 'Newest' },
+                        { value: 'oldest', label: 'Oldest' },
+                        { value: 'most_records', label: 'Popular' },
+                        { value: 'name_asc', label: 'A-Z' },
+                    ]" :key="opt.value"
+                        @click="form.sort = opt.value"
+                        :class="form.sort === opt.value ? 'bg-blue-500/30 border-blue-400/50 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'"
+                        class="flex-1 py-1 rounded-md border text-[11px] font-semibold transition-all text-center">
+                        {{ opt.label }}
+                    </button>
+                </div>
                 <TextInput type="text" v-model="form.search" class="block w-full" placeholder="Map name..." v-on:keyup.enter="onFilterSubmit" />
                 <TextInput type="text" v-model="form.author" class="block w-full" placeholder="Author..." v-on:keyup.enter="onFilterSubmit" />
             </div>
@@ -273,18 +288,9 @@
             <!-- Difficulty, Gametype & Physics -->
             <div class="sidebar-section">
                 <div class="space-y-2 px-3 py-2">
-                    <div>
-                        <label class="field-label">Difficulty</label>
-                        <SpecialRadio :options="difficulties" v-model="form.difficulty" :multi="true" :values="form.difficulty" />
-                    </div>
-                    <div>
-                        <label class="field-label">Gametype</label>
-                        <SpecialRadio :options="types" v-model="form.gametype" :multi="true" :values="form.gametype" />
-                    </div>
-                    <div>
-                        <label class="field-label">Physics</label>
-                        <SpecialRadio :options="physics" v-model="form.physics" :values="form.physics" :multi="true" />
-                    </div>
+                    <SpecialRadio :options="difficulties" v-model="form.difficulty" :multi="true" :values="form.difficulty" />
+                    <SpecialRadio :options="types" v-model="form.gametype" :multi="true" :values="form.gametype" />
+                    <SpecialRadio :options="physics" v-model="form.physics" :values="form.physics" :multi="true" />
                 </div>
             </div>
 
@@ -438,7 +444,8 @@
 
 /* Sections */
 .sidebar-section {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0 0.5rem;
 }
 .sidebar-section-last {
     border-bottom: none;
@@ -450,16 +457,21 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.375rem 0.75rem;
+    margin: 0.125rem 0;
     font-size: 0.8125rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.75);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 0.5rem;
     transition: all 0.15s;
     cursor: pointer;
 }
 .accordion-btn:hover {
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 1);
 }
 
 /* Chevron */
@@ -479,7 +491,12 @@
 
 /* Accordion content */
 .accordion-content {
-    padding: 0 1rem 1rem;
+    padding: 0.5rem 0.75rem 0.75rem;
+    margin: 0 0 0.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: none;
+    border-radius: 0 0 0.5rem 0.5rem;
 }
 
 /* Field labels */

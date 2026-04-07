@@ -50,7 +50,7 @@
         let classes = {
             'rounded-l-md': (index == 0),
             'rounded-r-md border-r': (index == Object.keys(props.options).length - 1),
-            'bg-grayop-900 hover:bg-grayop-800': !values.value.includes(key)
+            'bg-gray-800/60 hover:bg-gray-700/60': !values.value.includes(key)
         }
 
         let color = props.options[key]['color'] ?? 'bg-blue-600'
@@ -62,10 +62,10 @@
 </script>
 
 <template>
-    <div class="sm:flex">
-        <div v-for="(option, key, index) in options" class="flex-grow text-center">
+    <div class="flex">
+        <div v-for="(option, key, index) in options" class="flex-1 text-center min-w-0">
             <div
-                class="cursor-pointer border-l px-2 py-1 border-y border-grayop-700 text-gray-300 hover:text-gray-100 shadow-sm text-xs"
+                class="cursor-pointer border-l px-1.5 py-1 border-y border-white/10 text-gray-400 hover:text-gray-200 text-[11px]"
                 :class="getClasses(key, index)"
                 @click="onClick(key)"
                 :key="key"
