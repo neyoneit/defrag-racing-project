@@ -46,7 +46,8 @@ class RatingSettings extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        $user = auth()->user();
+        return $user?->isAdmin() || $user?->hasModeratorPermission('rating_settings');
     }
 
     public function mount(): void

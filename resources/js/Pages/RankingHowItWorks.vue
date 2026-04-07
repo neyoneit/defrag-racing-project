@@ -83,6 +83,16 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 Back to Rankings
             </Link>
 
+            <!-- WIP Banner -->
+            <div class="bg-red-600 border-4 border-red-800 rounded-xl px-4 py-4 text-center mb-8">
+                <div class="flex items-center justify-center gap-3 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                    <span class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">Work in Progress</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                </div>
+                <p class="text-white/90 text-sm sm:text-base font-semibold">The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.</p>
+            </div>
+
             <h1 class="text-4xl md:text-5xl font-black text-gray-200 mb-2">How Rankings Work</h1>
             <p class="text-gray-500 text-sm mb-10">A complete breakdown of the ranking algorithm, step by step.</p>
 
@@ -95,11 +105,12 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                     <a href="#reltime" class="text-blue-400 hover:text-blue-300">3. Relative Time (reltime)</a>
                     <a href="#base-score" class="text-blue-400 hover:text-blue-300">4. Base Map Score</a>
                     <a href="#multiplier" class="text-blue-400 hover:text-blue-300">5. Map Multiplier</a>
-                    <a href="#final-score" class="text-blue-400 hover:text-blue-300">6. Final Map Score</a>
-                    <a href="#player-rating" class="text-blue-400 hover:text-blue-300">7. Player Rating</a>
-                    <a href="#categories" class="text-blue-400 hover:text-blue-300">8. Categories</a>
-                    <a href="#updates" class="text-blue-400 hover:text-blue-300">9. Real-time Updates</a>
-                    <a href="#full-example" class="text-blue-400 hover:text-blue-300">10. Full Example</a>
+                    <a href="#rank-multiplier" class="text-blue-400 hover:text-blue-300">6. Rank Multiplier</a>
+                    <a href="#final-score" class="text-blue-400 hover:text-blue-300">7. Final Map Score</a>
+                    <a href="#player-rating" class="text-blue-400 hover:text-blue-300">8. Player Rating</a>
+                    <a href="#categories" class="text-blue-400 hover:text-blue-300">9. Categories</a>
+                    <a href="#updates" class="text-blue-400 hover:text-blue-300">10. Real-time Updates</a>
+                    <a href="#full-example" class="text-blue-400 hover:text-blue-300">11. Full Example</a>
                 </div>
             </div>
 
@@ -112,7 +123,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
                         <div class="text-sm font-bold text-green-400 mb-1">1. Relative Time</div>
-                        <div class="text-xs text-gray-400">Your time is compared to the world record to get a ratio (reltime).</div>
+                        <div class="text-xs text-gray-400">Your time is compared to the fastest time by another player to get a ratio (reltime).</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
                         <div class="text-sm font-bold text-yellow-400 mb-1">2. Base Score</div>
@@ -159,36 +170,43 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
                     <span class="text-blue-400 text-lg font-mono">3.</span> Relative Time (reltime)
                 </h2>
-                <p class="mb-3">Reltime is the ratio of your time to the world record time on that map:</p>
+                <p class="mb-3">Reltime is the ratio of your time to the <strong class="text-white">fastest time set by someone else</strong>:</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-lg text-white mb-3">
-                    reltime = your_time / wr_time
+                    reltime = your_time / fastest_other_time
+                </div>
+                <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300 mb-4">
+                    <strong>Key detail:</strong> You are always compared to the best time by a <em>different player</em>. If you hold the WR, your reltime is calculated against the 2nd place time - you are never compared to yourself.
                 </div>
                 <div class="space-y-2 text-sm">
                     <div class="flex items-center gap-3">
+                        <span class="bg-green-600/20 text-green-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">&lt; 1.000</span>
+                        <span>You are faster than the best time by anyone else (you hold WR)</span>
+                    </div>
+                    <div class="flex items-center gap-3">
                         <span class="bg-green-600/20 text-green-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">1.000</span>
-                        <span>You ARE the world record holder</span>
+                        <span>You matched the fastest other player exactly</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">1.233</span>
-                        <span>Your time is 23.3% slower than WR</span>
+                        <span>Your time is 23.3% slower than the fastest other time</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-red-600/20 text-red-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">2.500</span>
-                        <span>Your time is 2.5x the WR - very slow relative to WR</span>
+                        <span>Your time is 2.5x the fastest other time</span>
                     </div>
                 </div>
 
                 <div class="mt-4 bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (non-WR player)</div>
                     <div class="text-sm space-y-1">
-                        <div>WR time: <span class="text-white font-mono">{{ (exampleWR / 1000).toFixed(3) }}s</span></div>
+                        <div>WR time (other player): <span class="text-white font-mono">{{ (exampleWR / 1000).toFixed(3) }}s</span></div>
                         <div>Your time: <span class="text-white font-mono">{{ (exampleTime / 1000).toFixed(3) }}s</span></div>
                         <div>reltime = {{ (exampleTime / 1000).toFixed(3) }} / {{ (exampleWR / 1000).toFixed(3) }} = <span class="text-yellow-400 font-mono font-bold">{{ exampleReltime.toFixed(4) }}</span></div>
                     </div>
                 </div>
 
                 <div class="mt-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-300">
-                    <strong>Note:</strong> The lower the reltime, the better. A reltime of 1.0 means you matched the WR exactly.
+                    <strong>Note:</strong> The lower the reltime, the better. A reltime below 1.0 means you are the WR holder and faster than everyone else.
                 </div>
             </section>
 

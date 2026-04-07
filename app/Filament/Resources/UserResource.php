@@ -90,6 +90,7 @@ class UserResource extends Resource
                                 'creator_claim_disputes' => 'Creator Claim Disputes',
                                 'about_me' => 'About Me (moderation)',
                                 'rating_breakdown' => 'Rating Breakdown (view on profiles)',
+                                'rating_settings' => 'Rating Settings (view/edit)',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),

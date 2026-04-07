@@ -15,8 +15,9 @@ class MapFilters {
     public function filter(Request $request) {
         $maps = Map::select('id', 'name', 'author', 'pk3', 'thumbnail', 'physics', 'gametype', 'weapons', 'items', 'functions', 'is_nsfw', 'date_added', 'created_at', 'cpm_average', 'vq3_average')
             ->withAvg('difficultyRatings', 'rating')
-            ->withCount('difficultyRatings')
-            ->orderBy('date_added', 'DESC');
+            ->withCount('difficultyRatings');
+
+        $maps = $this->applySort($request, $maps);
 
         $maps = $this->search($request, $maps);
         $maps = $this->author($request, $maps);
@@ -49,6 +50,29 @@ class MapFilters {
             'query'     =>      $maps,
             'data'      =>      $this->queries
         ];
+    }
+
+    private function applySort(Request $request, $maps) {
+        $sort = $request->input('sort', 'newest');
+        $this->queries['sort'] = $sort;
+
+        switch ($sort) {
+            case 'oldest':
+                $maps = $maps->orderBy('date_added', 'ASC')->orderBy('id', 'ASC');
+                break;
+            case 'most_records':
+                $maps = $maps->withCount('records')->orderBy('records_count', 'DESC');
+                break;
+            case 'name_asc':
+                $maps = $maps->orderBy('name', 'ASC');
+                break;
+            case 'newest':
+            default:
+                $maps = $maps->orderBy('date_added', 'DESC')->orderBy('id', 'DESC');
+                break;
+        }
+
+        return $maps;
     }
 
     private function buildFuzzyLike(string $input): string {
