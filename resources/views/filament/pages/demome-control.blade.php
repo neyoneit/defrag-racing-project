@@ -233,7 +233,9 @@
                     type="text"
                     wire:model="discordRestartMessageId"
                     placeholder="Discord message ID (e.g. 1492601473450774711)"
-                    class="flex-1 px-3 py-2 bg-gray-800 rounded text-sm font-mono text-gray-300 border border-gray-700 focus:border-primary-500 focus:outline-none"
+                    style="flex: 1; padding: 8px 12px; background: #1f2937; color: #e5e7eb; border: 1px solid #374151; border-radius: 6px; font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; outline: none;"
+                    onfocus="this.style.borderColor='#ea580c'"
+                    onblur="this.style.borderColor='#374151'"
                 />
                 <x-filament::button wire:click="setDiscordRestartMarker" color="warning" icon="heroicon-o-arrow-uturn-left">
                     Set Marker
