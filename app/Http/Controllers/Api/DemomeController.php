@@ -354,8 +354,8 @@ class DemomeController extends Controller
 
         // No placeholder found - create fresh record (backward compat for legacy / missed start calls)
         $video = RenderedVideo::create([
-            'map_name' => $demo->map_name,
-            'player_name' => $demo->player_name,
+            'map_name' => $demo->map_name ?? 'Unknown',
+            'player_name' => $demo->player_name ?? 'Unknown',
             'physics' => $demo->physics,
             'time_ms' => $demo->time_ms,
             'gametype' => $demo->gametype,
@@ -365,6 +365,8 @@ class DemomeController extends Controller
             'requested_by' => $validated['requested_by'] ?? null,
             'status' => 'completed',
             'priority' => 3,
+            'demo_url' => 'discord://' . $demo->id,
+            'demo_filename' => $demo->original_filename,
             'youtube_url' => $validated['youtube_url'],
             'youtube_video_id' => $youtubeVideoId,
             'render_duration_seconds' => $validated['render_duration_seconds'] ?? null,
@@ -396,6 +398,14 @@ class DemomeController extends Controller
         $validated = $request->validate([
             'md5_hash' => 'required|string|size:32',
             'requested_by' => 'nullable|string',
+            // Metadata from bot (synchronously parsed via DemoCleaner3 in upload-demo).
+            // Needed because ProcessDemoJob runs async and demo->map_name may still be null
+            // when start-discord-render is called milliseconds after upload-demo.
+            'map_name' => 'nullable|string',
+            'player_name' => 'nullable|string',
+            'physics' => 'nullable|string',
+            'time_ms' => 'nullable|integer',
+            'gametype' => 'nullable|string',
         ]);
 
         $demo = UploadedDemo::where('file_hash', $validated['md5_hash'])
@@ -406,6 +416,14 @@ class DemomeController extends Controller
             Log::warning('startDiscordRender: no demo found for hash', ['md5_hash' => $validated['md5_hash']]);
             return response()->json(['success' => false, 'error' => 'No demo found for this hash'], 404);
         }
+
+        // Merge bot-provided metadata with demo fields (demo fields may still be null
+        // if ProcessDemoJob hasn't finished yet). Provide hard fallbacks for NOT NULL cols.
+        $mapName = $validated['map_name'] ?? $demo->map_name ?? 'Pending';
+        $playerName = $validated['player_name'] ?? $demo->player_name ?? 'Pending';
+        $physics = $validated['physics'] ?? $demo->physics;
+        $timeMs = $validated['time_ms'] ?? $demo->time_ms;
+        $gametype = $validated['gametype'] ?? $demo->gametype;
 
         // If there's already a rendering placeholder for this demo, reuse it (bot retry scenario).
         $existing = RenderedVideo::where('demo_id', $demo->id)
@@ -418,23 +436,33 @@ class DemomeController extends Controller
         if ($existing) {
             $existing->update([
                 'status' => 'rendering',
+                'map_name' => $mapName,
+                'player_name' => $playerName,
+                'physics' => $physics,
+                'time_ms' => $timeMs,
+                'gametype' => $gametype,
+                'failure_reason' => null,
                 'updated_at' => now(),
             ]);
             return response()->json(['success' => true, 'id' => $existing->id, 'reused' => true]);
         }
 
         $video = RenderedVideo::create([
-            'map_name' => $demo->map_name,
-            'player_name' => $demo->player_name,
-            'physics' => $demo->physics,
-            'time_ms' => $demo->time_ms,
-            'gametype' => $demo->gametype,
+            'map_name' => $mapName,
+            'player_name' => $playerName,
+            'physics' => $physics,
+            'time_ms' => $timeMs,
+            'gametype' => $gametype,
             'record_id' => $demo->record_id,
             'demo_id' => $demo->id,
             'source' => 'discord',
             'requested_by' => $validated['requested_by'] ?? null,
             'status' => 'rendering',
             'priority' => 3,
+            // demo_url is NOT NULL in the schema but Discord demos don't have a URL
+            // (they were uploaded directly). Use a placeholder that identifies the source.
+            'demo_url' => 'discord://' . $demo->id,
+            'demo_filename' => $demo->original_filename,
             'is_visible' => false,
             'user_id' => $demo->user_id,
         ]);
@@ -442,7 +470,7 @@ class DemomeController extends Controller
         Log::info('startDiscordRender: created placeholder', [
             'video_id' => $video->id,
             'demo_id' => $demo->id,
-            'map_name' => $demo->map_name,
+            'map_name' => $mapName,
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
@@ -453,6 +481,11 @@ class DemomeController extends Controller
      * an admin in Filament, and clear it. Bot calls this on startup and, if a value
      * comes back, resets its local channels.last_scraped_message_id to that value
      * before scraping Discord for the next batch of demos.
+     *
+     * The admin types the message ID they want re-processed. Discord's `after` query
+     * is exclusive (returns messages with ID > after), so to make that target message
+     * actually included we return (snowflake - 1) as the rewind target. Snowflake IDs
+     * are 63-bit and fit in a native PHP int on 64-bit platforms.
      */
     public function discordRestartMarker()
     {
@@ -466,9 +499,19 @@ class DemomeController extends Controller
         // One-shot: clear it so the bot doesn't keep re-applying on every startup.
         SiteSetting::set($key, '');
 
-        Log::info('discordRestartMarker: consumed marker', ['message_id' => $value]);
+        // Make the stored ID inclusive: subtract 1 so Discord's exclusive `after`
+        // parameter returns the target message itself on the next scrape.
+        $rewindTarget = (string) ((int) $value - 1);
 
-        return response()->json(['message_id' => (string) $value]);
+        Log::info('discordRestartMarker: consumed marker', [
+            'stored_message_id' => $value,
+            'rewind_target' => $rewindTarget,
+        ]);
+
+        return response()->json([
+            'message_id' => $rewindTarget,
+            'original' => (string) $value,
+        ]);
     }
 
     public function uploadDemo(Request $request)
