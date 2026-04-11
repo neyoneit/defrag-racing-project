@@ -364,7 +364,7 @@ class DemomeController extends Controller
             'source' => 'discord',
             'requested_by' => $validated['requested_by'] ?? null,
             'status' => 'completed',
-            'priority' => 3,
+            'priority' => 1,
             'demo_url' => 'discord://' . $demo->id,
             'demo_filename' => $demo->original_filename,
             'youtube_url' => $validated['youtube_url'],
@@ -458,7 +458,10 @@ class DemomeController extends Controller
             'source' => 'discord',
             'requested_by' => $validated['requested_by'] ?? null,
             'status' => 'rendering',
-            'priority' => 3,
+            // Discord demos are user-requested on-demand, so they're P1 (highest).
+            // This is cosmetic for admin panel display; Discord renders never go
+            // through the queue endpoint that actually orders by priority.
+            'priority' => 1,
             // demo_url is NOT NULL in the schema but Discord demos don't have a URL
             // (they were uploaded directly). Use a placeholder that identifies the source.
             'demo_url' => 'discord://' . $demo->id,
