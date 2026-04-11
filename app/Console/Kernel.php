@@ -55,8 +55,9 @@ class Kernel extends ConsoleKernel
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
-        // Auto-publish unlisted videos every 3 weeks on Sunday at 18:00
-        $schedule->command('demome:auto-publish')->withoutOverlapping()->weeklyOn(0, '18:00')->when(fn () => now()->weekOfYear % 3 === 0);
+        // NOTE: Triweekly auto-publish scheduler removed. Bulk publishing is now manual-only
+        // via the per-tier buttons in Filament DemomeControl page. The Python bot's every-4h
+        // deficit check (auto_publish_deficit) still keeps a steady 12 videos/day trickle.
 
         // Rebuild records page cache every 12 hours (full consistency refresh)
         $schedule->command('records:rebuild-cache')->withoutOverlapping()->twiceDaily(6, 18);
