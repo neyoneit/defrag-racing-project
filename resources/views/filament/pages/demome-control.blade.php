@@ -139,7 +139,7 @@
             </div>
         </x-filament::section>
 
-        {{-- Today + Auto-Publish --}}
+        {{-- Today + Last manual bulks --}}
         <x-filament::section>
             <x-slot name="heading">Today & Publishing</x-slot>
             <div class="space-y-2 text-sm">
@@ -147,18 +147,20 @@
                 <div class="flex justify-between"><span class="text-gray-500">Gameplay</span><span class="text-gray-300">{{ $backlog['today_gameplay_hours'] }}h</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">Render time</span><span class="text-gray-300">{{ $backlog['today_render_hours'] }}h</span></div>
                 <div class="pt-2 border-t border-gray-700/50 space-y-1">
-                    <div class="flex items-center justify-between">
-                        <span class="text-gray-500">Next auto-publish</span>
-                        <span class="text-gray-300 text-xs">{{ $next_auto_publish->format('D M j, H:i') }}</span>
-                    </div>
-                    @if($last_auto_publish)
-                        <div class="flex items-center justify-between">
-                            <span class="text-gray-500">Last</span>
-                            <span class="text-gray-300 text-xs">{{ $last_auto_publish->format('D M j, H:i') }}</span>
+                    <div class="text-gray-500 text-xs uppercase tracking-wider mb-1">Last manual bulks</div>
+                    @forelse($manual_bulk_history as $entry)
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-gray-300 text-xs truncate">{{ $entry['label'] }}</span>
+                            <span class="text-gray-500 text-xs whitespace-nowrap">
+                                {{ \Carbon\Carbon::parse($entry['ts'])->format('M j, H:i') }}
+                                <span class="text-primary-400 font-medium ml-1">({{ $entry['count'] }})</span>
+                            </span>
                         </div>
-                    @endif
+                    @empty
+                        <div class="text-gray-600 text-xs italic">No manual bulk runs yet</div>
+                    @endforelse
                     @if($publishing_count > 0)
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between pt-2 border-t border-gray-700/30 mt-2">
                             <span class="text-gray-500">Awaiting demome</span>
                             <x-filament::badge color="warning">{{ $publishing_count }}</x-filament::badge>
                         </div>
@@ -168,12 +170,79 @@
         </x-filament::section>
     </div>
 
+    {{-- Row 2.5: Manual Bulk Publish (per-tier) --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">Manual Bulk Publish</x-slot>
+        <x-slot name="description">
+            Mark every unlisted auto-rendered video in a given category as approved for publishing.
+            Demome bot will transition them from unlisted to public on its next run.
+            Use this for manual curation - the triweekly automatic bulk has been disabled.
+        </x-slot>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            @foreach($bulk_tier_buttons as $btn)
+                @php
+                    $isAll = $btn['tier'] === -1;
+                    $disabled = $btn['count'] === 0;
+                    $confirm = "Mark {$btn['count']} unlisted videos in '{$btn['label']}' for publishing?";
+                @endphp
+                <x-filament::button
+                    wire:click="bulkPublishTier({{ $btn['tier'] }})"
+                    wire:confirm="{{ $confirm }}"
+                    :color="$isAll ? 'danger' : 'success'"
+                    :disabled="$disabled"
+                    icon="heroicon-o-eye"
+                    class="w-full"
+                >
+                    {{ $btn['label'] }} ({{ $btn['count'] }})
+                </x-filament::button>
+            @endforeach
+        </div>
+    </x-filament::section>
+
     {{-- Row 3: API Token (compact) --}}
     <x-filament::section class="mt-4">
         <x-slot name="heading">API Token</x-slot>
         <div class="flex items-center gap-4">
             <code class="flex-1 px-3 py-2 bg-gray-800 rounded text-sm font-mono text-gray-300 break-all select-all">{{ $apiToken ?: 'Not set' }}</code>
             {{ $this->regenerateTokenAction }}
+        </div>
+    </x-filament::section>
+
+    {{-- Row 3.5: Discord restart marker --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">Discord Restart Marker</x-slot>
+        <x-slot name="description">
+            Force demome to rescan Discord starting from a specific message ID on its next startup.
+            Useful when a render crashed without writing anything and the bot has already advanced past it.
+            The marker is one-shot: it is consumed by demome on startup and cleared automatically.
+        </x-slot>
+        <div class="space-y-3">
+            @if($discordRestartMarker)
+                <div class="flex items-center justify-between p-2 bg-yellow-900/20 border border-yellow-800/50 rounded">
+                    <div class="text-sm">
+                        <span class="text-gray-400">Pending marker:</span>
+                        <code class="ml-2 text-yellow-300 font-mono">{{ $discordRestartMarker }}</code>
+                    </div>
+                    <x-filament::button wire:click="clearDiscordRestartMarker" size="sm" color="danger" icon="heroicon-o-x-mark">
+                        Clear
+                    </x-filament::button>
+                </div>
+            @endif
+            <div class="flex items-center gap-3">
+                <input
+                    type="text"
+                    wire:model="discordRestartMessageId"
+                    placeholder="Discord message ID (e.g. 1492601473450774711)"
+                    class="flex-1 px-3 py-2 bg-gray-800 rounded text-sm font-mono text-gray-300 border border-gray-700 focus:border-primary-500 focus:outline-none"
+                />
+                <x-filament::button wire:click="setDiscordRestartMarker" color="warning" icon="heroicon-o-arrow-uturn-left">
+                    Set Marker
+                </x-filament::button>
+            </div>
+            <div class="text-xs text-gray-500">
+                Demome will re-scrape the Discord channel(s) for messages with ID &gt; this value on next startup.
+                Set the message ID to one <strong>just before</strong> the message you want reprocessed.
+            </div>
         </div>
     </x-filament::section>
 

@@ -28,6 +28,8 @@ class DemomeControl extends Page
     public int $unlistedPage = 1;
     public int $unlistedPerPage = 20;
 
+    public ?string $discordRestartMessageId = null;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() ?? false;
@@ -95,12 +97,69 @@ class DemomeControl extends Page
                 ->where('publish_approved', true)
                 ->whereNull('published_at')
                 ->count(),
-            'next_auto_publish' => $this->getNextBiweeklyPublish(),
-            'last_auto_publish' => SiteSetting::get('demome:last_auto_publish')
-                ? Carbon::parse(SiteSetting::get('demome:last_auto_publish'))
-                : null,
+            'manual_bulk_history' => $this->getManualBulkHistory(),
+            'bulk_tier_buttons' => $this->getBulkTierButtonData(),
             'backlog' => $this->getBacklogStats(),
+            'discordRestartMarker' => SiteSetting::get('demome:discord_restart_from_message_id') ?: null,
         ];
+    }
+
+    private function getBulkTierButtonData(): array
+    {
+        $rows = $this->unlistedBaseQuery()
+            ->selectRaw('COALESCE(quality_tier, 0) as tier, COUNT(*) as cnt')
+            ->groupByRaw('COALESCE(quality_tier, 0)')
+            ->pluck('cnt', 'tier');
+
+        $total = 0;
+        $buttons = [];
+        foreach ($rows as $tier => $cnt) {
+            $total += (int) $cnt;
+            $label = \App\Services\RenderQueueService::TIER_LABELS[(int) $tier] ?? 'Unclassified';
+            $buttons[] = [
+                'tier' => (int) $tier,
+                'label' => $label,
+                'count' => (int) $cnt,
+            ];
+        }
+
+        // Sort by tier number so button order matches TIER_LABELS definition
+        usort($buttons, fn($a, $b) => $a['tier'] <=> $b['tier']);
+
+        array_unshift($buttons, [
+            'tier' => -1, // -1 = ALL sentinel
+            'label' => 'All',
+            'count' => $total,
+        ]);
+
+        return $buttons;
+    }
+
+    private function getManualBulkHistory(): array
+    {
+        $raw = SiteSetting::get('demome:manual_bulk_history');
+        if (!$raw) {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_slice($decoded, 0, 3);
+    }
+
+    private function recordManualBulk(string $label, int $count): void
+    {
+        $history = $this->getManualBulkHistory();
+        array_unshift($history, [
+            'ts' => now()->toIso8601String(),
+            'label' => $label,
+            'count' => $count,
+        ]);
+        $history = array_slice($history, 0, 3);
+        SiteSetting::set('demome:manual_bulk_history', json_encode($history));
     }
 
     private function unlistedBaseQuery()
@@ -161,15 +220,6 @@ class DemomeControl extends Page
         }
 
         return (int) ceil($query->count() / $this->unlistedPerPage);
-    }
-
-    private function getNextBiweeklyPublish(): Carbon
-    {
-        $next = Carbon::now()->next(Carbon::SUNDAY)->setTime(18, 0);
-        while ($next->weekOfYear % 3 !== 0) {
-            $next->addWeek();
-        }
-        return $next;
     }
 
     private function getBacklogStats(): array
@@ -289,9 +339,102 @@ class DemomeControl extends Page
 
         $breakdown = collect($tierCounts)->map(fn($c, $l) => "{$c}x {$l}")->join(', ');
 
+        $this->recordManualBulk("Mix 12 ({$breakdown})", $batch->count());
+
         Notification::make()
             ->title("Publish Queued: {$batch->count()} videos")
             ->body("Mix: {$breakdown}")
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Bulk-approve every unlisted auto-rendered video matching a specific quality tier.
+     * tier === -1 means "all tiers" (everything unlisted). This bypasses the rotation
+     * mix and is intended for manual curation - admin picks which bucket to drain.
+     */
+    public function bulkPublishTier(int $tier): void
+    {
+        $query = $this->unlistedBaseQuery();
+
+        if ($tier === 0) {
+            $query->where(function ($q) {
+                $q->whereNull('quality_tier')->orWhere('quality_tier', 0);
+            });
+            $label = 'Unclassified';
+        } elseif ($tier === -1) {
+            $label = 'All';
+        } else {
+            $query->where('quality_tier', $tier);
+            $label = \App\Services\RenderQueueService::TIER_LABELS[$tier] ?? "Tier {$tier}";
+        }
+
+        $count = (clone $query)->count();
+
+        if ($count === 0) {
+            Notification::make()
+                ->title('Nothing to Publish')
+                ->body("No unlisted videos in category: {$label}")
+                ->warning()
+                ->send();
+            return;
+        }
+
+        // Mark every matching video for publishing. Python bot will pick these up via
+        // get_videos_to_publish() on its next run and transition them unlisted -> public.
+        $query->update(['publish_approved' => true]);
+
+        $this->recordManualBulk($label, $count);
+
+        // Invalidate the unlisted stats cache so the UI immediately reflects the change.
+        \Illuminate\Support\Facades\Cache::forget('demome:control_stats');
+
+        Notification::make()
+            ->title("Bulk Publish Queued: {$count} videos")
+            ->body("Category: {$label}. Python bot will publish them on next cycle.")
+            ->success()
+            ->send();
+    }
+
+    public function setDiscordRestartMarker(): void
+    {
+        $id = trim((string) $this->discordRestartMessageId);
+
+        if ($id === '') {
+            SiteSetting::set('demome:discord_restart_from_message_id', '');
+            Notification::make()
+                ->title('Discord Restart Marker Cleared')
+                ->body('Demome will continue normally from the last scraped message.')
+                ->success()
+                ->send();
+            return;
+        }
+
+        if (!preg_match('/^\d{10,25}$/', $id)) {
+            Notification::make()
+                ->title('Invalid Message ID')
+                ->body('Discord snowflake IDs are numeric (10-25 digits).')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        SiteSetting::set('demome:discord_restart_from_message_id', $id);
+
+        Notification::make()
+            ->title('Discord Restart Marker Set')
+            ->body("On next demome startup it will rescan Discord from message ID {$id} onwards.")
+            ->success()
+            ->send();
+    }
+
+    public function clearDiscordRestartMarker(): void
+    {
+        SiteSetting::set('demome:discord_restart_from_message_id', '');
+        $this->discordRestartMessageId = null;
+
+        Notification::make()
+            ->title('Discord Restart Marker Cleared')
             ->success()
             ->send();
     }

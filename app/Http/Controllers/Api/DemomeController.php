@@ -316,6 +316,43 @@ class DemomeController extends Controller
         // Use metadata from the processed demo
         $recordId = $demo->record_id;
 
+        // Prefer updating an existing Discord placeholder created by start-discord-render
+        // (status=rendering or uploading) linked to this demo, to preserve timeline + avoid duplicates.
+        $video = RenderedVideo::where('demo_id', $demo->id)
+            ->where('source', 'discord')
+            ->whereIn('status', ['rendering', 'uploading'])
+            ->whereNull('youtube_video_id')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($video) {
+            $video->update([
+                'status' => 'completed',
+                'map_name' => $demo->map_name ?? $video->map_name,
+                'player_name' => $demo->player_name ?? $video->player_name,
+                'physics' => $demo->physics ?? $video->physics,
+                'time_ms' => $demo->time_ms ?? $video->time_ms,
+                'gametype' => $demo->gametype ?? $video->gametype,
+                'record_id' => $recordId,
+                'youtube_url' => $validated['youtube_url'],
+                'youtube_video_id' => $youtubeVideoId,
+                'render_duration_seconds' => $validated['render_duration_seconds'] ?? $video->render_duration_seconds,
+                'video_file_size' => $validated['video_file_size'] ?? $video->video_file_size,
+                'is_visible' => true,
+                'published_at' => now(),
+                'publish_approved' => true,
+                'failure_reason' => null,
+            ]);
+
+            Log::info('reportByHash: updated existing Discord placeholder', [
+                'video_id' => $video->id,
+                'demo_id' => $demo->id,
+            ]);
+
+            return response()->json(['success' => true, 'id' => $video->id, 'updated' => true]);
+        }
+
+        // No placeholder found - create fresh record (backward compat for legacy / missed start calls)
         $video = RenderedVideo::create([
             'map_name' => $demo->map_name,
             'player_name' => $demo->player_name,
@@ -346,6 +383,92 @@ class DemomeController extends Controller
         ]);
 
         return response()->json(['success' => true, 'id' => $video->id]);
+    }
+
+    /**
+     * Create a RenderedVideo placeholder at the START of a Discord render so it's
+     * visible in the admin panel as 'rendering' immediately (before upload completes).
+     * Bot calls this right before launching oDFe. On success, reportByHash updates it
+     * to 'completed'. On crash/Ctrl+C, bot calls /fail/{id} to mark it as failed.
+     */
+    public function startDiscordRender(Request $request)
+    {
+        $validated = $request->validate([
+            'md5_hash' => 'required|string|size:32',
+            'requested_by' => 'nullable|string',
+        ]);
+
+        $demo = UploadedDemo::where('file_hash', $validated['md5_hash'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$demo) {
+            Log::warning('startDiscordRender: no demo found for hash', ['md5_hash' => $validated['md5_hash']]);
+            return response()->json(['success' => false, 'error' => 'No demo found for this hash'], 404);
+        }
+
+        // If there's already a rendering placeholder for this demo, reuse it (bot retry scenario).
+        $existing = RenderedVideo::where('demo_id', $demo->id)
+            ->where('source', 'discord')
+            ->whereIn('status', ['rendering', 'uploading'])
+            ->whereNull('youtube_video_id')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'status' => 'rendering',
+                'updated_at' => now(),
+            ]);
+            return response()->json(['success' => true, 'id' => $existing->id, 'reused' => true]);
+        }
+
+        $video = RenderedVideo::create([
+            'map_name' => $demo->map_name,
+            'player_name' => $demo->player_name,
+            'physics' => $demo->physics,
+            'time_ms' => $demo->time_ms,
+            'gametype' => $demo->gametype,
+            'record_id' => $demo->record_id,
+            'demo_id' => $demo->id,
+            'source' => 'discord',
+            'requested_by' => $validated['requested_by'] ?? null,
+            'status' => 'rendering',
+            'priority' => 3,
+            'is_visible' => false,
+            'user_id' => $demo->user_id,
+        ]);
+
+        Log::info('startDiscordRender: created placeholder', [
+            'video_id' => $video->id,
+            'demo_id' => $demo->id,
+            'map_name' => $demo->map_name,
+        ]);
+
+        return response()->json(['success' => true, 'id' => $video->id]);
+    }
+
+    /**
+     * Return the one-shot "restart Discord scraping from message X" marker set by
+     * an admin in Filament, and clear it. Bot calls this on startup and, if a value
+     * comes back, resets its local channels.last_scraped_message_id to that value
+     * before scraping Discord for the next batch of demos.
+     */
+    public function discordRestartMarker()
+    {
+        $key = 'demome:discord_restart_from_message_id';
+        $value = SiteSetting::get($key);
+
+        if (!$value) {
+            return response()->json(['message_id' => null]);
+        }
+
+        // One-shot: clear it so the bot doesn't keep re-applying on every startup.
+        SiteSetting::set($key, '');
+
+        Log::info('discordRestartMarker: consumed marker', ['message_id' => $value]);
+
+        return response()->json(['message_id' => (string) $value]);
     }
 
     public function uploadDemo(Request $request)
