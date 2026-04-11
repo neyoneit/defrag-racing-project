@@ -78,9 +78,22 @@ class VideoMetadataService
         $desc .= "Quake 3 DeFRaG speedrun on {$mapName}. ";
         $desc .= "DeFRaG is a Quake III Arena modification focused on movement and trickjumping. ";
         $desc .= "Strafe jumping, rocket jumping, plasma climbing, circle jumping.\n";
-        $desc .= "#defrag #quake3 #speedrun #trickjump #strafejump\n";
+        $desc .= self::tagsToHashtags(self::generateTags($video)) . "\n";
 
         return $desc;
+    }
+
+    /**
+     * Convert tag array to space-separated hashtags.
+     * Strips spaces and non-alphanumeric chars from each tag.
+     */
+    public static function tagsToHashtags(array $tags): string
+    {
+        return collect($tags)
+            ->map(fn ($t) => '#' . preg_replace('/[^a-zA-Z0-9]/', '', $t))
+            ->filter(fn ($t) => strlen($t) > 1)
+            ->unique()
+            ->implode(' ');
     }
 
     /**
