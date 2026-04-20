@@ -89,15 +89,19 @@ def get_name_online(demo_time_cmd: str) -> str:
 class Q3DFResult:
     name: str
     q3dfName: Optional[str]
+    q3dfNameColored: Optional[str]
     time: timedelta
 
 
 def get_name_q3df(demo_time_cmd: str) -> Optional[Q3DFResult]:
-    text = remove_non_ascii(demo_time_cmd) or ''
-    text = remove_colors(text) or ''
+    # Keep a colored version (only ASCII filter applied) so we can extract the
+    # colored q3df login name alongside the plain one.
+    text_colored = remove_non_ascii(demo_time_cmd) or ''
+    text = remove_colors(text_colored) or ''
     stripped = text.replace('chat "', '').rstrip('"')
+    stripped_colored = text_colored.replace('chat "', '').rstrip('"')
 
-    def parse_prefix(prefix: str) -> tuple[str, Optional[str]]:
+    def parse_prefix(prefix: str, prefix_colored: Optional[str] = None) -> tuple[str, Optional[str], Optional[str]]:
         prefix = prefix.strip()
         if '(' in prefix and ')' in prefix:
             idx = prefix.rfind('(')
@@ -106,7 +110,21 @@ def get_name_q3df(demo_time_cmd: str) -> Optional[Q3DFResult]:
         else:
             name = prefix
             q3df = None
-        return normalize_name(name), normalize_name(q3df) if q3df else None
+
+        q3df_colored: Optional[str] = None
+        if q3df is not None and prefix_colored:
+            pc = prefix_colored.strip()
+            # The `(` and `)` markers are ASCII and never part of Q3 color codes,
+            # so we can rely on them to slice out the colored login directly.
+            if '(' in pc and ')' in pc:
+                cidx = pc.rfind('(')
+                q3df_colored = pc[cidx + 1:].strip(')').strip()
+
+        return (
+            normalize_name(name),
+            normalize_name(q3df) if q3df else None,
+            q3df_colored if q3df_colored else None,
+        )
 
     def parse_time(segment: str) -> str:
         segment = segment.strip()
@@ -114,31 +132,42 @@ def get_name_q3df(demo_time_cmd: str) -> Optional[Q3DFResult]:
         segment = segment.split('(', 1)[0]
         return segment.strip()
 
+    def split_colored(marker: str, haystack: str) -> Optional[str]:
+        """Return the colored prefix portion that matches the plain split on `marker`."""
+        if marker not in haystack:
+            return None
+        return haystack.split(marker, 1)[0]
+
     if ' broke the server record with ' in stripped:
         prefix, rest = stripped.split(' broke the server record with ', 1)
-        name, q3df = parse_prefix(prefix)
+        prefix_colored = split_colored(' broke the server record with ', stripped_colored)
+        name, q3df, q3df_colored = parse_prefix(prefix, prefix_colored)
         time_part = parse_time(rest)
-        return Q3DFResult(name=name, q3dfName=q3df, time=get_time_span(time_part))
+        return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
     if ' equalled the server record with ' in stripped:
         prefix, rest = stripped.split(' equalled the server record with ', 1)
-        name, q3df = parse_prefix(prefix)
+        prefix_colored = split_colored(' equalled the server record with ', stripped_colored)
+        name, q3df, q3df_colored = parse_prefix(prefix, prefix_colored)
         time_part = parse_time(rest)
-        return Q3DFResult(name=name, q3dfName=q3df, time=get_time_span(time_part))
+        return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
     if ', you are now rank' in stripped and ' with ' in stripped:
         prefix, rest = stripped.split(', you are now rank', 1)
-        name, q3df = parse_prefix(prefix)
+        prefix_colored = split_colored(', you are now rank', stripped_colored)
+        name, q3df, q3df_colored = parse_prefix(prefix, prefix_colored)
         if ' with ' in rest:
             time_part = parse_time(rest.split(' with ', 1)[1])
-            return Q3DFResult(name=name, q3dfName=q3df, time=get_time_span(time_part))
+            return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
     if stripped.startswith('console: ') and ' with ' in stripped:
         body = stripped[len('console: '):]
+        body_colored = stripped_colored[len('console: '):] if stripped_colored.startswith('console: ') else None
         name_part, rest = body.split(' is now rank', 1)
-        name, q3df = parse_prefix(name_part)
+        name_part_colored = split_colored(' is now rank', body_colored) if body_colored else None
+        name, q3df, q3df_colored = parse_prefix(name_part, name_part_colored)
         time_part = parse_time(rest.split(' with ', 1)[1])
-        return Q3DFResult(name=name, q3dfName=q3df, time=get_time_span(time_part))
+        return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
     return None
 

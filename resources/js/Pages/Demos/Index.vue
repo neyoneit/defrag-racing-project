@@ -879,6 +879,37 @@ const formatTime = (ms) => {
     return `${minutes}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
 };
 
+const matchMethodLabel = (method) => {
+    switch (method) {
+        case 'q3df_colored_record': return 'q3df ✓ rec';
+        case 'q3df_plain_record':   return 'q3df (plain) ✓ rec';
+        case 'q3df_colored_profile': return 'q3df → profile';
+        case 'q3df_plain_profile':  return 'q3df (plain) → profile';
+        case 'uploader_record':     return 'uploader';
+        case 'fuzzy_nick':          return 'nick fuzzy';
+        default: return method;
+    }
+};
+
+const matchMethodTooltip = (demo) => {
+    const alias = demo.matched_alias ? ` — matched alias: ${demo.matched_alias}` : '';
+    switch (demo.match_method) {
+        case 'q3df_colored_record':
+            return `Matched via colored q3df login + time to record${alias}`;
+        case 'q3df_plain_record':
+            return `Matched via plain q3df login + time to record${alias}`;
+        case 'q3df_colored_profile':
+            return `Matched via colored q3df login to profile (no record for this time)${alias}`;
+        case 'q3df_plain_profile':
+            return `Matched via plain q3df login to profile (no record for this time, alias is globally unique)${alias}`;
+        case 'uploader_record':
+            return `Uploader has a record with this exact time — no name check needed`;
+        case 'fuzzy_nick':
+            return `Matched via fuzzy nickname comparison${alias}`;
+        default: return '';
+    }
+};
+
 // Watch for user search query changes and trigger server-side search
 let searchTimeout = null;
 watch(userSearchQuery, (newValue) => {
@@ -2222,7 +2253,7 @@ watch(selectedPhysics, () => {
                                     </td>
                                     <td class="px-2 py-1.5 text-xs">
                                         <div class="flex flex-col space-y-2">
-                                            <div class="flex items-center space-x-2">
+                                            <div class="flex items-center space-x-2 flex-wrap gap-1">
                                                 <span
                                                     class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium relative"
                                                     :class="{
@@ -2251,6 +2282,21 @@ watch(selectedPhysics, () => {
                                                     <svg v-if="demo.status === 'fallback-assigned' && demo.offline_record" class="w-3 h-3 ml-1 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
+                                                </span>
+                                                <span
+                                                    v-if="demo.match_method"
+                                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                                    :class="{
+                                                        'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30': demo.match_method === 'q3df_colored_record',
+                                                        'bg-emerald-500/10 text-emerald-300': demo.match_method === 'q3df_colored_profile',
+                                                        'bg-cyan-500/20 text-cyan-300 ring-1 ring-cyan-400/30': demo.match_method === 'q3df_plain_record',
+                                                        'bg-cyan-500/10 text-cyan-300': demo.match_method === 'q3df_plain_profile',
+                                                        'bg-gray-500/20 text-gray-300': demo.match_method === 'uploader_record',
+                                                        'bg-yellow-500/20 text-yellow-300': demo.match_method === 'fuzzy_nick',
+                                                    }"
+                                                    :title="matchMethodTooltip(demo)"
+                                                >
+                                                    {{ matchMethodLabel(demo.match_method) }}
                                                 </span>
                                             </div>
                                         </div>

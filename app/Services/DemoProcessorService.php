@@ -134,6 +134,8 @@ class DemoProcessorService
                 'gametype' => $metadata['gametype'] ?? null,
                 'time_ms' => $metadata['time_ms'] ?? null,
                 'player_name' => $metadata['player'] ?? null,
+                'q3df_login_name' => $metadata['q3df_login_name'] ?? null,
+                'q3df_login_name_colored' => $metadata['q3df_login_name_colored'] ?? null,
                 'country' => $metadata['country'] ?? null,
                 'record_date' => $metadata['record_date'] ?? null,
                 'validity' => $metadata['validity'] ?? null,
@@ -321,6 +323,12 @@ class DemoProcessorService
             }
             if (isset($jsonData['country'])) {
                 $metadata['country'] = $jsonData['country'];
+            }
+            if (isset($jsonData['q3df_login_name']) && $jsonData['q3df_login_name']) {
+                $metadata['q3df_login_name'] = $jsonData['q3df_login_name'];
+            }
+            if (isset($jsonData['q3df_login_name_colored']) && $jsonData['q3df_login_name_colored']) {
+                $metadata['q3df_login_name_colored'] = $jsonData['q3df_login_name_colored'];
             }
 
             // Parse the suggested filename to extract remaining components (gametype)
@@ -623,6 +631,75 @@ class DemoProcessorService
         $physics = str_replace('.tr', '', strtolower($demo->physics));
         $gametype = 'run_' . $physics;
 
+        $nameMatcher = app(NameMatcher::class);
+
+        // PASS 0: q3df login match — server-side authoritative identifier
+        // extracted from console messages like "Enter(Enter), you are now rank..."
+        // Preferred over nick fuzzy matching because it cannot be impersonated
+        // without server-side control.
+        if ($demo->q3df_login_name || $demo->q3df_login_name_colored) {
+            $loginMatch = $nameMatcher->matchByQ3dfLogin(
+                $demo->q3df_login_name,
+                $demo->q3df_login_name_colored
+            );
+
+            if ($loginMatch['user_id']) {
+                $matchedUserId = $loginMatch['user_id'];
+                $tier = $loginMatch['tier']; // 'q3df_colored' or 'q3df_plain'
+
+                // Look for a matching record owned by the matched user
+                $record = Record::where('mapname', $demo->map_name)
+                    ->where('gametype', $gametype)
+                    ->where('time', $demo->time_ms)
+                    ->where('user_id', $matchedUserId)
+                    ->first();
+
+                if ($record) {
+                    // Scénář A: both signals agree (login AND time) → strongest match
+                    $demo->update([
+                        'record_id' => $record->id,
+                        'status' => 'assigned',
+                        'name_confidence' => 100,
+                        'suggested_user_id' => $matchedUserId,
+                        'matched_alias' => $loginMatch['matched_alias'],
+                        'match_method' => $tier . '_record',
+                    ]);
+
+                    Log::info('Demo auto-assigned to record via q3df login', [
+                        'demo_id' => $demo->id,
+                        'record_id' => $record->id,
+                        'user_id' => $matchedUserId,
+                        'tier' => $tier,
+                        'matched_alias' => $loginMatch['matched_alias'],
+                    ]);
+
+                    return;
+                }
+
+                // Scénář B: login matches a user but no record exists with that
+                // time. Attribute the demo to the matched user's profile and let
+                // it flow into the offline leaderboard as a "slow run" entry.
+                $demo->update([
+                    'user_id' => $matchedUserId,
+                    'name_confidence' => 100,
+                    'suggested_user_id' => $matchedUserId,
+                    'matched_alias' => $loginMatch['matched_alias'],
+                    'match_method' => $tier . '_profile',
+                ]);
+                $demo = $demo->fresh();
+
+                Log::info('Demo auto-assigned to profile via q3df login (no record match)', [
+                    'demo_id' => $demo->id,
+                    'user_id' => $matchedUserId,
+                    'tier' => $tier,
+                    'matched_alias' => $loginMatch['matched_alias'],
+                ]);
+
+                $this->createOfflineRecord($demo, $compressedLocalPath);
+                return;
+            }
+        }
+
         // PASS 1: Check if uploader has a matching record (ignores name completely)
         $uploaderRecordMatch = false;
         if ($demo->user_id) {
@@ -641,6 +718,7 @@ class DemoProcessorService
                     'name_confidence' => 100,
                     'suggested_user_id' => $demo->user_id,
                     'matched_alias' => null, // Matched by uploader record, not name
+                    'match_method' => 'uploader_record',
                 ]);
 
                 Log::info('Demo auto-assigned to uploader\'s record', [
@@ -658,7 +736,6 @@ class DemoProcessorService
 
         // PASS 2: Global name matching (only if uploader didn't match in PASS 1)
         if (!$uploaderRecordMatch) {
-            $nameMatcher = app(NameMatcher::class);
             $nameMatch = $nameMatcher->findBestMatch($demo->player_name, null); // null = global search
 
             // Store name matching results including matched_alias
@@ -691,6 +768,7 @@ class DemoProcessorService
                     $demo->update([
                         'record_id' => $record->id,
                         'status' => 'assigned',
+                        'match_method' => 'fuzzy_nick',
                     ]);
 
                     Log::info('Demo auto-assigned to record with 100% name match', [

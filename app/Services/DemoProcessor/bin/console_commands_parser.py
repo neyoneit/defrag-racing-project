@@ -27,6 +27,7 @@ class TimeStringInfo:
     time: timedelta
     oName: Optional[str] = None
     lName: Optional[str] = None
+    lNameColored: Optional[str] = None
 
 
 @dataclass
@@ -63,6 +64,7 @@ class ConsoleComandsParser:
                         time=result.time,
                         oName=result.name,
                         lName=result.q3dfName,
+                        lNameColored=result.q3dfNameColored,
                     ))
             elif value.startswith('print "Time performed by'):
                 self.timeStrings.append(TimeStringInfo(
