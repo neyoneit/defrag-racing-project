@@ -72,6 +72,7 @@ class ProfileController extends Controller {
         $mddId = $user->mdd_id;
         $type = $request->input('type', 'latest');
         $mode = $request->input('mode', 'all');
+        $search = trim((string) $request->input('search', ''));
 
         // --- Records (needed for records pagination or full load) ---
         if ($needs('vq3Records') || $needs('cpmRecords')) {
@@ -99,6 +100,16 @@ class ProfileController extends Controller {
                 $baseRecords->where($tablePrefix . '.mode', 'LIKE', 'ctf%');
             } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
                 $baseRecords->where($tablePrefix . '.mode', $mode);
+            }
+
+            if ($search !== '') {
+                $like = '%' . $search . '%';
+                $baseRecords->where(function ($q) use ($tablePrefix, $like) {
+                    $q->where($tablePrefix . '.mapname', 'LIKE', $like)
+                      ->orWhereIn($tablePrefix . '.mapname', function ($sub) use ($like) {
+                          $sub->select('name')->from('maps')->where('author', 'LIKE', $like);
+                      });
+                });
             }
 
             $vq3Records = clone $baseRecords;
@@ -208,6 +219,7 @@ class ProfileController extends Controller {
         $response = Inertia::render('Profile')
             ->with('user', $user)
             ->with('type', $type)
+            ->with('search', $search)
             ->with('hasProfile', true)
             ->with('visitorGlobalPreferences', $visitorGlobalPrefs)
             ->with('hasMapperProfile', $user->hasMapperProfile())
@@ -280,6 +292,7 @@ class ProfileController extends Controller {
 
         $type = $request->input('type', 'latest');
         $mode = $request->input('mode', 'all');
+        $search = trim((string) $request->input('search', ''));
 
         $types = ['recentlybeaten', 'tiedranks', 'bestranks', 'besttimes', 'worstranks', 'worsttimes', 'untouchable'];
 
@@ -307,6 +320,16 @@ class ProfileController extends Controller {
             $baseRecords->where($tablePrefix . '.mode', 'LIKE', 'ctf%');
         } elseif (in_array($mode, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'])) {
             $baseRecords->where($tablePrefix . '.mode', $mode);
+        }
+
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $baseRecords->where(function ($q) use ($tablePrefix, $like) {
+                $q->where($tablePrefix . '.mapname', 'LIKE', $like)
+                  ->orWhereIn($tablePrefix . '.mapname', function ($sub) use ($like) {
+                      $sub->select('name')->from('maps')->where('author', 'LIKE', $like);
+                  });
+            });
         }
 
         // Get VQ3 records (20 per page)
@@ -384,6 +407,7 @@ class ProfileController extends Controller {
             ->with('cpmRecords', $cpmRecords)
             ->with('user', $linkedUser)
             ->with('type', $type)
+            ->with('search', $search)
             ->with('visitorGlobalPreferences', $visitorGlobalPrefs)
             ->with('cpm_world_records', $stats['cpm_world_records'])
             ->with('vq3_world_records', $stats['vq3_world_records'])
@@ -1311,14 +1335,21 @@ class ProfileController extends Controller {
             $weight = $item['weight'];
             $contribution = $weightSum > 0 ? ($score->map_score * $weight / $weightSum) * $penalty : 0;
 
+            $mapMult = $score->multiplier ?? 1;
+            $rankMult = $score->rank_multiplier ?? 1;
+            // base = map_score / (map_mult * rank_mult) — so that score = base * rank_mult * map_mult
+            $divisor = $mapMult * $rankMult;
+            $baseScore = ($divisor > 0) ? $score->map_score / $divisor : $score->map_score;
+
             $breakdown[] = [
                 'rank' => $item['rank'] + 1,
                 'mapname' => $score->mapname,
                 'time' => $score->time,
                 'reltime' => round($score->reltime, 4),
                 'map_score' => round($score->map_score, 2),
-                'base_score' => round(($score->multiplier && $score->multiplier > 0) ? $score->map_score / $score->multiplier : $score->map_score, 2),
-                'multiplier' => round($score->multiplier ?? 1, 4),
+                'base_score' => round($baseScore, 2),
+                'multiplier' => round($mapMult, 4),
+                'rank_multiplier' => round($rankMult, 4),
                 'weight' => round($weight, 4),
                 'contribution' => round($contribution, 2),
                 'pct' => $finalRating > 0 ? round($contribution / $finalRating * 100, 2) : 0,

@@ -69,6 +69,7 @@
     });
 
     const confirmRender = () => {
+        renderError.value = null;
         showRenderConfirm.value = true;
     };
 
@@ -77,7 +78,6 @@
     };
 
     const requestRender = async () => {
-        showRenderConfirm.value = false;
         if (renderRequesting.value || !canRequestRender.value) return;
         renderRequesting.value = true;
         renderError.value = null;
@@ -86,10 +86,6 @@
             const recordId = props.record.id || props.record.record_id;
             await axios.post('/render/request', { record_id: recordId, demo_id: demoId });
             renderRequested.value = true;
-            // Redirect to YouTube page after short delay
-            setTimeout(() => {
-                window.location.href = '/rendered-demos';
-            }, 500);
         } catch (e) {
             renderError.value = e.response?.data?.error || 'Failed';
         } finally {
@@ -869,21 +865,43 @@
     <Teleport to="body" v-if="showRenderConfirm">
         <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" @click.self="cancelRender">
             <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
-                <div class="flex items-center gap-3 mb-3">
-                    <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                        <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                <template v-if="!renderRequested">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/><path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#fff"/></svg>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
                     </div>
-                    <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
-                </div>
-                <p class="text-xs text-gray-400 mb-4">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
-                <div class="flex gap-2 justify-end">
-                    <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
-                        Cancel
-                    </button>
-                    <button @click="requestRender" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
-                        Render
-                    </button>
-                </div>
+                    <p class="text-xs text-gray-400 mb-4">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
+                    <p v-if="renderError" class="text-xs text-red-400 mb-3">{{ renderError }}</p>
+                    <div class="flex gap-2 justify-end">
+                        <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                        <button @click="requestRender" :disabled="renderRequesting" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg transition-colors">
+                            {{ renderRequesting ? '...' : 'Render' }}
+                        </button>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">Render Queued</h3>
+                    </div>
+                    <p class="text-xs text-gray-400 mb-4">
+                        Your demo has been added to the render queue. You can check rendering progress
+                        <a href="/rendered-demos" class="text-red-400 hover:text-red-300 underline">here</a>.
+                    </p>
+                    <div class="flex justify-end">
+                        <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </template>
             </div>
         </div>
     </Teleport>

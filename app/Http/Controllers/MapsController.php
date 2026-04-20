@@ -76,6 +76,19 @@ class MapsController extends Controller
             ->with('queries', $queries);
     }
 
+    public function random(Request $request) {
+        $mapFilters = (new MapFilters())->filter($request);
+        $maps = $mapFilters['query'];
+
+        $map = $maps->reorder()->inRandomOrder()->first();
+
+        if (!$map || !$map->name) {
+            return response()->json(['error' => 'No maps match the current filters'], 404);
+        }
+
+        return response()->json(['name' => $map->name]);
+    }
+
     /**
      * API endpoint: return MDD profiles for filter dropdowns (lazy-loaded)
      */
