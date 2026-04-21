@@ -28,6 +28,18 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Launcher API bucket — per token so multiple devices with the same
+        // account don't share the quota. Falls back to user id when the
+        // request somehow arrives without a token (shouldn't happen, belt &
+        // braces).
+        RateLimiter::for('launcher', function (Request $request) {
+            $key = $request->user()?->currentAccessToken()?->id
+                ?? $request->user()?->id
+                ?? $request->ip();
+
+            return Limit::perMinute(120)->by('launcher:' . $key);
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

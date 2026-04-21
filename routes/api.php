@@ -18,6 +18,17 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+// Desktop launcher API. Sanctum personal access token with ability
+// "launcher:upload"; users generate tokens at /user/launcher-tokens.
+// Throttle key is the token id so two launchers on different PCs with the
+// same user account each get their own bucket.
+Route::prefix('launcher')
+    ->middleware(['auth:sanctum', 'abilities:launcher:upload', 'throttle:launcher'])
+    ->group(function () {
+        Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
+        Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
+    });
+
 Route::get('/profile/{userId}/beatable-records/{rivalMddId}', [\App\Http\Controllers\ProfileController::class, 'beatableRecordsApi']);
 Route::get('/profile/{mddId}/extras', [\App\Http\Controllers\ProfileController::class, 'profileExtras']);
 Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);

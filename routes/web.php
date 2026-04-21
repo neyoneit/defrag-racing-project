@@ -279,6 +279,11 @@ Route::get('/announcements', [ChangelogController::class, 'announcements'])->nam
 Route::middleware(['auth'])->group(function () {
     Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('settings.show');
     Route::redirect('/user/profile', '/user/settings', 301);
+
+    // Launcher personal access tokens
+    Route::get('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'index'])->name('launcher-tokens.index');
+    Route::post('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'store'])->name('launcher-tokens.store');
+    Route::delete('/user/launcher-tokens/{tokenId}', [\App\Http\Controllers\LauncherTokenController::class, 'destroy'])->name('launcher-tokens.destroy');
 });
 
 
