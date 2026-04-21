@@ -8,6 +8,7 @@ import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOther
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateSocialMediaForm from '@/Pages/Profile/Partials/UpdateSocialMediaForm.vue';
+import LauncherTokensForm from '@/Pages/Profile/Partials/LauncherTokensForm.vue';
 
 import ManageAliasesForm from '@/Pages/Profile/Partials/ManageAliasesForm.vue';
 import StreamerWidgetForm from '@/Pages/Profile/Partials/StreamerWidgetForm.vue';
@@ -2352,6 +2353,10 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
 
             <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
                 <LogoutOtherBrowserSessionsForm :sessions="sessions" />
+            </div>
+
+            <div class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 overflow-hidden">
+                <LauncherTokensForm />
             </div>
 
             <div v-if="$page.props.jetstream.hasAccountDeletionFeatures" class="rounded-xl bg-gradient-to-br from-red-500/5 to-red-600/5 border border-red-500/30 overflow-hidden">
