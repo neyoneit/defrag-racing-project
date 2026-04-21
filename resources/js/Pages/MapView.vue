@@ -838,8 +838,6 @@
             combined = [...combined, ...offlineRecords.data];
         }
 
-        const rawThisPage = combined.length;
-
         // Sort by time first, then collapse duplicates of the same virtual player.
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
         combined = groupByVirtualPlayer(combined);
@@ -856,26 +854,28 @@
             return { ...item, rank: rankCounter };
         });
 
-        // Server totals include the pre-grouping duplicates, so they overstate
-        // the visible row count. Derive a reduction ratio from this page
-        // (grouped / raw) and apply it to the max server total to estimate
-        // the post-grouping total across all pages. Perfectly accurate on
-        // single-page maps (majority case); a close approximation elsewhere.
+        // The offline paginator is already grouped server-side (one rep per
+        // virtual player), so its last_page is correct. Main records and
+        // oldtop have no collisions worth worrying about. Use max of the
+        // three server paginators — that's the real last page.
         const perPage = onlineRecords.per_page || 20;
-        let maxRawTotal = onlineRecords.total;
-        if (props.showOldtop && oldRecords) maxRawTotal = Math.max(maxRawTotal, oldRecords.total);
-        if (props.showOffline && offlineRecords) maxRawTotal = Math.max(maxRawTotal, offlineRecords.total);
-
-        const reductionRatio = rawThisPage > 0 ? combined.length / rawThisPage : 1;
-        const estimatedGroupedTotal = Math.max(combined.length, Math.round(maxRawTotal * reductionRatio));
-        const estimatedLastPage = Math.max(1, Math.ceil(estimatedGroupedTotal / perPage));
+        const lastPage = Math.max(
+            onlineRecords.last_page || 1,
+            (props.showOldtop && oldRecords) ? (oldRecords.last_page || 1) : 1,
+            (props.showOffline && offlineRecords) ? (offlineRecords.last_page || 1) : 1,
+        );
+        const total = Math.max(
+            onlineRecords.total || 0,
+            (props.showOldtop && oldRecords) ? (oldRecords.total || 0) : 0,
+            (props.showOffline && offlineRecords) ? (offlineRecords.total || 0) : 0,
+        );
 
         return {
-            total: estimatedGroupedTotal,
+            total,
             data: combined,
             first_page_url: onlineRecords.first_page_url,
             current_page: onlineRecords.current_page,
-            last_page: estimatedLastPage,
+            last_page: lastPage,
             per_page: perPage
         };
     };
@@ -1579,7 +1579,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span v-if="getVq3Records.total" class="text-sm font-semibold text-blue-400/60">({{ getVq3Records.total }})</span></h2>
-                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1643,7 +1643,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records <span v-if="getCpmRecords.total" class="text-sm font-semibold text-purple-400/60">({{ getCpmRecords.total }})</span></h2>
-                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>

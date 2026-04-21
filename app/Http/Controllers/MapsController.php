@@ -112,6 +112,36 @@ class MapsController extends Controller
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
+        // Drop flagged demos before clustering. A TAS / no_finish / pmove_cheat
+        // demo must not participate in a real player's history — both ways:
+        // it shouldn't act as seed (no timehistory button anyway), and it
+        // shouldn't appear in other players' drawers just because the name
+        // matches. Two flag sources: community flags (RecordFlag) and parser
+        // validity flags (OfflineRecord.validity_flag). Seed is checked below.
+        $demoIds = $demos->pluck('id')->all();
+        $recordIds = $demos->pluck('record_id')->filter()->all();
+        $flaggedDemoIds = [];
+        if (!empty($demoIds) || !empty($recordIds)) {
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')
+                ->where(function ($q) use ($demoIds, $recordIds) {
+                    if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
+                    if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
+                })
+                ->pluck('demo_id')->filter()->unique()->all();
+        }
+        if (!empty($demoIds)) {
+            $validityFlaggedIds = OfflineRecord::whereIn('demo_id', $demoIds)
+                ->whereNotNull('validity_flag')
+                ->where('validity_flag', '!=', '')
+                ->pluck('demo_id')->filter()->unique()->all();
+            $flaggedDemoIds = array_values(array_unique(array_merge($flaggedDemoIds, $validityFlaggedIds)));
+        }
+        if (in_array($seed->id, $flaggedDemoIds, true)) {
+            return response()->json(['history' => [], 'signals' => 0]);
+        }
+        $flaggedSet = array_flip($flaggedDemoIds);
+        $demos = $demos->reject(fn ($d) => isset($flaggedSet[$d->id]))->values();
+
         $grouper = new VirtualPlayerGrouper();
         $cluster = $grouper->classFor($demos, $seed);
 
@@ -173,7 +203,10 @@ class MapsController extends Controller
         // the same <MapRecord> component (same chips: download, render, YouTube,
         // report, flag — all for free).
         $history = $cluster->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName) {
-            $isOnline = $d->record_id !== null;
+            // Online-origin demos carry an 'm' prefix on gametype (mdf/mfs/mfc).
+            // record_id alone is wrong: a legit mdf demo with no main-record
+            // assignment still came from online play and should show ONLINE.
+            $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
 
             return [
                 // Identity
@@ -405,94 +438,21 @@ class MapsController extends Controller
         $showOffline = $request->has('showOffline') ? $request->input('showOffline') : $userDefaultOffline;
 
         if ($showOffline === 'true') {
-            // Determine offline gametype based on map name (same logic as online records)
-            // fc (fast caps) maps start with "actf" or "ctf", otherwise df (defrag)
+            // Determine physics patterns based on map name + selected ctf mode.
+            // fc (fast caps) maps start with "actf" or "ctf", otherwise df (defrag).
+            // Physics format in DB: "CPM.2.TR" or "VQ3.1" (N = ctf mode).
             $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
-
-            // For fast caps with CTF modes, filter by physics field containing the CTF mode
-            // Physics format: "CPM.2.TR" or "VQ3.1" where the number is the CTF mode
-            // $gametype from URL contains: run, ctf1, ctf2, etc.
             if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
-                // Specific CTF mode selected - filter by physics LIKE pattern
-                // Extract CTF number from gametype (e.g., "ctf2" -> "2")
                 $ctfNumber = substr($gametype, 3, 1);
-
-                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', "CPM.{$ctfNumber}%")
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'cpmPage')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, "CPM.{$ctfNumber}%", $column, $order, $allCpmRecordsByTime
-                );
-
-                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', "VQ3.{$ctfNumber}%")
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'vq3Page')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, "VQ3.{$ctfNumber}%", $column, $order, $allVq3RecordsByTime
-                );
-            } elseif ($offlineGametype === 'fc') {
-                // Fast caps map but no specific CTF mode selected (on "run" gametype)
-                // Show all offline fast caps records regardless of CTF mode
-                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', 'CPM%')
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'cpmPage')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
-                );
-
-                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', 'VQ3%')
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'vq3Page')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
-                );
+                $cpmPattern = "CPM.{$ctfNumber}%";
+                $vq3Pattern = "VQ3.{$ctfNumber}%";
             } else {
-                // For df (defrag), physics can be "CPM" or "CPM.TR" (with timer reset)
-                // Use LIKE to match both
-                $cpmOfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', 'CPM%')
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'cpmPage')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $cpmOfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $cpmOfflineRecords, $map->name, null, 'CPM%', $column, $order, $allCpmRecordsByTime
-                );
-
-                $vq3OfflineRecords = OfflineRecord::where('map_name', $map->name)
-                    ->where('physics', 'LIKE', 'VQ3%')
-                    ->with(['demo.suggestedUser', 'user', 'renderedVideos' => fn($q) => $q->visible()->latest()])
-                    ->orderBy($column === 'date_set' ? 'date_set' : 'time_ms', $order)
-                    ->paginate(50, ['*'], 'vq3Page')
-                    ->withQueryString();
-
-                // Combine with assigned online demos
-                $vq3OfflineRecords = $this->combineOfflineAndOnlineDemos(
-                    $vq3OfflineRecords, $map->name, null, 'VQ3%', $column, $order, $allVq3RecordsByTime
-                );
+                $cpmPattern = 'CPM%';
+                $vq3Pattern = 'VQ3%';
             }
+
+            $cpmOfflineRecords = $this->buildGroupedDemosTop($map->name, $cpmPattern, $column, $order, 'cpmPage', $allCpmRecordsByTime);
+            $vq3OfflineRecords = $this->buildGroupedDemosTop($map->name, $vq3Pattern, $column, $order, 'vq3Page', $allVq3RecordsByTime);
         } else {
             $cpmOfflineRecords = null;
             $vq3OfflineRecords = null;
@@ -601,6 +561,29 @@ class MapsController extends Controller
             return [];
         }
 
+        // Identify flagged demos — they must not cluster with legitimate attempts.
+        // Two sources to merge: community flags (RecordFlag) and parser-detected
+        // validity flags (OfflineRecord.validity_flag, keyed by demo_id).
+        $demoIds = $demos->pluck('id')->all();
+        $recordIds = $demos->pluck('record_id')->filter()->all();
+        $flaggedDemoIds = [];
+        if (!empty($demoIds) || !empty($recordIds)) {
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')
+                ->where(function ($q) use ($demoIds, $recordIds) {
+                    if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
+                    if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
+                })
+                ->pluck('demo_id')->filter()->unique()->all();
+        }
+        if (!empty($demoIds)) {
+            $validityFlaggedIds = OfflineRecord::whereIn('demo_id', $demoIds)
+                ->whereNotNull('validity_flag')
+                ->where('validity_flag', '!=', '')
+                ->pluck('demo_id')->filter()->unique()->all();
+            $flaggedDemoIds = array_values(array_unique(array_merge($flaggedDemoIds, $validityFlaggedIds)));
+        }
+        $flaggedSet = array_flip($flaggedDemoIds);
+
         $grouper = new VirtualPlayerGrouper();
 
         // Union-find: compute root per demo once, reuse for all lookups.
@@ -618,6 +601,7 @@ class MapsController extends Controller
         $byName = []; $byColored = []; $byPlain = [];
         $demosArr = $demos->values();
         foreach ($demosArr as $i => $d) {
+            if (isset($flaggedSet[$d->id])) continue;
             $name = strtolower(trim(preg_replace('/\^[0-9\[\]]/', '', $d->player_name ?? '')));
             $colored = trim($d->q3df_login_name_colored ?? '');
             $plain = strtolower(trim($d->q3df_login_name ?? ''));
@@ -690,164 +674,284 @@ class MapsController extends Controller
     }
 
     /**
-     * Combine offline records with assigned online demos for "Demos Top" section
+     * Build "Demos Top" paginator with server-side virtual-player grouping.
+     * Pools offline_records + assigned online demos for the map/physics, runs
+     * union-find on (player_name / q3df_login_name_colored / q3df_login_name),
+     * keeps the fastest attempt per cluster as the representative, then
+     * paginates the representatives. Guarantees one row per virtual player and
+     * stable cross-page behavior.
      */
-    private function combineOfflineAndOnlineDemos($offlineRecords, $mapName, $physics, $physicsPattern, $column, $order, $mainRecordIds = [])
+    private function buildGroupedDemosTop(string $mapName, string $physicsPattern, string $column, string $order, string $pageName, array $mainRecordIds = []): \Illuminate\Pagination\LengthAwarePaginator
     {
-        if (!$offlineRecords) {
-            return null;
-        }
+        $perPage = 50;
+        $currentPage = (int) (request()->input($pageName, 1));
+        if ($currentPage < 1) $currentPage = 1;
 
-        // Get offline records collection
-        $offlineItems = $offlineRecords->getCollection()->map(function ($record) {
-            // Determine flag type based on gametype and validity
-            // If validity_flag is set, use that as the flag
-            // Otherwise: mdf/mfs/mfc = ONLINE, df/fs/fc = OFFLINE
-            $flagType = 'OFFLINE'; // Default
+        // Pool 1: offline_records (with demo eager-loaded so we can read q3df signals)
+        $offline = OfflineRecord::where('map_name', $mapName)
+            ->where('physics', 'LIKE', $physicsPattern)
+            ->with([
+                'demo:id,q3df_login_name,q3df_login_name_colored,file_hash,country,user_id,suggested_user_id',
+                'demo.suggestedUser',
+                'user',
+                'renderedVideos' => fn ($q) => $q->visible()->latest(),
+            ])
+            ->get();
+
+        // Pool 2: assigned online demos not already in main records table
+        $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)
+            ->where('physics', 'LIKE', $physicsPattern)
+            ->where('status', 'assigned')
+            ->whereNotNull('record_id')
+            ->with(['record.user', 'user', 'renderedVideo']);
+        if (!empty($mainRecordIds)) {
+            $onlineDemosQuery->whereNotIn('record_id', $mainRecordIds);
+        }
+        $onlineDemos = $onlineDemosQuery->get();
+
+        // Unify into a single candidate list with normalized shape.
+        $candidates = collect();
+
+        foreach ($offline as $record) {
+            $flagType = 'OFFLINE';
             if ($record->validity_flag) {
-                // Validity flag takes priority (e.g., "client_finish=false")
                 $flagType = $record->validity_flag;
             } elseif ($record->gametype && str_starts_with($record->gametype, 'm')) {
-                // Online demo (mdf, mfs, mfc)
                 $flagType = 'ONLINE';
             }
 
-            return (object) [
+            // Country must come from the demo itself (parsed from filename),
+            // never from the demo's uploader. Falling back to the uploader's
+            // country means every demo without filename country gets stamped
+            // with the admin's / bulk uploader's flag.
+            $demoCountry = $record->demo?->country;
+            $candidates->push((object) [
                 'id' => $record->id,
                 'time_ms' => $record->time_ms,
                 'time' => $record->time,
                 'player_name' => $record->player_name,
+                'q3df_login_name' => $record->demo?->q3df_login_name,
+                'q3df_login_name_colored' => $record->demo?->q3df_login_name_colored,
                 'date_set' => $record->date_set,
                 'demo' => $record->demo,
                 'demo_id' => $record->demo_id,
                 'record_id' => null,
                 'user' => null,
-                'country' => $record->demo?->country ?? $record->user?->country ?? '_404',
+                'country' => $demoCountry !== null && $demoCountry !== '' ? $demoCountry : '_404',
                 'rank' => $record->rank,
-                'is_online' => $record->gametype && str_starts_with($record->gametype, 'm'), // true for mdf/mfs/mfc
-                'verification_type' => $flagType, // ONLINE/OFFLINE or validity flag
+                'is_online' => $record->gametype && str_starts_with($record->gametype, 'm'),
+                'verification_type' => $flagType,
                 'rendered_videos' => $record->renderedVideos,
-            ];
-        });
-
-        // Get assigned online demos for this map/physics
-        $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)
-            ->where('status', 'assigned')
-            ->whereNotNull('record_id')
-            ->with(['record.user', 'user', 'renderedVideo']);
-
-        // Apply physics filter
-        if ($physicsPattern) {
-            $onlineDemosQuery->where('physics', 'LIKE', $physicsPattern);
-        } else {
-            $onlineDemosQuery->where('physics', $physics);
+            ]);
         }
 
-        // Exclude demos already shown in main records table (avoid duplicates)
-        if (!empty($mainRecordIds)) {
-            $onlineDemosQuery->whereNotIn('record_id', $mainRecordIds);
-        }
-
-        $onlineDemos = $onlineDemosQuery->get()->map(function ($demo) {
-            // Determine which user to use: record owner takes priority
-            // If record has a registered user, use that for avatar/effects
-            // If record has no user (unregistered player), pass NULL for user so no avatar/effects show
+        foreach ($onlineDemos as $demo) {
             $user = null;
             $nameToDisplay = $demo->player_name;
-
             if ($demo->record && $demo->record->user) {
-                // Record has a registered user - use their info for name, avatar, effects
                 $user = $demo->record->user;
                 $nameToDisplay = $demo->record->user->name;
             } elseif ($demo->record && $demo->record->name) {
-                // Record has no registered user - use record's name, but NO avatar/effects
-                $user = null;
                 $nameToDisplay = $demo->record->name;
             }
 
-            return (object) [
+            $candidates->push((object) [
                 'id' => $demo->id,
                 'time_ms' => $demo->time_ms,
                 'time' => $demo->time_ms,
                 'player_name' => $demo->player_name,
-                'name' => $nameToDisplay, // Override name for unregistered record owners
+                'q3df_login_name' => $demo->q3df_login_name,
+                'q3df_login_name_colored' => $demo->q3df_login_name_colored,
+                'name' => $nameToDisplay,
                 'date_set' => $demo->record_date ?? $demo->created_at,
                 'demo' => $demo,
-                'demo_id' => null, // Online demos don't use demo_id
-                'record_id' => $demo->record_id, // Has record_id since they're assigned
-                'user' => $user, // Use record owner (assigned user) for avatar/effects/country
-                'country' => $demo->record?->country ?? $demo->country, // Use record's country
-                'rank' => null, // Will be calculated after merge
-                'is_online' => true, // Flag for online demos
-                'verification_type' => 'verified', // Online demos assigned to records are verified
+                'demo_id' => null,
+                'record_id' => $demo->record_id,
+                'user' => $user,
+                'country' => $demo->record?->country ?? $demo->country,
+                'rank' => null,
+                'is_online' => true,
+                'verification_type' => 'verified',
                 'rendered_videos' => $demo->renderedVideo ? [$demo->renderedVideo] : [],
-            ];
-        });
-
-        // Merge collections - use base collect() to avoid EloquentCollection's getKey() calls
-        $combined = collect($offlineItems->all())->merge($onlineDemos);
-
-        // Attach community flags BEFORE ranking (so flagged items get excluded from ranks)
-        $allDemoIds = $combined->pluck('demo_id')->filter()->values()->toArray();
-        $allRecordIds = $combined->pluck('record_id')->filter()->values()->toArray();
-
-        if (!empty($allDemoIds) || !empty($allRecordIds)) {
-            $flags = RecordFlag::where('status', 'approved')
-                ->where(function ($q) use ($allRecordIds, $allDemoIds) {
-                    if (!empty($allRecordIds)) {
-                        $q->whereIn('record_id', $allRecordIds);
-                    }
-                    if (!empty($allDemoIds)) {
-                        $q->orWhereIn('demo_id', $allDemoIds);
-                    }
-                })
-                ->get();
-
-            $flagsByDemo = $flags->whereNotNull('demo_id')->groupBy('demo_id');
-            $flagsByRecord = $flags->whereNotNull('record_id')->groupBy('record_id');
-
-            $combined = $combined->map(function ($item) use ($flagsByDemo, $flagsByRecord) {
-                $itemFlags = collect();
-                if ($item->demo_id && isset($flagsByDemo[$item->demo_id])) {
-                    $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo_id]);
-                }
-                if ($item->demo && isset($flagsByDemo[$item->demo->id])) {
-                    $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo->id]);
-                }
-                if ($item->record_id && isset($flagsByRecord[$item->record_id])) {
-                    $itemFlags = $itemFlags->merge($flagsByRecord[$item->record_id]);
-                }
-                $item->approved_flags = $itemFlags->groupBy('flag_type')->map(fn ($g) => $g->sortByDesc('flag_count')->first())->values()->toArray();
-                return $item;
-            });
+            ]);
         }
 
-        // Recalculate ranks - skip items with validity flags or community flags
-        $rank = 0;
-        $combined = $combined->sortBy('time_ms')->values()->map(function ($item) use (&$rank) {
-            $hasFlagIssue = !empty($item->approved_flags) ||
-                ($item->verification_type && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
+        if ($candidates->isEmpty()) {
+            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, $currentPage, [
+                'path' => request()->url(),
+                'query' => request()->query(),
+                'pageName' => $pageName,
+            ]);
+        }
 
-            if ($hasFlagIssue) {
-                $item->rank = null;
-            } else {
-                $rank++;
-                $item->rank = $rank;
+        // Attach community flags to each candidate before clustering so flagged
+        // items can be skipped from rank but kept in cluster.
+        $allDemoIds = $candidates->pluck('demo_id')->filter()->values()->toArray();
+        $embeddedDemoIds = $candidates->map(fn ($c) => $c->demo?->id)->filter()->values()->toArray();
+        $allRecordIds = $candidates->pluck('record_id')->filter()->values()->toArray();
+
+        $flagsByDemo = collect();
+        $flagsByRecord = collect();
+        $mergedDemoIds = array_unique(array_merge($allDemoIds, $embeddedDemoIds));
+        if (!empty($mergedDemoIds) || !empty($allRecordIds)) {
+            $flags = RecordFlag::where('status', 'approved')
+                ->where(function ($q) use ($allRecordIds, $mergedDemoIds) {
+                    if (!empty($allRecordIds)) $q->whereIn('record_id', $allRecordIds);
+                    if (!empty($mergedDemoIds)) $q->orWhereIn('demo_id', $mergedDemoIds);
+                })
+                ->get();
+            $flagsByDemo = $flags->whereNotNull('demo_id')->groupBy('demo_id');
+            $flagsByRecord = $flags->whereNotNull('record_id')->groupBy('record_id');
+        }
+
+        $candidates = $candidates->map(function ($item) use ($flagsByDemo, $flagsByRecord) {
+            $itemFlags = collect();
+            if ($item->demo_id && isset($flagsByDemo[$item->demo_id])) {
+                $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo_id]);
             }
+            if ($item->demo && isset($flagsByDemo[$item->demo->id])) {
+                $itemFlags = $itemFlags->merge($flagsByDemo[$item->demo->id]);
+            }
+            if ($item->record_id && isset($flagsByRecord[$item->record_id])) {
+                $itemFlags = $itemFlags->merge($flagsByRecord[$item->record_id]);
+            }
+            $item->approved_flags = $itemFlags->groupBy('flag_type')->map(fn ($g) => $g->sortByDesc('flag_count')->first())->values()->toArray();
             return $item;
         });
 
-        // Apply sort order
-        if ($column === 'date_set') {
-            $combined = $order === 'ASC'
-                ? $combined->sortBy('date_set')->values()
-                : $combined->sortByDesc('date_set')->values();
+        // Pre-sort by time so cluster representative is deterministic (fastest).
+        $sorted = $candidates->sortBy('time_ms')->values();
+
+        // Union-find over (player_name / q3df_login_name_colored / q3df_login_name).
+        $n = $sorted->count();
+        $parent = range(0, $n - 1);
+        $find = function ($i) use (&$parent) {
+            while ($parent[$i] !== $i) { $parent[$i] = $parent[$parent[$i]]; $i = $parent[$i]; }
+            return $i;
+        };
+        $union = function ($a, $b) use (&$parent, $find) {
+            $ra = $find($a); $rb = $find($b);
+            if ($ra !== $rb) $parent[$ra] = $rb;
+        };
+
+        // Flagged candidates (TAS, pmove cheat, no_finish, client_finish=false,
+        // etc.) stay as their own singleton clusters — they must not poison a
+        // real player's cluster or act as a timehistory seed. E.g. a fake TAS
+        // run uploaded under a legitimate player's name would otherwise steal
+        // all their attempts into its cluster and show up as the canonical
+        // "fastest". Keeping flagged rows standalone lets a reprocess reassign
+        // non-flagged demos to the correct owner via name/q3df_login aliases.
+        //
+        // Two flag sources: community flags (RecordFlag, surfaced as
+        // $c->approved_flags) and parser-detected validity flags (stored on
+        // OfflineRecord.validity_flag, surfaced here as $c->verification_type
+        // with any value outside [OFFLINE, ONLINE, verified]).
+        $isFlagged = function ($c) {
+            if (!empty($c->approved_flags)) return true;
+            return $c->verification_type
+                && !in_array($c->verification_type, ['OFFLINE', 'ONLINE', 'verified'], true);
+        };
+
+        $byName = []; $byColored = []; $byPlain = [];
+        foreach ($sorted as $i => $c) {
+            if ($isFlagged($c)) continue;
+            $name = strtolower(trim(preg_replace('/\^[0-9\[\]]/', '', $c->player_name ?? '')));
+            $colored = trim($c->q3df_login_name_colored ?? '');
+            $plain = strtolower(trim($c->q3df_login_name ?? ''));
+            if ($name !== '') {
+                if (isset($byName[$name])) $union($byName[$name], $i); else $byName[$name] = $i;
+            }
+            if ($colored !== '') {
+                if (isset($byColored[$colored])) $union($byColored[$colored], $i); else $byColored[$colored] = $i;
+            }
+            if ($plain !== '') {
+                if (isset($byPlain[$plain])) $union($byPlain[$plain], $i); else $byPlain[$plain] = $i;
+            }
         }
 
-        // Update paginator with combined data - use base Collection to avoid Eloquent's getKey() calls
-        $offlineRecords->setCollection(collect($combined->all()));
+        $clustersByRoot = [];
+        foreach ($sorted as $i => $c) {
+            $r = $find($i);
+            $clustersByRoot[$r][] = $i;
+        }
 
-        return $offlineRecords;
+        $grouper = new VirtualPlayerGrouper();
+        $representatives = [];
+
+        foreach ($clustersByRoot as $memberIndices) {
+            // $sorted is already sorted by time_ms asc, so first index is fastest.
+            $seedIdx = $memberIndices[0];
+            $seed = clone $sorted[$seedIdx];
+
+            if (count($memberIndices) === 1) {
+                $seed->grouped_count = 0;
+                $seed->grouped_signals = 0;
+            } else {
+                // Build member list (excluding seed) for count + signals.
+                $rest = [];
+                foreach ($memberIndices as $mi) {
+                    if ($mi !== $seedIdx) $rest[] = $sorted[$mi];
+                }
+                // Dedupe by file_hash, then by time_ms (keep oldest by date_set).
+                $seenHash = []; $dedup1 = [];
+                foreach ($rest as $m) {
+                    $hash = $m->demo?->file_hash ?: ('cand:' . $m->id);
+                    if (!isset($seenHash[$hash])) { $seenHash[$hash] = true; $dedup1[] = $m; }
+                }
+                usort($dedup1, fn ($a, $b) => strtotime((string) ($a->date_set ?? '')) - strtotime((string) ($b->date_set ?? '')));
+                $seenTime = []; $dedup2 = [];
+                foreach ($dedup1 as $m) {
+                    $k = 'time:' . (int) $m->time_ms;
+                    if (!isset($seenTime[$k])) { $seenTime[$k] = true; $dedup2[] = $m; }
+                }
+                $seed->grouped_count = count($dedup2);
+                $maxSignals = 0;
+                foreach ($dedup2 as $m) {
+                    $s = $grouper->signalStrength($seed, $m);
+                    if ($s > $maxSignals) $maxSignals = $s;
+                }
+                $seed->grouped_signals = $maxSignals;
+            }
+
+            $representatives[] = $seed;
+        }
+
+        $reps = collect($representatives);
+
+        // Sort representatives (column = 'time' or 'date_set').
+        if ($column === 'date_set') {
+            $reps = $order === 'ASC'
+                ? $reps->sortBy(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values()
+                : $reps->sortByDesc(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values();
+        } else {
+            $reps = $reps->sortBy('time_ms')->values();
+        }
+
+        // Recalculate ranks: skip flagged reps.
+        $rank = 0;
+        $reps = $reps->map(function ($item) use (&$rank) {
+            $hasFlag = !empty($item->approved_flags) ||
+                ($item->verification_type && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
+            $item->rank = $hasFlag ? null : ++$rank;
+            return $item;
+        });
+
+        // Manual pagination over representatives.
+        $total = $reps->count();
+        $offset = ($currentPage - 1) * $perPage;
+        $items = $reps->slice($offset, $perPage)->values();
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+                'pageName' => $pageName,
+            ]
+        );
     }
 
     /**

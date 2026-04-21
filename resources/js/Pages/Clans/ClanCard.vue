@@ -413,11 +413,12 @@
     </div>
 
     <!-- Resolution Debug Indicator -->
-    <Teleport to="body">
+    <!-- <Teleport to="body">
         <div class="fixed bottom-2 right-2 z-[99999] bg-black/80 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-mono text-green-400 pointer-events-none">
             {{ breakpointLabel }}
         </div>
-    </Teleport>
+    </Teleport> -->
+
 </template>
 
 <style scoped>

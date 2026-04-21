@@ -2478,7 +2478,7 @@
                             <div class="bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-b border-blue-500/30 px-4 pt-1 pb-1">
                                 <div class="flex items-center justify-between">
                                     <h2 class="text-lg font-bold text-blue-400">VQ3 Records</h2>
-                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
@@ -2607,7 +2607,7 @@
                             <div class="bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-b border-purple-500/30 px-4 pt-1 pb-1">
                                 <div class="flex items-center justify-between">
                                     <h2 class="text-lg font-bold text-purple-400">CPM Records</h2>
-                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                    <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                         Swap VQ3/CPM sides
                                     </Link>
                                 </div>
