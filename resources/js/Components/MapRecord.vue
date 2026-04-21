@@ -33,13 +33,25 @@
         compact: {
             type: Boolean,
             default: false
-        }
+        },
+        // Time-history metadata attached to this row. When present, an inline
+        // icon chip is rendered in the row's chip area; clicking it emits
+        // `toggle-history` so the parent can render a drawer below the row.
+        // Shape: { count, signals, demoId?, userId? }
+        timeHistory: {
+            type: Object,
+            default: null,
+        },
+        // Parent-controlled open/close state for the time-history drawer.
+        historyExpanded: {
+            type: Boolean,
+            default: false,
+        },
     });
 
-    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover']);
+    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history']);
 
     const page = usePage();
-    const showUploaderTooltip = ref(false);
     const showReportModal = ref(false);
     const showFlagModal = ref(false);
     const showYoutubeEmbed = ref(false);
@@ -344,14 +356,17 @@
     });
 
     const getRoute = computed(() => {
-        // Offline records should never link to profiles
-        if (isOfflineRecord.value) {
-            return null;
-        }
-
-        // Linked users with full profiles
+        // Linked users with full profiles — works for online records AND for
+        // offline/Demos-Top reps that inherited a canonical user from their
+        // cluster (e.g. NOOB's fastest offline demo links to NOOB's profile
+        // when the cluster matched his alias).
         if (props.record.user) {
             return route('profile.index', props.record.user.id);
+        }
+
+        // Unmatched offline row — no profile link available.
+        if (isOfflineRecord.value) {
+            return null;
         }
 
         // Fallback to mdd profile for unlinked accounts
@@ -426,8 +441,6 @@
                 !compact ? 'group-hover:ml-1' : '',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
-            @mouseenter="isOfflineRecord && (showUploaderTooltip = true)"
-            @mouseleave="isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects (effects suppressed in compact mode) -->
@@ -742,16 +755,7 @@
             </template>
         </component>
 
-        <!-- Offline record uploader tooltip - TELEPORTED -->
-        <Teleport to="body" v-if="isOfflineRecord && showUploaderTooltip && record.user">
-            <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-                <div class="bg-gray-900 border-2 border-blue-500 text-gray-300 px-4 py-2 rounded-lg text-sm font-semibold shadow-xl">
-                    Uploaded by: <span class="text-blue-400" v-html="q3tohtml(record.user.name)"></span>
-                </div>
-            </div>
-        </Teleport>
-
-        <!-- Community flag tooltip - TELEPORTED -->
+<!-- Community flag tooltip - TELEPORTED -->
         <Teleport to="body" v-if="hoveredCommunityFlag">
             <div class="fixed z-[9999] pointer-events-none" :style="{ top: communityFlagTooltipPos.y + 'px', left: communityFlagTooltipPos.x + 'px' }">
                 <div class="bg-gray-900 border border-orange-500/30 rounded-lg px-3 py-2 shadow-xl -translate-x-1/2 -translate-y-full -mt-2">
@@ -843,22 +847,40 @@
             </div>
         </div>
 
-        <!-- Time - MASSIVE and eye-catching -->
-        <div class="text-right flex-shrink-0 ml-2">
-            <div
-                class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
-                :class="{
-                    'text-base': !compact,
-                    'text-xs': compact,
-                    'text-emerald-300': isMyRecord && !compact,
-                    'text-white': !isMyRecord && !compact,
-                    'text-gray-300': compact,
-                }"
+        <!-- Time - MASSIVE and eye-catching. History trigger sits next to the
+             time stack, vertically centered across both rows (time + diff). -->
+        <div class="flex items-center justify-end gap-1.5 flex-shrink-0 ml-2">
+            <button
+                v-if="timeHistory && timeHistory.count"
+                type="button"
+                @click.prevent.stop="emit('toggle-history')"
+                :title="historyExpanded ? 'Hide time history' : 'Show time history'"
+                :class="[
+                    'inline-flex flex-col items-center justify-center leading-none px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors',
+                    historyExpanded
+                        ? 'bg-blue-500/30 text-blue-200 border-blue-400/60'
+                        : 'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
+                ]"
             >
-                {{ formatTime(record.time) }}
-            </div>
-            <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                -{{ formatTime(timeDiff) }}
+                <span>Time</span>
+                <span class="mt-0.5">History</span>
+            </button>
+            <div class="text-right">
+                <div
+                    class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                    :class="{
+                        'text-base': !compact,
+                        'text-xs': compact,
+                        'text-emerald-300': isMyRecord && !compact,
+                        'text-white': !isMyRecord && !compact,
+                        'text-gray-300': compact,
+                    }"
+                >
+                    {{ formatTime(record.time) }}
+                </div>
+                <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                    -{{ formatTime(timeDiff) }}
+                </div>
             </div>
         </div>
 

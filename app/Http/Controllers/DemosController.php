@@ -1322,10 +1322,9 @@ class DemosController extends Controller
             ], 400);
         }
 
-        // Delete file
-        Storage::delete($demo->file_path);
-
-        // Delete database record
+        // Intentionally no B2 file deletion — the app must never delete files
+        // from Backblaze. The DB row is removed so the demo disappears from
+        // the UI; the blob remains on B2 until the operator purges it manually.
         $demo->delete();
 
         return response()->json([

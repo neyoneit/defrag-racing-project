@@ -691,10 +691,47 @@
         const meta = physics === 'vq3' ? props.clusterMetaVq3 : props.clusterMetaCpm;
         if (!meta) return null;
         const demoId = record.demo?.id || record.uploaded_demos?.[0]?.id;
-        if (!demoId) return null;
-        const m = meta[String(demoId)];
-        if (!m || !m.count) return null;
-        return { demoId, count: m.count, signals: m.signals || 0 };
+        if (demoId) {
+            const m = meta[String(demoId)];
+            if (m && m.count) return { demoId, userId: null, mddId: null, count: m.count, signals: m.signals || 0 };
+        }
+        // Fallback: main record with no attached demo. Prefer user_id
+        // (registered defrag.racing account) then mdd_id (unclaimed q3df
+        // profile) so the drawer still works for players who haven't
+        // linked their q3df account to a local user yet.
+        const userId = record.user_id || record.user?.id;
+        if (userId) {
+            const m = meta['user:' + userId];
+            if (m && m.count) {
+                return { demoId: null, userId, mddId: null, count: m.count, signals: m.signals || 0 };
+            }
+        }
+        const mddId = record.mdd_id;
+        if (mddId) {
+            const m = meta['mdd:' + mddId];
+            if (m && m.count) {
+                return { demoId: null, userId: null, mddId, count: m.count, signals: m.signals || 0 };
+            }
+        }
+        return null;
+    };
+
+    // Unique-per-row key for tracking which time-history drawer is open.
+    // A row can be either an offline/online demo (has `demo.id`) or a main
+    // record (no attached demo — fall back to record.id). Physics-scoped so
+    // the same user's VQ3 and CPM rows don't share state.
+    const timeHistoryRowKey = (record, physics) => {
+        const id = record.demo?.id || record.uploaded_demos?.[0]?.id || record.id;
+        return physics + ':' + id;
+    };
+
+    const expandedHistoryKeys = ref(new Set());
+    const isHistoryExpanded = (record, physics) => expandedHistoryKeys.value.has(timeHistoryRowKey(record, physics));
+    const toggleHistory = (record, physics) => {
+        const key = timeHistoryRowKey(record, physics);
+        const next = new Set(expandedHistoryKeys.value);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        expandedHistoryKeys.value = next;
     };
 
     // Group items sharing any of (player_name / q3df_colored / q3df_plain).
@@ -838,8 +875,6 @@
             combined = [...combined, ...offlineRecords.data];
         }
 
-        const rawThisPage = combined.length;
-
         // Sort by time first, then collapse duplicates of the same virtual player.
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
         combined = groupByVirtualPlayer(combined);
@@ -856,26 +891,28 @@
             return { ...item, rank: rankCounter };
         });
 
-        // Server totals include the pre-grouping duplicates, so they overstate
-        // the visible row count. Derive a reduction ratio from this page
-        // (grouped / raw) and apply it to the max server total to estimate
-        // the post-grouping total across all pages. Perfectly accurate on
-        // single-page maps (majority case); a close approximation elsewhere.
+        // The offline paginator is already grouped server-side (one rep per
+        // virtual player), so its last_page is correct. Main records and
+        // oldtop have no collisions worth worrying about. Use max of the
+        // three server paginators — that's the real last page.
         const perPage = onlineRecords.per_page || 20;
-        let maxRawTotal = onlineRecords.total;
-        if (props.showOldtop && oldRecords) maxRawTotal = Math.max(maxRawTotal, oldRecords.total);
-        if (props.showOffline && offlineRecords) maxRawTotal = Math.max(maxRawTotal, offlineRecords.total);
-
-        const reductionRatio = rawThisPage > 0 ? combined.length / rawThisPage : 1;
-        const estimatedGroupedTotal = Math.max(combined.length, Math.round(maxRawTotal * reductionRatio));
-        const estimatedLastPage = Math.max(1, Math.ceil(estimatedGroupedTotal / perPage));
+        const lastPage = Math.max(
+            onlineRecords.last_page || 1,
+            (props.showOldtop && oldRecords) ? (oldRecords.last_page || 1) : 1,
+            (props.showOffline && offlineRecords) ? (offlineRecords.last_page || 1) : 1,
+        );
+        const total = Math.max(
+            onlineRecords.total || 0,
+            (props.showOldtop && oldRecords) ? (oldRecords.total || 0) : 0,
+            (props.showOffline && offlineRecords) ? (offlineRecords.total || 0) : 0,
+        );
 
         return {
-            total: estimatedGroupedTotal,
+            total,
             data: combined,
             first_page_url: onlineRecords.first_page_url,
             current_page: onlineRecords.current_page,
-            last_page: estimatedLastPage,
+            last_page: lastPage,
             per_page: perPage
         };
     };
@@ -1579,7 +1616,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
                                 <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span v-if="getVq3Records.total" class="text-sm font-semibold text-blue-400/60">({{ getVq3Records.total }})</span></h2>
-                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1607,8 +1644,30 @@
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getVq3Records.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
-                                    <MapRecord physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
-                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'vq3')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'vq3').demoId" :attempts-count="timeHistorySeed(record, 'vq3').count" :signals-count="timeHistorySeed(record, 'vq3').signals" physics="vq3" />
+                                    <MapRecord
+                                        physics="VQ3"
+                                        :oldtop="record.oldtop"
+                                        :showSourceChips="showOldtop || showOffline"
+                                        :record="record"
+                                        :demoMatches="demoMatchesMap[record.id] || []"
+                                        :timeHistory="timeHistorySeed(record, 'vq3')"
+                                        :historyExpanded="isHistoryExpanded(record, 'vq3')"
+                                        @assign="openAssignModal($event, 'VQ3')"
+                                        @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])"
+                                        @reassign-record="(rec) => openReassignModal(rec)"
+                                        @scoreHover="scoreTooltip = $event"
+                                        @toggle-history="toggleHistory(record, 'vq3')"
+                                    />
+                                    <TimeHistoryExpand
+                                        v-if="timeHistorySeed(record, 'vq3') && isHistoryExpanded(record, 'vq3')"
+                                        :mapname="map.name"
+                                        :demo-id="timeHistorySeed(record, 'vq3').demoId"
+                                        :user-id="timeHistorySeed(record, 'vq3').userId"
+                                        :mdd-id="timeHistorySeed(record, 'vq3').mddId"
+                                        :attempts-count="timeHistorySeed(record, 'vq3').count"
+                                        :signals-count="timeHistorySeed(record, 'vq3').signals"
+                                        physics="vq3"
+                                    />
                                 </template>
                             </div>
 
@@ -1643,7 +1702,7 @@
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
                                 <h2 class="text-lg font-bold text-purple-400">CPM Records <span v-if="getCpmRecords.total" class="text-sm font-semibold text-purple-400/60">({{ getCpmRecords.total }})</span></h2>
-                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
+                                <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Swap VQ3/CPM sides
                                 </Link>
                             </div>
@@ -1671,8 +1730,29 @@
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getCpmRecords.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
-                                    <MapRecord physics="CPM" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
-                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'cpm')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'cpm').demoId" :attempts-count="timeHistorySeed(record, 'cpm').count" :signals-count="timeHistorySeed(record, 'cpm').signals" physics="cpm" />
+                                    <MapRecord
+                                        physics="CPM"
+                                        :showSourceChips="showOldtop || showOffline"
+                                        :record="record"
+                                        :demoMatches="demoMatchesMap[record.id] || []"
+                                        :timeHistory="timeHistorySeed(record, 'cpm')"
+                                        :historyExpanded="isHistoryExpanded(record, 'cpm')"
+                                        @assign="openAssignModal($event, 'CPM')"
+                                        @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])"
+                                        @reassign-record="(rec) => openReassignModal(rec)"
+                                        @scoreHover="scoreTooltip = $event"
+                                        @toggle-history="toggleHistory(record, 'cpm')"
+                                    />
+                                    <TimeHistoryExpand
+                                        v-if="timeHistorySeed(record, 'cpm') && isHistoryExpanded(record, 'cpm')"
+                                        :mapname="map.name"
+                                        :demo-id="timeHistorySeed(record, 'cpm').demoId"
+                                        :user-id="timeHistorySeed(record, 'cpm').userId"
+                                        :mdd-id="timeHistorySeed(record, 'cpm').mddId"
+                                        :attempts-count="timeHistorySeed(record, 'cpm').count"
+                                        :signals-count="timeHistorySeed(record, 'cpm').signals"
+                                        physics="cpm"
+                                    />
                                 </template>
                             </div>
 
