@@ -1,3 +1,7 @@
+"""
+Credit: based on DemoCleaner3 by ivan200 — https://github.com/ivan200/DemoCleaner3
+"""
+
 from __future__ import annotations
 
 import re

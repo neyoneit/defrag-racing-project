@@ -2,6 +2,7 @@
     import { Head, Link, router, usePage } from '@inertiajs/vue3';
     import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
+    import TimeHistoryExpand from '@/Components/TimeHistoryExpand.vue';
     // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
     import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
@@ -235,6 +236,18 @@
         difficultyRating: {
             type: Object,
             default: () => ({ average: null, total: 0, distribution: {}, user_rating: null })
+        },
+        // Server-computed cluster metadata for time-history badges. Keyed by
+        // uploaded_demo.id; each value is { count, signals }. Pre-computed so
+        // the collapsed leaderboard badge matches the opened drawer numbers
+        // exactly (no drift from pagination / client-only dedupe).
+        clusterMetaVq3: {
+            type: Object,
+            default: () => ({})
+        },
+        clusterMetaCpm: {
+            type: Object,
+            default: () => ({})
         }
     });
 
@@ -668,6 +681,146 @@
         tagBarInput.value?.focus();
     };
 
+    // Given a leaderboard row, pick the best demo id to use as seed for the
+    // time-history drawer (offline/inline demos have `record.demo`, main MDD
+    // records have `record.uploaded_demos[0]`). Looks up server-computed
+    // cluster metadata (count + signals) so the collapsed badge numbers match
+    // the drawer contents exactly. Returns null when the row has no demo or
+    // the cluster has no history beyond the seed itself.
+    const timeHistorySeed = (record, physics) => {
+        const meta = physics === 'vq3' ? props.clusterMetaVq3 : props.clusterMetaCpm;
+        if (!meta) return null;
+        const demoId = record.demo?.id || record.uploaded_demos?.[0]?.id;
+        if (!demoId) return null;
+        const m = meta[String(demoId)];
+        if (!m || !m.count) return null;
+        return { demoId, count: m.count, signals: m.signals || 0 };
+    };
+
+    // Group items sharing any of (player_name / q3df_colored / q3df_plain).
+    // Keeps only the fastest time per virtual player; the rest are surfaced
+    // via the TimeHistoryExpand drawer.
+    //
+    // Items that participate in grouping:
+    //   1. Offline records / inline assigned demos — signals come from `demo`
+    //   2. Main MDD online records — signals come from `uploaded_demos[0]`
+    //      (if attached) + fallback on record.name / record.user.name
+    // This means a main q3df record and its owner's slower offline uploads
+    // collapse into a single row (with the MDD record as representative if
+    // it's the fastest, which it usually is).
+    const groupByVirtualPlayer = (items) => {
+        const n = items.length;
+        const parent = Array.from({ length: n }, (_, i) => i);
+        const find = (i) => {
+            while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; }
+            return i;
+        };
+        const union = (a, b) => {
+            const ra = find(a), rb = find(b);
+            if (ra !== rb) parent[ra] = rb;
+        };
+
+        const stripColors = (s) => (s || '').replace(/\^[0-9\[\]]/g, '').trim().toLowerCase() || null;
+
+        const signalsFor = (item) => {
+            const d = item.demo || item.uploaded_demos?.[0];
+            if (d) {
+                return {
+                    name: stripColors(d.player_name || item.name),
+                    colored: ((d.q3df_login_name_colored || '').trim()) || null,
+                    plain: ((d.q3df_login_name || '').trim().toLowerCase()) || null,
+                };
+            }
+            // Main MDD record without attached demo — fall back to the record's
+            // own player name so it can still cluster with that player's demos.
+            const fallbackName = stripColors(item.name || item.player_name || item.user?.name);
+            if (fallbackName) {
+                return { name: fallbackName, colored: null, plain: null };
+            }
+            return null;
+        };
+
+        const nameIdx = new Map();
+        const coloredIdx = new Map();
+        const plainIdx = new Map();
+
+        for (let i = 0; i < n; i++) {
+            const sig = signalsFor(items[i]);
+            if (!sig) continue;
+
+            if (sig.name) {
+                if (nameIdx.has(sig.name)) union(nameIdx.get(sig.name), i);
+                else nameIdx.set(sig.name, i);
+            }
+            if (sig.colored) {
+                if (coloredIdx.has(sig.colored)) union(coloredIdx.get(sig.colored), i);
+                else coloredIdx.set(sig.colored, i);
+            }
+            if (sig.plain) {
+                if (plainIdx.has(sig.plain)) union(plainIdx.get(sig.plain), i);
+                else plainIdx.set(sig.plain, i);
+            }
+        }
+
+        const counts = new Map();
+        for (let i = 0; i < n; i++) {
+            if (!signalsFor(items[i])) continue;
+            const root = find(i);
+            counts.set(root, (counts.get(root) || 0) + 1);
+        }
+
+        // Precompute max signal strength (0..3) for each cluster — so the
+        // time-history badge can show 1/3, 2/3, 3/3 before the drawer is
+        // even opened. We compare each non-representative member back to
+        // its cluster root.
+        const rootSeed = new Map(); // root idx -> representative item index (first seen = fastest)
+        for (let i = 0; i < n; i++) {
+            if (!signalsFor(items[i])) continue;
+            const root = find(i);
+            if (!rootSeed.has(root)) rootSeed.set(root, i);
+        }
+        const maxSignals = new Map();
+        const matchCount = (a, b) => {
+            let c = 0;
+            if (a.name && b.name && a.name === b.name) c++;
+            if (a.colored && b.colored && a.colored === b.colored) c++;
+            if (a.plain && b.plain && a.plain === b.plain) c++;
+            return c;
+        };
+        for (let i = 0; i < n; i++) {
+            const sig = signalsFor(items[i]);
+            if (!sig) continue;
+            const root = find(i);
+            if (i === rootSeed.get(root)) continue;
+            const seedSig = signalsFor(items[rootSeed.get(root)]);
+            if (!seedSig) continue;
+            const c = matchCount(sig, seedSig);
+            if (c > (maxSignals.get(root) || 0)) maxSignals.set(root, c);
+        }
+
+        // Items are already sorted by time asc before this call, so the first
+        // index we see per root is the fastest attempt — that becomes the
+        // representative row for the virtual player.
+        const kept = new Set();
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            if (!signalsFor(items[i])) {
+                result.push(items[i]);
+                continue;
+            }
+            const root = find(i);
+            if (!kept.has(root)) {
+                kept.add(root);
+                result.push({
+                    ...items[i],
+                    grouped_count: counts.get(root),
+                    grouped_signals: maxSignals.get(root) || 0,
+                });
+            }
+        }
+        return result;
+    };
+
     const mergeRecordSources = (onlineRecords, oldRecords, offlineRecords) => {
         let combined = [...onlineRecords.data];
 
@@ -685,8 +838,13 @@
             combined = [...combined, ...offlineRecords.data];
         }
 
-        // Sort by time and recalculate ranks (skip flagged items)
+        const rawThisPage = combined.length;
+
+        // Sort by time first, then collapse duplicates of the same virtual player.
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
+        combined = groupByVirtualPlayer(combined);
+
+        // Recalculate ranks (skip flagged items)
         let rankCounter = 0;
         combined = combined.map((item) => {
             const hasFlag = (item.approved_flags && item.approved_flags.length > 0) ||
@@ -698,24 +856,27 @@
             return { ...item, rank: rankCounter };
         });
 
-        let maxTotal = onlineRecords.total;
-        let maxLastPage = onlineRecords.last_page;
-        if (props.showOldtop && oldRecords) {
-            maxTotal = Math.max(maxTotal, oldRecords.total);
-            maxLastPage = Math.max(maxLastPage, oldRecords.last_page);
-        }
-        if (props.showOffline && offlineRecords) {
-            maxTotal = Math.max(maxTotal, offlineRecords.total);
-            maxLastPage = Math.max(maxLastPage, offlineRecords.last_page);
-        }
+        // Server totals include the pre-grouping duplicates, so they overstate
+        // the visible row count. Derive a reduction ratio from this page
+        // (grouped / raw) and apply it to the max server total to estimate
+        // the post-grouping total across all pages. Perfectly accurate on
+        // single-page maps (majority case); a close approximation elsewhere.
+        const perPage = onlineRecords.per_page || 20;
+        let maxRawTotal = onlineRecords.total;
+        if (props.showOldtop && oldRecords) maxRawTotal = Math.max(maxRawTotal, oldRecords.total);
+        if (props.showOffline && offlineRecords) maxRawTotal = Math.max(maxRawTotal, offlineRecords.total);
+
+        const reductionRatio = rawThisPage > 0 ? combined.length / rawThisPage : 1;
+        const estimatedGroupedTotal = Math.max(combined.length, Math.round(maxRawTotal * reductionRatio));
+        const estimatedLastPage = Math.max(1, Math.ceil(estimatedGroupedTotal / perPage));
 
         return {
-            total: maxTotal,
+            total: estimatedGroupedTotal,
             data: combined,
             first_page_url: onlineRecords.first_page_url,
             current_page: onlineRecords.current_page,
-            last_page: maxLastPage,
-            per_page: onlineRecords.per_page
+            last_page: estimatedLastPage,
+            per_page: perPage
         };
     };
 
@@ -1445,7 +1606,10 @@
                                 <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                             </div>
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getVq3Records.data" physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
+                                <template v-for="record in getVq3Records.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
+                                    <MapRecord physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
+                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'vq3')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'vq3').demoId" :attempts-count="timeHistorySeed(record, 'vq3').count" :signals-count="timeHistorySeed(record, 'vq3').signals" physics="vq3" />
+                                </template>
                             </div>
 
                             <!-- <div class="flex-grow" v-else>
@@ -1506,7 +1670,10 @@
                                 <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
                             </div>
                             <div class="flex-grow">
-                                <MapRecord v-for="record in getCpmRecords.data" physics="CPM" :showSourceChips="showOldtop || showOffline" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
+                                <template v-for="record in getCpmRecords.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
+                                    <MapRecord physics="CPM" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
+                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'cpm')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'cpm').demoId" :attempts-count="timeHistorySeed(record, 'cpm').count" :signals-count="timeHistorySeed(record, 'cpm').signals" physics="cpm" />
+                                </template>
                             </div>
 
                             <!-- <div class="flex-grow" v-else>

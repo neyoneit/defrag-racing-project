@@ -18,6 +18,7 @@ use App\Models\MapDifficultyRating;
 
 use App\Filters\MapFilters;
 use App\Services\NameMatcher;
+use App\Services\VirtualPlayerGrouper;
 
 class MapsController extends Controller
 {
@@ -74,6 +75,143 @@ class MapsController extends Controller
         return Inertia::render('Maps')
             ->with('maps', $maps)
             ->with('queries', $queries);
+    }
+
+    /**
+     * Fake time history for a given demo on a map, reconstructed from all
+     * demo uploads matched to the same virtual player via
+     * name/q3df_colored/q3df_plain (transitive OR match).
+     *
+     * Query params:
+     *   demo_id : int — UploadedDemo.id to use as seed
+     *   physics : 'vq3' | 'cpm'
+     */
+    public function timeHistory(Request $request, $mapname)
+    {
+        $demoId = (int) $request->input('demo_id');
+        $physics = strtolower((string) $request->input('physics'));
+
+        if (!$demoId || !in_array($physics, ['vq3', 'cpm'], true)) {
+            return response()->json(['error' => 'Invalid parameters'], 422);
+        }
+
+        $seed = UploadedDemo::find($demoId);
+        if (!$seed) {
+            return response()->json(['history' => [], 'signals' => 0]);
+        }
+
+        // Fetch all demos on this map+physics (both online-assigned and offline-only)
+        // uploaded_demos.physics is uppercase ("CPM", "VQ3", possibly with ".TR"),
+        // so match case-insensitively on the leading segment.
+        $physicsUpper = strtoupper($physics);
+        $demos = UploadedDemo::where('map_name', $mapname)
+            ->where(function ($q) use ($physicsUpper) {
+                $q->where('physics', $physicsUpper)
+                  ->orWhere('physics', 'LIKE', $physicsUpper . '.%');
+            })
+            ->with(['renderedVideo', 'user', 'record.user'])
+            ->get();
+
+        $grouper = new VirtualPlayerGrouper();
+        $cluster = $grouper->classFor($demos, $seed);
+
+        if ($cluster->isEmpty()) {
+            return response()->json(['history' => [], 'signals' => 0]);
+        }
+
+        // History dedupe strategy:
+        //   1. Exclude the seed demo itself — main row already shows it
+        //   2. Dedupe by file_hash — same physical file uploaded twice
+        //   3. Dedupe by time_ms (same millisecond = same run for this
+        //      virtual player) keeping the OLDEST by record_date — treats
+        //      the earliest upload as the canonical one for that time
+        // Different time_ms values are always preserved — this is intentional:
+        // if a player's official record is slower than an unofficial demo,
+        // both show up on the leaderboard (different times, no dedup).
+        $seedId = (int) $seed->id;
+        $cluster = $cluster
+            ->reject(fn ($d) => (int) $d->id === $seedId)
+            ->unique(fn ($d) => $d->file_hash ?: 'demo:' . $d->id)
+            ->sortBy(fn ($d) => strtotime((string) ($d->record_date ?? $d->created_at)))
+            ->unique(fn ($d) => 'time:' . (int) $d->time_ms)
+            ->sortBy('time_ms')
+            ->values();
+
+        if ($cluster->isEmpty()) {
+            return response()->json(['history' => [], 'signals' => 0]);
+        }
+
+        // Signal count against the seed — how confidently did we group this?
+        $maxSignals = 0;
+        foreach ($cluster as $d) {
+            if ((int) $d->id === (int) $seed->id) continue;
+            $s = $grouper->signalStrength($seed, $d);
+            if ($s > $maxSignals) $maxSignals = $s;
+        }
+
+        // The seed demo (the row the user clicked) acts as the canonical
+        // representation of the virtual player — all history rows inherit its
+        // avatar/country so the leaderboard tells a consistent story.
+        //
+        // Using the seed (not cluster->first) because we just filtered out the
+        // top time from the cluster, but the seed itself is that top time and
+        // already has the authoritative identity we want to mirror.
+        //
+        // IMPORTANT: only promote record.user (registered q3df account), never
+        // uploaded_demo.user (the uploader — could be anyone, e.g. admin bulk
+        // uploading someone else's demos).
+        $canonicalUser = $seed->record?->user;
+        $canonicalCountry = $seed->country
+            ?? $seed->record?->country
+            ?? $canonicalUser?->country
+            ?? '_404';
+        $canonicalName = $seed->record?->user?->name
+            ?? $seed->record?->name
+            ?? $seed->player_name;
+
+        // Return MapRecord-compatible shape per entry so the frontend can reuse
+        // the same <MapRecord> component (same chips: download, render, YouTube,
+        // report, flag — all for free).
+        $history = $cluster->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName) {
+            $isOnline = $d->record_id !== null;
+
+            return [
+                // Identity
+                'id' => $d->id,
+                'demo_id' => $d->id,
+                'record_id' => $d->record_id,
+
+                // Times & display
+                'time' => (int) $d->time_ms,
+                'time_ms' => (int) $d->time_ms,
+                'date_set' => $d->record_date ?? $d->created_at,
+                'player_name' => $d->player_name,
+                'name' => $canonicalName,
+                'country' => $canonicalCountry,
+
+                // Source / verification
+                'is_online' => $isOnline,
+                'verification_type' => $isOnline ? 'ONLINE' : 'OFFLINE',
+                'rank' => null, // no ranking within history view
+
+                // Relations MapRecord needs for chip rendering
+                // user inherited from canonical (fastest) demo
+                'user' => $canonicalUser,
+                'demo' => $d,
+                'uploaded_demos' => [],
+                'rendered_videos' => $d->renderedVideo ? [$d->renderedVideo] : [],
+
+                // Q3df login extras (for debugging / signal display)
+                'q3df_login_name' => $d->q3df_login_name,
+                'q3df_login_name_colored' => $d->q3df_login_name_colored,
+            ];
+        })->values();
+
+        return response()->json([
+            'history' => $history,
+            'signals' => $maxSignals,
+            'seed_demo_id' => (int) $seed->id,
+        ]);
     }
 
     public function random(Request $request) {
@@ -372,6 +510,13 @@ class MapsController extends Controller
             return redirect()->route('maps.map', ['cpmPage' => $cpmRecords->lastPage(), 'mapname' => $mapname, 'vq3Page' => $vq3Page]);
         }
 
+        // Precompute time-history cluster metadata per demo for this map.
+        // Frontend shows these counts/signal strengths on the leaderboard
+        // *without* having to open each drawer — mirrors what the time-history
+        // endpoint computes so the numbers match before and after click.
+        $clusterMetaVq3 = $this->computeClusterMetadataForMap($map->name, 'vq3');
+        $clusterMetaCpm = $this->computeClusterMetadataForMap($map->name, 'cpm');
+
         // Get servers currently playing this map
         $servers = \App\Models\Server::where('map', $map->name)
             ->where('online', true)
@@ -420,6 +565,8 @@ class MapsController extends Controller
             ->with('showOffline', ($showOffline === 'true'))
             ->with('servers', $servers)
             ->with('publicMaplists', $publicMaplists)
+            ->with('clusterMetaVq3', $clusterMetaVq3)
+            ->with('clusterMetaCpm', $clusterMetaCpm)
             ->with('difficultyRating', [
                 'average' => $difficultyAvg,
                 'total' => $difficultyTotal,
@@ -427,6 +574,119 @@ class MapsController extends Controller
                 'user_rating' => $userDifficultyRating,
             ]);
 
+    }
+
+    /**
+     * For every uploaded_demo on a map (given physics), return how many demos
+     * end up in its virtual-player cluster after applying the same dedupe
+     * rules as the time-history endpoint (exclude seed, dedupe by file_hash
+     * and by time_ms keeping the oldest). Also returns the max signal
+     * strength (0-3) between the seed and any other cluster member.
+     *
+     * Returns a map: ['<demo_id>' => ['count' => int, 'signals' => int]]
+     * so the frontend can look up per-row badge data in O(1).
+     */
+    private function computeClusterMetadataForMap(string $mapname, string $physics): array
+    {
+        $physicsUpper = strtoupper($physics);
+        $demos = UploadedDemo::where('map_name', $mapname)
+            ->where(function ($q) use ($physicsUpper) {
+                $q->where('physics', $physicsUpper)
+                  ->orWhere('physics', 'LIKE', $physicsUpper . '.%');
+            })
+            ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
+                   'time_ms', 'record_date', 'record_id', 'file_hash', 'created_at']);
+
+        if ($demos->isEmpty()) {
+            return [];
+        }
+
+        $grouper = new VirtualPlayerGrouper();
+
+        // Union-find: compute root per demo once, reuse for all lookups.
+        $n = $demos->count();
+        $parent = range(0, $n - 1);
+        $find = function ($i) use (&$parent) {
+            while ($parent[$i] !== $i) { $parent[$i] = $parent[$parent[$i]]; $i = $parent[$i]; }
+            return $i;
+        };
+        $union = function ($a, $b) use (&$parent, $find) {
+            $ra = $find($a); $rb = $find($b);
+            if ($ra !== $rb) $parent[$ra] = $rb;
+        };
+
+        $byName = []; $byColored = []; $byPlain = [];
+        $demosArr = $demos->values();
+        foreach ($demosArr as $i => $d) {
+            $name = strtolower(trim(preg_replace('/\^[0-9\[\]]/', '', $d->player_name ?? '')));
+            $colored = trim($d->q3df_login_name_colored ?? '');
+            $plain = strtolower(trim($d->q3df_login_name ?? ''));
+            if ($name !== '') {
+                if (isset($byName[$name])) $union($byName[$name], $i); else $byName[$name] = $i;
+            }
+            if ($colored !== '') {
+                if (isset($byColored[$colored])) $union($byColored[$colored], $i); else $byColored[$colored] = $i;
+            }
+            if ($plain !== '') {
+                if (isset($byPlain[$plain])) $union($byPlain[$plain], $i); else $byPlain[$plain] = $i;
+            }
+        }
+
+        // Group items by root.
+        $clusters = [];
+        foreach ($demosArr as $i => $d) {
+            $r = $find($i);
+            $clusters[$r][] = $d;
+        }
+
+        $meta = [];
+        foreach ($clusters as $members) {
+            if (count($members) === 1) {
+                $d = $members[0];
+                $meta[(string) $d->id] = ['count' => 0, 'signals' => 0];
+                continue;
+            }
+
+            // Sort members by time_ms ASC to identify canonical seed (fastest).
+            usort($members, fn ($a, $b) => (int) $a->time_ms - (int) $b->time_ms);
+
+            // Apply the same dedupe as /time-history: for each member seen as
+            // seed, we'd exclude itself then dedupe remaining by file_hash
+            // and by time_ms (keeping oldest). Rather than run this N times,
+            // approximate using the seed = fastest and compute the dedupe
+            // result once — every member of the same cluster gets the same
+            // history view since they all resolve to the same seed in the UI
+            // (seed is always the representative / main row).
+            $seed = $members[0];
+
+            // dedupe by file_hash, then by time_ms keeping oldest
+            $rest = array_values(array_filter($members, fn ($d) => (int) $d->id !== (int) $seed->id));
+            $seenHash = []; $dedup1 = [];
+            foreach ($rest as $d) {
+                $k = $d->file_hash ?: ('demo:' . $d->id);
+                if (!isset($seenHash[$k])) { $seenHash[$k] = true; $dedup1[] = $d; }
+            }
+            usort($dedup1, fn ($a, $b) => strtotime((string) ($a->record_date ?? $a->created_at)) - strtotime((string) ($b->record_date ?? $b->created_at)));
+            $seenTime = []; $dedup2 = [];
+            foreach ($dedup1 as $d) {
+                $k = 'time:' . (int) $d->time_ms;
+                if (!isset($seenTime[$k])) { $seenTime[$k] = true; $dedup2[] = $d; }
+            }
+            $count = count($dedup2);
+
+            // Max signal strength: seed vs each survivor
+            $maxSignals = 0;
+            foreach ($dedup2 as $d) {
+                $s = $grouper->signalStrength($seed, $d);
+                if ($s > $maxSignals) $maxSignals = $s;
+            }
+
+            foreach ($members as $m) {
+                $meta[(string) $m->id] = ['count' => $count, 'signals' => $maxSignals];
+            }
+        }
+
+        return $meta;
     }
 
     /**

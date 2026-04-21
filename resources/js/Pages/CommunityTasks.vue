@@ -11,6 +11,7 @@ export default {
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
+import CopyButton from '@/Components/Basic/CopyButton.vue';
 
 const props = defineProps({
     assignmentTasks: Array,
@@ -1556,8 +1557,11 @@ onUnmounted(() => {
 
                         <!-- Map name + difficulty buttons -->
                         <div class="p-3">
-                            <a :href="'/maps/' + encodeURIComponent(map.name)" target="_blank"
-                                class="text-white text-sm font-bold truncate block mb-2 hover:text-blue-400 transition-colors">{{ map.name }}</a>
+                            <div class="flex items-center gap-1.5 mb-2">
+                                <a :href="'/maps/' + encodeURIComponent(map.name)" target="_blank"
+                                    class="text-white text-sm font-bold truncate hover:text-blue-400 transition-colors">{{ map.name }}</a>
+                                <CopyButton :text="map.name" size="xs" />
+                            </div>
                             <div class="flex gap-1.5">
                                 <div v-for="d in difficultyLabels" :key="d.level" class="flex-1 relative group/btn">
                                     <button
@@ -1691,8 +1695,11 @@ onUnmounted(() => {
                             <!-- Map name + existing tags + skip -->
                             <div class="p-3">
                                 <div class="flex items-center justify-between mb-2">
-                                    <a :href="'/maps/' + encodeURIComponent(currentTagMap.name)" target="_blank"
-                                        class="text-lg font-bold text-white hover:text-blue-400 transition-colors">{{ currentTagMap.name }}</a>
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <a :href="'/maps/' + encodeURIComponent(currentTagMap.name)" target="_blank"
+                                            class="text-lg font-bold text-white hover:text-blue-400 transition-colors truncate">{{ currentTagMap.name }}</a>
+                                        <CopyButton :text="currentTagMap.name" size="sm" />
+                                    </div>
                                     <button @click="skipTag"
                                         class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all"
                                         :class="taggedCurrentMap

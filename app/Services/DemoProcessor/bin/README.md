@@ -6,6 +6,13 @@ Python port of DemoCleaner3's demo parser and rename logic. It runs entirely on 
 - duplicate handling / deletion rules from `FileHelper.renameFile`
 - optional logging, progress counters, and case-only renames
 
+## Attribution
+
+Based on **DemoCleaner3** by ivan200 (Enter) â€” https://github.com/ivan200/DemoCleaner3
+
+The Huffman codec implements the algorithm from id Software's Quake 3
+Arena engine source (GPL-2.0).
+
 ## Requirements
 
 - Python 3.10 or newer
@@ -32,10 +39,10 @@ renamed
 usage: renamer.py [-h] [--delete-identical] [--log-file LOG_FILE] file [new_name]
 ```
 
-- `file` – path to the demo to rename
-- `new_name` (optional) – override the suggested filename. If omitted the tool auto-generates the name from demo contents
-- `--delete-identical` – when the target filename already exists, delete the source if both files are identical
-- `--log-file` – write move/rename/delete operations to a DemoCleaner-style log file
+- `file` ï¿½ path to the demo to rename
+- `new_name` (optional) ï¿½ override the suggested filename. If omitted the tool auto-generates the name from demo contents
+- `--delete-identical` ï¿½ when the target filename already exists, delete the source if both files are identical
+- `--log-file` ï¿½ write move/rename/delete operations to a DemoCleaner-style log file
 
 ### Library usage
 

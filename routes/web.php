@@ -55,6 +55,7 @@ Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filt
 Route::get('/maps/random', [MapsController::class, 'random'])->name('maps.random');
 
 Route::get('/maps/{mapname}/demo-matches', [MapsController::class, 'getDemoMatches'])->name('maps.demoMatches');
+Route::get('/maps/{mapname}/time-history', [MapsController::class, 'timeHistory'])->name('maps.timeHistory');
 Route::post('/maps/{id}/flag-nsfw', [MapsController::class, 'flagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('maps.flag-nsfw');
 Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->where('id', '[0-9]+')->middleware(['auth', 'verified'])->name('maps.unflag-nsfw');
 Route::post('/maps/{id}/rate-difficulty', [MapsController::class, 'rateDifficulty'])->where('id', '[0-9]+')->middleware('auth')->name('maps.rate-difficulty');

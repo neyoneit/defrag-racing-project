@@ -22,6 +22,17 @@
         showSourceChips: {
             type: Boolean,
             default: false
+        },
+        hideRank: {
+            type: Boolean,
+            default: false
+        },
+        // Compact mode: used by TimeHistoryExpand drawer. Disables the row
+        // hover animations ("pop" scale, white wash) and "my record" highlight
+        // so the sub-rows read as secondary data rather than another leaderboard.
+        compact: {
+            type: Boolean,
+            default: false
         }
     });
 
@@ -384,14 +395,18 @@
 
 <template>
     <div
-        class="group relative flex items-center gap-1.5 -mr-1 py-1.5 rounded-md transition-all duration-200 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg -ml-3"
+        class="group relative flex items-center gap-1.5 -mr-1 rounded-md transition-all duration-200 -ml-3"
         :class="{
-            'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop,
-            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord
+            'py-1.5 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg': !compact,
+            'py-0 opacity-70': compact,
+            'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop && !compact,
+            'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !compact,
+            'border-l-2 border-transparent': compact,
         }"
     >
         <!-- Rank Number - LARGE and prominent with pop animation -->
         <div
+            v-if="!hideRank"
             class="font-black text-sm w-8 flex-shrink-0 text-center leading-none transition-all duration-200 group-hover:scale-110"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
@@ -399,27 +414,30 @@
             <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
             <template v-else>{{ record.rank }}</template>
         </div>
+        <!-- Empty spacer preserves horizontal alignment with the parent row when rank is hidden -->
+        <div v-else class="w-8 flex-shrink-0"></div>
 
         <!-- Player Info - Compact -->
         <component
             :is="getRoute ? Link : 'div'"
             :href="getRoute"
             :class="[
-                'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200 group-hover:ml-1',
+                'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200',
+                !compact ? 'group-hover:ml-1' : '',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
             @mouseenter="isOfflineRecord && (showUploaderTooltip = true)"
             @mouseleave="isOfflineRecord && (showUploaderTooltip = false)"
         >
             <div class="overflow-visible flex-shrink-0">
-                <!-- Show user's avatar with effects -->
+                <!-- Show user's avatar with effects (effects suppressed in compact mode) -->
                 <div
-                    :class="'avatar-effect-' + (record.user?.avatar_effect || 'none')"
-                    :style="`--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`"
+                    :class="compact ? 'avatar-effect-none' : 'avatar-effect-' + (record.user?.avatar_effect || 'none')"
+                    :style="compact ? '' : `--effect-color: ${record.user?.color || '#ffffff'}; --border-color: ${record.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`"
                 >
                     <img
-                        class="h-7 w-7 rounded-full object-cover border-2 relative"
-                        :style="`border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
+                        :class="['rounded-full object-cover border relative', compact ? 'h-4 w-4' : 'h-7 w-7 border-2']"
+                        :style="compact ? 'border-color: #6b7280' : `border-color: ${record.user?.avatar_border_color || '#6b7280'}`"
                         :src="record.user?.profile_photo_path ? '/storage/' + record.user?.profile_photo_path : '/images/null.jpg'"
                         :alt="displayName"
                     />
@@ -427,18 +445,21 @@
             </div>
             <img
                 :src="`/images/flags/${bestrecordCountry}.png`"
-                class="w-5 h-4 flex-shrink-0"
+                :class="['flex-shrink-0', compact ? 'w-3.5 h-2.5' : 'w-5 h-4']"
                 onerror="this.src='/images/flags/_404.png'"
             >
             <span
                 :class="[
-                    'name-effect-' + (record.user?.name_effect || 'none'),
-                    'text-sm font-semibold whitespace-nowrap overflow-visible group-hover/player:text-blue-400 transition-colors', {
-                        'text-emerald-200': isMyRecord,
-                        'text-gray-200': !isMyRecord
+                    compact ? 'name-effect-none' : ('name-effect-' + (record.user?.name_effect || 'none')),
+                    'font-semibold whitespace-nowrap overflow-visible transition-colors',
+                    compact ? 'text-[11px]' : 'text-sm',
+                    !compact ? 'group-hover/player:text-blue-400' : '',
+                    {
+                        'text-emerald-200': isMyRecord && !compact,
+                        'text-gray-200': !isMyRecord || compact,
                     }
                 ]"
-                :style="`--effect-color: ${record.user?.color || '#ffffff'}`"
+                :style="compact ? '--effect-color: #ffffff' : `--effect-color: ${record.user?.color || '#ffffff'}`"
                 v-html="q3tohtml(displayName)"
             ></span>
 
@@ -825,10 +846,13 @@
         <!-- Time - MASSIVE and eye-catching -->
         <div class="text-right flex-shrink-0 ml-2">
             <div
-                class="font-black text-base tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                 :class="{
-                    'text-emerald-300': isMyRecord,
-                    'text-white': !isMyRecord
+                    'text-base': !compact,
+                    'text-xs': compact,
+                    'text-emerald-300': isMyRecord && !compact,
+                    'text-white': !isMyRecord && !compact,
+                    'text-gray-300': compact,
                 }"
             >
                 {{ formatTime(record.time) }}
@@ -850,11 +874,11 @@
         </div>
 
         <!-- Date -->
-        <div :class="[dateColWidth, 'flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity text-right']">
-            <div class="text-xs text-gray-100 whitespace-nowrap font-mono font-semibold group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none">
+        <div :class="[dateColWidth, 'flex-shrink-0 transition-opacity text-right', compact ? 'opacity-80' : 'opacity-90 group-hover:opacity-100']">
+            <div :class="['whitespace-nowrap font-mono font-semibold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none', compact ? 'text-[10px] text-gray-400' : 'text-xs text-gray-100 group-hover:text-white']">
                 {{ fmtDate(record.date_set) }}
             </div>
-            <div class="text-[10px] text-gray-400 whitespace-nowrap font-mono group-hover:text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5">
+            <div :class="['whitespace-nowrap font-mono drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-none mt-0.5', compact ? 'text-[9px] text-gray-600' : 'text-[10px] text-gray-400 group-hover:text-gray-300']">
                 {{ new Date(record.date_set).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}
             </div>
         </div>
