@@ -1035,9 +1035,12 @@ class DemosController extends Controller
                 'physics' => null,
                 'gametype' => null,
                 'player_name' => null,
+                'q3df_login_name' => null,
+                'q3df_login_name_colored' => null,
                 'time_ms' => null,
                 'processing_output' => null,
                 'record_id' => null,
+                'match_method' => null,
             ]);
 
             // Queue the demo for reprocessing (don't process synchronously)

@@ -24,6 +24,10 @@
         vq3Records: Object,
         cpmRecords: Object,
         type: String,
+        search: {
+            type: String,
+            default: '',
+        },
         profile: Object,
         cpm_world_records: {
             type: Number,
@@ -679,6 +683,8 @@
     const cpmTotalPages = computed(() => Math.ceil(cpmComparison.value.length / perPage));
 
     const mode = ref('all');
+    const recordsSearch = ref(props.search || '');
+    let recordsSearchTimeout = null;
 
     const selectOption = (option) => {
         if (loading.value === option) {
@@ -689,6 +695,7 @@
             data: {
                 type: option,
                 mode: mode.value,
+                search: recordsSearch.value || undefined,
                 vq3_page: 1,
                 cpm_page: 1
             },
@@ -707,11 +714,35 @@
             data: {
                 type: props.type,
                 mode: newMode,
+                search: recordsSearch.value || undefined,
                 vq3_page: 1,
                 cpm_page: 1
             }
         });
     }
+
+    const onRecordsSearchInput = () => {
+        if (recordsSearchTimeout) clearTimeout(recordsSearchTimeout);
+        recordsSearchTimeout = setTimeout(() => {
+            router.reload({
+                data: {
+                    type: props.type,
+                    mode: mode.value,
+                    search: recordsSearch.value || undefined,
+                    vq3_page: 1,
+                    cpm_page: 1,
+                },
+                only: ['vq3Records', 'cpmRecords', 'search'],
+                preserveState: true,
+                preserveScroll: true,
+            });
+        }, 350);
+    };
+
+    const clearRecordsSearch = () => {
+        recordsSearch.value = '';
+        onRecordsSearchInput();
+    };
 
     const loadBeatableRecords = async (rivalMddId, rivalName) => {
         selectedRival.value = { id: rivalMddId, name: rivalName };
@@ -993,7 +1024,6 @@
             const demoId = record.uploaded_demos[0].id;
             await axios.post('/render/request', { record_id: record.id, demo_id: demoId });
             renderStates.value[record.id] = { ...state, requesting: false, requested: true };
-            setTimeout(() => { window.location.href = '/rendered-demos'; }, 500);
         } catch (e) {
             renderStates.value[record.id] = { ...state, requesting: false, error: e.response?.data?.error || 'Failed' };
         }
@@ -1782,7 +1812,8 @@
                                             { key: 'time', label: 'Time', align: 'right' },
                                             { key: 'reltime', label: 'Reltime', align: 'right' },
                                             { key: 'base_score', label: 'Base', align: 'right' },
-                                            { key: 'multiplier', label: 'Mult', align: 'right' },
+                                            { key: 'rank_multiplier', label: 'Rank Mult', align: 'right' },
+                                            { key: 'multiplier', label: 'Map Mult', align: 'right' },
                                             { key: 'map_score', label: 'Score', align: 'right' },
                                             { key: 'weight', label: 'Weight', align: 'right' },
                                             { key: 'contribution', label: 'Contrib', align: 'right' },
@@ -1815,6 +1846,9 @@
                                             {{ row.reltime.toFixed(4) }}
                                         </td>
                                         <td class="px-3 py-1.5 text-right font-mono text-gray-400">{{ row.base_score?.toFixed(1) || row.map_score.toFixed(1) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono" :class="(row.rank_multiplier ?? 1) >= 0.9 ? 'text-green-400' : (row.rank_multiplier ?? 1) >= 0.5 ? 'text-yellow-400' : 'text-red-400'">
+                                            {{ ((row.rank_multiplier ?? 1) * 100).toFixed(1) }}%
+                                        </td>
                                         <td class="px-3 py-1.5 text-right font-mono" :class="row.multiplier >= 0.9 ? 'text-green-400' : row.multiplier >= 0.5 ? 'text-yellow-400' : 'text-red-400'">
                                             {{ (row.multiplier * 100).toFixed(1) }}%
                                         </td>
@@ -2356,6 +2390,32 @@
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
                     <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
+                        <!-- Search (map name or author) -->
+                        <div class="mb-4">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Search</h3>
+                            <div class="relative">
+                                <svg class="w-4 h-4 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                                </svg>
+                                <input
+                                    v-model="recordsSearch"
+                                    @input="onRecordsSearchInput"
+                                    type="text"
+                                    placeholder="Map name or author..."
+                                    class="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/30 transition-colors"
+                                />
+                                <button
+                                    v-if="recordsSearch"
+                                    @click="clearRecordsSearch"
+                                    type="button"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                    title="Clear search">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <!-- Gamemode Filter (MOVED TO TOP) -->
                         <div class="mb-4">
                             <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>

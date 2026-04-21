@@ -170,6 +170,40 @@
         });
     };
 
+    const randomMap = ref({ name: null, copied: false, loading: false, error: null });
+
+    const pickRandomMap = async () => {
+        if (randomMap.value.loading) return;
+        randomMap.value.loading = true;
+        randomMap.value.error = null;
+        randomMap.value.copied = false;
+        try {
+            // Reuse the current URL's query string so nested filters (weapons[include][], records_count[])
+            // are forwarded to the backend in the exact same format MapFilters expects.
+            const qs = window.location.search || '';
+            const response = await axios.get('/maps/random' + qs);
+            const name = response.data.name;
+            randomMap.value.name = name;
+            try {
+                await navigator.clipboard.writeText(name);
+                randomMap.value.copied = true;
+            } catch (e) {
+                randomMap.value.copied = false;
+            }
+            setTimeout(() => {
+                if (randomMap.value.name === name) {
+                    randomMap.value.name = null;
+                    randomMap.value.copied = false;
+                }
+            }, 4000);
+        } catch (e) {
+            randomMap.value.error = e.response?.data?.error || 'Failed to pick random map';
+            setTimeout(() => { randomMap.value.error = null; }, 3000);
+        } finally {
+            randomMap.value.loading = false;
+        }
+    };
+
     onMounted(() => {
         fetchTags();
 
@@ -211,17 +245,49 @@
                 <div class="flex gap-4">
                     <!-- Spacer matching sidebar width -->
                     <div class="hidden md:block flex-shrink-0 w-[300px]">
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-3 flex-wrap">
                             <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                            <button
+                                @click="pickRandomMap"
+                                :disabled="randomMap.loading"
+                                :title="'Pick a random map from the current filters and copy its name to clipboard'"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:bg-blue-600/40 hover:text-white disabled:opacity-50 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                {{ randomMap.loading ? '...' : 'Random' }}
+                            </button>
+                        </div>
+                        <div v-if="randomMap.name || randomMap.error" class="mt-1.5 text-xs">
+                            <span v-if="randomMap.error" class="text-red-400">{{ randomMap.error }}</span>
+                            <span v-else class="text-green-400">
+                                <span class="font-mono font-bold">{{ randomMap.name }}</span>
+                                <span class="text-gray-400 ml-1">{{ randomMap.copied ? '(copied)' : '' }}</span>
+                            </span>
                         </div>
                     </div>
                     <!-- Tags on title level, aligned with maps grid -->
                     <div class="flex-1 min-w-0">
                         <!-- Mobile title -->
-                        <div class="md:hidden flex items-center gap-4 mb-2">
+                        <div class="md:hidden flex items-center gap-3 mb-2 flex-wrap">
                             <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                            <button
+                                @click="pickRandomMap"
+                                :disabled="randomMap.loading"
+                                :title="'Pick a random map from the current filters and copy its name to clipboard'"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:bg-blue-600/40 hover:text-white disabled:opacity-50 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                </svg>
+                                {{ randomMap.loading ? '...' : 'Random' }}
+                            </button>
+                            <span v-if="randomMap.name" class="text-xs text-green-400 font-mono w-full">
+                                <span class="font-bold">{{ randomMap.name }}</span>
+                                <span class="text-gray-400 ml-1">{{ randomMap.copied ? '(copied)' : '' }}</span>
+                            </span>
+                            <span v-else-if="randomMap.error" class="text-xs text-red-400 w-full">{{ randomMap.error }}</span>
                         </div>
                         <!-- Tags bar (relative wrapper, expanded is absolute overlay) -->
                         <div v-if="tagsWithUsage.length > 0" class="relative" @mouseenter="onTagsEnter" @mouseleave="onTagsLeave">

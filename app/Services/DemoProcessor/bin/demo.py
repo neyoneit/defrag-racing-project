@@ -1,3 +1,7 @@
+"""
+Credit: based on DemoCleaner3 by ivan200 — https://github.com/ivan200/DemoCleaner3
+"""
+
 from __future__ import annotations
 
 import re
@@ -82,6 +86,8 @@ class Demo:
     isSpectator: bool = False
     rawInfo: RawInfo | None = None
     userId: int = -1
+    q3dfLoginName: Optional[str] = None
+    q3dfLoginNameColored: Optional[str] = None
 
     _demoNewName: str = ''
     _demoNewNameSimple: str = ''
@@ -223,6 +229,23 @@ class Demo:
                 demo.recordTime = latest.recordDate
         if fastest:
             names.setConsoleName(fastest.oName, fastest.lName, raw.gameInfo.isOnline if raw.gameInfo else True)
+
+        # Pick q3df login name whose TimeStringInfo time matches the finalized demo.time.
+        # This guarantees we don't pick a login from a different player's finish line
+        # (e.g. someone else also finished in the same demo but with a different time).
+        # Per Enter: if times match uniquely, it's the recording player's login.
+        if raw.consoleComandsParser.timeStrings:
+            matching = [
+                ts for ts in raw.consoleComandsParser.timeStrings
+                if ts.lName and ts.time == demo.time
+            ]
+            if len(matching) == 1:
+                demo.q3dfLoginName = matching[0].lName
+                demo.q3dfLoginNameColored = matching[0].lNameColored
+            elif fastest and fastest.lName and (not raw.fin or fastest.time == demo.time):
+                # Fallback: use fastest if it has an lName and its time is consistent
+                demo.q3dfLoginName = fastest.lName
+                demo.q3dfLoginNameColored = fastest.lNameColored
         filename = demo.normalizedFileName
         country_and_name = Demo._get_name_and_country(filename)
         country_name_parsed = Demo._try_get_name_and_country(country_and_name, names)

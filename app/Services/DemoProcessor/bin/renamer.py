@@ -205,6 +205,8 @@ def parse_demo_metadata(file_path: Path) -> Optional[dict]:
         "time_seconds": demo.time.total_seconds() if demo.time else None,
         "country": demo.country if demo.country else None,
         "validity": demo.validDict if demo.validDict else None,
+        "q3df_login_name": demo.q3dfLoginName if getattr(demo, 'q3dfLoginName', None) else None,
+        "q3df_login_name_colored": demo.q3dfLoginNameColored if getattr(demo, 'q3dfLoginNameColored', None) else None,
         "_debug_original_filename": str(file_path.name),
         "_debug_normalized_filename": demo.normalizedFileName if hasattr(demo, 'normalizedFileName') else None,
         "_debug_demo_country": demo.country if hasattr(demo, 'country') else None,

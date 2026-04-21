@@ -1,3 +1,8 @@
+"""
+Q3 Huffman codec — algorithm and symbol table originate from id Software's
+Quake 3 Arena engine source (GPL-2.0). This file is a Python reimplementation.
+"""
+
 from __future__ import annotations
 
 from typing import Dict, List

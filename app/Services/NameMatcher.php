@@ -105,6 +105,73 @@ class NameMatcher
     }
 
     /**
+     * Match a demo's q3df login (extracted from console messages) to a user.
+     *
+     * The q3df login is an authoritative server-side identifier (shown in
+     * "Enter(Enter), you are now rank..." style messages). A colored variant
+     * is effectively a unique fingerprint across aliases; the plain variant
+     * can collide between different users sharing the same plain nickname.
+     *
+     * Returns the matched user_id plus the tier that produced the match so
+     * the caller can attach it as match_method on the demo record:
+     *   - 'q3df_colored' : exact colored alias match (most confident)
+     *   - 'q3df_plain'   : exact plain alias match and the plain alias is
+     *                      globally unique (1 user owns it)
+     *
+     * Returns null on ambiguous plain matches (2+ users with the same plain
+     * alias) so the caller can fall back to the legacy nick fuzzy match.
+     *
+     * @return array{user_id: int|null, matched_alias: string|null, tier: string|null}
+     */
+    public function matchByQ3dfLogin(?string $plain, ?string $colored = null): array
+    {
+        $plain = $plain ? trim($plain) : null;
+        $colored = $colored ? trim($colored) : null;
+
+        if (!$plain && !$colored) {
+            return ['user_id' => null, 'matched_alias' => null, 'tier' => null];
+        }
+
+        // Tier 1: colored exact match — colored codes make this effectively unique
+        if ($colored) {
+            $coloredMatch = UserAlias::where('alias_colored', $colored)
+                ->where('is_approved', true)
+                ->whereNotNull('user_id')
+                ->orderByDesc('usage_count')
+                ->first();
+
+            if ($coloredMatch && $coloredMatch->user_id) {
+                return [
+                    'user_id' => $coloredMatch->user_id,
+                    'matched_alias' => $coloredMatch->alias_colored ?: $coloredMatch->alias,
+                    'tier' => 'q3df_colored',
+                ];
+            }
+        }
+
+        // Tier 2: plain exact match — only accept when exactly ONE user owns it
+        if ($plain) {
+            $plainMatches = UserAlias::where('alias', $plain)
+                ->where('is_approved', true)
+                ->whereNotNull('user_id')
+                ->get();
+
+            $distinctUsers = $plainMatches->pluck('user_id')->unique();
+
+            if ($distinctUsers->count() === 1) {
+                $hit = $plainMatches->first();
+                return [
+                    'user_id' => $hit->user_id,
+                    'matched_alias' => $hit->alias,
+                    'tier' => 'q3df_plain',
+                ];
+            }
+        }
+
+        return ['user_id' => null, 'matched_alias' => null, 'tier' => null];
+    }
+
+    /**
      * Two-pass matching: priority (uploader) then global
      *
      * @param string $demoPlayerName Name from the demo file
