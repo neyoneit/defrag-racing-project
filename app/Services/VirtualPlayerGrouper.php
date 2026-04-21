@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\DemoProfileResolver;
 use Illuminate\Support\Collection;
 
 /**
@@ -45,6 +46,13 @@ class VirtualPlayerGrouper
         $seenName = [];
         $seenColored = [];
         $seenPlain = [];
+        // Profile-based bucket: a demo that alias-resolves to a registered
+        // user joins every other demo for that same user, even when their
+        // raw demo signals differ (e.g. one demo has q3df_login, another
+        // only has player_name with a registered alias). Matches the
+        // clustering used in MapsController::buildGroupedDemosTop.
+        $seenUser = [];
+        $profileResolver = new DemoProfileResolver();
 
         $indexByKey = [];
 
@@ -77,6 +85,15 @@ class VirtualPlayerGrouper
                     $this->union($parent, $seenPlain[$plainNorm], $i);
                 } else {
                     $seenPlain[$plainNorm] = $i;
+                }
+            }
+
+            $resolvedUserId = $profileResolver->resolve($demo);
+            if ($resolvedUserId !== null) {
+                if (isset($seenUser[$resolvedUserId])) {
+                    $this->union($parent, $seenUser[$resolvedUserId], $i);
+                } else {
+                    $seenUser[$resolvedUserId] = $i;
                 }
             }
         }

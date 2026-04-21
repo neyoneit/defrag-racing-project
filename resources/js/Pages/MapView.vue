@@ -691,10 +691,47 @@
         const meta = physics === 'vq3' ? props.clusterMetaVq3 : props.clusterMetaCpm;
         if (!meta) return null;
         const demoId = record.demo?.id || record.uploaded_demos?.[0]?.id;
-        if (!demoId) return null;
-        const m = meta[String(demoId)];
-        if (!m || !m.count) return null;
-        return { demoId, count: m.count, signals: m.signals || 0 };
+        if (demoId) {
+            const m = meta[String(demoId)];
+            if (m && m.count) return { demoId, userId: null, mddId: null, count: m.count, signals: m.signals || 0 };
+        }
+        // Fallback: main record with no attached demo. Prefer user_id
+        // (registered defrag.racing account) then mdd_id (unclaimed q3df
+        // profile) so the drawer still works for players who haven't
+        // linked their q3df account to a local user yet.
+        const userId = record.user_id || record.user?.id;
+        if (userId) {
+            const m = meta['user:' + userId];
+            if (m && m.count) {
+                return { demoId: null, userId, mddId: null, count: m.count, signals: m.signals || 0 };
+            }
+        }
+        const mddId = record.mdd_id;
+        if (mddId) {
+            const m = meta['mdd:' + mddId];
+            if (m && m.count) {
+                return { demoId: null, userId: null, mddId, count: m.count, signals: m.signals || 0 };
+            }
+        }
+        return null;
+    };
+
+    // Unique-per-row key for tracking which time-history drawer is open.
+    // A row can be either an offline/online demo (has `demo.id`) or a main
+    // record (no attached demo — fall back to record.id). Physics-scoped so
+    // the same user's VQ3 and CPM rows don't share state.
+    const timeHistoryRowKey = (record, physics) => {
+        const id = record.demo?.id || record.uploaded_demos?.[0]?.id || record.id;
+        return physics + ':' + id;
+    };
+
+    const expandedHistoryKeys = ref(new Set());
+    const isHistoryExpanded = (record, physics) => expandedHistoryKeys.value.has(timeHistoryRowKey(record, physics));
+    const toggleHistory = (record, physics) => {
+        const key = timeHistoryRowKey(record, physics);
+        const next = new Set(expandedHistoryKeys.value);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        expandedHistoryKeys.value = next;
     };
 
     // Group items sharing any of (player_name / q3df_colored / q3df_plain).
@@ -1607,8 +1644,30 @@
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getVq3Records.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
-                                    <MapRecord physics="VQ3" :oldtop="record.oldtop" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'VQ3')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
-                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'vq3')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'vq3').demoId" :attempts-count="timeHistorySeed(record, 'vq3').count" :signals-count="timeHistorySeed(record, 'vq3').signals" physics="vq3" />
+                                    <MapRecord
+                                        physics="VQ3"
+                                        :oldtop="record.oldtop"
+                                        :showSourceChips="showOldtop || showOffline"
+                                        :record="record"
+                                        :demoMatches="demoMatchesMap[record.id] || []"
+                                        :timeHistory="timeHistorySeed(record, 'vq3')"
+                                        :historyExpanded="isHistoryExpanded(record, 'vq3')"
+                                        @assign="openAssignModal($event, 'VQ3')"
+                                        @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])"
+                                        @reassign-record="(rec) => openReassignModal(rec)"
+                                        @scoreHover="scoreTooltip = $event"
+                                        @toggle-history="toggleHistory(record, 'vq3')"
+                                    />
+                                    <TimeHistoryExpand
+                                        v-if="timeHistorySeed(record, 'vq3') && isHistoryExpanded(record, 'vq3')"
+                                        :mapname="map.name"
+                                        :demo-id="timeHistorySeed(record, 'vq3').demoId"
+                                        :user-id="timeHistorySeed(record, 'vq3').userId"
+                                        :mdd-id="timeHistorySeed(record, 'vq3').mddId"
+                                        :attempts-count="timeHistorySeed(record, 'vq3').count"
+                                        :signals-count="timeHistorySeed(record, 'vq3').signals"
+                                        physics="vq3"
+                                    />
                                 </template>
                             </div>
 
@@ -1671,8 +1730,29 @@
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getCpmRecords.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
-                                    <MapRecord physics="CPM" :showSourceChips="showOldtop || showOffline" :record="record" :demoMatches="demoMatchesMap[record.id] || []" @assign="openAssignModal($event, 'CPM')" @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])" @reassign-record="(rec) => openReassignModal(rec)" @scoreHover="scoreTooltip = $event" />
-                                    <TimeHistoryExpand v-if="timeHistorySeed(record, 'cpm')" :mapname="map.name" :demo-id="timeHistorySeed(record, 'cpm').demoId" :attempts-count="timeHistorySeed(record, 'cpm').count" :signals-count="timeHistorySeed(record, 'cpm').signals" physics="cpm" />
+                                    <MapRecord
+                                        physics="CPM"
+                                        :showSourceChips="showOldtop || showOffline"
+                                        :record="record"
+                                        :demoMatches="demoMatchesMap[record.id] || []"
+                                        :timeHistory="timeHistorySeed(record, 'cpm')"
+                                        :historyExpanded="isHistoryExpanded(record, 'cpm')"
+                                        @assign="openAssignModal($event, 'CPM')"
+                                        @assign-from-record="(rec) => openReverseAssignModal(rec, demoMatchesMap[rec.id] || [])"
+                                        @reassign-record="(rec) => openReassignModal(rec)"
+                                        @scoreHover="scoreTooltip = $event"
+                                        @toggle-history="toggleHistory(record, 'cpm')"
+                                    />
+                                    <TimeHistoryExpand
+                                        v-if="timeHistorySeed(record, 'cpm') && isHistoryExpanded(record, 'cpm')"
+                                        :mapname="map.name"
+                                        :demo-id="timeHistorySeed(record, 'cpm').demoId"
+                                        :user-id="timeHistorySeed(record, 'cpm').userId"
+                                        :mdd-id="timeHistorySeed(record, 'cpm').mddId"
+                                        :attempts-count="timeHistorySeed(record, 'cpm').count"
+                                        :signals-count="timeHistorySeed(record, 'cpm').signals"
+                                        physics="cpm"
+                                    />
                                 </template>
                             </div>
 
