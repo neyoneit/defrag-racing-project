@@ -36,8 +36,12 @@ class DemoAutoAssigner
     /**
      * Run the 3-pass auto-assign pipeline on an ONLINE demo. For offline
      * demos this returns OUTCOME_NONE without touching the demo.
+     *
+     * When $ctx is supplied (batch rematch), Record lookups go through an
+     * in-memory hashmap instead of per-demo SELECTs. Live upload path
+     * passes null and falls back to direct queries.
      */
-    public function attemptAssignToRecord(UploadedDemo $demo): string
+    public function attemptAssignToRecord(UploadedDemo $demo, ?DemoAutoAssignContext $ctx = null): string
     {
         if (!$demo->map_name || !$demo->physics || !$demo->time_ms || !$demo->player_name) {
             return self::OUTCOME_NONE;
@@ -72,18 +76,14 @@ class DemoAutoAssigner
                 $matchedUserId = $loginMatch['user_id'];
                 $tier = $loginMatch['tier']; // 'q3df_colored' | 'q3df_plain'
 
-                $record = Record::where('mapname', $demo->map_name)
-                    ->where('gametype', $gametype)
-                    ->where('time', $demo->time_ms)
-                    ->where('user_id', $matchedUserId)
-                    ->first();
+                $recordId = $this->findRecordId($ctx, $demo->map_name, $gametype, (int) $demo->time_ms, (int) $matchedUserId);
 
-                if ($record) {
+                if ($recordId !== null) {
                     // Scénár A: login + time agree → strongest match
                     $this->upgradeOfflineRecordToOnline($demo);
 
                     $demo->update([
-                        'record_id'        => $record->id,
+                        'record_id'        => $recordId,
                         'status'           => 'assigned',
                         'name_confidence'  => 100,
                         'suggested_user_id'=> $matchedUserId,
@@ -93,7 +93,7 @@ class DemoAutoAssigner
 
                     Log::info('Demo auto-assigned to record via q3df login', [
                         'demo_id' => $demo->id,
-                        'record_id' => $record->id,
+                        'record_id' => $recordId,
                         'user_id' => $matchedUserId,
                         'tier' => $tier,
                         'matched_alias' => $loginMatch['matched_alias'],
@@ -127,17 +127,13 @@ class DemoAutoAssigner
         // PASS 1: uploader has a Record at this map/gametype/time.
         // Ignores name entirely — uploader identity is authoritative.
         if ($demo->user_id) {
-            $uploaderRecord = Record::where('mapname', $demo->map_name)
-                ->where('gametype', $gametype)
-                ->where('time', $demo->time_ms)
-                ->where('user_id', $demo->user_id)
-                ->first();
+            $uploaderRecordId = $this->findRecordId($ctx, $demo->map_name, $gametype, (int) $demo->time_ms, (int) $demo->user_id);
 
-            if ($uploaderRecord) {
+            if ($uploaderRecordId !== null) {
                 $this->upgradeOfflineRecordToOnline($demo);
 
                 $demo->update([
-                    'record_id'        => $uploaderRecord->id,
+                    'record_id'        => $uploaderRecordId,
                     'status'           => 'assigned',
                     'name_confidence'  => 100,
                     'suggested_user_id'=> $demo->user_id,
@@ -147,7 +143,7 @@ class DemoAutoAssigner
 
                 Log::info('Demo auto-assigned to uploader\'s record', [
                     'demo_id' => $demo->id,
-                    'record_id' => $uploaderRecord->id,
+                    'record_id' => $uploaderRecordId,
                     'user_id' => $demo->user_id,
                     'gametype' => $gametype,
                     'file_path' => $demo->file_path,
@@ -160,43 +156,47 @@ class DemoAutoAssigner
         // PASS 2: global fuzzy nick match across all user aliases.
         $nameMatch = $this->nameMatcher->findBestMatch($demo->player_name, null);
 
-        $demo->update([
-            'name_confidence'  => $nameMatch['confidence'],
-            'suggested_user_id'=> $nameMatch['user_id'],
-            'matched_alias'    => $nameMatch['matched_name'] ?? null,
-        ]);
+        // Skip no-op writes: rematch runs daily; if aliases didn't change,
+        // most demos already have the correct name-match hints. Writing
+        // the same values back wastes ~80% of UPDATE queries in batch.
+        $newAlias = $nameMatch['matched_name'] ?? null;
+        if ($demo->name_confidence !== $nameMatch['confidence']
+            || $demo->suggested_user_id !== $nameMatch['user_id']
+            || $demo->matched_alias !== $newAlias) {
+            $demo->update([
+                'name_confidence'  => $nameMatch['confidence'],
+                'suggested_user_id'=> $nameMatch['user_id'],
+                'matched_alias'    => $newAlias,
+            ]);
 
-        Log::info('Name matching completed', [
-            'demo_id' => $demo->id,
-            'player_name' => $demo->player_name,
-            'confidence' => $nameMatch['confidence'],
-            'suggested_user_id' => $nameMatch['user_id'],
-            'matched_alias' => $nameMatch['matched_name'] ?? null,
-            'source' => $nameMatch['source'],
-        ]);
+            Log::info('Name matching completed', [
+                'demo_id' => $demo->id,
+                'player_name' => $demo->player_name,
+                'confidence' => $nameMatch['confidence'],
+                'suggested_user_id' => $nameMatch['user_id'],
+                'matched_alias' => $newAlias,
+                'source' => $nameMatch['source'],
+            ]);
+        }
 
         if ($nameMatch['confidence'] === 100 && $nameMatch['user_id']) {
-            $record = Record::where('mapname', $demo->map_name)
-                ->where('gametype', $gametype)
-                ->where('time', $demo->time_ms)
-                ->where('user_id', $nameMatch['user_id'])
-                ->first();
+            $recordId = $this->findRecordId($ctx, $demo->map_name, $gametype, (int) $demo->time_ms, (int) $nameMatch['user_id']);
 
-            if ($record) {
+            if ($recordId !== null) {
                 $this->upgradeOfflineRecordToOnline($demo);
 
                 $demo->update([
-                    'record_id'    => $record->id,
+                    'record_id'    => $recordId,
                     'status'       => 'assigned',
                     'match_method' => 'fuzzy_nick',
                 ]);
 
                 Log::info('Demo auto-assigned to record with 100% name match', [
                     'demo_id' => $demo->id,
-                    'record_id' => $record->id,
+                    'record_id' => $recordId,
                     'user_id' => $nameMatch['user_id'],
                     'gametype' => $demo->gametype,
-                    'matched_alias' => $nameMatch['matched_name'] ?? null,
+                    'matched_alias' => $newAlias,
                     'file_path' => $demo->file_path,
                 ]);
 
@@ -205,6 +205,23 @@ class DemoAutoAssigner
         }
 
         return self::OUTCOME_NONE;
+    }
+
+    /**
+     * O(1) Record lookup via context hashmap, or ad-hoc SELECT when no
+     * context is supplied (live upload path).
+     */
+    protected function findRecordId(?DemoAutoAssignContext $ctx, string $mapname, string $gametype, int $timeMs, int $userId): ?int
+    {
+        if ($ctx !== null) {
+            return $ctx->findRecordId($mapname, $gametype, $timeMs, $userId);
+        }
+        $r = Record::where('mapname', $mapname)
+            ->where('gametype', $gametype)
+            ->where('time', $timeMs)
+            ->where('user_id', $userId)
+            ->first(['id']);
+        return $r?->id;
     }
 
     /**
@@ -219,11 +236,16 @@ class DemoAutoAssigner
     {
         $nameMatch = $this->nameMatcher->findBestMatch($demo->player_name, null);
 
-        $demo->update([
-            'name_confidence'  => $nameMatch['confidence'],
-            'suggested_user_id'=> $nameMatch['user_id'],
-            'matched_alias'    => $nameMatch['matched_name'] ?? null,
-        ]);
+        $newAlias = $nameMatch['matched_name'] ?? null;
+        if ($demo->name_confidence !== $nameMatch['confidence']
+            || $demo->suggested_user_id !== $nameMatch['user_id']
+            || $demo->matched_alias !== $newAlias) {
+            $demo->update([
+                'name_confidence'  => $nameMatch['confidence'],
+                'suggested_user_id'=> $nameMatch['user_id'],
+                'matched_alias'    => $newAlias,
+            ]);
+        }
 
         return $nameMatch;
     }
