@@ -1,7 +1,8 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { ref, computed, getCurrentInstance } from 'vue';
-import HtmlDiff from 'htmldiff-js';
+import HtmlDiffImport from 'htmldiff-js';
+const HtmlDiff = HtmlDiffImport.default ?? HtmlDiffImport;
 import { diffLines } from 'diff';
 
 const { proxy } = getCurrentInstance();
