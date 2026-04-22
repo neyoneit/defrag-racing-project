@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\UploadedDemo;
 use App\Models\Record;
-use App\Services\NameMatcher;
-use App\Services\DemoProcessorService;
+use App\Models\OfflineRecord;
+use App\Services\DemoAutoAssigner;
 use Illuminate\Console\Command;
 
 class RematchAllDemos extends Command
@@ -13,7 +13,7 @@ class RematchAllDemos extends Command
     protected $signature = 'demos:rematch-all {demo_id? : Optional specific demo ID to rematch}';
     protected $description = 'Rematch all unassigned demos against current user aliases';
 
-    public function handle()
+    public function handle(DemoAutoAssigner $autoAssigner)
     {
         $demoId = $this->argument('demo_id');
 
@@ -37,194 +37,82 @@ class RematchAllDemos extends Command
 
         $improved = 0;
         $assigned = 0;
-        $nameMatcher = app(NameMatcher::class);
-        $demoProcessor = app(DemoProcessorService::class);
 
         foreach ($demos as $demo) {
-            // PASS 1: For online demos, check if uploader has a matching record (ignores name completely)
-            $uploaderRecordMatch = false;
-            if (!$demo->is_offline && $demo->user_id && $demo->status !== 'assigned' && $demo->file_path) {
-                $physics = str_replace('.tr', '', strtolower($demo->physics));
-                $gametype = 'run_' . $physics;
-
-                $uploaderRecord = Record::where('mapname', $demo->map_name)
-                    ->where('gametype', $gametype)
-                    ->where('time', $demo->time_ms)
-                    ->where('user_id', $demo->user_id)
-                    ->first();
-
-                if ($uploaderRecord) {
-                    // Check if this demo has an existing offline_record (from fallback-assigned status)
-                    $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
-
-                    if ($offlineRecord) {
-                        // Delete the offline_record since we're upgrading to online record
-                        // Update ranks for records that were slower than the deleted one
-                        \App\Models\OfflineRecord::where('map_name', $offlineRecord->map_name)
-                            ->where('physics', $offlineRecord->physics)
-                            ->where('gametype', $offlineRecord->gametype)
-                            ->where('time_ms', '>', $offlineRecord->time_ms)
-                            ->decrement('rank');
-
-                        $offlineRecord->delete();
-
-                        if ($demoId) {
-                            $this->info("✓ Deleted offline_record (upgrading to online record)");
-                        }
-                    }
-
-                    // Uploader has a matching record - assign immediately with 100% confidence
-                    $demo->update([
-                        'record_id' => $uploaderRecord->id,
-                        'status' => 'assigned',
-                        'name_confidence' => 100,
-                        'suggested_user_id' => $demo->user_id,
-                        'matched_alias' => null, // Matched by uploader record, not name
-                    ]);
-                    $assigned++;
-                    $uploaderRecordMatch = true;
-
-                    if ($demoId) {
-                        $this->info("\n✓ Demo ID: {$demo->id} - Assigned to uploader's record ID: {$uploaderRecord->id} (100% - record match)");
-                    }
-                }
-            }
-
-            // PASS 2: Global name matching (only if not already assigned by Pass 1)
-            if (!$uploaderRecordMatch) {
-                $nameMatch = $nameMatcher->findBestMatch($demo->player_name, null);
-
-                $oldConfidence = $demo->name_confidence ?? 0;
-                $oldUserId = $demo->suggested_user_id;
+            if ($demo->is_offline) {
+                // Offline demos (df/fs/fc) never map to online Records.
+                // Refresh their fuzzy name-match hint against the current
+                // alias set so admin UI / future upgrades stay accurate.
+                $nameMatch = $autoAssigner->updateNameMatchOnly($demo);
 
                 if ($demoId) {
-                    // Verbose output for single demo
-                    $this->info("\nDemo ID: {$demo->id}");
+                    $this->info("\nDemo ID: {$demo->id} (offline)");
                     $this->info("Player Name: {$demo->player_name}");
-                    $this->info("Uploader ID: {$demo->user_id}");
-                    $this->info("Old Suggested User ID: " . ($oldUserId ?? 'null'));
-                    $this->info("Old Confidence: {$oldConfidence}%");
                     $this->info("New Suggested User ID: " . ($nameMatch['user_id'] ?? 'null'));
                     $this->info("New Confidence: {$nameMatch['confidence']}%");
-                    $this->info("Match Source: {$nameMatch['source']}");
                 }
 
-                // Always update name confidence, suggested user, and matched alias
-                $demo->update([
-                    'name_confidence' => $nameMatch['confidence'],
-                    'suggested_user_id' => $nameMatch['user_id'],
-                    'matched_alias' => $nameMatch['matched_name'] ?? null,
-                ]);
+                // If the offline demo has a missing offline_record and we
+                // have a 100% confident user match, create it. Rank cascade
+                // mirrors DemoProcessorService::createOfflineRecord but
+                // simplified — rematch has no file-path / validity context.
+                if ($nameMatch['confidence'] === 100 && $nameMatch['user_id'] && $demo->status !== 'assigned' && $demo->file_path) {
+                    if ($this->ensureOfflineRecord($demo, $demoId !== null)) {
+                        $assigned++;
+                    }
+                }
+
+                // Fix status for offline demos that already have an
+                // offline_record but weren't marked assigned.
+                if ($demo->status !== 'assigned' && $demo->file_path) {
+                    $existing = OfflineRecord::where('demo_id', $demo->id)->first();
+                    if ($existing) {
+                        $demo->update(['status' => 'assigned']);
+                        $assigned++;
+                        if ($demoId) {
+                            $this->info("✓ Fixed status for offline record ID: {$existing->id}");
+                        }
+                    }
+                }
+
+                $improved++;
+                $progressBar->advance();
+                continue;
+            }
+
+            // Online demo: run the shared PASS 0/1/2 pipeline. The service
+            // handles q3df login matching (PASS 0), uploader record
+            // matching (PASS 1), fuzzy nick matching (PASS 2), writes
+            // match_method, and upgrades any pre-existing offline_record
+            // to the online Record (rank cascade + delete).
+            $outcome = $autoAssigner->attemptAssignToRecord($demo);
+
+            if ($demoId) {
+                $demo->refresh();
+                $this->info("\nDemo ID: {$demo->id} (online)");
+                $this->info("Player Name: {$demo->player_name}");
+                $this->info("Outcome: {$outcome}");
+                $this->info("match_method: " . ($demo->match_method ?? 'null'));
+                $this->info("record_id: " . ($demo->record_id ?? 'null'));
+                $this->info("suggested_user_id: " . ($demo->suggested_user_id ?? 'null'));
+                $this->info("name_confidence: {$demo->name_confidence}%");
+            }
+
+            if ($outcome === DemoAutoAssigner::OUTCOME_RECORD) {
+                $assigned++;
+            } elseif ($outcome === DemoAutoAssigner::OUTCOME_PROFILE) {
+                // q3df login matched a user but no Record exists. Create
+                // an offline_record so the run shows up on that user's
+                // leaderboard (parity with DemoProcessorService scénár B).
+                if ($demo->file_path) {
+                    $demo = $demo->fresh();
+                    if ($this->ensureOfflineRecord($demo, $demoId !== null)) {
+                        $assigned++;
+                    }
+                }
             }
 
             $improved++;
-
-            // Fix offline demo status if it has an offline record but wrong status
-            if ($demo->is_offline && $demo->status !== 'assigned' && $demo->file_path) {
-                $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
-
-                if ($offlineRecord) {
-                    // Offline record exists but demo is not marked as assigned - fix it
-                    $demo->update(['status' => 'assigned']);
-                    $assigned++;
-
-                    if ($demoId) {
-                        $this->info("✓ Fixed status for offline record ID: {$offlineRecord->id}");
-                    }
-                }
-            }
-
-            // If 100% confidence name match, try to auto-assign (only if not already assigned by uploader record match)
-            if (!$uploaderRecordMatch && isset($nameMatch) && $nameMatch['confidence'] === 100 && $nameMatch['user_id'] && $demo->status !== 'assigned') {
-                // Check if this is an offline demo
-                if ($demo->is_offline) {
-                    // For offline demos with 100% match, create offline record if missing
-                    $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
-
-                    if (!$offlineRecord && $demo->file_path && $demo->map_name && $demo->physics && $demo->gametype && $demo->time_ms) {
-                        // Create offline record if it doesn't exist
-                        $fasterTimes = \App\Models\OfflineRecord::where('map_name', $demo->map_name)
-                            ->where('physics', $demo->physics)
-                            ->where('gametype', $demo->gametype)
-                            ->where('time_ms', '<', $demo->time_ms)
-                            ->count();
-
-                        $rank = $fasterTimes + 1;
-
-                        $offlineRecord = \App\Models\OfflineRecord::create([
-                            'map_name' => $demo->map_name,
-                            'physics' => $demo->physics,
-                            'gametype' => $demo->gametype,
-                            'time_ms' => $demo->time_ms,
-                            'player_name' => $demo->player_name,
-                            'demo_id' => $demo->id,
-                            'rank' => $rank,
-                            'date_set' => $demo->record_date ?? $demo->created_at,
-                        ]);
-
-                        // Mark demo as assigned
-                        $demo->update(['status' => 'assigned']);
-
-                        // Update ranks for slower records
-                        \App\Models\OfflineRecord::where('map_name', $demo->map_name)
-                            ->where('physics', $demo->physics)
-                            ->where('gametype', $demo->gametype)
-                            ->where('time_ms', '>=', $demo->time_ms)
-                            ->where('id', '!=', $offlineRecord->id)
-                            ->increment('rank');
-
-                        $assigned++;
-
-                        if ($demoId) {
-                            $this->info("✓ Created offline record ID: {$offlineRecord->id}");
-                        }
-                    }
-                } else {
-                    // For online demos, try to match to existing records
-                    $physics = str_replace('.tr', '', strtolower($demo->physics));
-                    $gametype = 'run_' . $physics;
-
-                    // Find matching record
-                    $record = Record::where('mapname', $demo->map_name)
-                        ->where('gametype', $gametype)
-                        ->where('time', $demo->time_ms)
-                        ->where('user_id', $nameMatch['user_id'])
-                        ->first();
-
-                    if ($record && $demo->file_path) {
-                        // Check if this demo has an existing offline_record (from fallback-assigned status)
-                        $offlineRecord = \App\Models\OfflineRecord::where('demo_id', $demo->id)->first();
-
-                        if ($offlineRecord) {
-                            // Delete the offline_record since we're upgrading to online record
-                            // Update ranks for records that were slower than the deleted one
-                            \App\Models\OfflineRecord::where('map_name', $offlineRecord->map_name)
-                                ->where('physics', $offlineRecord->physics)
-                                ->where('gametype', $offlineRecord->gametype)
-                                ->where('time_ms', '>', $offlineRecord->time_ms)
-                                ->decrement('rank');
-
-                            $offlineRecord->delete();
-
-                            if ($demoId) {
-                                $this->info("✓ Deleted offline_record (upgrading to online record)");
-                            }
-                        }
-
-                        // Assign demo to online record
-                        $demo->update([
-                            'record_id' => $record->id,
-                            'status' => 'assigned',
-                        ]);
-                        $assigned++;
-
-                        if ($demoId) {
-                            $this->info("✓ Assigned to online record ID: {$record->id}");
-                        }
-                    }
-                }
-            }
-
             $progressBar->advance();
         }
 
@@ -232,5 +120,55 @@ class RematchAllDemos extends Command
         $this->newLine();
         $this->info("Done! Improved confidence for {$improved} demos.");
         $this->info("Assigned {$assigned} demos to records.");
+    }
+
+    /**
+     * Create an offline_record for a demo if it doesn't have one yet and
+     * mark the demo as assigned. Returns true if a new offline_record was
+     * created, false if one already existed or required fields were missing.
+     *
+     * Rank cascade: decrement ranks of existing records slower than this
+     * time so the new record slots in at its correct position.
+     */
+    protected function ensureOfflineRecord(UploadedDemo $demo, bool $verbose): bool
+    {
+        if (OfflineRecord::where('demo_id', $demo->id)->exists()) {
+            return false;
+        }
+        if (!$demo->file_path || !$demo->map_name || !$demo->physics || !$demo->gametype || !$demo->time_ms) {
+            return false;
+        }
+
+        $fasterTimes = OfflineRecord::where('map_name', $demo->map_name)
+            ->where('physics', $demo->physics)
+            ->where('gametype', $demo->gametype)
+            ->where('time_ms', '<', $demo->time_ms)
+            ->count();
+
+        $offlineRecord = OfflineRecord::create([
+            'map_name'    => $demo->map_name,
+            'physics'     => $demo->physics,
+            'gametype'    => $demo->gametype,
+            'time_ms'     => $demo->time_ms,
+            'player_name' => $demo->player_name,
+            'demo_id'     => $demo->id,
+            'rank'        => $fasterTimes + 1,
+            'date_set'    => $demo->record_date ?? $demo->created_at,
+        ]);
+
+        $demo->update(['status' => 'assigned']);
+
+        OfflineRecord::where('map_name', $demo->map_name)
+            ->where('physics', $demo->physics)
+            ->where('gametype', $demo->gametype)
+            ->where('time_ms', '>=', $demo->time_ms)
+            ->where('id', '!=', $offlineRecord->id)
+            ->increment('rank');
+
+        if ($verbose) {
+            $this->info("✓ Created offline record ID: {$offlineRecord->id}");
+        }
+
+        return true;
     }
 }
