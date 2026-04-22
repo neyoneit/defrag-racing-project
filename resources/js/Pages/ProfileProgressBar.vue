@@ -245,16 +245,16 @@ div[id^="phpdebugbar"] { display: none !important; }
     flex-shrink: 0;
 }
 
-.ppb-player-name :deep(.q3c-0),
-.ppb-player-name :deep(.q3c-1),
-.ppb-player-name :deep(.q3c-2),
-.ppb-player-name :deep(.q3c-3),
-.ppb-player-name :deep(.q3c-4),
-.ppb-player-name :deep(.q3c-5),
-.ppb-player-name :deep(.q3c-6),
-.ppb-player-name :deep(.q3c-7),
-.ppb-player-name :deep(.q3c-8),
-.ppb-player-name :deep(.q3c-9) {
+.ppb-player-name .q3c-0,
+.ppb-player-name .q3c-1,
+.ppb-player-name .q3c-2,
+.ppb-player-name .q3c-3,
+.ppb-player-name .q3c-4,
+.ppb-player-name .q3c-5,
+.ppb-player-name .q3c-6,
+.ppb-player-name .q3c-7,
+.ppb-player-name .q3c-8,
+.ppb-player-name .q3c-9 {
     font-weight: inherit;
     font-size: inherit;
     font-family: inherit;
