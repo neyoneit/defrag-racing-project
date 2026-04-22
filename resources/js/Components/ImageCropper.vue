@@ -152,14 +152,14 @@
     overflow: hidden;
 }
 
-/* Override vue-cropper default styles using :deep() */
-.cropper-wrapper :deep(img) {
+/* Override vue-cropper default styles */
+.cropper-wrapper img {
     max-width: 100%;
     max-height: 100%;
 }
 
 /* The main cropper container that gets created */
-.cropper-wrapper :deep(.cropper-container) {
+.cropper-wrapper .cropper-container {
     position: relative !important;
     height: 500px !important;
     width: 100% !important;
@@ -167,63 +167,63 @@
 }
 
 /* Wrap box should be contained */
-.cropper-wrapper :deep(.cropper-wrap-box) {
+.cropper-wrapper .cropper-wrap-box {
     position: relative !important;
 }
 
 /* Canvas should not overflow */
-.cropper-wrapper :deep(.cropper-canvas) {
+.cropper-wrapper .cropper-canvas {
     position: relative !important;
 }
 
 /* Drag box and crop box need proper z-index */
-.cropper-wrapper :deep(.cropper-drag-box) {
+.cropper-wrapper .cropper-drag-box {
     position: absolute;
     z-index: 1;
 }
 
-.cropper-wrapper :deep(.cropper-crop-box) {
+.cropper-wrapper .cropper-crop-box {
     position: absolute;
     z-index: 2;
 }
 
 /* Cropper.js custom styling */
-:deep(.cropper-view-box) {
+.cropper-view-box {
     outline: 2px solid rgba(59, 130, 246, 0.8) !important;
     outline-color: rgba(59, 130, 246, 0.8) !important;
 }
 
-:deep(.cropper-point) {
+.cropper-point {
     background-color: rgba(59, 130, 246, 1) !important;
     width: 12px !important;
     height: 12px !important;
 }
 
-:deep(.cropper-line) {
+.cropper-line {
     background-color: rgba(59, 130, 246, 0.8) !important;
 }
 
-:deep(.cropper-face) {
+.cropper-face {
     background-color: transparent !important;
     cursor: move !important;
 }
 
-:deep(.cropper-dashed) {
+.cropper-dashed {
     border-color: rgba(59, 130, 246, 0.3) !important;
 }
 
-:deep(.cropper-center) {
+.cropper-center {
     background-color: rgba(59, 130, 246, 0.8) !important;
 }
 
 /* Dark background for area outside crop */
-:deep(.cropper-modal) {
+.cropper-modal {
     background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Make sure all cropper elements stay within bounds */
-.cropper-wrapper :deep(.cropper-modal),
-.cropper-wrapper :deep(.cropper-bg) {
+.cropper-wrapper .cropper-modal,
+.cropper-wrapper .cropper-bg {
     position: absolute !important;
 }
 </style>
