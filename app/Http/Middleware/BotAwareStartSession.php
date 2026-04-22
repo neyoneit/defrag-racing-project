@@ -3,23 +3,24 @@
 namespace App\Http\Middleware;
 
 use App\Services\BotDetector;
-use Closure;
 use Illuminate\Session\Middleware\StartSession;
 
 /**
- * Skip session start for identified bots so their requests don't
- * create sessions table rows. Bot crawlers rarely persist cookies,
- * so every request was creating a new row — the sessions table had
- * grown to ~1.8M rows in 30 days from bot traffic alone.
+ * Run StartSession normally so downstream middleware (ShareErrorsFromSession,
+ * VerifyCsrfToken, HandleInertiaRequests) still has a session to read — but
+ * skip the terminal save() for bot traffic so their session never lands in
+ * the sessions table. Prevents bot bloat (~1.8M rows / 30 days) without
+ * breaking endpoints hit by headless clients like the DefragLive bot,
+ * which send a `python-requests/*` UA and expect JSON responses.
  */
 class BotAwareStartSession extends StartSession
 {
-    public function handle($request, Closure $next)
+    public function terminate($request, $response)
     {
         if (BotDetector::isBot($request->userAgent() ?? '')) {
-            return $next($request);
+            return;
         }
 
-        return parent::handle($request, $next);
+        parent::terminate($request, $response);
     }
 }
