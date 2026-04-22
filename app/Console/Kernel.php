@@ -8,6 +8,7 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Jobs\GetLastMddRecords;
 use App\Jobs\ScrapeRecords;
 use App\Jobs\TournamentCalculationsJob;
+use Illuminate\Support\Facades\DB;
 
 class Kernel extends ConsoleKernel
 {
@@ -69,6 +70,15 @@ class Kernel extends ConsoleKernel
 
         // Check q3defrag.org for new DeFRaG mod releases every Sunday at 12:00
         $schedule->command('wiki:check-defrag-releases')->withoutOverlapping()->weeklyOn(0, '12:00');
+
+        // Prune guest sessions older than 24h so bot traffic doesn't bloat
+        // the sessions table. Logged-in sessions keep the 30-day lifetime.
+        $schedule->call(function () {
+            DB::table('sessions')
+                ->whereNull('user_id')
+                ->where('last_activity', '<', time() - 86400)
+                ->delete();
+        })->daily()->name('prune-guest-sessions')->withoutOverlapping();
     }
 
     /**
