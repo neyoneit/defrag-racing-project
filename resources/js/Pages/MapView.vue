@@ -879,17 +879,12 @@
         combined.sort((a, b) => (a.time || a.time_ms) - (b.time || b.time_ms));
         combined = groupByVirtualPlayer(combined);
 
-        // Recalculate ranks (skip flagged items)
-        let rankCounter = 0;
-        combined = combined.map((item) => {
-            const hasFlag = (item.approved_flags && item.approved_flags.length > 0) ||
-                (item.verification_type && !['OFFLINE', 'ONLINE', 'verified'].includes(item.verification_type));
-            if (hasFlag) {
-                return { ...item, rank: null };
-            }
-            rankCounter++;
-            return { ...item, rank: rankCounter };
-        });
+        // DON'T reassign ranks per page — each server-side paginator (main
+        // records, Demos Top, oldtop) ranks its own data, and reassigning
+        // here from 1 on every page made ranks reset whenever the user
+        // clicks Next. We lose cross-source rank unification (main rank 5
+        // and DT rank 5 can collide in the merged view) but ranks are
+        // stable across pages, which matters far more.
 
         // The offline paginator is already grouped server-side (one rep per
         // virtual player), so its last_page is correct. Main records and
@@ -918,14 +913,20 @@
     };
 
     const getVq3Records = computed(() => {
-        if (props.showOldtop || props.showOffline) {
+        // Server now returns a unified leaderboard in `vq3Records` when
+        // showOldtop or showOffline is on (merging main + DT + oldtop into
+        // one paginator with continuous ranks). Detect the unified case by
+        // both extras props being null and short-circuit the legacy merge.
+        const unified = props.vq3OldRecords === null && props.vq3OfflineRecords === null;
+        if (! unified && (props.showOldtop || props.showOffline)) {
             return mergeRecordSources(props.vq3Records, props.vq3OldRecords, props.vq3OfflineRecords);
         }
         return props.vq3Records;
     })
 
     const getCpmRecords = computed(() => {
-        if (props.showOldtop || props.showOffline) {
+        const unified = props.cpmOldRecords === null && props.cpmOfflineRecords === null;
+        if (! unified && (props.showOldtop || props.showOffline)) {
             return mergeRecordSources(props.cpmRecords, props.cpmOldRecords, props.cpmOfflineRecords);
         }
         return props.cpmRecords;
