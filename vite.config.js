@@ -27,4 +27,11 @@ export default defineConfig({
             host: 'localhost',
         },
     },
+    css: {
+        preprocessorOptions: {
+            scss: {
+                api: 'modern-compiler',
+            },
+        },
+    },
 });

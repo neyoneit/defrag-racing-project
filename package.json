@@ -11,20 +11,21 @@
         "@tailwindcss/forms": "^0.5.2",
         "@tailwindcss/line-clamp": "^0.4.4",
         "@tailwindcss/typography": "^0.5.2",
-        "@vitejs/plugin-vue": "^4.5.0",
+        "@vitejs/plugin-vue": "^6.0.6",
         "autoprefixer": "^10.4.7",
         "axios": "^1.6.4",
-        "laravel-vite-plugin": "^1.0.0",
+        "laravel-vite-plugin": "^3.0.1",
         "postcss": "^8.4.14",
         "puppeteer": "^24.24.1",
         "sass": "^1.70.0",
         "tailwindcss": "^3.1.0",
-        "vite": "^5.0.0",
+        "vite": "^8.0.9",
         "vue": "^3.2.31"
     },
+    "overrides": {
+        "tar": "^7.5.13"
+    },
     "dependencies": {
-        "@ckeditor/ckeditor5-build-classic": "^41.1.0",
-        "@ckeditor/ckeditor5-vue": "^5.1.0",
         "@tiptap/extension-code-block-lowlight": "^3.21.0",
         "@tiptap/extension-image": "^3.21.0",
         "@tiptap/extension-link": "^3.21.0",

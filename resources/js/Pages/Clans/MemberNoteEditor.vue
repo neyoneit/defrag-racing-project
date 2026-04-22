@@ -3,10 +3,7 @@
     import { ref } from 'vue';
     import InputError from '@/Components/Laravel/InputError.vue';
     import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
-    import CKEditor from '@ckeditor/ckeditor5-vue';
-    import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
-
-    const ckeditor = CKEditor.component;
+    import RichTextEditor from '@/Components/RichTextEditor.vue';
 
     const props = defineProps({
         player: Object,
@@ -21,24 +18,6 @@
         position: props.player.position || '',
         config_file: null
     });
-
-    const editorConfig = {
-        toolbar: {
-            items: [
-                'heading',
-                '|',
-                'bold',
-                'italic',
-                'link',
-                'bulletedList',
-                'numberedList',
-                '|',
-                'blockQuote',
-                'undo',
-                'redo'
-            ]
-        }
-    };
 
     const saveNote = () => {
         form.post(route('clans.manage.member.note', { clan: props.clan.id, user: props.player.user_id }), {
@@ -155,13 +134,14 @@
                     <InputError class="mt-2" :message="form.errors.position" />
                 </div>
 
-                <div class="ckeditor-dark-theme">
-                    <ckeditor
-                        :editor="ClassicEditor"
-                        v-model="form.note"
-                        :config="editorConfig"
-                    ></ckeditor>
-                </div>
+                <RichTextEditor
+                    v-model="form.note"
+                    :enable-image="false"
+                    :enable-table="false"
+                    :enable-code="false"
+                    placeholder="Add a note about this member..."
+                    min-height="8rem"
+                />
                 <InputError class="mt-2" :message="form.errors.note" />
 
                 <!-- Config File Upload -->
@@ -205,50 +185,3 @@
     </div>
 </template>
 
-<style>
-.ckeditor-dark-theme .ck-editor__editable {
-    min-height: 200px;
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    color: #fff !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.ckeditor-dark-theme .ck-editor__editable:focus {
-    border-color: rgba(99, 102, 241, 0.5) !important;
-    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
-}
-
-.ckeditor-dark-theme .ck.ck-toolbar {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.ckeditor-dark-theme .ck.ck-button,
-.ckeditor-dark-theme .ck.ck-dropdown__button {
-    color: #d1d5db !important;
-}
-
-.ckeditor-dark-theme .ck.ck-button:hover,
-.ckeditor-dark-theme .ck.ck-dropdown__button:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.ckeditor-dark-theme .ck.ck-button.ck-on,
-.ckeditor-dark-theme .ck.ck-button.ck-on:hover {
-    background-color: rgba(99, 102, 241, 0.3) !important;
-    color: #fff !important;
-}
-
-.ckeditor-dark-theme .ck.ck-dropdown__panel {
-    background-color: rgba(17, 24, 39, 0.95) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.ckeditor-dark-theme .ck.ck-list__item {
-    color: #d1d5db !important;
-}
-
-.ckeditor-dark-theme .ck.ck-list__item:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-}
-</style>

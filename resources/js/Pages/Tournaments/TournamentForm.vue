@@ -7,7 +7,7 @@
     import InputLabel from '@/Components/Laravel/InputLabel.vue';
     import PrimaryButton from '@/Components/Laravel/PrimaryButton.vue';
     import TextInput from '@/Components/Laravel/TextInput.vue';
-    import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+    import RichTextEditor from '@/Components/RichTextEditor.vue';
     import rulesData from '@/rules';
 
     const props = defineProps({
@@ -27,21 +27,6 @@
         prize_pool: props.tournament.prize_pool?.toString() || '0',
         donation_link: props.tournament.donation_link || '',
     });
-
-    const editor = ClassicEditor;
-    const editorConfig = {
-        heading: {
-            options: [
-                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
-                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
-                { model: 'heading4', view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' },
-                { model: 'heading5', view: 'h5', title: 'Heading 5', class: 'ck-heading_heading5' },
-                { model: 'heading6', view: 'h6', title: 'Heading 6', class: 'ck-heading_heading6' }
-            ]
-        }
-    };
 
     const photoPreview = ref(null);
     const photoInput = ref(null);
@@ -242,13 +227,11 @@
                 <div class="col-span-6" v-show="tabs[currentTab] == 'details'">
                     <div class="mb-3">
                         <InputLabel for="rules" value="Rules" />
-                        <ckeditor
-                            :editor="editor"
-                            :config="editorConfig"
+                        <RichTextEditor
                             id="rules"
                             v-model="form.rules"
-                            type="text"
-                            class="mt-1 block w-full border-2 border-grayop-700 bg-grayop-900 text-gray-300 focus:border-blue-600 focus:ring-blue-600 rounded-md shadow-sm"
+                            placeholder="Tournament rules..."
+                            class="mt-1"
                         />
                         <InputError :message="form.errors.rules" class="mt-2" />
                     </div>

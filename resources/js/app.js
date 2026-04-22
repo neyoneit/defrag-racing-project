@@ -38,8 +38,6 @@ import MainLayout from "@/Layouts/MainLayout.vue"
 
 import { createVuetify } from 'vuetify'
 
-import CKEditor from '@ckeditor/ckeditor5-vue';
-
 const appName = import.meta.env.VITE_APP_NAME || 'Defrag Racing';
 
 const formatTime = (milliseconds) => {
@@ -200,8 +198,7 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
-            .use(vuetify)
-            .use(CKEditor);
+            .use(vuetify);
 
         app.component("Popper", Popper);
 

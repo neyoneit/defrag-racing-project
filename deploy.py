@@ -28,7 +28,7 @@ def get_git_clone_cmd(name):
 
 def pipeline_cmds(name):
     cmds = [
-        "composer install --optimize-autoloader --no-dev --no-interaction",
+        "COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-dev --no-interaction",
         "npm install",
         "npm run build",
         f"ln -s {PROJECT_PATH}/deploy/.env {PROJECT_PATH}/releases/{name}/.env",
