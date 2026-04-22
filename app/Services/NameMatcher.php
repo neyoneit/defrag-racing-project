@@ -16,6 +16,20 @@ class NameMatcher
     protected ?array $userCache = null;
 
     /**
+     * Exact-match alias index built from userCache on first use.
+     *
+     * Key is strtolower(stripColorCodes($alias)) so a demo's player name can
+     * be compared in O(1) instead of iterating every user's aliases and
+     * running Levenshtein. Collisions (multiple users with the same plain
+     * alias) are resolved first-write-wins to preserve the iteration order
+     * semantics of the original matchGlobally loop, which early-exited on
+     * the first 100% match.
+     *
+     * Format: [stripped_lowered_name => ['user_id' => int, 'matched_name' => string]]
+     */
+    protected ?array $aliasIndex = null;
+
+    /**
      * Strip Quake 3 color codes from a name
      * Removes patterns like ^0-^9, ^[, ^]
      */
@@ -65,7 +79,60 @@ class NameMatcher
     public function clearCache(): void
     {
         $this->userCache = null;
+        $this->aliasIndex = null;
         Cache::forget('name_matcher_users');
+    }
+
+    /**
+     * Build the exact-match alias index from the already-loaded userCache.
+     * Plain_name is added before aliases to mirror matchAgainstUser's check
+     * order, and first-write-wins preserves the early-exit semantics of
+     * matchGlobally across ambiguous names shared by multiple users.
+     */
+    protected function loadAliasIndex(): void
+    {
+        if ($this->aliasIndex !== null) {
+            return;
+        }
+        $this->loadUserCache();
+
+        $index = [];
+        foreach ($this->userCache as $userId => $userData) {
+            $candidates = [];
+            if (!empty($userData['plain_name'])) {
+                $candidates[] = $userData['plain_name'];
+            }
+            foreach ($userData['aliases'] as $alias) {
+                $candidates[] = $alias;
+            }
+            foreach ($candidates as $name) {
+                $key = strtolower($this->stripColorCodes($name));
+                if ($key === '') {
+                    continue;
+                }
+                if (!isset($index[$key])) {
+                    $index[$key] = ['user_id' => $userId, 'matched_name' => $name];
+                }
+            }
+        }
+        $this->aliasIndex = $index;
+    }
+
+    /**
+     * O(1) exact-match lookup against the approved-alias set. Returns null
+     * if no user owns this (stripped, lowercased) name. Used as a fast
+     * path before falling back to fuzzy Levenshtein matching.
+     *
+     * @return array{user_id: int, matched_name: string}|null
+     */
+    public function findExactMatch(string $demoPlayerName): ?array
+    {
+        $this->loadAliasIndex();
+        $key = strtolower($this->stripColorCodes($demoPlayerName));
+        if ($key === '') {
+            return null;
+        }
+        return $this->aliasIndex[$key] ?? null;
     }
 
     /**
@@ -180,6 +247,21 @@ class NameMatcher
      */
     public function findBestMatch(string $demoPlayerName, ?int $uploaderId = null): array
     {
+        // Fast path: an exact (stripped + lowercased) alias match is always
+        // 100% confidence, and it's the vast majority of real-world names.
+        // This skips the O(users * aliases) Levenshtein sweep entirely,
+        // which dominates batch-rematch runtime. Semantically identical to
+        // matchGlobally's early-exit on a 100% match.
+        $exact = $this->findExactMatch($demoPlayerName);
+        if ($exact !== null) {
+            return [
+                'user_id' => $exact['user_id'],
+                'confidence' => 100,
+                'source' => 'global',
+                'matched_name' => $exact['matched_name'],
+            ];
+        }
+
         // Pass 1: Check global search first
         $globalMatch = $this->matchGlobally($demoPlayerName, null); // Don't exclude uploader
 

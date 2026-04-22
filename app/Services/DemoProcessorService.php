@@ -605,194 +605,36 @@ class DemoProcessorService
     }
 
     /**
-     * Try to automatically assign demo to a record using name matching
+     * Try to automatically assign demo to a record using the shared
+     * DemoAutoAssigner pipeline (PASS 0/1/2). On fall-through (no Record
+     * matched) or on the PASS 0 profile-only scenario, creates an offline
+     * record so the run still appears on the Demos Top leaderboard.
      */
     protected function autoAssignToRecord(UploadedDemo $demo, $compressedLocalPath)
     {
-        if (!$demo->map_name || !$demo->physics || !$demo->time_ms || !$demo->player_name) {
-            return; // Not enough data to match
-        }
+        $autoAssigner = app(DemoAutoAssigner::class);
+        $outcome = $autoAssigner->attemptAssignToRecord($demo);
 
-        // IMPORTANT: Only assign ONLINE demos to records
-        // Offline demos (df, fs, fc) should NOT be assigned to online records
-        // They will have their own offline leaderboards
-        if ($demo->gametype && !str_starts_with($demo->gametype, 'm')) {
-            Log::info('Skipping auto-assign for offline demo', [
-                'demo_id' => $demo->id,
-                'gametype' => $demo->gametype,
-                'map' => $demo->map_name,
-            ]);
+        if ($outcome === DemoAutoAssigner::OUTCOME_RECORD) {
             return;
         }
 
-        // Build gametype string (e.g., "run_cpm" or "run_vq3")
-        // Records from q3df.org are all online records
-        // Strip .tr suffix (timer reset) as it's just an indicator and not part of physics matching
-        $physics = str_replace('.tr', '', strtolower($demo->physics));
-        $gametype = 'run_' . $physics;
-
-        $nameMatcher = app(NameMatcher::class);
-
-        // PASS 0: q3df login match — server-side authoritative identifier
-        // extracted from console messages like "Enter(Enter), you are now rank..."
-        // Preferred over nick fuzzy matching because it cannot be impersonated
-        // without server-side control.
-        if ($demo->q3df_login_name || $demo->q3df_login_name_colored) {
-            $loginMatch = $nameMatcher->matchByQ3dfLogin(
-                $demo->q3df_login_name,
-                $demo->q3df_login_name_colored
-            );
-
-            if ($loginMatch['user_id']) {
-                $matchedUserId = $loginMatch['user_id'];
-                $tier = $loginMatch['tier']; // 'q3df_colored' or 'q3df_plain'
-
-                // Look for a matching record owned by the matched user
-                $record = Record::where('mapname', $demo->map_name)
-                    ->where('gametype', $gametype)
-                    ->where('time', $demo->time_ms)
-                    ->where('user_id', $matchedUserId)
-                    ->first();
-
-                if ($record) {
-                    // Scénář A: both signals agree (login AND time) → strongest match
-                    $demo->update([
-                        'record_id' => $record->id,
-                        'status' => 'assigned',
-                        'name_confidence' => 100,
-                        'suggested_user_id' => $matchedUserId,
-                        'matched_alias' => $loginMatch['matched_alias'],
-                        'match_method' => $tier . '_record',
-                    ]);
-
-                    Log::info('Demo auto-assigned to record via q3df login', [
-                        'demo_id' => $demo->id,
-                        'record_id' => $record->id,
-                        'user_id' => $matchedUserId,
-                        'tier' => $tier,
-                        'matched_alias' => $loginMatch['matched_alias'],
-                    ]);
-
-                    return;
-                }
-
-                // Scénář B: login matches a user but no record exists with that
-                // time. Attribute the demo to the matched user's profile and let
-                // it flow into the offline leaderboard as a "slow run" entry.
-                $demo->update([
-                    'user_id' => $matchedUserId,
-                    'name_confidence' => 100,
-                    'suggested_user_id' => $matchedUserId,
-                    'matched_alias' => $loginMatch['matched_alias'],
-                    'match_method' => $tier . '_profile',
-                ]);
-                $demo = $demo->fresh();
-
-                Log::info('Demo auto-assigned to profile via q3df login (no record match)', [
-                    'demo_id' => $demo->id,
-                    'user_id' => $matchedUserId,
-                    'tier' => $tier,
-                    'matched_alias' => $loginMatch['matched_alias'],
-                ]);
-
-                $this->createOfflineRecord($demo, $compressedLocalPath);
-                return;
-            }
-        }
-
-        // PASS 1: Check if uploader has a matching record (ignores name completely)
-        $uploaderRecordMatch = false;
-        if ($demo->user_id) {
-            $uploaderRecord = Record::where('mapname', $demo->map_name)
-                ->where('gametype', $gametype)
-                ->where('time', $demo->time_ms)
-                ->where('user_id', $demo->user_id)
-                ->first();
-
-            if ($uploaderRecord) {
-                // Uploader has a matching record - assign immediately with 100% confidence
-                // File already uploaded to Backblaze during processing
-                $demo->update([
-                    'record_id' => $uploaderRecord->id,
-                    'status' => 'assigned',
-                    'name_confidence' => 100,
-                    'suggested_user_id' => $demo->user_id,
-                    'matched_alias' => null, // Matched by uploader record, not name
-                    'match_method' => 'uploader_record',
-                ]);
-
-                Log::info('Demo auto-assigned to uploader\'s record', [
-                    'demo_id' => $demo->id,
-                    'record_id' => $uploaderRecord->id,
-                    'user_id' => $demo->user_id,
-                    'gametype' => $gametype,
-                    'file_path' => $demo->file_path,
-                ]);
-
-                $uploaderRecordMatch = true;
-                return;
-            }
-        }
-
-        // PASS 2: Global name matching (only if uploader didn't match in PASS 1)
-        if (!$uploaderRecordMatch) {
-            $nameMatch = $nameMatcher->findBestMatch($demo->player_name, null); // null = global search
-
-            // Store name matching results including matched_alias
-            $demo->update([
-                'name_confidence' => $nameMatch['confidence'],
-                'suggested_user_id' => $nameMatch['user_id'],
-                'matched_alias' => $nameMatch['matched_name'] ?? null,
-            ]);
-
-            Log::info('Name matching completed', [
+        // PROFILE: q3df login matched a user but no Record existed at this
+        // time. The service already updated user_id + name fields; we just
+        // need the offline_record so the run appears on that user's
+        // leaderboard. Re-fetch because service called refresh().
+        // NONE: no match — fall back to offline_record so the run still
+        // shows up in Demos Top (player_name attribution).
+        if ($outcome === DemoAutoAssigner::OUTCOME_PROFILE) {
+            $demo = $demo->fresh();
+        } else {
+            Log::info('Creating offline record for non-100% match', [
                 'demo_id' => $demo->id,
-                'player_name' => $demo->player_name,
-                'confidence' => $nameMatch['confidence'],
-                'suggested_user_id' => $nameMatch['user_id'],
-                'matched_alias' => $nameMatch['matched_name'] ?? null,
-                'source' => $nameMatch['source'],
+                'confidence' => $demo->name_confidence,
+                'map' => $demo->map_name,
+                'time_ms' => $demo->time_ms,
             ]);
-
-            // Only auto-assign if we have 100% confidence match
-            if ($nameMatch['confidence'] === 100 && $nameMatch['user_id']) {
-                // Find matching record for this user
-                $record = Record::where('mapname', $demo->map_name)
-                    ->where('gametype', $gametype)
-                    ->where('time', $demo->time_ms)
-                    ->where('user_id', $nameMatch['user_id'])
-                    ->first();
-
-                if ($record) {
-                    // Perfect match found! File already uploaded to Backblaze during processing
-                    $demo->update([
-                        'record_id' => $record->id,
-                        'status' => 'assigned',
-                        'match_method' => 'fuzzy_nick',
-                    ]);
-
-                    Log::info('Demo auto-assigned to record with 100% name match', [
-                        'demo_id' => $demo->id,
-                        'record_id' => $record->id,
-                        'user_id' => $nameMatch['user_id'],
-                        'gametype' => $demo->gametype,
-                        'matched_alias' => $nameMatch['matched_name'] ?? null,
-                        'file_path' => $demo->file_path,
-                    ]);
-
-                    return;
-                }
-            }
         }
-
-        // Less than 100% confidence or no matching record found
-        // Create offline record instead (goes to "Demos Top")
-        Log::info('Creating offline record for non-100% match', [
-            'demo_id' => $demo->id,
-            'confidence' => $nameMatch['confidence'],
-            'map' => $demo->map_name,
-            'time_ms' => $demo->time_ms,
-        ]);
 
         $this->createOfflineRecord($demo, $compressedLocalPath);
     }

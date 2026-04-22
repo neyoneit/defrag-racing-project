@@ -581,37 +581,69 @@ class MapsController extends Controller
         $userDefaultOffline = $request->user()?->default_show_offline ? 'true' : 'false';
         $showOffline = $request->has('showOffline') ? $request->input('showOffline') : $userDefaultOffline;
 
-        if ($showOffline === 'true') {
-            // Determine physics patterns based on map name + selected ctf mode.
-            // fc (fast caps) maps start with "actf" or "ctf", otherwise df (defrag).
-            // Physics format in DB: "CPM.2.TR" or "VQ3.1" (N = ctf mode).
-            $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
-            if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
-                $ctfNumber = substr($gametype, 3, 1);
-                $cpmPattern = "CPM.{$ctfNumber}%";
-                $vq3Pattern = "VQ3.{$ctfNumber}%";
-            } else {
-                $cpmPattern = 'CPM%';
-                $vq3Pattern = 'VQ3%';
-            }
+        // Physics patterns are needed for both the unified leaderboard (when
+        // showOffline is on) and the standalone Demos Top fallback, so pull
+        // them out of the if-block.
+        $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
+        if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
+            $ctfNumber = substr($gametype, 3, 1);
+            $cpmPattern = "CPM.{$ctfNumber}%";
+            $vq3Pattern = "VQ3.{$ctfNumber}%";
+        } else {
+            $cpmPattern = 'CPM%';
+            $vq3Pattern = 'VQ3%';
+        }
 
-            $cpmOfflineRecords = $this->buildGroupedDemosTop($map->name, $cpmPattern, $column, $order, 'cpmPage', $allCpmRecordsByTime);
-            $vq3OfflineRecords = $this->buildGroupedDemosTop($map->name, $vq3Pattern, $column, $order, 'vq3Page', $allVq3RecordsByTime);
+        // When any "extras" toggle is on, replace the main records paginator
+        // with a unified leaderboard that merges main + DT reps + oldtop into
+        // one continuous rank 1..N, paginated 50 per page. Frontend detects
+        // the replacement by seeing $xOfflineRecords/$xOldRecords as null and
+        // skips its legacy merge pass.
+        if ($showOffline === 'true' || $showOldtop === 'true') {
+            $cpmRecords = $this->buildUnifiedLeaderboard(
+                $map->name, $cpmGametype, $cpmPattern,
+                $showOffline === 'true', $showOldtop === 'true',
+                $column, $order, 'cpmPage'
+            );
+            $vq3Records = $this->buildUnifiedLeaderboard(
+                $map->name, $vq3Gametype, $vq3Pattern,
+                $showOffline === 'true', $showOldtop === 'true',
+                $column, $order, 'vq3Page'
+            );
+            $cpmOfflineRecords = null;
+            $vq3OfflineRecords = null;
+            $cpmOldRecords = null;
+            $vq3OldRecords = null;
         } else {
             $cpmOfflineRecords = null;
             $vq3OfflineRecords = null;
         }
 
-        $cpmPage = ($request->has('cpmPage')) ? min($request->cpmPage, $cpmRecords->lastPage()) : 1;
+        // Redirect clamps must respect every source that shares the page
+        // parameter — main records, oldtop, and Demos Top (grouped offline).
+        // Old logic compared against $cpmRecords->lastPage() only, so a map
+        // with e.g. 50 main records (1 page) and 300 Demos Top reps (6 pages)
+        // would silently bounce every Demos Top page > 1 back to page 1.
+        $cpmMaxPage = max(
+            $cpmRecords->lastPage(),
+            $cpmOldRecords ? $cpmOldRecords->lastPage() : 1,
+            $cpmOfflineRecords ? $cpmOfflineRecords->lastPage() : 1,
+        );
+        $vq3MaxPage = max(
+            $vq3Records->lastPage(),
+            $vq3OldRecords ? $vq3OldRecords->lastPage() : 1,
+            $vq3OfflineRecords ? $vq3OfflineRecords->lastPage() : 1,
+        );
 
-        $vq3Page = ($request->has('vq3Page')) ? min($request->vq3Page, $vq3Records->lastPage()) : 1;
+        $cpmPage = ($request->has('cpmPage')) ? min($request->cpmPage, $cpmMaxPage) : 1;
+        $vq3Page = ($request->has('vq3Page')) ? min($request->vq3Page, $vq3MaxPage) : 1;
 
-        if ($request->has('vq3Page') && $request->get('vq3Page') > $vq3Records->lastPage()) {
-            return redirect()->route('maps.map', ['vq3Page' => $vq3Records->lastPage(), 'mapname' => $mapname, 'cpmPage' => $cpmPage]);
+        if ($request->has('vq3Page') && $request->get('vq3Page') > $vq3MaxPage) {
+            return redirect()->route('maps.map', ['vq3Page' => $vq3MaxPage, 'mapname' => $mapname, 'cpmPage' => $cpmPage]);
         }
 
-        if ($request->has('cpmPage') && $request->get('cpmPage') > $cpmRecords->lastPage()) {
-            return redirect()->route('maps.map', ['cpmPage' => $cpmRecords->lastPage(), 'mapname' => $mapname, 'vq3Page' => $vq3Page]);
+        if ($request->has('cpmPage') && $request->get('cpmPage') > $cpmMaxPage) {
+            return redirect()->route('maps.map', ['cpmPage' => $cpmMaxPage, 'mapname' => $mapname, 'vq3Page' => $vq3Page]);
         }
 
         // Precompute time-history cluster metadata per demo for this map.
@@ -874,17 +906,70 @@ class MapsController extends Controller
 
     /**
      * Build "Demos Top" paginator with server-side virtual-player grouping.
-     * Pools offline_records + assigned online demos for the map/physics, runs
-     * union-find on (player_name / q3df_login_name_colored / q3df_login_name),
-     * keeps the fastest attempt per cluster as the representative, then
-     * paginates the representatives. Guarantees one row per virtual player and
-     * stable cross-page behavior.
+     * Thin wrapper around buildDemosTopReps — keeps the legacy signature so
+     * existing callers don't change. The real work (clustering + rep
+     * selection + time-history metadata) lives in buildDemosTopReps so the
+     * unified leaderboard can reuse the exact same grouping.
      */
     private function buildGroupedDemosTop(string $mapName, string $physicsPattern, string $column, string $order, string $pageName, array $mainRecordIds = []): \Illuminate\Pagination\LengthAwarePaginator
     {
-        $perPage = 50;
+        $reps = $this->buildDemosTopReps($mapName, $physicsPattern, $mainRecordIds);
+        return $this->paginateReps($reps, $column, $order, $pageName, 50);
+    }
+
+    /**
+     * Paginate a pre-built reps collection: sort by $column, recompute rank
+     * (nulling flagged items), slice to the requested page. Shared between
+     * buildGroupedDemosTop (Demos-Top-only view) and buildUnifiedLeaderboard
+     * (unified main+DT+oldtop view) so rank semantics stay identical.
+     */
+    private function paginateReps(\Illuminate\Support\Collection $reps, string $column, string $order, string $pageName, int $perPage): \Illuminate\Pagination\LengthAwarePaginator
+    {
         $currentPage = (int) (request()->input($pageName, 1));
         if ($currentPage < 1) $currentPage = 1;
+
+        if ($column === 'date_set') {
+            $reps = $order === 'ASC'
+                ? $reps->sortBy(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values()
+                : $reps->sortByDesc(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values();
+        } else {
+            $reps = $reps->sortBy('time_ms')->values();
+        }
+
+        $rank = 0;
+        $reps = $reps->map(function ($item) use (&$rank) {
+            $hasFlag = !empty($item->approved_flags) ||
+                (property_exists($item, 'verification_type') && $item->verification_type
+                    && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
+            $item->rank = $hasFlag ? null : ++$rank;
+            return $item;
+        });
+
+        $total = $reps->count();
+        $offset = ($currentPage - 1) * $perPage;
+        $items = $reps->slice($offset, $perPage)->values();
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+                'pageName' => $pageName,
+            ]
+        );
+    }
+
+    /**
+     * Build the Demos Top representative collection (no pagination, no rank
+     * assignment). Returns a flat collection of candidate objects already
+     * run through union-find + MDD-time filter + online/offline subcluster
+     * split. Callers layer their own sort + rank + pagination on top.
+     */
+    private function buildDemosTopReps(string $mapName, string $physicsPattern, array $mainRecordIds = []): \Illuminate\Support\Collection
+    {
 
         // Pool 1: offline_records (with demo eager-loaded so we can read q3df signals)
         $offline = OfflineRecord::where('map_name', $mapName)
@@ -1052,11 +1137,7 @@ class MapsController extends Controller
         }
 
         if ($candidates->isEmpty()) {
-            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, $currentPage, [
-                'path' => request()->url(),
-                'query' => request()->query(),
-                'pageName' => $pageName,
-            ]);
+            return collect();
         }
 
         // Attach community flags to each candidate before clustering so flagged
@@ -1324,42 +1405,108 @@ class MapsController extends Controller
             if ($offlineRep = $buildRep($offlineIndices)) $representatives[] = $offlineRep;
         }
 
-        $reps = collect($representatives);
+        // Hand back the raw reps — caller owns sort + rank + pagination.
+        return collect($representatives);
+    }
 
-        // Sort representatives (column = 'time' or 'date_set').
-        if ($column === 'date_set') {
-            $reps = $order === 'ASC'
-                ? $reps->sortBy(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values()
-                : $reps->sortByDesc(fn ($r) => strtotime((string) ($r->date_set ?? '')))->values();
-        } else {
-            $reps = $reps->sortBy('time_ms')->values();
+    /**
+     * Unified leaderboard: merge main MDD records + Demos Top reps + oldtop
+     * records into one paginated list with continuous ranks 1..N.
+     *
+     * Shape-wise the returned paginator replaces the main `$xRecords`
+     * variable when either `showOffline` or `showOldtop` is on, so the
+     * frontend stops trying to merge three separate paginators by hand
+     * (which broke both pagination and rank numbering).
+     *
+     * Scope: each SOURCE item becomes its own row (same player can appear
+     * as a main record AND as a Demos Top rep). Within-source grouping for
+     * Demos Top still happens — that's where the time-history drawer's
+     * cluster data comes from.
+     */
+    private function buildUnifiedLeaderboard(
+        string $mapname,
+        string $gametype,
+        string $physicsPattern,
+        bool $includeOffline,
+        bool $includeOldtop,
+        string $column,
+        string $order,
+        string $pageName
+    ): \Illuminate\Pagination\LengthAwarePaginator {
+        // --- Main records (all, unpaginated) --------------------------------
+        $mainRecords = Record::where('mapname', $mapname)
+            ->where('gametype', $gametype)
+            ->with(['user', 'uploadedDemos', 'renderedVideos' => fn ($q) => $q->visible()->latest()])
+            ->get();
+        $mainRecordIds = $mainRecords->pluck('id')->toArray();
+
+        // Community flags on main records drive their rank nulling.
+        // attachCommunityFlags iterates directly over $records, so a plain
+        // Eloquent Collection works — no paginator wrapping needed.
+        $this->attachCommunityFlags($mainRecords);
+
+        // Compute MDD rank map across ALL main records (sorted by time
+        // ASC) so each main record carries its own MDD-table rank, which
+        // the unified view overwrites for the merged rank but the client
+        // still exposes via `mdd_rank` for tooltips / cluster badges.
+        $allMainIdsByTime = Record::where('mapname', $mapname)
+            ->where('gametype', $gametype)
+            ->orderBy('time', 'ASC')
+            ->orderBy('date_set', 'ASC')
+            ->pluck('id')
+            ->toArray();
+        $flaggedMainIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
+            ->whereIn('record_id', $allMainIdsByTime)->pluck('record_id')->unique()->toArray();
+        $mddRankMap = [];
+        $mr = 0;
+        foreach ($allMainIdsByTime as $id) {
+            $mddRankMap[$id] = in_array($id, $flaggedMainIds) ? null : ++$mr;
         }
 
-        // Recalculate ranks: skip flagged reps.
-        $rank = 0;
-        $reps = $reps->map(function ($item) use (&$rank) {
-            $hasFlag = !empty($item->approved_flags) ||
-                ($item->verification_type && !in_array($item->verification_type, ['OFFLINE', 'ONLINE', 'verified']));
-            $item->rank = $hasFlag ? null : ++$rank;
-            return $item;
-        });
+        $unified = collect();
 
-        // Manual pagination over representatives.
-        $total = $reps->count();
-        $offset = ($currentPage - 1) * $perPage;
-        $items = $reps->slice($offset, $perPage)->values();
+        foreach ($mainRecords as $record) {
+            $record->time_ms = $record->time; // mirror so sort/rank share one field
+            $record->mdd_rank = $mddRankMap[$record->id] ?? null;
+            $record->source_type = 'main';
+            // Don't stamp verification_type — the frontend decides
+            // verification from uploaded_demos.length > 0. Forcing
+            // 'verified' here made every main record light up green even
+            // when no demo was attached.
+            $unified->push($record);
+        }
 
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $currentPage,
-            [
-                'path' => request()->url(),
-                'query' => request()->query(),
-                'pageName' => $pageName,
-            ]
-        );
+        // --- Oldtop ---------------------------------------------------------
+        if ($includeOldtop) {
+            $oldRecords = OldtopRecord::where('mapname', $mapname)
+                ->where('gametype', $gametype)
+                ->orderBy('time', 'ASC')
+                ->get();
+            foreach ($oldRecords as $old) {
+                $old->time_ms = $old->time;
+                $old->oldtop = true;
+                $old->source_type = 'oldtop';
+                // Same reasoning as main records — leave verification_type
+                // unset so the frontend's demo-attached check decides.
+                $unified->push($old);
+            }
+        }
+
+        // --- Demos Top reps -------------------------------------------------
+        // Same grouping logic as the stand-alone Demos Top paginator: each
+        // cluster contributes up to two rows (fastest online + fastest
+        // offline) with embedded time-history metadata.
+        if ($includeOffline) {
+            $dtReps = $this->buildDemosTopReps($mapname, $physicsPattern, $mainRecordIds);
+            foreach ($dtReps as $rep) {
+                if (empty($rep->source_type)) {
+                    $rep->source_type = $rep->is_online ?? false ? 'dt_online' : 'dt_offline';
+                }
+                $unified->push($rep);
+            }
+        }
+
+        return $this->paginateReps($unified, $column, $order, $pageName, 50);
     }
 
     /**
