@@ -27,6 +27,21 @@ const players = ref(0);
 const interval = ref(null);
 const isRotating = ref(false);
 
+const formatRecordDate = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    const yyyy = String(d.getFullYear());
+    const fmt = page.props.dateFormat;
+    if (fmt === 'dmY') return `${dd}/${mm}/${yyyy}`;
+    if (fmt === 'Ymd') return `${yyyy}/${mm}/${dd}`;
+    if (fmt === 'dmy') return `${dd}/${mm}/${yy}`;
+    return `${yy}/${mm}/${dd}`;
+};
+
 // Get layout from cookie or default to 'large'
 const getLayoutFromCookie = () => {
     const cookies = document.cookie.split(';');
@@ -518,24 +533,26 @@ const getFunctionName = (abbr) => {
                                             </div>
                                             <!-- Copy map name -->
                                             <CopyButton :text="server.map" size="xs" />
+                                        </div>
+                                        <div class="flex items-center gap-2 ml-auto">
+                                            <!-- Expand Indicator - only show if map has features -->
+                                            <div v-if="(server.mapdata?.weapons && server.mapdata.weapons.length > 0) || (server.mapdata?.items && server.mapdata.items.length > 0) || (server.mapdata?.functions && server.mapdata.functions.length > 0)" class="map-expand-indicator">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            </div>
                                             <!-- Add to Maplist button (only if logged in and map has ID) -->
                                             <button
                                                 v-if="page.props.auth.user && server.mapdata?.id"
                                                 @click.stop="openAddToMaplist(server.mapdata.id)"
-                                                class="p-1 text-gray-200 hover:text-purple-400 rounded transition-colors"
-                                                style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1));"
-                                                title="Add to Maplist"
+                                                class="save-maplist-btn"
+                                                title="Save to Maplist"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
                                                 </svg>
+                                                <span class="text-[10px] font-semibold">Save</span>
                                             </button>
-                                        </div>
-                                        <!-- Expand Indicator - only show if map has features -->
-                                        <div v-if="(server.mapdata?.weapons && server.mapdata.weapons.length > 0) || (server.mapdata?.items && server.mapdata.items.length > 0) || (server.mapdata?.functions && server.mapdata.functions.length > 0)" class="map-expand-indicator">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
                                         </div>
                                     </div>
 
@@ -586,15 +603,14 @@ const getFunctionName = (abbr) => {
                                     </svg>
                                     <img v-if="server.besttime_country" :src="`/images/flags/${server.besttime_country}.png`" class="w-4 h-3 rounded" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));" @error="$event.target.style.display='none'">
                                     <span class="font-bold flex-1" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.besttime_name)"></span>
-                                    <span class="font-bold text-yellow-400 font-mono" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
+                                    <span v-if="server.besttime_date" class="text-sm text-gray-400 font-mono leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1);">{{ formatRecordDate(server.besttime_date) }}</span>
+                                    <span class="font-bold text-yellow-400 font-mono leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.besttime_time) }}</span>
                                 </a>
                                 <div v-if="server.mytime_time && server.mytime_time > 0" :class="['flex items-center gap-2 text-sm map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="w-4 h-4 flex-shrink-0" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,1)) drop-shadow(0 0 6px rgba(0,0,0,0.8));">
-                                        <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clip-rule="evenodd" />
-                                    </svg>
+                                    <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold flex-shrink-0" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.myrank_position }}/{{ server.myrank_total }}</span>
                                     <span class="font-bold flex-1 text-white text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">My Time</span>
-                                    <span v-if="server.myrank_position && server.myrank_total" class="text-sm text-gray-400 font-bold" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Rank {{ server.myrank_position }}/{{ server.myrank_total }}</span>
-                                    <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
+                                    <span v-if="server.mytime_date" class="text-sm text-gray-400 font-mono leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1);">{{ formatRecordDate(server.mytime_date) }}</span>
+                                    <span :class="server.defrag.toLowerCase().includes('cpm') ? 'text-purple-400' : 'text-blue-400'" class="font-bold font-mono text-sm leading-none" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ formatTime(server.mytime_time) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -865,6 +881,31 @@ const getFunctionName = (abbr) => {
 </template>
 
 <style scoped>
+/* Save to Maplist button — same bubble style as CopyButton */
+.save-maplist-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.save-maplist-btn:hover {
+    color: #c084fc;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(192, 132, 252, 0.5);
+    transform: scale(1.1);
+}
+.save-maplist-btn:active {
+    transform: scale(0.9);
+}
+
 /* Map features hover box styling */
 .map-features-hover-group {
     cursor: default;

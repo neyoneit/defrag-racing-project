@@ -73,6 +73,7 @@ class ServersController extends Controller
 
                 if ($myRecord) {
                     $server->mytime_time = $myRecord->time;
+                    $server->mytime_date = $myRecord->date_set;
                     $mapRanks = $rankData->get($key, collect());
                     $totalPlayers = $mapRanks->count();
                     $fasterPlayers = $mapRanks->filter(fn($r) => $r->best_time < $myRecord->time)->count();
@@ -80,6 +81,7 @@ class ServersController extends Controller
                     $server->myrank_total = $totalPlayers;
                 } else {
                     $server->mytime_time = null;
+                    $server->mytime_date = null;
                     $server->myrank_position = null;
                     $server->myrank_total = null;
                 }
@@ -87,9 +89,33 @@ class ServersController extends Controller
         } else {
             $servers->each(function ($server) {
                 $server->mytime_time = null;
+                $server->mytime_date = null;
                 $server->myrank_position = null;
                 $server->myrank_total = null;
             });
+        }
+
+        $wrKeys = $servers->map(fn($s) => [
+            'mapname' => $s->map,
+            'gametype' => str_contains(strtolower($s->defrag), 'cpm') ? 'cpm' : 'vq3',
+            'time' => (int) $s->besttime_time,
+        ])->filter(fn($k) => $k['time'] > 0)->values();
+
+        if ($wrKeys->isNotEmpty()) {
+            $wrMaps = $wrKeys->pluck('mapname')->unique()->values()->all();
+            $wrCandidates = Record::whereIn('mapname', $wrMaps)
+                ->whereIn('time', $wrKeys->pluck('time')->unique()->values()->all())
+                ->get(['mapname', 'gametype', 'time', 'date_set'])
+                ->groupBy(fn($r) => $r->mapname . ':' . (str_contains($r->gametype, 'cpm') ? 'cpm' : 'vq3') . ':' . $r->time);
+
+            $servers->each(function ($server) use ($wrCandidates) {
+                if (!$server->besttime_time) { $server->besttime_date = null; return; }
+                $gametype = str_contains(strtolower($server->defrag), 'cpm') ? 'cpm' : 'vq3';
+                $key = $server->map . ':' . $gametype . ':' . (int) $server->besttime_time;
+                $server->besttime_date = $wrCandidates->get($key)?->first()?->date_set;
+            });
+        } else {
+            $servers->each(fn($s) => $s->besttime_date = null);
         }
 
         $servers = $this->sortServers($servers);
@@ -118,8 +144,10 @@ class ServersController extends Controller
         return $servers->values()->map(function($server) {
             $array = $server->toArray();
             $array['mytime_time'] = $server->mytime_time ?? null;
+            $array['mytime_date'] = $server->mytime_date ?? null;
             $array['myrank_position'] = $server->myrank_position ?? null;
             $array['myrank_total'] = $server->myrank_total ?? null;
+            $array['besttime_date'] = $server->besttime_date ?? null;
             return $array;
         })->all();
     }
