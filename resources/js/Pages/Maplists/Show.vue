@@ -50,6 +50,21 @@ const showServerDropdown = ref(false);
 
 const isPlayLater = computed(() => props.maplist.is_play_later);
 
+const aggregatedMapTags = computed(() => {
+    const counts = new Map();
+    for (const map of (props.maplist.maps || [])) {
+        for (const tag of (map.tags || [])) {
+            const existing = counts.get(tag.id);
+            if (existing) existing.count++;
+            else counts.set(tag.id, { tag, count: 1 });
+        }
+    }
+    return Array.from(counts.values())
+        .sort((a, b) => b.count - a.count || a.tag.display_name.localeCompare(b.tag.display_name))
+        .slice(0, 15)
+        .map(entry => ({ ...entry.tag, map_count: entry.count }));
+});
+
 const emptyServers = computed(() => {
     if (!props.servers) return [];
     return props.servers
@@ -382,25 +397,25 @@ const closeServerDropdown = () => {
         </div>
 
         <!-- Header Section -->
-        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pointer-events-none" :class="isPlayLater ? 'pb-6' : 'pb-96'">
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-0 pointer-events-none" :class="isPlayLater ? 'pb-6' : (maplist.description ? 'pb-16' : 'pb-3')">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
-                <!-- Breadcrumb (not for Play Later) -->
-                <div v-if="!isPlayLater" class="flex items-center gap-2 text-sm text-gray-400 mb-6">
-                    <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
-                    <template v-if="is_owner">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Maplist Header Card -->
+                <div class="bg-black/40 rounded-2xl border border-white/5 shadow-2xl" :class="isPlayLater ? 'p-4 md:p-5' : 'p-3 md:p-4'">
+                    <!-- Breadcrumb (not for Play Later) -->
+                    <div v-if="!isPlayLater" class="flex items-center gap-1.5 text-xs text-gray-400 mb-2">
+                        <Link href="/maplists" class="hover:text-white transition">Maplists</Link>
+                        <template v-if="is_owner">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                            <Link href="/maplists?view=mine" class="hover:text-white transition">My Maplists</Link>
+                        </template>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>
-                        <Link href="/maplists?view=mine" class="hover:text-white transition">My Maplists</Link>
-                    </template>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                    <span class="text-white">{{ maplist.name }}</span>
-                </div>
+                        <span class="text-white">{{ maplist.name }}</span>
+                    </div>
 
-                <!-- Maplist Header Card -->
-                <div class="bg-black/40 rounded-2xl border border-white/5 shadow-2xl" :class="isPlayLater ? 'p-4 md:p-5' : 'p-6 md:p-8'">
                     <!-- Edit Mode -->
                     <div v-if="isEditing">
                         <div class="mb-6">
@@ -468,131 +483,161 @@ const closeServerDropdown = () => {
 
                     <!-- View Mode -->
                     <div v-else>
-                        <!-- Title Row with Actions -->
-                        <div class="flex items-start justify-between gap-4" :class="isPlayLater ? 'mb-0' : 'mb-6'">
-                            <!-- Title Left -->
-                            <div class="flex flex-wrap items-center gap-3 flex-1 min-w-0">
-                                <h1 :class="isPlayLater ? 'text-3xl md:text-4xl' : 'text-5xl md:text-6xl'" class="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
-                                    {{ maplist.name }}
-                                </h1>
-                                <span v-if="isPlayLater" class="text-sm font-semibold text-gray-500 align-middle">{{ maplist.maps?.length || 0 }} maps</span>
-                                <div v-if="!isPlayLater && maplist.is_public" class="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Public
-                                </div>
-                                <div v-else-if="!isPlayLater" class="px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                    Private
-                                </div>
-                            </div>
-
-                            <!-- Owner Actions (Edit, Delete, Reorder) - Right Side -->
-                            <div v-if="is_owner && !isPlayLater" class="flex flex-col gap-2 flex-shrink-0">
-                                <div class="flex gap-2">
-                                    <button
-                                        @click="startEditing"
-                                        class="p-3 text-blue-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 hover:border-blue-400/50"
-                                        title="Edit maplist">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <!-- Title Row with Stats + Owner Actions -->
+                        <div class="flex items-start justify-between gap-6" :class="isPlayLater ? 'mb-0' : ((maplist.description || (is_owner && !isPlayLater)) ? 'mb-6' : 'mb-0')">
+                            <!-- Title Left: title, badge, small Like/Fav, map tags -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-lg border border-purple-500/30 hover:border-purple-400/50 transition-all group flex-shrink-0">
+                                        <div class="relative w-8 h-8 flex-shrink-0">
+                                            <div :class="'avatar-effect-' + (maplist.user?.avatar_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}; --border-color: ${maplist.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 16px`">
+                                                <img
+                                                    :src="maplist.user?.profile_photo_path ? `/storage/${maplist.user.profile_photo_path}` : '/images/null.jpg'"
+                                                    :alt="maplist.user?.plain_name"
+                                                    class="w-8 h-8 rounded-full object-cover border-2 relative"
+                                                    :style="`border-color: ${maplist.user?.avatar_border_color || '#6b7280'}`">
+                                            </div>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="text-[10px] text-purple-300 font-semibold uppercase tracking-wider leading-none">Created by</div>
+                                            <div :class="'name-effect-' + (maplist.user?.name_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}`" class="font-bold text-white text-sm group-hover:text-purple-300 transition truncate" v-html="q3tohtml(maplist.user?.name || 'Unknown')"></div>
+                                        </div>
+                                    </Link>
+                                    <h1 :class="isPlayLater ? 'text-3xl md:text-4xl' : 'text-5xl md:text-6xl'" class="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
+                                        {{ maplist.name }}
+                                    </h1>
+                                    <span v-if="isPlayLater" class="text-sm font-semibold text-gray-500 align-middle">{{ maplist.maps?.length || 0 }} maps</span>
+                                    <div v-if="!isPlayLater && maplist.is_public" class="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                    </button>
-                                    <button
-                                        @click="openDeleteModal"
-                                        class="p-3 text-red-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 hover:border-red-400/50"
-                                        title="Delete maplist">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        Public
+                                    </div>
+                                    <div v-else-if="!isPlayLater" class="px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-600 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-lg flex-shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                         </svg>
-                                    </button>
-                                </div>
-                                <!-- Reorder Button -->
-                                <button
-                                    v-if="!isReordering"
-                                    @click="toggleReordering"
-                                    class="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
-                                    </svg>
-                                    Reorder
-                                </button>
-                                <!-- Save/Cancel when reordering -->
-                                <template v-else>
-                                    <button
-                                        @click="saveOrder"
-                                        class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                        Save
-                                    </button>
-                                    <button
-                                        @click="toggleReordering"
-                                        class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold transition-all border border-white/20">
-                                        Cancel
-                                    </button>
-                                </template>
-                            </div>
-                        </div>
-
-                        <!-- Stats Cards Row -->
-                        <div v-if="!isPlayLater" class="flex flex-wrap gap-4 mb-6">
-                            <div class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-xl border border-blue-500/30">
-                                <div class="p-2 bg-blue-500/20 rounded-lg">
-                                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="text-3xl font-black text-white">{{ maplist.maps?.length || 0 }}</div>
-                                    <div class="text-xs text-blue-300 font-semibold uppercase tracking-wider">Maps</div>
-                                </div>
-                            </div>
-
-                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-red-600/20 to-red-700/10 rounded-xl border border-red-500/30">
-                                <div class="p-2 bg-red-500/20 rounded-lg">
-                                    <svg class="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="text-3xl font-black text-white">{{ likesCount }}</div>
-                                    <div class="text-xs text-red-300 font-semibold uppercase tracking-wider">Likes</div>
-                                </div>
-                            </div>
-
-                            <div v-if="!isPlayLater" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-xl border border-yellow-500/30">
-                                <div class="p-2 bg-yellow-500/20 rounded-lg">
-                                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div class="text-3xl font-black text-white">{{ favoritesCount }}</div>
-                                    <div class="text-xs text-yellow-300 font-semibold uppercase tracking-wider">Favorites</div>
-                                </div>
-                            </div>
-
-                            <!-- Creator Info (only for non-Play Later) -->
-                            <Link v-if="!isPlayLater" :href="`/profile/${maplist.user?.id}`" class="flex items-center gap-3 px-5 py-3 bg-gradient-to-br from-purple-600/20 to-purple-700/10 rounded-xl border border-purple-500/30 hover:border-purple-400/50 transition-all group overflow-visible">
-                                <div class="relative w-14 h-14 flex-shrink-0">
-                                    <div :class="'avatar-effect-' + (maplist.user?.avatar_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}; --border-color: ${maplist.user?.avatar_border_color || '#6b7280'}; --orbit-radius: 24px`">
-                                        <img
-                                            :src="maplist.user?.profile_photo_path ? `/storage/${maplist.user.profile_photo_path}` : '/images/null.jpg'"
-                                            :alt="maplist.user?.plain_name"
-                                            class="w-10 h-10 rounded-full object-cover border-2 relative"
-                                            :style="`border-color: ${maplist.user?.avatar_border_color || '#6b7280'}`">
+                                        Private
                                     </div>
                                 </div>
-                                <div>
-                                    <div class="text-xs text-purple-300 font-semibold uppercase tracking-wider">Created by</div>
-                                    <div :class="'name-effect-' + (maplist.user?.name_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}`" class="font-bold text-white group-hover:text-purple-300 transition" v-html="q3tohtml(maplist.user?.name || 'Unknown')"></div>
+
+                                <!-- Small Like / Favourite buttons under title -->
+                                <div v-if="!isPlayLater && !is_owner && maplist.is_public" class="flex flex-wrap gap-2 mt-3">
+                                    <button
+                                        @click="toggleLike"
+                                        :disabled="processing"
+                                        :class="[
+                                            'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow',
+                                            liked ? 'bg-gradient-to-r from-red-600 to-red-500 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
+                                        ]">
+                                        <svg class="w-3.5 h-3.5" :fill="liked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 20 20">
+                                            <path stroke-width="2" fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                                        </svg>
+                                        {{ liked ? 'Liked' : 'Like' }}
+                                    </button>
+                                    <button
+                                        @click="toggleFavorite"
+                                        :disabled="processing"
+                                        :class="[
+                                            'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow',
+                                            favorited ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
+                                        ]">
+                                        <svg class="w-3.5 h-3.5" :fill="favorited ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 20 20">
+                                            <path stroke-width="2" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                        {{ favorited ? 'Favorited' : 'Favorite' }}
+                                    </button>
                                 </div>
-                            </Link>
+
+                                <!-- Aggregated tags from maps in this list -->
+                                <div v-if="!isPlayLater && aggregatedMapTags.length > 0" class="flex flex-wrap gap-1.5 mt-3">
+                                    <span
+                                        v-for="tag in aggregatedMapTags"
+                                        :key="tag.id"
+                                        :title="`${tag.map_count} ${tag.map_count === 1 ? 'map' : 'maps'} with this tag`"
+                                        class="px-2.5 py-1 rounded-full text-xs font-semibold bg-white/10 text-gray-300 border border-white/15 hover:bg-white/15 hover:border-white/25 transition-colors">
+                                        {{ tag.display_name }}
+                                        <span class="text-gray-500 font-normal ml-0.5">{{ tag.map_count }}</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Right: Stats bubbles + Owner Actions -->
+                            <div class="flex flex-col items-end gap-3 flex-shrink-0">
+                                <!-- Stats Cards Row -->
+                                <div v-if="!isPlayLater" class="flex flex-wrap gap-2 justify-end max-w-md">
+                                    <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-blue-600/20 to-blue-700/10 rounded-lg border border-blue-500/30">
+                                        <svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                        </svg>
+                                        <div class="text-lg font-black text-white leading-none">{{ maplist.maps?.length || 0 }}</div>
+                                        <div class="text-[10px] text-blue-300 font-semibold uppercase tracking-wider">Maps</div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-red-600/20 to-red-700/10 rounded-lg border border-red-500/30">
+                                        <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
+                                        </svg>
+                                        <div class="text-lg font-black text-white leading-none">{{ likesCount }}</div>
+                                        <div class="text-[10px] text-red-300 font-semibold uppercase tracking-wider">Likes</div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-yellow-600/20 to-yellow-700/10 rounded-lg border border-yellow-500/30">
+                                        <svg class="w-4 h-4 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                        </svg>
+                                        <div class="text-lg font-black text-white leading-none">{{ favoritesCount }}</div>
+                                        <div class="text-[10px] text-yellow-300 font-semibold uppercase tracking-wider">Favorites</div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Owner Actions (Edit, Delete, Reorder) -->
+                                <div v-if="is_owner && !isPlayLater" class="flex flex-col gap-2">
+                                    <div class="flex gap-2 justify-end">
+                                        <button
+                                            @click="startEditing"
+                                            class="p-2.5 text-blue-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/10 hover:border-blue-400/50"
+                                            title="Edit maplist">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            @click="openDeleteModal"
+                                            class="p-2.5 text-red-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/10 hover:border-red-400/50"
+                                            title="Delete maplist">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <button
+                                        v-if="!isReordering"
+                                        @click="toggleReordering"
+                                        class="px-3 py-1.5 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg text-xs font-bold shadow transition-all flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5L7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                                        </svg>
+                                        Reorder
+                                    </button>
+                                    <template v-else>
+                                        <button
+                                            @click="saveOrder"
+                                            class="px-3 py-1.5 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white rounded-lg text-xs font-bold shadow transition-all flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            Save
+                                        </button>
+                                        <button
+                                            @click="toggleReordering"
+                                            class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-all border border-white/20">
+                                            Cancel
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Description -->
@@ -755,40 +800,11 @@ const closeServerDropdown = () => {
                     </div>
                 </div>
 
-                <!-- Actions -->
-                <div v-if="!isPlayLater && !is_owner && maplist.is_public" class="flex flex-wrap gap-3 mt-6">
-                    <!-- Social Actions (not for Play Later or owner) -->
-                    <button
-                        @click="toggleLike"
-                        :disabled="processing"
-                        :class="[
-                            'px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg transform hover:scale-105',
-                            liked ? 'bg-gradient-to-r from-red-600 to-red-500 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
-                        ]">
-                        <svg class="w-5 h-5" :fill="liked ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 20 20">
-                            <path stroke-width="2" fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
-                        </svg>
-                        {{ liked ? 'Liked' : 'Like' }}
-                    </button>
-                    <button
-                        @click="toggleFavorite"
-                        :disabled="processing"
-                        :class="[
-                            'px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg transform hover:scale-105',
-                            favorited ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
-                        ]">
-                        <svg class="w-5 h-5" :fill="favorited ? 'currentColor' : 'none'" stroke="currentColor" viewBox="0 0 20 20">
-                            <path stroke-width="2" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        {{ favorited ? 'Favorited' : 'Favorite' }}
-                    </button>
-                </div>
-
             </div>
         </div>
 
         <!-- Maps Grid -->
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-6" :style="isPlayLater ? '' : 'margin-top: -22rem;'">
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-2" :style="isPlayLater ? '' : (maplist.description ? 'margin-top: -3rem;' : 'margin-top: 0;')">
             <!-- Reordering Instructions -->
             <div v-if="isReordering" class="mb-4 p-4 bg-purple-600/20 border border-purple-500/50 rounded-lg text-purple-200 text-center">
                 <p class="font-semibold">Drag and drop maps to reorder them</p>

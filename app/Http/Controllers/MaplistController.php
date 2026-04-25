@@ -262,7 +262,7 @@ class MaplistController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $maplist = Maplist::with(['user', 'maps', 'tags'])->findOrFail($id);
+        $maplist = Maplist::with(['user', 'maps.tags', 'tags'])->findOrFail($id);
 
         // Check if user can view this maplist
         if (!$maplist->is_public && (!Auth::check() || Auth::id() !== $maplist->user_id)) {

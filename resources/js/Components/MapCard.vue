@@ -149,16 +149,17 @@
                         <!-- Copy Button -->
                         <CopyButton :text="map.name" size="xs" />
 
-                        <!-- Add to Maplist Button (only if logged in) -->
+                        <!-- Save to Maplist Button (only if logged in) -->
                         <button
                             v-if="page.props.auth.user"
                             @click.prevent.stop="showMaplistModal = true"
-                            class="p-0.5 text-gray-400 hover:text-purple-400 rounded transition-colors"
-                            title="Add to Maplist"
+                            class="save-maplist-btn"
+                            title="Save to Maplist"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
                             </svg>
+                            <span class="text-[9px] font-semibold">Save</span>
                         </button>
 
                         <!-- Download Button -->
@@ -193,3 +194,29 @@
         @close="showMaplistModal = false"
     />
 </template>
+
+<style scoped>
+.save-maplist-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    color: #d1d5db;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.save-maplist-btn:hover {
+    color: #c084fc;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(192, 132, 252, 0.5);
+    transform: scale(1.05);
+}
+.save-maplist-btn:active {
+    transform: scale(0.95);
+}
+</style>
