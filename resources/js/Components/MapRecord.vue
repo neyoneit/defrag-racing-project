@@ -75,10 +75,22 @@
     const showRenderConfirm = ref(false);
 
     const renderedVideo = computed(() => {
-        if (props.record.rendered_videos && props.record.rendered_videos.length > 0) {
-            return props.record.rendered_videos[0];
-        }
-        return null;
+        const videos = props.record.rendered_videos;
+        if (!videos || videos.length === 0) return null;
+        if (videos.length === 1) return videos[0];
+
+        // A record can have several rendered_videos (re-render attempts,
+        // updated metadata, server-then-uploader demos that both got rendered).
+        // Picking videos[0] from the latest()-ordered backend list means a
+        // newer 'failed' attempt hides an older 'completed' one — the user
+        // sees a "render failed" badge on a record whose YouTube video is
+        // perfectly fine. Pick the most useful status instead.
+        const priority = { completed: 0, uploading: 1, rendering: 2, pending: 3, failed: 4 };
+        return [...videos].sort((a, b) => {
+            const pa = priority[a.status] ?? 99;
+            const pb = priority[b.status] ?? 99;
+            return pa - pb;
+        })[0];
     });
 
     const needsVerify = computed(() => isLoggedIn.value && !page.props.isVerified);
