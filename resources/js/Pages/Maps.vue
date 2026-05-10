@@ -1,6 +1,6 @@
 <script setup>
     import { ref, computed, onMounted } from 'vue';
-    import { Head, router } from '@inertiajs/vue3';
+    import { Head, Link, router } from '@inertiajs/vue3';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import MapCard from '@/Components/MapCard.vue';
     import MapFiltersSidebar from '@/Components/MapFiltersSidebar.vue';
@@ -170,13 +170,29 @@
         });
     };
 
-    const randomMap = ref({ name: null, copied: false, loading: false, error: null });
+    // `copied` carries which variant was placed on the clipboard last:
+    // 'name' (auto-copy on pick) or 'callvote' (when user hits the
+    // /callvote button). Drives the inline "(copied)" hint label.
+    const randomMap = ref({ name: null, copied: null, loading: false, error: null });
+
+    const copyRandomVariant = async (variant) => {
+        if (!randomMap.value.name) return;
+        const text = variant === 'callvote'
+            ? `/callvote map ${randomMap.value.name}`
+            : randomMap.value.name;
+        try {
+            await navigator.clipboard.writeText(text);
+            randomMap.value.copied = variant;
+        } catch (e) {
+            randomMap.value.copied = null;
+        }
+    };
 
     const pickRandomMap = async () => {
         if (randomMap.value.loading) return;
         randomMap.value.loading = true;
         randomMap.value.error = null;
-        randomMap.value.copied = false;
+        randomMap.value.copied = null;
         try {
             // Reuse the current URL's query string so nested filters (weapons[include][], records_count[])
             // are forwarded to the backend in the exact same format MapFilters expects.
@@ -184,18 +200,23 @@
             const response = await axios.get('/maps/random' + qs);
             const name = response.data.name;
             randomMap.value.name = name;
+            // Auto-copy the bare map name (most common use). Buttons
+            // below let the user re-copy as `/callvote map <name>` if
+            // they're feeding it into Quake's console.
             try {
                 await navigator.clipboard.writeText(name);
-                randomMap.value.copied = true;
+                randomMap.value.copied = 'name';
             } catch (e) {
-                randomMap.value.copied = false;
+                randomMap.value.copied = null;
             }
+            // Stay visible longer than the 4s before — user wants to
+            // click through / re-copy after the auto-copy fires.
             setTimeout(() => {
                 if (randomMap.value.name === name) {
                     randomMap.value.name = null;
-                    randomMap.value.copied = false;
+                    randomMap.value.copied = null;
                 }
-            }, 4000);
+            }, 12000);
         } catch (e) {
             randomMap.value.error = e.response?.data?.error || 'Failed to pick random map';
             setTimeout(() => { randomMap.value.error = null; }, 3000);
@@ -261,9 +282,27 @@
                         </div>
                         <div v-if="randomMap.name || randomMap.error" class="mt-1.5 text-xs">
                             <span v-if="randomMap.error" class="text-red-400">{{ randomMap.error }}</span>
-                            <span v-else class="text-green-400">
-                                <span class="font-mono font-bold">{{ randomMap.name }}</span>
-                                <span class="text-gray-400 ml-1">{{ randomMap.copied ? '(copied)' : '' }}</span>
+                            <span v-else class="inline-flex items-center gap-1.5 flex-wrap">
+                                <Link
+                                    :href="`/maps/${encodeURIComponent(randomMap.name)}`"
+                                    class="font-mono font-bold text-green-400 hover:text-green-300 underline decoration-dotted underline-offset-2"
+                                    :title="`Open ${randomMap.name}`"
+                                >{{ randomMap.name }}</Link>
+                                <button
+                                    @click="copyRandomVariant('name')"
+                                    title="Copy map name"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    name
+                                </button>
+                                <button
+                                    @click="copyRandomVariant('callvote')"
+                                    title="Copy /callvote map command"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    /callvote
+                                </button>
+                                <span v-if="randomMap.copied" class="text-gray-400">
+                                    (copied {{ randomMap.copied === 'callvote' ? '/callvote' : 'name' }})
+                                </span>
                             </span>
                         </div>
                     </div>
@@ -283,10 +322,28 @@
                                 </svg>
                                 {{ randomMap.loading ? '...' : 'Random' }}
                             </button>
-                            <span v-if="randomMap.name" class="text-xs text-green-400 font-mono w-full">
-                                <span class="font-bold">{{ randomMap.name }}</span>
-                                <span class="text-gray-400 ml-1">{{ randomMap.copied ? '(copied)' : '' }}</span>
-                            </span>
+                            <div v-if="randomMap.name" class="text-xs w-full inline-flex items-center gap-1.5 flex-wrap">
+                                <Link
+                                    :href="`/maps/${encodeURIComponent(randomMap.name)}`"
+                                    class="font-mono font-bold text-green-400 hover:text-green-300 underline decoration-dotted underline-offset-2"
+                                    :title="`Open ${randomMap.name}`"
+                                >{{ randomMap.name }}</Link>
+                                <button
+                                    @click="copyRandomVariant('name')"
+                                    title="Copy map name"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    name
+                                </button>
+                                <button
+                                    @click="copyRandomVariant('callvote')"
+                                    title="Copy /callvote map command"
+                                    class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
+                                    /callvote
+                                </button>
+                                <span v-if="randomMap.copied" class="text-gray-400">
+                                    (copied {{ randomMap.copied === 'callvote' ? '/callvote' : 'name' }})
+                                </span>
+                            </div>
                             <span v-else-if="randomMap.error" class="text-xs text-red-400 w-full">{{ randomMap.error }}</span>
                         </div>
                         <!-- Tags bar (relative wrapper, expanded is absolute overlay) -->
