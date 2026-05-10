@@ -39,7 +39,7 @@
             servers: route().current('servers'),
             players: route().current('records') || route().current('clans.*'),
             rankings: route().current('ranking') || route().current('community'),
-            mapsmodels: route().current('maps') || route().current('models.*'),
+            mapsmodels: route().current('maps') || route().current('maps.stats') || route().current('models.*'),
             demos: route().current('demos.*') || route().current('youtube'),
             challenges: route().current('headhunter.*') || route().current('marketplace.*') || route().current('community.tasks'),
             tournaments: route().current('tournaments.*'),
@@ -51,6 +51,7 @@
             ranking: route().current('ranking'),
             community: route().current('community'),
             maps: route().current('maps'),
+            mapsStats: route().current('maps.stats'),
             maplists: route().current('maplists.*'),
             models: route().current('models.*'),
             demosIndex: route().current('demos.*'),
@@ -794,6 +795,7 @@
                                 </template>
                                 <template #content>
                                     <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
+                                    <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">Map Statistics</DropdownLink>
                                     <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
                                 </template>
                             </Dropdown>
@@ -887,6 +889,7 @@
                                         <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Maps & Models</div>
                                         <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
+                                        <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">Map Statistics</DropdownLink>
                                         <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Demos</div>
                                         <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
