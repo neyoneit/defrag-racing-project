@@ -53,6 +53,11 @@ def pipeline_cmds(name):
         f"rm {PROJECT_PATH}/current",
         f"ln -s {PROJECT_PATH}/releases/{name} {PROJECT_PATH}/current",
         "php artisan optimize:clear",
+        # Warm /maps/stats Redis cache so the first visitor after the
+        # deploy doesn't trigger a 14s cold rebuild — `cache:clear`
+        # above wipes the previous warm payload, and the daily cron
+        # only fires at 04:00 CET.
+        "php artisan mapstats:rebuild",
         'supervisorctl restart "defrag-racing-octane:*"',
         'supervisorctl restart "defrag-racing-worker:*"',
         "php artisan octane:reload",
