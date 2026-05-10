@@ -49,6 +49,14 @@ const fetchStats = () => {
     statsError.value = null;
     const start = Date.now();
     const finishLoading = () => {
+        // Backend returns { __rebuilding: true } when the cache is
+        // cold and a background job is regenerating it. Don't try
+        // to render charts on that payload — keep the skeleton up
+        // and poll again in a few seconds.
+        if (props.stats && props.stats.__rebuilding) {
+            setTimeout(fetchStats, 5000);
+            return;
+        }
         const elapsed = Date.now() - start;
         const wait = Math.max(0, MIN_SKELETON_MS - elapsed);
         setTimeout(() => {

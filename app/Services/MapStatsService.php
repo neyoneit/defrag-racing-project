@@ -18,7 +18,15 @@ use Illuminate\Support\Facades\DB;
  */
 class MapStatsService
 {
-    public const CACHE_TTL = 21600; // 6 hours
+    // 25h TTL paired with the daily 04:00 cron `mapstats:rebuild` —
+    // the cron always refreshes the keys before they can expire, so
+    // a visitor never lands on an empty cache that would force a
+    // ~100s synchronous DB rebuild (production timing — local is
+    // ~14s but production sees 7× slower aggregates on 646k rows).
+    // 6h was the original TTL, but with rebuild taking that long any
+    // mid-day expiry meant the next visitor stalled / 504'd from the
+    // upstream timeout.
+    public const CACHE_TTL = 90000; // 25 hours
     public const CACHE_PREFIX = 'mapstats:';
 
     /**

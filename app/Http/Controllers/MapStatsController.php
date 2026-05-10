@@ -36,8 +36,26 @@ class MapStatsController extends Controller
             return Inertia::render('MapStats', ['stats' => null]);
         }
 
+        // Read straight from Redis — never block a web request on the
+        // cold rebuild (~100s on production, well past the upstream
+        // timeout). If the key is missing, kick off a background
+        // rebuild via the queue and return a "still warming" payload
+        // so the front-end can keep polling.
+        $cached = \Illuminate\Support\Facades\Cache::get(MapStatsService::CACHE_PREFIX.'all');
+
+        if ($cached) {
+            return Inertia::render('MapStats', ['stats' => $cached]);
+        }
+
+        // Cold cache: enqueue a rebuild and tell the client to retry.
+        \Illuminate\Support\Facades\Cache::add(MapStatsService::CACHE_PREFIX.'rebuilding', 1, 300);
+        dispatch(function () {
+            app(MapStatsService::class)->all();
+            \Illuminate\Support\Facades\Cache::forget(MapStatsService::CACHE_PREFIX.'rebuilding');
+        })->afterResponse();
+
         return Inertia::render('MapStats', [
-            'stats' => fn () => $this->stats->all(),
+            'stats' => ['__rebuilding' => true],
         ]);
     }
 
