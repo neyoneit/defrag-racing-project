@@ -96,6 +96,14 @@ class ResolveDuplicateDemoAssignments extends Command
             $progressBar->start();
         }
         foreach ($matched as $c) {
+            // Skip rows whose player_name was never extracted (legacy upload
+            // where parsing failed) — NameMatcher requires a string and we
+            // can't reason about ownership without one.
+            if (empty($c->player_name)) {
+                $unmatched++;
+                if ($progressBar) $progressBar->advance();
+                continue;
+            }
             $best = $matcher->findBestMatch($c->player_name, null);
             $bestConf = (int) ($best['confidence'] ?? 0);
             $bestUid  = (int) ($best['user_id'] ?? 0);
