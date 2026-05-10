@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\MapsController;
+use App\Http\Controllers\MapStatsController;
 use App\Http\Controllers\BundlesController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServersController;
@@ -53,6 +54,7 @@ Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers
 Route::get('/maps', [MapsController::class, 'index'])->name('maps');
 Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filters');
 Route::get('/maps/random', [MapsController::class, 'random'])->name('maps.random');
+Route::get('/maps/stats', [MapStatsController::class, 'index'])->name('maps.stats');
 
 Route::get('/maps/{mapname}/demo-matches', [MapsController::class, 'getDemoMatches'])->name('maps.demoMatches');
 Route::get('/maps/{mapname}/time-history', [MapsController::class, 'timeHistory'])->name('maps.timeHistory');

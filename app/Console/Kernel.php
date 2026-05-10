@@ -50,6 +50,10 @@ class Kernel extends ConsoleKernel
         // Recalculate all player profile stats (WRs, totals, avg rank, etc.) daily at 3am
         $schedule->command('process-all-player-stats')->withoutOverlapping()->dailyAt('03:00');
 
+        // Refresh the /maps/stats cache. ~15s, run after the player-stats
+        // recalc so the page never serves a cold cache to a visitor.
+        $schedule->command('mapstats:rebuild')->withoutOverlapping()->dailyAt('04:00');
+
         // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
         $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
 

@@ -499,16 +499,34 @@ const getFunctionName = (abbr) => {
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">
+                            <!-- Soft mask on the image itself: bottom
+                                 ~30% of the thumbnail fades to
+                                 transparent so the image dissolves
+                                 directly into the glass card body.
+                                 No separate overlay slab needed. -->
                             <a v-if="server.map" :href="`/maps/${server.map}`" class="block">
-                                <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top pointer-events-auto cursor-pointer" style="max-height: 450px;" />
+                                <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top pointer-events-auto cursor-pointer" style="max-height: 450px; -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%); mask-image: linear-gradient(to bottom, black 65%, transparent 100%);" />
                             </a>
-                            <img v-else :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px;" />
-                            <!-- Fade positioned at bottom of actual image -->
-                            <div :class="['absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent', hoveredMapServer === server.id ? 'h-6 from-gray-950/90' : 'h-40 from-black via-black/80']"></div>
-                            <!-- Solid dark below the image -->
+                            <img v-else :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px; -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%); mask-image: linear-gradient(to bottom, black 65%, transparent 100%);" />
+                            <!-- Hover state: shrunken bottom fade kept
+                                 because the hover overlay below the
+                                 image needs a visible seam. -->
+                            <div :class="['absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent transition-all', hoveredMapServer === server.id ? 'h-6 from-gray-950/90 opacity-100' : 'h-0 opacity-0']"></div>
+                            <!-- Solid dark below the image (only when
+                                 the user hovers the map row to reveal
+                                 the metadata overlay) -->
                             <div :class="['absolute inset-x-0 top-full w-full bg-gray-950/90', hoveredMapServer === server.id ? 'h-[300px]' : 'h-0']" style="transition: height 0.3s ease;"></div>
-                            <!-- Reverse fade right below the image -->
-                            <div :class="['absolute inset-x-0 top-full w-full bg-gradient-to-b from-black via-black/80 to-transparent', hoveredMapServer === server.id ? 'h-0 opacity-0' : 'h-[160px] opacity-100']"></div>
+                            <!-- Below the image: no `from-black`
+                                 gradient. Card body's own glass (the
+                                 outer wrapper has bg-black/40
+                                 backdrop-blur-sm) handles readability;
+                                 the previous solid-black-into-glass
+                                 ramp produced a visible dark stripe
+                                 between the thumbnail and the player
+                                 list. Keep this div for the hover
+                                 transition but make it transparent
+                                 in the default state. -->
+                            <div :class="['absolute inset-x-0 top-full w-full bg-gradient-to-b from-black via-black/60 to-transparent', hoveredMapServer === server.id ? 'h-0 opacity-0' : 'h-0 opacity-0']"></div>
                         </div>
                     </div>
 
@@ -615,16 +633,25 @@ const getFunctionName = (abbr) => {
                             </div>
                         </div>
 
-                        <!-- Players List - Always expanded -->
+                        <!-- Players List - Always expanded.
+                             Background uses variant S2 from
+                             /q3-bg-demo.html: slate-700 (#334155) at
+                             88% alpha with a 4px backdrop blur. Solid
+                             enough to read like a panel, but with a
+                             slight bleed of the map thumbnail under
+                             it. Every Q3 colour code stays legible —
+                             black ^0 as a dark silhouette, white ^7
+                             bright, brights (yellow/cyan/magenta)
+                             punchy. -->
                         <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
-                            <div class="bg-black/50 rounded-lg p-2 border border-white/10 ">
+                            <div class="rounded-lg p-2 border border-white/10 backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />
                                 </div>
                             </div>
                         </div>
                         <div v-else :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
-                            <div class="p-3 bg-black/50 rounded-lg border border-white/10 text-center ">
+                            <div class="p-3 rounded-lg border border-white/10 text-center backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
                                 <span class="text-sm text-gray-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">No players online</span>
                             </div>
                         </div>
