@@ -1006,7 +1006,15 @@
     const flagDemoId = ref(null);
 
     const getRenderedVideo = (record) => {
-        return record.rendered_videos?.[0] || record.uploaded_demos?.[0]?.rendered_video || null;
+        // Same status-priority pick as MapRecord.vue — a newer 'failed'
+        // attempt must not hide an older 'completed' one in the badge.
+        const videos = record.rendered_videos;
+        if (videos && videos.length > 0) {
+            if (videos.length === 1) return videos[0];
+            const priority = { completed: 0, uploading: 1, rendering: 2, pending: 3, failed: 4 };
+            return [...videos].sort((a, b) => (priority[a.status] ?? 99) - (priority[b.status] ?? 99))[0];
+        }
+        return record.uploaded_demos?.[0]?.rendered_video || null;
     };
 
     const canRequestRender = (record) => {
