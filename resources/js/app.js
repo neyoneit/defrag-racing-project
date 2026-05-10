@@ -42,26 +42,25 @@ const appName = import.meta.env.VITE_APP_NAME || 'Defrag Racing';
 
 const formatTime = (milliseconds) => {
     milliseconds = Math.max(0, milliseconds);
-  
-    const hours = Math.floor(milliseconds / 3600000);
-    milliseconds %= 3600000;
+
+    // Defrag's smallest practical run is sub-minute and the largest pushes
+    // a couple hours, but the engine itself only ever displays MM:SS.mmm
+    // (minutes rolling past 60, never an "H:" prefix). Match that — a
+    // 1:30:45.123 hh:mm:ss display would just confuse players used to
+    // reading "90:45.123" off the in-game timer.
     const minutes = Math.floor(milliseconds / 60000);
     milliseconds %= 60000;
     const seconds = Math.floor(milliseconds / 1000);
     milliseconds %= 1000;
-  
+
     let formattedTime = '';
-  
-    if (hours > 0) {
-      formattedTime += `${hours}:`;
-    }
-  
-    if (minutes > 0 || hours > 0) {
+
+    if (minutes > 0) {
       formattedTime += `${padZero(minutes)}:`;
     }
-  
+
     formattedTime += `${padZero(seconds)}:${milliseconds.toString().padStart(3, '0')}`;
-  
+
     return formattedTime;
 };
 
