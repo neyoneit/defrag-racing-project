@@ -124,32 +124,52 @@ class DemoAutoAssigner
             }
         }
 
-        // PASS 1: uploader has a Record at this map/gametype/time.
-        // Ignores name entirely — uploader identity is authoritative.
+        // PASS 1: uploader has a Record at this map/gametype/time AND the
+        // demo's player_name actually resolves to that uploader via the
+        // alias system. The name verification guards against bulk-uploader
+        // accounts (e.g. an admin importing third-party demos): without it,
+        // any cizí demo with a time matching one of the uploader's own
+        // Records would be wrongly stamped as the uploader's run.
         if ($demo->user_id) {
             $uploaderRecordId = $this->findRecordId($ctx, $demo->map_name, $gametype, (int) $demo->time_ms, (int) $demo->user_id);
 
             if ($uploaderRecordId !== null) {
-                $this->upgradeOfflineRecordToOnline($demo);
+                $nameMatch = $this->nameMatcher->findBestMatch($demo->player_name, null);
+                $playerMatchesUploader = ($nameMatch['confidence'] === 100 && (int) $nameMatch['user_id'] === (int) $demo->user_id);
 
-                $demo->update([
-                    'record_id'        => $uploaderRecordId,
-                    'status'           => 'assigned',
-                    'name_confidence'  => 100,
-                    'suggested_user_id'=> $demo->user_id,
-                    'matched_alias'    => null,
-                    'match_method'     => 'uploader_record',
-                ]);
+                if ($playerMatchesUploader) {
+                    $this->upgradeOfflineRecordToOnline($demo);
 
-                Log::info('Demo auto-assigned to uploader\'s record', [
+                    $demo->update([
+                        'record_id'        => $uploaderRecordId,
+                        'status'           => 'assigned',
+                        'name_confidence'  => 100,
+                        'suggested_user_id'=> $demo->user_id,
+                        'matched_alias'    => $nameMatch['matched_name'] ?? null,
+                        'match_method'     => 'uploader_record',
+                    ]);
+
+                    Log::info('Demo auto-assigned to uploader\'s record (name verified)', [
+                        'demo_id' => $demo->id,
+                        'record_id' => $uploaderRecordId,
+                        'user_id' => $demo->user_id,
+                        'matched_alias' => $nameMatch['matched_name'] ?? null,
+                        'gametype' => $gametype,
+                    ]);
+
+                    return self::OUTCOME_RECORD;
+                }
+
+                Log::info('Pass 1 skipped: uploader has matching record but demo player_name does not resolve to uploader', [
                     'demo_id' => $demo->id,
-                    'record_id' => $uploaderRecordId,
-                    'user_id' => $demo->user_id,
-                    'gametype' => $gametype,
-                    'file_path' => $demo->file_path,
+                    'uploader_user_id' => $demo->user_id,
+                    'player_name' => $demo->player_name,
+                    'name_match_user_id' => $nameMatch['user_id'] ?? null,
+                    'name_match_confidence' => $nameMatch['confidence'] ?? null,
+                    'candidate_record_id' => $uploaderRecordId,
                 ]);
-
-                return self::OUTCOME_RECORD;
+                // Fall through to Pass 2 (fuzzy nick) — that path will
+                // attribute the demo to the actual player.
             }
         }
 

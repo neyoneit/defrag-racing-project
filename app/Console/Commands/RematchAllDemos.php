@@ -14,7 +14,8 @@ class RematchAllDemos extends Command
 {
     protected $signature = 'demos:rematch-all
         {demo_id? : Optional specific demo ID to rematch}
-        {--chunk=1000 : Batch size for chunkById streaming}';
+        {--chunk=1000 : Batch size for chunkById streaming}
+        {--status= : Filter to demos with this exact status (e.g. processed). When set, the rematch only touches that subset instead of every non-assigned demo. Useful after a targeted cleanup unpaired demos to status=processed.}';
 
     protected $description = 'Rematch all unassigned demos against current user aliases';
 
@@ -22,6 +23,7 @@ class RematchAllDemos extends Command
     {
         $demoId = (int) $this->argument('demo_id') ?: null;
         $chunkSize = max(100, (int) $this->option('chunk'));
+        $statusFilter = $this->option('status') ?: null;
 
         // Single-demo mode bypasses chunking/preload entirely — one demo
         // doesn't justify loading ~650k Records into memory, and verbose
@@ -38,12 +40,16 @@ class RematchAllDemos extends Command
             return 0;
         }
 
-        $this->info('Rematching all unassigned demos...');
-
-        // Rematch all demos that are NOT assigned (includes: uploaded,
-        // processing, processed, failed). player_name is required for
-        // fuzzy-match to do anything useful.
-        $query = UploadedDemo::where('status', '!=', 'assigned')->whereNotNull('player_name');
+        if ($statusFilter) {
+            $this->info("Rematching demos with status={$statusFilter}...");
+            $query = UploadedDemo::where('status', $statusFilter)->whereNotNull('player_name');
+        } else {
+            $this->info('Rematching all unassigned demos...');
+            // Rematch all demos that are NOT assigned (includes: uploaded,
+            // processing, processed, failed). player_name is required for
+            // fuzzy-match to do anything useful.
+            $query = UploadedDemo::where('status', '!=', 'assigned')->whereNotNull('player_name');
+        }
         $total = (clone $query)->count();
         $this->info("Found {$total} demos to rematch");
 
@@ -158,6 +164,26 @@ class RematchAllDemos extends Command
             // leaderboard (parity with DemoProcessorService scénár B).
             if ($demo->file_path) {
                 $demo = $demo->fresh();
+                if ($this->ensureOfflineRecord($demo, $verbose)) {
+                    $assigned++;
+                }
+            }
+        } elseif ($outcome === DemoAutoAssigner::OUTCOME_NONE) {
+            // Parity with DemoProcessorService::autoAssignToRecord: when
+            // Pass 2 fuzzy nick reached a confident-enough user match but
+            // no Record exists at this (map, gametype, time) for that
+            // user, create an offline_record so the run is attributed.
+            // Without this branch demos that we just unpaired (e.g. via
+            // demos:resolve-duplicate-assignments) would never reach the
+            // player's profile through rematch — they'd stay as plain
+            // 'processed' files invisible on the leaderboard.
+            //
+            // Threshold lowered from 100 to 80 so Levenshtein-fuzzy matches
+            // (e.g. demo player "NOOBZ0RN" → user alias "[NOOB]Z0RN" at 80%)
+            // also produce an offline_record. Conservative auto-assignment
+            // to a Record still requires 100% in DemoAutoAssigner Pass 2.
+            $demo = $demo->fresh();
+            if ($demo->file_path && $demo->name_confidence >= 80 && $demo->suggested_user_id) {
                 if ($this->ensureOfflineRecord($demo, $verbose)) {
                     $assigned++;
                 }

@@ -40,8 +40,14 @@ class DemoAutoAssignContext
     public static function build(): self
     {
         $index = [];
+        // Exclude soft-deleted records — they're hidden from the frontend
+        // (Record uses SoftDeletes), so attaching demos to them just makes
+        // the demo invisible in the UI. The Eloquent path in
+        // DemoAutoAssigner::findRecordId already respects this via the
+        // SoftDeletes global scope; we mirror that here for the raw query.
         DB::table('records')
             ->select(['id', 'mapname', 'gametype', 'time', 'user_id'])
+            ->whereNull('deleted_at')
             ->orderBy('id')
             ->chunk(20000, function ($chunk) use (&$index) {
                 foreach ($chunk as $r) {

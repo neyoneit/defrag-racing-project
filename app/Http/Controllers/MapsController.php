@@ -485,12 +485,24 @@ class MapsController extends Controller
         $cpmFlaggedIds = $cpmRecords->getCollection()->filter(fn ($r) => !empty($r->approved_flags))->pluck('id')->toArray();
         $allCpmFlaggedIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
             ->whereIn('record_id', $allCpmRecordsByTime)->pluck('record_id')->unique()->toArray();
-        // Also check flags via demos
+        // Also check flags via demos. Group by record_id so multiple demos
+        // pointing to the same record are all considered (defensive — the
+        // 1-record-1-demo guard in DemoAutoAssigner enforces uniqueness for
+        // new assignments, but legacy duplicates may still exist).
         $cpmDemoFlaggedRecordIds = [];
-        $cpmRecordDemoIds = UploadedDemo::whereIn('record_id', $allCpmRecordsByTime)->whereNotNull('record_id')->pluck('id', 'record_id')->toArray();
-        if (!empty($cpmRecordDemoIds)) {
-            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', array_values($cpmRecordDemoIds))->pluck('demo_id')->unique()->toArray();
-            $cpmDemoFlaggedRecordIds = collect($cpmRecordDemoIds)->filter(fn ($demoId) => in_array($demoId, $flaggedDemoIds))->keys()->toArray();
+        $cpmRecordDemoIdMap = UploadedDemo::whereIn('record_id', $allCpmRecordsByTime)
+            ->whereNotNull('record_id')
+            ->get(['id', 'record_id'])
+            ->groupBy('record_id')
+            ->map(fn ($demos) => $demos->pluck('id')->all())
+            ->toArray();
+        if (!empty($cpmRecordDemoIdMap)) {
+            $allCpmDemoIds = collect($cpmRecordDemoIdMap)->flatten()->unique()->values()->all();
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', $allCpmDemoIds)->pluck('demo_id')->unique()->toArray();
+            $cpmDemoFlaggedRecordIds = collect($cpmRecordDemoIdMap)
+                ->filter(fn ($demoIds) => !empty(array_intersect($demoIds, $flaggedDemoIds)))
+                ->keys()
+                ->toArray();
         }
         $allCpmFlaggedIds = array_unique(array_merge($allCpmFlaggedIds, $cpmDemoFlaggedRecordIds));
 
@@ -529,10 +541,19 @@ class MapsController extends Controller
 
         $allVq3FlaggedIds = RecordFlag::where('status', 'approved')->whereNotNull('record_id')
             ->whereIn('record_id', $allVq3RecordsByTime)->pluck('record_id')->unique()->toArray();
-        $vq3RecordDemoIds = UploadedDemo::whereIn('record_id', $allVq3RecordsByTime)->whereNotNull('record_id')->pluck('id', 'record_id')->toArray();
-        if (!empty($vq3RecordDemoIds)) {
-            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', array_values($vq3RecordDemoIds))->pluck('demo_id')->unique()->toArray();
-            $vq3DemoFlaggedRecordIds = collect($vq3RecordDemoIds)->filter(fn ($demoId) => in_array($demoId, $flaggedDemoIds))->keys()->toArray();
+        $vq3RecordDemoIdMap = UploadedDemo::whereIn('record_id', $allVq3RecordsByTime)
+            ->whereNotNull('record_id')
+            ->get(['id', 'record_id'])
+            ->groupBy('record_id')
+            ->map(fn ($demos) => $demos->pluck('id')->all())
+            ->toArray();
+        if (!empty($vq3RecordDemoIdMap)) {
+            $allVq3DemoIds = collect($vq3RecordDemoIdMap)->flatten()->unique()->values()->all();
+            $flaggedDemoIds = RecordFlag::where('status', 'approved')->whereIn('demo_id', $allVq3DemoIds)->pluck('demo_id')->unique()->toArray();
+            $vq3DemoFlaggedRecordIds = collect($vq3RecordDemoIdMap)
+                ->filter(fn ($demoIds) => !empty(array_intersect($demoIds, $flaggedDemoIds)))
+                ->keys()
+                ->toArray();
             $allVq3FlaggedIds = array_unique(array_merge($allVq3FlaggedIds, $vq3DemoFlaggedRecordIds));
         }
 
