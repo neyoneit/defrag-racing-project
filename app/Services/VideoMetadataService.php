@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\RenderedVideo;
 use App\Models\Record;
+use App\Services\ContentFilter;
 use Illuminate\Support\Facades\DB;
 
 class VideoMetadataService
@@ -37,7 +38,7 @@ class VideoMetadataService
 
         $physics = strtoupper($video->physics ?? '');
         $time = self::formatTime($video->time_ms);
-        $mapName = $video->map_name ?? 'Unknown';
+        $mapName = ContentFilter::filterText($video->map_name ?? 'Unknown');
         $playerName = self::cleanPlayerName($video->player_name ?? 'Unknown');
 
         return "{$prefix}{$mapName} | {$time} by {$playerName} ({$physics}) - Quake 3 DeFRaG";
@@ -49,7 +50,9 @@ class VideoMetadataService
     public static function generateDescription(RenderedVideo $video): string
     {
         $physics = strtoupper($video->physics ?? '');
-        $mapName = $video->map_name ?? 'Unknown';
+        $rawMapName = $video->map_name ?? 'Unknown';
+        $mapName = ContentFilter::filterText($rawMapName);
+        $mapNameClean = ($mapName === $rawMapName); // no blocked terms in raw name
         $playerName = self::cleanPlayerName($video->player_name ?? 'Unknown');
         $time = self::formatTime($video->time_ms);
 
@@ -71,7 +74,12 @@ class VideoMetadataService
         if ($video->demo_id) {
             $desc .= "Demo download: https://defrag.racing/demos/{$video->demo_id}/download\n";
         }
-        $desc .= "Map page: https://defrag.racing/maps/{$mapName}\n";
+        // Skip the map-page URL when the map name itself contains a blocked
+        // term — surfacing the raw name as a clickable URL would defeat the
+        // censoring above.
+        if ($mapNameClean) {
+            $desc .= "Map page: https://defrag.racing/maps/{$rawMapName}\n";
+        }
         $desc .= "Website: https://defrag.racing/\n";
         $desc .= "Discord: https://discord.defrag.racing/\n";
         $desc .= "\n";
@@ -109,8 +117,13 @@ class VideoMetadataService
             'bunny hop', 'bhop',
         ];
 
+        // Drop the raw map name from tags when it contains a blocked term;
+        // YouTube tags can't be censored mid-string without confusing search.
         if ($video->map_name) {
-            $tags[] = $video->map_name;
+            $cleanedMap = ContentFilter::filterText($video->map_name);
+            if ($cleanedMap === $video->map_name) {
+                $tags[] = $video->map_name;
+            }
         }
 
         if ($video->physics) {
@@ -126,7 +139,12 @@ class VideoMetadataService
         }
 
         if ($video->player_name) {
-            $tags[] = self::cleanPlayerName($video->player_name);
+            // cleanPlayerName routes through ContentFilter::filterAuthor,
+            // so blocked nicks become 'UnnamedPlayer' here too.
+            $cleanedNick = self::cleanPlayerName($video->player_name);
+            if ($cleanedNick !== '' && $cleanedNick !== 'UnnamedPlayer') {
+                $tags[] = $cleanedNick;
+            }
         }
 
         if (self::isWorldRecord($video)) {
@@ -239,11 +257,14 @@ class VideoMetadataService
     }
 
     /**
-     * Clean Quake 3 color codes from player name.
+     * Strip Quake 3 colour codes AND replace the whole nickname with a
+     * safe placeholder when it contains a blocked term. Used everywhere
+     * the player name surfaces in YouTube metadata so a slur in someone's
+     * nick can't strike the channel.
      */
     public static function cleanPlayerName(string $name): string
     {
-        return preg_replace('/\^[0-9a-zA-Z]/', '', $name);
+        return ContentFilter::filterAuthor($name, 'UnnamedPlayer');
     }
 
     /**
