@@ -274,30 +274,57 @@ class MapStatsService
 
     /**
      * Weapon presence in maps over time. For each year, what fraction
-     * of new maps include rocket / plasma / grenade / bfg / lg. The
-     * `weapons` column stores comma-or-space-separated keywords.
+     * of new maps include each weapon — counts a map once per weapon
+     * present, so a `gl,pg,rl` map increments grenade + plasma +
+     * rocket all by 1.
      *
-     * @return array<int, array{year:int,total:int,rocket:int,plasma:int,grenade:int,bfg:int,lg:int}>
+     * The `weapons` column stores comma-separated abbreviations
+     * (`rl,pg,gl,lg,rg,sg,bfg,hook,gauntlet,mg`), not full names. Split
+     * on commas and match exact tokens to avoid false positives like
+     * `gauntlet` matching "g" or `pg` matching "p". Token list mirrors
+     * the actual data: rare tokens (`ng`, `cg`, `pml`, `ga` — under
+     * 30 maps each across the entire 15k library) are dropped from
+     * the chart but still counted toward `total` so percentages are
+     * accurate.
+     *
+     * @return array<int, array<string,int>>
      */
     public function weaponsByYear(): array
     {
         return Cache::remember(self::CACHE_PREFIX.'weapons_by_year', self::CACHE_TTL, function () {
+            // Map[token] => display key. Order matters: this is how
+            // they appear left-to-right in the legend & stack.
+            $tokenMap = [
+                'rl'       => 'rocket',
+                'pg'       => 'plasma',
+                'gl'       => 'grenade',
+                'rg'       => 'rail',
+                'sg'       => 'shotgun',
+                'bfg'      => 'bfg',
+                'lg'       => 'lg',
+                'hook'     => 'hook',
+                'gauntlet' => 'gauntlet',
+                'mg'       => 'machinegun',
+            ];
+
             $rows = DB::table('maps')
                 ->whereNotNull('date_added')
                 ->select(DB::raw('YEAR(date_added) AS year'), 'weapons')
                 ->get();
+
             $byYear = [];
             foreach ($rows as $r) {
                 $y = (int) $r->year;
                 if ($y < 1999 || $y > (int) date('Y')) continue;
-                $byYear[$y] ??= ['year' => $y, 'total' => 0, 'rocket' => 0, 'plasma' => 0, 'grenade' => 0, 'bfg' => 0, 'lg' => 0];
+                if (!isset($byYear[$y])) {
+                    $byYear[$y] = ['year' => $y, 'total' => 0];
+                    foreach ($tokenMap as $key) $byYear[$y][$key] = 0;
+                }
                 $byYear[$y]['total']++;
-                $w = strtolower((string) ($r->weapons ?? ''));
-                if (str_contains($w, 'rocket'))  $byYear[$y]['rocket']++;
-                if (str_contains($w, 'plasma'))  $byYear[$y]['plasma']++;
-                if (str_contains($w, 'grenade')) $byYear[$y]['grenade']++;
-                if (str_contains($w, 'bfg'))     $byYear[$y]['bfg']++;
-                if (str_contains($w, 'lg') || str_contains($w, 'lightning')) $byYear[$y]['lg']++;
+                $tokens = array_map('trim', explode(',', strtolower((string) ($r->weapons ?? ''))));
+                foreach ($tokenMap as $tok => $key) {
+                    if (in_array($tok, $tokens, true)) $byYear[$y][$key]++;
+                }
             }
             ksort($byYear);
             return array_values($byYear);

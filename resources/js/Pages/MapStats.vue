@@ -43,14 +43,44 @@ const DARK = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
     font: { color: '#cbd5e1', family: 'ui-sans-serif, system-ui' },
-    xaxis: { gridcolor: 'rgba(148,163,184,0.12)', zerolinecolor: 'rgba(148,163,184,0.2)' },
-    yaxis: { gridcolor: 'rgba(148,163,184,0.12)', zerolinecolor: 'rgba(148,163,184,0.2)' },
-    margin: { t: 20, r: 18, b: 50, l: 60 },
-    legend: { orientation: 'h', y: 1.12 },
+    // Tight margins — defaults reserve generous padding for axis titles
+    // & legend that left huge dead bands around every chart. Pulling
+    // them in claws back ~30% of vertical space for actual data.
+    xaxis: { gridcolor: 'rgba(148,163,184,0.12)', zerolinecolor: 'rgba(148,163,184,0.2)', automargin: true },
+    yaxis: { gridcolor: 'rgba(148,163,184,0.12)', zerolinecolor: 'rgba(148,163,184,0.2)', automargin: true },
+    margin: { t: 4, r: 8, b: 38, l: 50 },
+    legend: { orientation: 'h', y: 1.06, x: 0, xanchor: 'left', yanchor: 'bottom' },
     hovermode: 'closest',
 };
 
 const CFG = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
+
+// Plotly's default log-axis labelling shows minor ticks (2, 5) between
+// powers of ten, but it strips the decade context — so a "2" between
+// "10" and "100" actually means 20, "5" means 500. Confusing as hell.
+// `dtick: 1` (one log10 step per major tick) plus a `,d` integer format
+// gives clean 1 / 10 / 100 / 1000 labels with no minor noise.
+//
+// Minor gridlines fill in the "empty" space between 1–10 — without them
+// the eye reads the gap as missing data, when in fact the log curve is
+// just compressing 2/3/.../9 into a small visual band near the top of
+// each decade. Subtle gridlines let the user see *where* those ticks
+// land without re-introducing the misleading short labels.
+const LOG_AXIS = {
+    type: 'log',
+    dtick: 1,
+    tickformat: ',d',
+    minor: {
+        tickmode: 'auto',
+        nticks: 9,
+        showgrid: true,
+        gridcolor: 'rgba(148,163,184,0.18)',
+        gridwidth: 1,
+        ticks: 'outside',
+        ticklen: 4,
+        tickcolor: 'rgba(148,163,184,0.5)',
+    },
+};
 
 const summary = computed(() => props.stats?.summary || {});
 
@@ -187,44 +217,99 @@ const renderAll = async () => {
           type: 'bar', marker: { color: '#14b8a6' },
           hovertemplate: '%{x} records: %{y} players<extra></extra>' }
     ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'records per player' },
-         yaxis: { ...DARK.yaxis, title: 'players (log)', type: 'log' } }, CFG);
+         yaxis: { ...DARK.yaxis, title: 'players (log)', ...LOG_AXIS } }, CFG);
 
-    // 9. Weapons per year (stacked area)
+    // 9. Weapons per year — line chart (not stacked, since a single
+    // map can carry multiple weapons; stacking would double-count).
+    // Each line shows the % of that year's new maps that include
+    // the given weapon.
     const wy = data.weapons_by_year;
-    const totals = wy.map(w => w.total);
-    const pct = (key) => wy.map((w, i) => totals[i] ? (w[key] / totals[i] * 100) : 0);
-    Plotly.newPlot('chart-weapons', [
-        { x: wy.map(w => w.year), y: pct('rocket'),  name: 'rocket',  type: 'scatter', mode: 'lines', stackgroup: 'a', line: { color: '#ef4444' } },
-        { x: wy.map(w => w.year), y: pct('plasma'),  name: 'plasma',  type: 'scatter', mode: 'lines', stackgroup: 'a', line: { color: '#22c55e' } },
-        { x: wy.map(w => w.year), y: pct('grenade'), name: 'grenade', type: 'scatter', mode: 'lines', stackgroup: 'a', line: { color: '#f59e0b' } },
-        { x: wy.map(w => w.year), y: pct('bfg'),     name: 'bfg',     type: 'scatter', mode: 'lines', stackgroup: 'a', line: { color: '#8b5cf6' } },
-        { x: wy.map(w => w.year), y: pct('lg'),      name: 'lg',      type: 'scatter', mode: 'lines', stackgroup: 'a', line: { color: '#06b6d4' } },
-    ], { ...DARK, xaxis: { ...DARK.xaxis, title: 'year' },
-         yaxis: { ...DARK.yaxis, title: '% of new maps including this weapon' } }, CFG);
+    const pct = (key) => wy.map(w => w.total ? (w[key] / w.total * 100) : 0);
+    const weaponSeries = [
+        ['rocket',     '#ef4444'],
+        ['plasma',     '#22c55e'],
+        ['grenade',    '#f59e0b'],
+        ['rail',       '#facc15'],
+        ['shotgun',    '#fb923c'],
+        ['bfg',        '#8b5cf6'],
+        ['lg',         '#06b6d4'],
+        ['hook',       '#ec4899'],
+        ['gauntlet',   '#a3a3a3'],
+        ['machinegun', '#14b8a6'],
+    ];
+    Plotly.newPlot('chart-weapons',
+        weaponSeries.map(([key, color]) => ({
+            x: wy.map(w => w.year),
+            y: pct(key),
+            name: key,
+            type: 'scatter',
+            mode: 'lines',
+            line: { color, width: 2 },
+            hovertemplate: `${key}: %{y:.1f}%<extra></extra>`,
+        })),
+        { ...DARK, xaxis: { ...DARK.xaxis, title: 'year' },
+          yaxis: { ...DARK.yaxis, title: '% of new maps including this weapon', ticksuffix: '%' } },
+        CFG
+    );
 
-    // 10. Scatter: release date × WR time (the big one — webgl-backed)
+    // 10. Scatter: release date × WR time (the big one — webgl-backed).
+    //
+    // Floor at 1s (sub-second WRs are demo/scoreboard bugs) AND cap
+    // at the 99th percentile to keep the meaningful 1–100s mass from
+    // being squashed by the handful of clearly-broken 10000s+ entries
+    // (3+ hour "WRs" = abandoned runs, scoreboard bugs). The cap is
+    // rounded up to the next decade so axis labels stay clean.
+    const allWrSec = [...data.cpm, ...data.vq3]
+        .map(p => p.wr_ms / 1000)
+        .filter(v => v >= 1)
+        .sort((a, b) => a - b);
+    const wrP99 = allWrSec[Math.floor(allWrSec.length * 0.99)] ?? 1000;
+    const wrCapSec = Math.pow(10, Math.ceil(Math.log10(wrP99)));
     Plotly.newPlot('chart-release-vs-wr', ['cpm','vq3'].map(phys => ({
         x: data[phys].map(p => p.date_added),
-        y: data[phys].map(p => p.wr_ms / 1000),
+        y: data[phys].map(p => Math.min(wrCapSec, Math.max(1, p.wr_ms / 1000))),
         customdata: buildHover(data[phys]),
         hovertemplate: '%{customdata}<extra></extra>',
         mode: 'markers', type: 'scattergl', name: phys.toUpperCase(),
         marker: { size: 4, opacity: 0.55, color: phys === 'cpm' ? '#a855f7' : '#3b82f6' },
     })), { ...DARK,
            xaxis: { ...DARK.xaxis, title: 'map release date', type: 'date' },
-           yaxis: { ...DARK.yaxis, title: 'WR time (seconds, log)', type: 'log' } }, CFG);
+           yaxis: { ...DARK.yaxis, title: `WR time (seconds, log; capped at ${wrCapSec})`, ...LOG_AXIS,
+                    range: [0, Math.log10(wrCapSec) + 0.02], autorange: false } }, CFG);
 
     // 11. Scatter: release × #finishers
+    //
+    // Finisher counts are integers, so plain log scale draws hard
+    // bands at 1, 2, 3, ... — sharp horizontal stripes that mask
+    // overplot density. Solve it with a multiplicative jitter that's
+    // constant-width in log space (±0.18 log10), so a "1" smears to
+    // [1.0, 1.51], a "2" to [1.32, 3.02], etc., with the next
+    // integer's smear overlapping the previous one. Bands dissolve
+    // into clouds at every magnitude.
+    //
+    // Clamp the floor to 1.0 so jittered values never fall below the
+    // bottom axis label (avoids a phantom "gap" between "1" and "2"
+    // when the smear of "1" spills below into the 0.x decade).
+    const logJitter = (v) => {
+        if (!v || v < 1) return 1;
+        const offset = (Math.random() * 2 - 1) * 0.18;
+        return Math.max(1, v * Math.pow(10, offset));
+    };
+    const finishersMax = Math.max(
+        ...data.cpm.map(p => p.finishers || 1),
+        ...data.vq3.map(p => p.finishers || 1)
+    );
     Plotly.newPlot('chart-release-vs-finishers', ['cpm','vq3'].map(phys => ({
         x: data[phys].map(p => p.date_added),
-        y: data[phys].map(p => p.finishers),
+        y: data[phys].map(p => logJitter(p.finishers)),
         customdata: buildHover(data[phys]),
         hovertemplate: '%{customdata}<extra></extra>',
         mode: 'markers', type: 'scattergl', name: phys.toUpperCase(),
         marker: { size: 4, opacity: 0.55, color: phys === 'cpm' ? '#a855f7' : '#3b82f6' },
     })), { ...DARK,
            xaxis: { ...DARK.xaxis, title: 'map release date', type: 'date' },
-           yaxis: { ...DARK.yaxis, title: 'unique finishers (log)', type: 'log' } }, CFG);
+           yaxis: { ...DARK.yaxis, title: 'unique finishers (log)', ...LOG_AXIS,
+                    range: [0, Math.log10(finishersMax) + 0.05], autorange: false } }, CFG);
 
     // 12. Scatter: release × WR set date
     Plotly.newPlot('chart-release-vs-wrdate', ['cpm','vq3'].map(phys => ({
@@ -268,27 +353,27 @@ onMounted(renderAll);
 
             <!-- Top-level summary chips -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_maps?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Maps</div>
                 </div>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_records?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Records</div>
                 </div>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_wrs?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Top-1 runs</div>
                 </div>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_authors?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Mappers</div>
                 </div>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_players?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Players</div>
                 </div>
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-sm font-bold text-white">{{ summary.first_record }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">First record</div>
                 </div>
@@ -300,73 +385,73 @@ onMounted(renderAll);
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Histograms / bar charts in 2-col -->
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">WR time distribution</h2>
                     <p class="text-xs text-gray-500 mb-2">Per-map fastest run, log-scale X. CPM (purple) vs VQ3 (blue).</p>
                     <div id="chart-hist" style="height: 360px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">Maps released per year</h2>
                     <p class="text-xs text-gray-500 mb-2">When was the map library built?</p>
                     <div id="chart-yearly" style="height: 360px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">Distinct active players per year</h2>
                     <p class="text-xs text-gray-500 mb-2">Players who set at least one record that year.</p>
                     <div id="chart-active-players" style="height: 360px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">Records per player</h2>
                     <p class="text-xs text-gray-500 mb-2">Long-tail distribution — most players have a handful, a few have thousands.</p>
                     <div id="chart-records-per-player" style="height: 360px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Weapon presence in new maps</h2>
                     <p class="text-xs text-gray-500 mb-2">% of maps released each year that include each weapon.</p>
                     <div id="chart-weapons" style="height: 360px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Top mappers</h2>
                     <p class="text-xs text-gray-500 mb-2">25 most prolific authors by visible map count.</p>
                     <div id="chart-authors" style="min-height: 600px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">WR concentration (top 30)</h2>
                     <p class="text-xs text-gray-500 mb-2">Bar = WRs held, line = cumulative % of all WRs.</p>
                     <div id="chart-pareto" style="height: 420px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">WRs by country</h2>
                     <p class="text-xs text-gray-500 mb-2">Choropleth of map-best-time holders.</p>
                     <div id="chart-countries" style="height: 480px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Activity heatmap</h2>
                     <p class="text-xs text-gray-500 mb-2">Records set per month, per year. GitHub-style — the brighter the busier.</p>
                     <div id="chart-heatmap" style="min-height: 600px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Map release date × WR time</h2>
                     <p class="text-xs text-gray-500 mb-2">Each dot is one map. Hover for details.</p>
                     <div id="chart-release-vs-wr" style="height: 540px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Map release date × number of finishers</h2>
                     <p class="text-xs text-gray-500 mb-2">Older maps tend to have more finishers, but viral newer maps stand out.</p>
                     <div id="chart-release-vs-finishers" style="height: 540px"></div>
                 </div>
 
-                <div class="bg-black/40 border border-white/10 rounded-xl p-4 lg:col-span-2">
+                <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Map release date × WR set date</h2>
                     <p class="text-xs text-gray-500 mb-2">Diagonal-ish — outliers above the line are late discoveries (WR set years after release).</p>
                     <div id="chart-release-vs-wrdate" style="height: 540px"></div>
