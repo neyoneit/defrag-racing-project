@@ -24,9 +24,13 @@
     to { transform: translate(-90px, 45px); }
 }
 
-/* Make black Q3 text (^0 color code) visible on dark backgrounds */
+/* Q3 color ^0 is true black — render it as such. Containers that show
+ * Q3 nicks (e.g. server cards' player list) provide a warm-glass
+ * backdrop that gives every colour code a legible kontrast. No
+ * outline / halo trickery here: a black glyph reads exactly as it
+ * does in the game scoreboard. */
 .q3c-0 {
-    color: #888 !important;
+    color: #000 !important;
 }
 
 .rotate-animation {

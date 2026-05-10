@@ -119,7 +119,13 @@ hr{
 }
 .server-card-wrapper{
     width:100%;
-    background:#161d2b;
+    /* Card body is fully transparent — the thumbnail behind it
+     * (covered + alpha-ramped via .server-background-overlay)
+     * provides the entire visual surface. No second dark slab
+     * stacking on top of the gradient = no hard line under the
+     * thumbnail. */
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
     overflow: hidden;
 }
@@ -128,13 +134,16 @@ hr{
     top:0;
     left:0;
     width:100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height:100%;            /* span the whole card so the overlay
+                               gradient can fade thumbnail → glass
+                               continuously instead of stopping at
+                               the bottom of the image */
+    display: block;
     z-index: 0;
 }
 .server-background img{
     width:100%;
+    display:block;
     transition: all .15s linear;
 }
 .server-background .server-background-overlay{
@@ -143,11 +152,17 @@ hr{
     left:0;
     width:100%;
     height: 100%;
-    background: rgb(22,29,43);
-    background: linear-gradient(0deg, #161d2b, #161d2b34, #161d2bad);
+    /* No dark slab anywhere. Just a short gradient at the bottom
+     * edge of the thumbnail itself fading the image into the
+     * transparent card body — so text below it sits directly on
+     * the page background, not on any dark veil. */
+    background: linear-gradient(180deg,
+        rgba(0,0,0,0) 0%,
+        rgba(0,0,0,0) 60%,
+        rgba(11,16,32,0.4) 90%,
+        rgba(11,16,32,0) 100%);
     z-index: 2;
     box-sizing: content-box;
-    border-bottom: 1000px solid #161d2b;
     transition: all .15s linear;
 }
 .server-background .server-background-hover-overlay{
@@ -156,10 +171,9 @@ hr{
     left:0;
     width:100%;
     height: 100%;
-    background: rgb(22,29,43);
+    background: rgba(22,29,43,0.5);
     z-index: 3;
     box-sizing: content-box;
-    border-bottom: 1000px solid #161d2b;
     transition: all .15s linear;
     opacity: 0;
 }
