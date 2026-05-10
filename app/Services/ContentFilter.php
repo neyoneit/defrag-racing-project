@@ -119,10 +119,20 @@ class ContentFilter
         // Collapse blocklist entries on-the-fly so "fagggot" (input
         // collapsed to "fagot") matches "faggot" (blocklist collapsed
         // to "fagot"). Mirrors DefragLive filters.py behaviour.
-        $collapsedBlocklist = array_map(
-            fn ($w) => self::stripRepeated($w),
-            self::blocklist()
-        );
+        //
+        // Drop entries that collapse below 4 chars: "boob" -> "bob" and
+        // "coon" -> "con" would otherwise generate false positives like
+        // ARTICON (matches "con") and bunbob (matches "bob"). Genuine
+        // 3-char slurs in the blocklist (e.g. fag) are still detected
+        // via the exact match in filterText() — only the substring path
+        // gets the length floor.
+        $collapsedBlocklist = [];
+        foreach (self::blocklist() as $w) {
+            $c = self::stripRepeated($w);
+            if (strlen($c) >= 4) {
+                $collapsedBlocklist[] = $c;
+            }
+        }
         $variants = self::expandSpecialChars(str_replace(' ', '', $msgLower));
         foreach ($variants as $variant) {
             $collapsed = self::stripRepeated($variant);

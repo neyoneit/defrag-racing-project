@@ -3,18 +3,23 @@
 # Lines starting with # are ignored. Match is case-insensitive.
 #
 # filterText() (map names, descriptions): word-START match — entry "fuck"
-# automatically catches fucker/fucking/fucked. False positives like
-# "rape" inside "skyscraper" are avoided by requiring a non-letter
-# character (or string start) immediately before the entry.
+# would catch fucker/fucking/fucked. False positives like "rape" inside
+# "skyscraper" are avoided by requiring a non-letter character (or string
+# start) immediately before the entry.
 #
-# filterAuthor() (player nicks): substring match WITH leetspeak
-# expansion + repeated-char collapse, so "n1gg3r", "fagggot", "f a g"
-# also trip. Whole nick is replaced with 'UnnamedPlayer' on a hit.
+# filterAuthor() (player nicks): substring match WITH leetspeak expansion
+# + repeated-character collapse, so "n1gg3r", "fagggot", "f a g" also
+# trip. Whole nick is replaced with 'UnnamedPlayer' on a hit.
+#
+# Conservative scope — only terms YouTube has demonstrably struck for
+# (racial slurs, CSAM, sexual violence, extremism, hard threats). Words
+# like "porn", "shit", "autism", "fuck" are deliberately NOT here:
+# hundreds of channel uploads with those substrings are still live, so
+# blocking them would be all false positive and zero risk reduction.
 
 # --- Racial / ethnic slurs ---
 nigger
 nigga
-niglet
 niggress
 chink
 gook
@@ -22,8 +27,6 @@ spic
 wetback
 beaner
 towelhead
-sandnigger
-sandnigga
 raghead
 camelfucker
 pikey
@@ -32,134 +35,78 @@ kike
 heeb
 jewfag
 jewboy
-zionazi
-honky
-slanteye
-zipperhead
-coon
 jiggaboo
 porchmonkey
 mudshark
 mudpeople
 mongoloid
+zipperhead
+slanteye
 
-# --- Sexual orientation / gender slurs ---
+# --- Severe sexual orientation / gender slurs ---
 faggot
-fag
-homo
 homofag
 queerbait
-dyke
 bulldyke
 tranny
 trannies
 shemale
 ladyboy
 
-# --- Misogyny / sexual slurs ---
+# --- Misogyny extreme ---
 cunt
-whore
-slut
-skank
-hooker
-bitch
-biotch
-biatch
 
-# --- Sexual / explicit ---
-porn
-pornstar
-pornhub
-xxxporn
-hentai
-nudie
-nudist
-analsex
+# --- Explicit sexual acts ---
+blowjob
+handjob
+footjob
+rimjob
+pussyfuck
 assfuck
 buttfuck
 cocksuck
 cocksucker
-cockfag
-dickhead
-dickface
 dicksuck
-pussy
-pussyfuck
 clitsuck
-shit
-bullshit
-motherfuck
-fukboi
-jizzface
 cumdumpster
 cumguzzler
 cumslut
 felching
-rimjob
-handjob
-blowjob
-footjob
-cuckold
-cuckolding
-vagina
-vaginal
-penis
-testicle
-masturbat
-ejaculat
-orgasm
-orgy
-boner
-boob
-boobs
-titties
-nipple
-sodomy
-sodomi
+motherfuck
+fukboi
+xxxporn
+hentai
 
-# --- Sexual violence / minors ---
-rapist
-raper
-gangrape
-childrape
-childporn
-loli
+# --- CSAM / minors ---
 lolicon
 shotacon
 pedo
 pedofile
 pedophile
+childrape
+childporn
 molest
 molestation
-incest
+
+# --- Sexual violence ---
+rapist
+raper
+gangrape
 bestiality
 zoophilia
 necrophilia
+incest
+incestuous
 
-# --- Generic insults that flag automod ---
-retard
-spaz
-sped
-cripple
-autism
-autistic
-cancer
-aids
-hivpositive
-
-# --- Hate / extremist ---
-nazi
-neonazi
+# --- Hate / extremism ---
 heilhitler
 hitler
 goebbels
 holohoax
-1488
 fashy
 groyper
-femcel
 
-# --- Threats of violence ---
+# --- Hard threats / self-harm ---
 killyourself
 kys
 kysfaggot
@@ -170,21 +117,8 @@ massshoot
 genocide
 exterminate
 lynching
-
-# --- Self-harm / suicide ---
 slityourwrist
 slitwrists
-
-# --- Drug references ---
-methhead
-crackhead
-crackbaby
-heroinaddict
-oxyaddict
-weed
-marijuana
-cocaine
-methamphetamine
 
 # --- Misc ---
 wifebeater
