@@ -20,10 +20,7 @@
 # --- Racial / ethnic slurs ---
 nigger
 nigga
-niglet
 niggress
-sandnigger
-sandnigga
 chink
 gook
 spic
@@ -59,8 +56,28 @@ ladyboy
 # --- Misogyny extreme ---
 cunt
 
+# --- Explicit sexual acts ---
+blowjob
+handjob
+footjob
+rimjob
+pussyfuck
+assfuck
+buttfuck
+cocksuck
+cocksucker
+dicksuck
+clitsuck
+cumdumpster
+cumguzzler
+cumslut
+felching
+motherfuck
+fukboi
+xxxporn
+hentai
+
 # --- CSAM / minors ---
-loli
 lolicon
 shotacon
 pedo
@@ -82,14 +99,10 @@ incest
 incestuous
 
 # --- Hate / extremism ---
-nazi
-neonazi
-zionazi
 heilhitler
 hitler
 goebbels
 holohoax
-1488
 fashy
 groyper
 
