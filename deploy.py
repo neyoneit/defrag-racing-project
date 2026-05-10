@@ -71,12 +71,16 @@ def pipeline_cmds(name):
         # leaderboard, server list, map stats endpoint). cache:clear
         # above wiped them and most have TTLs of 12h+, so the first
         # visitor would otherwise pay full DB cost.
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/ || true",
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/ranking || true",
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/records || true",
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/community || true",
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/servers || true",
-        "curl -s -o /dev/null --max-time 30 https://defrag.racing/maps/stats || true",
+        #
+        # `-w` prints status + timing per URL so the deploy log
+        # actually shows what got warmed (a silent `-s -o /dev/null`
+        # gives no feedback, which made the warm-up indistinguishable
+        # from "didn't run").
+        'echo "==> Warming public-page caches..."',
+        'for url in / /ranking /records /community /servers /maps/stats; do '
+        'echo "  - https://defrag.racing$url"; '
+        'curl -s -o /dev/null --max-time 30 -w "    HTTP %{http_code}  in %{time_total}s\\n" "https://defrag.racing$url" || echo "    (failed, continuing)"; '
+        'done',
     ]
 
     return cmds
@@ -91,7 +95,14 @@ def deploy():
     subprocess.run(git_clone_cmd, shell=True, cwd=f"{PROJECT_PATH}/releases")
 
     for cmd in cmds:
-        subprocess.run(cmd, shell=True, cwd=f"{PROJECT_PATH}/releases/{name}")
+        # Print the command we're about to run + flag non-zero exits
+        # so warm-up failures (like mapstats:rebuild blowing up
+        # silently) are visible in the deploy log instead of being
+        # swallowed.
+        print(f"\n>>> {cmd}", flush=True)
+        result = subprocess.run(cmd, shell=True, cwd=f"{PROJECT_PATH}/releases/{name}")
+        if result.returncode != 0:
+            print(f"!!! exit {result.returncode} from: {cmd}", flush=True)
 
 if __name__ == "__main__":
     deploy()
