@@ -72,6 +72,31 @@ class Record extends Model
             }
         });
 
+        // Before delete (soft or hard), detach any UploadedDemos pointing at
+        // this Record. Otherwise demos would dangle on a soft-deleted record
+        // (frontend hides soft-deleted records, so the demo would vanish
+        // from the UI). After detach, the next demos:rematch-all run will
+        // attribute the demo to its real player via Pass 2 (fuzzy nick) and
+        // create an offline_record so the historical attempt surfaces under
+        // the player's current live record as a Time History sibling.
+        static::deleting(function ($record) {
+            $detached = \App\Models\UploadedDemo::where('record_id', $record->id)
+                ->whereIn('status', ['assigned', 'fallback-assigned'])
+                ->update([
+                    'record_id' => null,
+                    'status'    => 'processed',
+                ]);
+            if ($detached > 0) {
+                \Illuminate\Support\Facades\Log::info('Auto-detached uploaded_demos from record being deleted', [
+                    'record_id' => $record->id,
+                    'mapname' => $record->mapname,
+                    'gametype' => $record->gametype,
+                    'time' => $record->time,
+                    'detached_count' => $detached,
+                ]);
+            }
+        });
+
         // On delete, decrement counts and invalidate affected pages
         static::deleted(function ($record) {
             if ($record->mdd_id) {
