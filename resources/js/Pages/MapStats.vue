@@ -206,7 +206,7 @@ const renderAll = async () => {
           y: yrs, type: 'heatmap',
           colorscale: [[0, '#0b1020'], [0.1, '#1e293b'], [0.3, '#1e40af'], [0.7, '#a855f7'], [1, '#f43f5e']],
           hovertemplate: '%{y} %{x}: %{z} records<extra></extra>' }
-    ], { ...DARK, height: Math.max(400, yrs.length * 22),
+    ], { ...DARK, height: Math.max(280, yrs.length * 28),
          xaxis: { ...DARK.xaxis, side: 'top' },
          yaxis: { ...DARK.yaxis, autorange: 'reversed' } }, CFG);
 
@@ -344,7 +344,7 @@ onMounted(renderAll);
 <template>
     <Head title="Map Statistics" />
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
             <h1 class="text-3xl font-black text-white mb-2">Map Statistics</h1>
             <p class="text-gray-400 mb-6 text-sm">
                 Aggregates across the whole defrag.racing dataset. Updated every six hours
@@ -436,7 +436,7 @@ onMounted(renderAll);
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
                     <h2 class="text-base font-bold text-white mb-1">Activity heatmap</h2>
                     <p class="text-xs text-gray-500 mb-2">Records set per month, per year. GitHub-style — the brighter the busier.</p>
-                    <div id="chart-heatmap" style="min-height: 600px"></div>
+                    <div id="chart-heatmap"></div>
                 </div>
 
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl lg:col-span-2">
