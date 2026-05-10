@@ -163,6 +163,15 @@ const filteredAndSortedServers = computed(() => {
             const serverType = server.type?.toLowerCase() || 'run';
             const serverName = (server.name || '').replace(/\^\d|\^x[\da-fA-F]{2}|\^[\da-fA-F]{6}/g, '').toLowerCase();
 
+            // Defrag's gametype 5 = mixed (server allows run + teamrun
+            // simultaneously). Many "10gbit cpm III"-style servers are
+            // tagged type='team' in our DB but actually advertise a
+            // run leaderboard too, so they need to surface in both
+            // the 'run' and 'teamrun' tabs. The "mixed" keyword in
+            // the server name is the other signal — admins use it
+            // for the same kind of multi-mode setup.
+            const isMixed = String(server.defrag_gametype) === '5' || serverName.includes('mixed');
+
             // Detect effective type: DB type first, then name-based detection
             let effectiveType = serverType;
             if (serverType === 'run') {
@@ -173,13 +182,13 @@ const filteredAndSortedServers = computed(() => {
 
             switch (filters.value.gametype) {
                 case 'run':
-                    return effectiveType === 'run';
+                    return effectiveType === 'run' || isMixed;
                 case 'ctf':
                     return effectiveType === 'ctf' || effectiveType === 'fastcaps';
                 case 'freestyle':
                     return effectiveType === 'freestyle';
                 case 'teamrun':
-                    return effectiveType === 'teamrun' || effectiveType === 'team';
+                    return effectiveType === 'teamrun' || effectiveType === 'team' || isMixed;
                 default:
                     return true;
             }
