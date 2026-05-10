@@ -12,9 +12,30 @@ class MapStatsController extends Controller
 
     /**
      * Public stats dashboard — Plotly-rendered charts on the client.
+     *
+     * The full payload is ~14s to build cold and ~25ms warm. We don't
+     * want the visitor's first request to block on the cold rebuild
+     * (it would time out before HTML even ships), so:
+     *
+     *  - Initial full-page request: render the shell with `stats=null`
+     *    and let the client paint a loading state immediately.
+     *  - Inertia partial reload (X-Inertia-Partial-Data header set,
+     *    asking for `stats`): actually compute / fetch the cached
+     *    payload and return it.
+     *
+     * If the partial reload happens to land on a cold cache, the
+     * client is the one that pays the wait — but it's an async XHR,
+     * so the page is already interactive and the spinner stays
+     * visible instead of the browser hanging on the navigation.
      */
     public function index(Request $request)
     {
+        $isPartial = $request->header('X-Inertia-Partial-Data') !== null;
+
+        if (!$isPartial) {
+            return Inertia::render('MapStats', ['stats' => null]);
+        }
+
         return Inertia::render('MapStats', [
             'stats' => fn () => $this->stats->all(),
         ]);

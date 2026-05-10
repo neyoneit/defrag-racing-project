@@ -53,10 +53,30 @@ def pipeline_cmds(name):
         f"rm {PROJECT_PATH}/current",
         f"ln -s {PROJECT_PATH}/releases/{name} {PROJECT_PATH}/current",
         "php artisan optimize:clear",
+        # Pre-warm the heaviest cache directly via the service (14s
+        # aggregate). Doing this before the octane restart means it
+        # runs against the still-current codebase, but the Redis key
+        # it writes survives the restart, so the freshly-restarted
+        # workers see a warm cache from request #1.
+        "php artisan mapstats:rebuild",
         'supervisorctl restart "defrag-racing-octane:*"',
         'supervisorctl restart "defrag-racing-worker:*"',
         "php artisan octane:reload",
-        "php artisan queue:restart"
+        "php artisan queue:restart",
+        # Give octane a couple seconds to come up before we hit it.
+        "sleep 3",
+        # Warm the rest of the public-page caches by triggering the
+        # Cache::remember blocks inside the controllers (homepage
+        # totals, ranking prebuilt pages, records, community
+        # leaderboard, server list, map stats endpoint). cache:clear
+        # above wiped them and most have TTLs of 12h+, so the first
+        # visitor would otherwise pay full DB cost.
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/ || true",
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/ranking || true",
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/records || true",
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/community || true",
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/servers || true",
+        "curl -s -o /dev/null --max-time 30 https://defrag.racing/maps/stats || true",
     ]
 
     return cmds

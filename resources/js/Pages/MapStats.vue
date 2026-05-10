@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref, computed, nextTick } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 
 const props = defineProps({
     stats: Object,
@@ -11,6 +11,60 @@ const props = defineProps({
 // Plotly is in flight — empty containers are placeholders.
 const plotlyReady = ref(false);
 const plotlyError = ref(null);
+
+// Initial Inertia request returns `stats: null` so the page paints
+// instantly. We then fire a partial reload to fetch the heavy
+// aggregate. While it's in flight, `statsLoading` stays true and
+// the template shows a "warming up" state.
+const statsLoading = ref(props.stats === null);
+const statsError = ref(null);
+
+// Layout of the skeleton placeholders rendered while the partial
+// reload is in flight. Heights and span flags mirror the real chart
+// cards so the page doesn't reflow when data lands.
+const skeletonCards = [
+    { height: 360, span: false },  // WR time distribution
+    { height: 360, span: false },  // Maps released per year
+    { height: 360, span: false },  // Active players per year
+    { height: 360, span: false },  // Records per player
+    { height: 360, span: true  },  // Weapons (full width)
+    { height: 600, span: true  },  // Top mappers
+    { height: 420, span: true  },  // WR concentration
+    { height: 480, span: true  },  // Country choropleth
+    { height: 500, span: true  },  // Activity heatmap
+    { height: 540, span: true  },  // Release × WR time
+    { height: 540, span: true  },  // Release × finishers
+    { height: 540, span: true  },  // Release × WR set date
+];
+
+// Mirror RankingView: keep the skeleton on screen for at least
+// MIN_SKELETON_MS even if the cache is warm and the response
+// returns in 25ms. Otherwise the user clicking "Map Statistics"
+// from the nav sees a flash of skeleton-then-charts so brief it
+// reads as "nothing happened".
+const MIN_SKELETON_MS = 400;
+
+const fetchStats = () => {
+    statsLoading.value = true;
+    statsError.value = null;
+    const start = Date.now();
+    const finishLoading = () => {
+        const elapsed = Date.now() - start;
+        const wait = Math.max(0, MIN_SKELETON_MS - elapsed);
+        setTimeout(() => {
+            statsLoading.value = false;
+            if (props.stats) renderAll();
+        }, wait);
+    };
+    router.reload({
+        only: ['stats'],
+        onError: () => {
+            statsError.value = 'Failed to load stats. Please refresh.';
+            statsLoading.value = false;
+        },
+        onFinish: finishLoading,
+    });
+};
 
 const ensurePlotly = () => new Promise((resolve, reject) => {
     if (window.Plotly) return resolve(window.Plotly);
@@ -166,11 +220,11 @@ const renderAll = async () => {
     // 5. WR concentration (Pareto)
     const wrc = data.wr_concentration;
     Plotly.newPlot('chart-pareto', [
-        { x: wrc.map((p, i) => i + 1), y: wrc.map(p => p.wrs),
+        { x: wrc.map((_, i) => i + 1), y: wrc.map(p => p.wrs),
           customdata: wrc.map(p => p.name),
           hovertemplate: 'Rank %{x}: %{customdata}<br>%{y} WRs<extra></extra>',
           type: 'bar', marker: { color: '#06b6d4' }, name: 'WRs' },
-        { x: wrc.map((p, i) => i + 1), y: wrc.map(p => p.cumulative_pct),
+        { x: wrc.map((_, i) => i + 1), y: wrc.map(p => p.cumulative_pct),
           type: 'scatter', mode: 'lines+markers', name: 'cumulative %',
           yaxis: 'y2', line: { color: '#facc15' } },
     ], { ...DARK,
@@ -338,7 +392,18 @@ const ISO_MAP = {
 };
 const iso2to3 = (c) => ISO_MAP[c] || c;
 
-onMounted(renderAll);
+onMounted(() => {
+    // First-page load returns stats=null. Trigger a partial Inertia
+    // reload to actually fetch the payload — that XHR is what may
+    // pay the cold-rebuild cost (up to ~14s), but the page is
+    // already painted by then so the user sees a loading state
+    // instead of a blank stalled navigation.
+    if (props.stats === null) {
+        fetchStats();
+        return;
+    }
+    renderAll();
+});
 </script>
 
 <template>
@@ -351,8 +416,8 @@ onMounted(renderAll);
                 from the live records database.
             </p>
 
-            <!-- Top-level summary chips -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+            <!-- Top-level summary chips (hidden until data lands) -->
+            <div v-if="props.stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <div class="text-2xl font-bold text-white">{{ summary.total_maps?.toLocaleString() }}</div>
                     <div class="text-xs text-gray-400 uppercase tracking-wider">Maps</div>
@@ -379,11 +444,62 @@ onMounted(renderAll);
                 </div>
             </div>
 
+            <!-- Lazy-load state. Initial Inertia render returns
+                 stats=null so the page paints instantly; the
+                 fetchStats() partial reload below is what may pay
+                 the ~14s cold-cache cost. The skeleton mirrors the
+                 final layout so the page doesn't visibly reflow
+                 once data lands. -->
+            <template v-if="statsLoading">
+                <!-- Status banner with spinner — gives the user a
+                     reason to wait instead of leaving the tab. -->
+                <div class="bg-black/40 backdrop-blur-sm border border-purple-500/30 rounded-xl px-4 py-3 mb-6 flex items-center gap-3">
+                    <svg class="w-5 h-5 animate-spin text-purple-400 shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm text-gray-200 font-medium">Crunching aggregates across 15k maps and 646k records…</div>
+                        <div class="text-xs text-gray-500 mt-0.5">First load can take up to ~15 seconds. Subsequent visits are instant from cache.</div>
+                    </div>
+                </div>
+
+                <!-- Summary chip skeletons -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+                    <div v-for="i in 6" :key="`chip-${i}`" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl animate-pulse">
+                        <div class="h-7 bg-white/10 rounded w-3/4 mb-2"></div>
+                        <div class="h-3 bg-white/5 rounded w-1/2"></div>
+                    </div>
+                </div>
+
+                <!-- Chart card skeletons — same grid + sizes as the
+                     real charts so the page doesn't jump when data
+                     arrives. -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div
+                        v-for="(skel, idx) in skeletonCards"
+                        :key="`skel-${idx}`"
+                        class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl animate-pulse"
+                        :class="skel.span ? 'lg:col-span-2' : ''"
+                        :style="`min-height: ${skel.height}px;`"
+                    >
+                        <div class="h-4 bg-white/10 rounded w-1/3 mb-2"></div>
+                        <div class="h-3 bg-white/5 rounded w-2/3 mb-4"></div>
+                        <div class="bg-white/5 rounded" :style="`height: ${skel.height - 80}px;`"></div>
+                    </div>
+                </div>
+            </template>
+
+            <div v-if="statsError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 mb-6 flex items-center justify-between">
+                <span>{{ statsError }}</span>
+                <button @click="fetchStats" class="px-3 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-200 text-sm font-bold">Retry</button>
+            </div>
+
             <div v-if="plotlyError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 mb-6">
                 Failed to load charts: {{ plotlyError }}. Check your network connection or try refreshing.
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div v-if="props.stats" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Histograms / bar charts in 2-col -->
                 <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-3 shadow-2xl">
                     <h2 class="text-base font-bold text-white mb-1">WR time distribution</h2>
