@@ -36,7 +36,8 @@ function calcPlayerRating(scores) {
     let weightedSum = 0;
     let weightSum = 0;
     for (let i = 0; i < sorted.length; i++) {
-        const weight = Math.exp(-CFG_D * (i + 1));
+        // weight = exp(-D * (rank - 1)) — best record (rank 1) gets weight 1.0
+        const weight = Math.exp(-CFG_D * i);
         weightedSum += sorted[i] * weight;
         weightSum += weight;
     }
@@ -68,6 +69,17 @@ const exampleScores = [850, 780, 720, 650, 600, 550, 500, 480, 420, 380, 350, 30
 const exampleRating = calcPlayerRating(exampleScores);
 const exampleFewScores = [850, 780, 720];
 const exampleFewRating = calcPlayerRating(exampleFewScores);
+
+// Share of total weight carried by the top-N records, in the limit
+// of a very large record count. Derived from the geometric series:
+// sum_{i=0..N-1} exp(-D*i) / sum_{i=0..inf} exp(-D*i)  =  1 - exp(-D*N).
+// This is the "best case" upper bound on top-N contribution; for a
+// finite roster the share is even higher.
+function topNWeightShare(n) {
+    return (1 - Math.exp(-CFG_D * n)) * 100;
+}
+const top100Share = topNWeightShare(100);
+const top200Share = topNWeightShare(200);
 </script>
 
 <template>
@@ -119,7 +131,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
                     <span class="text-blue-400 text-lg font-mono">1.</span> Overview
                 </h2>
-                <p class="mb-3">The ranking system measures how well a player performs across all maps they have records on. The process works in 4 stages:</p>
+                <p class="mb-3">The ranking system measures how well a player performs across all maps they have records on. The process works in 5 stages:</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
                         <div class="text-sm font-bold text-green-400 mb-1">1. Relative Time</div>
@@ -134,7 +146,11 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                         <div class="text-xs text-gray-400">Score is scaled by how many players the map has (popular maps count more).</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-red-400 mb-1">4. Player Rating</div>
+                        <div class="text-sm font-bold text-pink-400 mb-1">4. Rank Multiplier</div>
+                        <div class="text-xs text-gray-400">Score is further scaled by your rank on the map (beating more players counts more).</div>
+                    </div>
+                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3 sm:col-span-2">
+                        <div class="text-sm font-bold text-red-400 mb-1">5. Player Rating</div>
                         <div class="text-xs text-gray-400">All map scores are combined with exponential weighting into a single rating.</div>
                     </div>
                 </div>
@@ -149,7 +165,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 space-y-2">
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>At least <strong class="text-white">5 unique players</strong> must have a record on the map</span>
+                        <span>At least <strong class="text-white">5 unique players</strong> must have a record on the map for the given physics (VQ3 and CPM are counted separately)</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
@@ -171,7 +187,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                     <span class="text-blue-400 text-lg font-mono">3.</span> Relative Time (reltime)
                 </h2>
                 <p class="mb-3">Reltime is the ratio of your time to the <strong class="text-white">fastest time set by someone else</strong>:</p>
-                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-lg text-white mb-3">
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3">
                     reltime = your_time / fastest_other_time
                 </div>
                 <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300 mb-4">
@@ -221,12 +237,12 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                        <div><span class="text-white font-mono">A = 1.2</span> <span class="text-gray-500">- amplitude</span></div>
-                        <div><span class="text-white font-mono">B = 1.33</span> <span class="text-gray-500">- steepness</span></div>
-                        <div><span class="text-white font-mono">M = 0.3</span> <span class="text-gray-500">- midpoint shift</span></div>
-                        <div><span class="text-white font-mono">V = 0.1</span> <span class="text-gray-500">- curve shape</span></div>
-                        <div><span class="text-white font-mono">Q = 0.5</span> <span class="text-gray-500">- initial value</span></div>
+                    <div class="space-y-1 text-xs">
+                        <div><span class="text-white font-mono">A = 1.2</span> <span class="text-gray-500">— amplitude</span></div>
+                        <div><span class="text-white font-mono">B = 1.33</span> <span class="text-gray-500">— steepness</span></div>
+                        <div><span class="text-white font-mono">M = 0.3</span> <span class="text-gray-500">— midpoint shift</span></div>
+                        <div><span class="text-white font-mono">V = 0.1</span> <span class="text-gray-500">— curve shape</span></div>
+                        <div><span class="text-white font-mono">Q = 0.5</span> <span class="text-gray-500">— initial value</span></div>
                     </div>
                 </div>
 
@@ -276,10 +292,10 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">x</span> = number of unique players on the map</div>
-                        <div><span class="text-white font-mono">k</span> = median(players per map in category) / 2 - the halfway point</div>
-                        <div><span class="text-white font-mono">L = 1.0</span> - maximum multiplier (100%)</div>
-                        <div><span class="text-white font-mono">n = 2.0</span> - steepness of the curve</div>
+                        <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— number of unique players on the map</span></div>
+                        <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— median(players per map in category) / 2 (the halfway point)</span></div>
+                        <div><span class="text-white font-mono">L = 1.0</span> <span class="text-gray-500">— maximum multiplier (100%)</span></div>
+                        <div><span class="text-white font-mono">n = 2.0</span> <span class="text-gray-500">— steepness of the curve</span></div>
                     </div>
                 </div>
 
@@ -348,10 +364,12 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                     rank_mult = (((total_players * v) - your_rank) / ((total_players * v) - 1)) ^ n
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Current parameters</div>
-                    <div class="text-sm space-y-1">
-                        <div><span class="text-gray-400">n (steepness):</span> <span class="text-white font-mono">{{ RANK_N }}</span></div>
-                        <div><span class="text-gray-400">v (total_players modifier):</span> <span class="text-white font-mono">{{ RANK_V }}</span></div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="space-y-1 text-xs">
+                        <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— number of unique players on the map</span></div>
+                        <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— your position on the map leaderboard (1 = WR)</span></div>
+                        <div><span class="text-white font-mono">n = {{ RANK_N }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
+                        <div><span class="text-white font-mono">v = {{ RANK_V }}</span> <span class="text-gray-500">— total_players modifier</span></div>
                     </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
@@ -379,7 +397,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                     <span class="text-blue-400 text-lg font-mono">7.</span> Final Map Score
                 </h2>
                 <p class="mb-3">The final score for each record combines all multipliers:</p>
-                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-lg text-white mb-3">
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3">
                     final_score = base_score * map_multiplier * rank_multiplier
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
@@ -401,15 +419,47 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                 </h2>
                 <p class="mb-3">A player's overall rating is calculated from all their map scores using <strong class="text-white">exponential weighting</strong>:</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
-                    rating = sum(score_i * exp(-D * i)) / sum(exp(-D * i))
+                    rating = sum(score_i * exp(-D * (i-1))) / sum(exp(-D * (i-1)))
                 </div>
+
+                <!-- Reassurance callout: bad records do NOT lower the rating -->
+                <div class="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-3">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                        <div>
+                            <div class="text-sm font-bold text-green-300 mb-1">Bad records do not lower your rating</div>
+                            <div class="text-xs text-gray-300">Weak runs simply contribute very little weight — they don't subtract anything. Just play the maps you enjoy; you can't hurt your rating by adding a slow time on some map. Practically only your best scores move the number.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="space-y-1 text-xs">
+                        <div><span class="text-white font-mono">i</span> <span class="text-gray-500">— rank position in your sorted map scores (1 = your best map)</span></div>
+                        <div><span class="text-white font-mono">score_i</span> <span class="text-gray-500">— the final map score (after multipliers) on your i-th best map</span></div>
+                        <div><span class="text-white font-mono">D = {{ CFG_D }}</span> <span class="text-gray-500">— decay constant; smaller value means slower decay (more records contribute)</span></div>
+                    </div>
+                </div>
+
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">How it works</div>
                     <div class="text-sm space-y-2">
                         <p>1. All your map scores are <strong class="text-white">sorted from highest to lowest</strong></p>
-                        <p>2. Each score gets a weight: <span class="font-mono text-white">exp(-0.02 * rank)</span> where rank starts at 1</p>
-                        <p>3. Your best map gets weight ~0.98, your 10th best ~0.82, your 50th best ~0.37</p>
+                        <p>2. Each score gets a weight: <span class="font-mono text-white">exp(-{{ CFG_D }} * (i - 1))</span> where i starts at 1</p>
+                        <p>3. Your best map gets weight 1.0, your 10th best ~0.84, your 50th best ~0.38</p>
                         <p>4. The final rating is the weighted average of all scores</p>
+                    </div>
+                </div>
+
+                <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 mb-3">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                        <div class="text-sm">
+                            <div class="font-bold text-blue-300 mb-1">Which records actually matter?</div>
+                            <div class="text-xs text-gray-300">With <span class="font-mono text-white">D = {{ CFG_D }}</span>, your <strong class="text-white">top 100 records carry ~{{ top100Share.toFixed(1) }}%</strong> of the total weight in your rating, and your <strong class="text-white">top 200 carry ~{{ top200Share.toFixed(1) }}%</strong>. So pushing your best maps a little harder will move your number much more than adding a hundred more average runs.</div>
+                            <div class="text-[10px] text-gray-500 mt-1">(Computed dynamically from D — if the decay constant changes, this number changes too.)</div>
+                        </div>
                     </div>
                 </div>
 
@@ -419,7 +469,7 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                         <div v-for="(score, i) in exampleScores" :key="i" class="bg-gray-800 rounded px-2 py-1 text-center">
                             <div class="text-gray-500">#{{ i + 1 }}</div>
                             <div class="font-mono" :class="i < 3 ? 'text-green-400' : i < 6 ? 'text-yellow-400' : 'text-gray-400'">{{ score }}</div>
-                            <div class="text-gray-600 text-[9px]">w={{ Math.exp(-CFG_D * (i + 1)).toFixed(3) }}</div>
+                            <div class="text-gray-600 text-[9px]">w={{ Math.exp(-CFG_D * i).toFixed(3) }}</div>
                         </div>
                     </div>
                     <div class="text-sm">
@@ -456,6 +506,18 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                         <div class="text-xs text-gray-500">All maps</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
+                        <div class="text-sm font-bold text-yellow-400">Strafe</div>
+                        <div class="text-xs text-gray-500">Maps without weapons (MG/SG/Gauntlet/Hook/RG allowed)</div>
+                    </div>
+                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
+                        <div class="text-sm font-bold text-cyan-400">Slick</div>
+                        <div class="text-xs text-gray-500">Maps with slick surfaces</div>
+                    </div>
+                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
+                        <div class="text-sm font-bold text-purple-400">Tele</div>
+                        <div class="text-xs text-gray-500">Maps with teleporters</div>
+                    </div>
+                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
                         <div class="text-sm font-bold text-orange-400">Rocket</div>
                         <div class="text-xs text-gray-500">Maps with RL</div>
                     </div>
@@ -468,24 +530,12 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                         <div class="text-xs text-gray-500">Maps with GL</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-cyan-400">Slick</div>
-                        <div class="text-xs text-gray-500">Maps with slick surfaces</div>
-                    </div>
-                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-purple-400">Teleport</div>
-                        <div class="text-xs text-gray-500">Maps with teleporters</div>
+                        <div class="text-sm font-bold text-pink-400">LG</div>
+                        <div class="text-xs text-gray-500">Maps with Lightning Gun</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
                         <div class="text-sm font-bold text-red-400">BFG</div>
                         <div class="text-xs text-gray-500">Maps with BFG</div>
-                    </div>
-                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-yellow-400">Strafe</div>
-                        <div class="text-xs text-gray-500">Maps without weapons (MG/SG/Gauntlet/Hook/RG allowed)</div>
-                    </div>
-                    <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-pink-400">LG</div>
-                        <div class="text-xs text-gray-500">Maps with Lightning Gun</div>
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-gray-500">
@@ -521,6 +571,9 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                             <div class="text-xs text-gray-400">Once per day, all rankings across all maps, physics, and categories are recalculated from scratch. This ensures consistency and catches any edge cases the incremental updates might miss.</div>
                         </div>
                     </div>
+                </div>
+                <div class="mt-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-300">
+                    <strong>Why both?</strong> The incremental update is an optimization — it touches only the map a new record landed on, not every map that record might secondarily affect (e.g. category-wide medians used in the map multiplier shift slightly when any map's player count changes). Over a day these small approximations can drift from the exact value. The nightly full recalculation re-derives everything from scratch and brings the rankings back to the ground truth.
                 </div>
             </section>
 
@@ -566,16 +619,26 @@ const exampleFewRating = calcPlayerRating(exampleFewScores);
                         <div class="text-xs text-gray-400">
                             <div>Category median: <span class="text-white">13 players</span>, k = 6.5</div>
                             <div>Map has <span class="text-white">25 players</span></div>
-                            <div>multiplier = (25^2) / (6.5^2 + 25^2) = <span class="text-blue-400 font-mono font-bold">{{ exampleMultiplier.toFixed(4) }}</span></div>
-                            <div class="mt-1">final_score = {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ exampleFinalScore.toFixed(1) }}</span></div>
+                            <div>map_multiplier = (25^2) / (6.5^2 + 25^2) = <span class="text-blue-400 font-mono font-bold">{{ exampleMultiplier.toFixed(4) }}</span></div>
+                            <div class="mt-1">scaled = {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} = <span class="text-blue-400 font-mono font-bold">{{ exampleFinalScore.toFixed(1) }}</span></div>
                         </div>
                     </div>
 
-                    <!-- Step 5 -->
+                    <!-- Step 5: Rank multiplier (NEW) -->
                     <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                        <div class="text-sm font-bold text-red-400 mb-2">Step 5: Combine into player rating</div>
+                        <div class="text-sm font-bold text-pink-400 mb-2">Step 5: Apply rank multiplier</div>
                         <div class="text-xs text-gray-400">
-                            <div>This score ({{ exampleFinalScore.toFixed(1) }}) joins all your other map scores.</div>
+                            <div>Your rank on the map: <span class="text-white">#3 of 25 players</span></div>
+                            <div>rank_mult = ((25*{{ RANK_V }} - 3) / (25*{{ RANK_V }} - 1))<sup>{{ RANK_N }}</sup> = <span class="text-pink-400 font-mono font-bold">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span></div>
+                            <div class="mt-1">final_score = {{ exampleFinalScore.toFixed(1) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Player rating (renumbered) -->
+                    <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                        <div class="text-sm font-bold text-red-400 mb-2">Step 6: Combine into player rating</div>
+                        <div class="text-xs text-gray-400">
+                            <div>This score ({{ (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }}) joins all your other map scores from the given category.</div>
                             <div>They are sorted, exponentially weighted, and averaged into your final rating.</div>
                             <div>If you have fewer than 10 records, a penalty is applied.</div>
                         </div>

@@ -329,6 +329,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/api/maps/{mapId}/tags/{tagId}', [App\Http\Controllers\TagController::class, 'removeFromMap'])->name('tags.removeFromMap');
     Route::post('/api/maplists/{id}/tags', [App\Http\Controllers\TagController::class, 'addToMaplist'])->name('tags.addToMaplist');
     Route::delete('/api/maplists/{maplistId}/tags/{tagId}', [App\Http\Controllers\TagController::class, 'removeFromMaplist'])->name('tags.removeFromMaplist');
+
+    // Saved map filter routes (per-user, private)
+    Route::get('/api/saved-map-filters', [App\Http\Controllers\SavedMapFilterController::class, 'index'])->name('savedMapFilters.index');
+    Route::post('/api/saved-map-filters', [App\Http\Controllers\SavedMapFilterController::class, 'store'])->name('savedMapFilters.store');
+    Route::delete('/api/saved-map-filters/{savedMapFilter}', [App\Http\Controllers\SavedMapFilterController::class, 'destroy'])->name('savedMapFilters.destroy');
 });
 
 // Public tag routes

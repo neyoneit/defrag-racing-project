@@ -289,7 +289,9 @@ fn calculate_player_rating(map_scores: &mut Vec<f64>, cfg: &RatingConfig) -> f64
     let mut weight_sum = 0.0;
 
     for (rank, &score) in map_scores.iter().enumerate() {
-        let weight = (-cfg.cfg_d * (rank as f64 + 1.0)).exp();
+        // weight = exp(-D * (i - 1)) with i = rank + 1 (1-indexed) → exp(-D * rank)
+        // so the best record gets weight 1.0
+        let weight = (-cfg.cfg_d * rank as f64).exp();
         weighted_sum += score * weight;
         weight_sum += weight;
     }

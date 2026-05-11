@@ -1,6 +1,6 @@
 <script setup>
     import { ref, onMounted, computed } from 'vue';
-    import { useForm } from '@inertiajs/vue3';
+    import { useForm, usePage } from '@inertiajs/vue3';
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import SpecialRadio from '@/Components/Basic/SpecialRadio.vue';
     import PlayerSelect from '@/Components/Basic/PlayerSelect.vue';
@@ -244,6 +244,114 @@
         form.average_length[1] = sliderToValue(lengthSliderMax.value, 1000);
     };
 
+    // --- Saved filters (per-user, private) -------------------------------
+    const page = usePage();
+    const isLoggedIn = computed(() => !!page.props.auth?.user);
+
+    const savedFilters = ref([]);
+    const savedFiltersLoaded = ref(false);
+    const savedFiltersLoading = ref(false);
+    const showSaveModal = ref(false);
+    const showLoadDropdown = ref(false);
+    const newFilterName = ref('');
+    const saveError = ref('');
+    const saveLoading = ref(false);
+
+    const fetchSavedFilters = async () => {
+        if (!isLoggedIn.value) return;
+        savedFiltersLoading.value = true;
+        try {
+            const { data } = await axios.get('/api/saved-map-filters');
+            savedFilters.value = data.filters || [];
+            savedFiltersLoaded.value = true;
+        } catch (e) {
+            console.error('Failed to load saved filters', e);
+        } finally {
+            savedFiltersLoading.value = false;
+        }
+    };
+
+    const openSaveModal = () => {
+        saveError.value = '';
+        newFilterName.value = '';
+        showSaveModal.value = true;
+    };
+
+    const saveCurrentFilter = async () => {
+        const name = newFilterName.value.trim();
+        if (!name) return;
+        saveError.value = '';
+        saveLoading.value = true;
+        try {
+            const { data } = await axios.post('/api/saved-map-filters', {
+                name,
+                filter_state: form.data(),
+            });
+            savedFilters.value = [data.filter, ...savedFilters.value];
+            showSaveModal.value = false;
+        } catch (e) {
+            if (e.response?.status === 422) {
+                saveError.value = e.response.data.errors?.name?.[0]
+                    || e.response.data.message
+                    || 'Validation error';
+            } else {
+                saveError.value = 'Failed to save filter';
+            }
+        } finally {
+            saveLoading.value = false;
+        }
+    };
+
+    const toggleLoadDropdown = async () => {
+        showLoadDropdown.value = !showLoadDropdown.value;
+        if (showLoadDropdown.value && !savedFiltersLoaded.value) {
+            await fetchSavedFilters();
+        }
+    };
+
+    const applyFilter = (filter) => {
+        const s = filter.filter_state || {};
+        form.sort            = s.sort ?? 'newest';
+        form.search          = s.search ?? '';
+        form.author          = s.author ?? '';
+        form.difficulty      = s.difficulty ?? [];
+        form.gametype        = s.gametype ?? [];
+        form.physics         = s.physics ?? [];
+        form.has_records     = s.has_records ?? [];
+        form.have_no_records = s.have_no_records ?? [];
+        form.world_record    = s.world_record ?? [];
+        form.items           = s.items ?? {};
+        form.weapons         = s.weapons ?? {};
+        form.functions       = s.functions ?? {};
+        form.records_count   = Array.isArray(s.records_count) && s.records_count.length === 2 ? s.records_count : [0, 1000];
+        form.average_length  = Array.isArray(s.average_length) && s.average_length.length === 2 ? s.average_length : [0, 1000];
+        form.rank_min        = s.rank_min ?? 1;
+        form.rank_max        = s.rank_max ?? 999;
+        // resync sliders so the visual thumbs follow the loaded values
+        recordsSliderMin.value = valueToSlider(form.records_count[0], 1000);
+        recordsSliderMax.value = valueToSlider(form.records_count[1], 1000);
+        lengthSliderMin.value  = valueToSlider(form.average_length[0], 1000);
+        lengthSliderMax.value  = valueToSlider(form.average_length[1], 1000);
+        rankSliderMin.value    = rankToSlider(form.rank_min);
+        rankSliderMax.value    = rankToSlider(form.rank_max);
+        showLoadDropdown.value = false;
+        onFilterSubmit();
+    };
+
+    const deleteFilter = async (filter) => {
+        if (!confirm(`Delete saved filter "${filter.name}"?`)) return;
+        try {
+            await axios.delete(`/api/saved-map-filters/${filter.id}`);
+            savedFilters.value = savedFilters.value.filter(f => f.id !== filter.id);
+        } catch (e) {
+            console.error('Delete failed', e);
+        }
+    };
+
+    onMounted(() => {
+        if (isLoggedIn.value) fetchSavedFilters();
+    });
+
 </script>
 
 <template>
@@ -261,6 +369,46 @@
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                 Reset
             </button>
+        </div>
+
+        <!-- Save / Load saved filters (auth only) -->
+        <div v-if="isLoggedIn" class="relative px-3 pt-2 pb-2 border-b border-white/5 flex items-center gap-2">
+            <button @click="openSaveModal"
+                class="flex-1 px-2 py-1.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 text-[11px] font-semibold text-blue-200 transition flex items-center justify-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0 1 20.25 6v12A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V6A2.25 2.25 0 0 1 6 3.75h1.5m9 0h-9" /></svg>
+                Save filter
+            </button>
+            <button @click="toggleLoadDropdown"
+                :class="showLoadDropdown
+                    ? 'bg-amber-500/25 hover:bg-amber-500/30 border-amber-400/50 text-amber-100 ring-2 ring-amber-400/30'
+                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'"
+                class="flex-1 px-2 py-1.5 rounded-md border text-[11px] font-semibold transition flex items-center justify-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+                Load<span v-if="savedFiltersLoaded">&nbsp;({{ savedFilters.length }})</span>
+                <svg class="w-3 h-3 transition-transform" :class="showLoadDropdown ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+            </button>
+
+            <!-- Load dropdown -->
+            <div v-if="showLoadDropdown"
+                class="absolute top-full left-3 right-3 mt-2 z-30 bg-amber-950/95 border-2 border-amber-400/60 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.7)] ring-2 ring-amber-400/20 max-h-72 overflow-y-auto backdrop-blur-sm">
+                <div class="px-3 py-1.5 border-b border-amber-400/30 bg-amber-500/15 text-[10px] font-bold text-amber-200 uppercase tracking-wider flex items-center gap-1.5 sticky top-0">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" /></svg>
+                    Saved filters
+                </div>
+                <div v-if="savedFiltersLoading" class="px-3 py-3 text-[11px] text-amber-200/70 text-center">Loading…</div>
+                <div v-else-if="savedFilters.length === 0" class="px-3 py-3 text-[11px] text-amber-200/60 text-center">No saved filters yet. Configure filters above and click "Save filter".</div>
+                <div v-else class="divide-y divide-amber-400/15">
+                    <div v-for="f in savedFilters" :key="f.id"
+                        class="flex items-center justify-between px-3 py-2 hover:bg-amber-500/20 transition group cursor-pointer"
+                        @click="applyFilter(f)">
+                        <span class="text-xs text-amber-50 truncate flex-1 mr-2 font-medium">{{ f.name }}</span>
+                        <button @click.stop="deleteFilter(f)" title="Delete"
+                            class="text-amber-200/40 hover:text-red-400 transition flex-shrink-0">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Scrollable sections -->
@@ -404,6 +552,31 @@
             </button>
         </div>
     </div>
+
+    <!-- Save filter modal -->
+    <Teleport to="body">
+        <div v-if="showSaveModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+            @click.self="showSaveModal = false">
+            <div class="bg-gray-900 border border-white/10 rounded-xl shadow-2xl p-5 w-full max-w-sm mx-4">
+                <h3 class="text-lg font-bold text-white mb-1">Save filter</h3>
+                <p class="text-xs text-gray-400 mb-4">Stores the current filter setup so you can recall it later with one click. Private to you.</p>
+                <input v-model="newFilterName" type="text" maxlength="80"
+                    placeholder='e.g. "Easy CPM trickjumps"'
+                    class="w-full px-3 py-2 rounded-md bg-black/40 border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-400/60"
+                    @keyup.enter="saveCurrentFilter" />
+                <div v-if="saveError" class="mt-2 text-xs text-red-400">{{ saveError }}</div>
+                <div class="mt-4 flex gap-2 justify-end">
+                    <button @click="showSaveModal = false"
+                        class="px-4 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-sm text-gray-300 transition">Cancel</button>
+                    <button @click="saveCurrentFilter" :disabled="saveLoading || !newFilterName.trim()"
+                        class="px-4 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-sm font-semibold text-white transition">
+                        {{ saveLoading ? 'Saving…' : 'Save' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>
 
 <style scoped>

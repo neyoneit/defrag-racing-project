@@ -569,6 +569,11 @@
             icon: 'trophy',
             color: 'text-yellow-400'
         },
+        'bestscore': {
+            label: 'Best Score',
+            icon: 'linegraph',
+            color: 'text-purple-400'
+        },
         'bestranks': {
             label: 'Best Ranks',
             icon: 'fire',
@@ -1225,9 +1230,10 @@
                                     Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
                             </div>
-                            <!-- Player Rank -->
+                            <!-- Player Rank (overall run rank, VQ3 + CPM) -->
                             <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
                                 <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span class="text-xs font-bold text-orange-300 uppercase tracking-wider">Rank</span>
                                 <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
                                 <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
                                 <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
@@ -1362,9 +1368,10 @@
                                     Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
                             </div>
-                            <!-- Player Rank -->
+                            <!-- Player Rank (overall run rank, VQ3 + CPM) -->
                             <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 2" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
                                 <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span class="text-xs font-bold text-orange-300 uppercase tracking-wider">Rank</span>
                                 <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
                                 <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
                                 <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
@@ -1526,9 +1533,10 @@
                                     Manually assigned {{ assignedDemoCounts.offline + assignedDemoCounts.online }} {{ (assignedDemoCounts.offline + assignedDemoCounts.online) === 1 ? 'demo' : 'demos' }} to records
                                 </div>
                             </div>
-                            <!-- Player Rank -->
+                            <!-- Player Rank (overall run rank, VQ3 + CPM) -->
                             <div v-if="hasPlayerRank && showHeaderItem('player_rank') && headerItemRow('player_rank') === 3" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-950/70 border border-orange-400/50 shadow-xl backdrop-blur-sm group relative" :style="{ order: headerItemOrder('player_rank') }">
                                 <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5-6L16.5 21m0 0L12 16.5m4.5 4.5V7.5" /></svg>
+                                <span class="text-xs font-bold text-orange-300 uppercase tracking-wider">Rank</span>
                                 <span v-if="vq3RunRank" class="text-xs font-semibold text-blue-300 uppercase tracking-wider">VQ3</span>
                                 <span v-if="vq3RunRank" class="text-sm font-black text-orange-400">#{{ vq3RunRank }}</span>
                                 <span v-if="cpmRunRank && vq3RunRank" class="text-gray-600">|</span>
@@ -1837,15 +1845,15 @@
                                         <td class="px-3 py-1.5 text-right font-mono" :class="row.reltime <= 1.05 ? 'text-green-400' : row.reltime <= 1.25 ? 'text-yellow-400' : row.reltime <= 2 ? 'text-orange-400' : 'text-red-400'">
                                             {{ row.reltime.toFixed(4) }}
                                         </td>
-                                        <td class="px-3 py-1.5 text-right font-mono text-gray-400">{{ row.base_score?.toFixed(1) || row.map_score.toFixed(1) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-mono text-gray-400">{{ row.base_score?.toFixed(2) || row.map_score.toFixed(2) }}</td>
                                         <td class="px-3 py-1.5 text-right font-mono" :class="(row.rank_multiplier ?? 1) >= 0.9 ? 'text-green-400' : (row.rank_multiplier ?? 1) >= 0.5 ? 'text-yellow-400' : 'text-red-400'">
-                                            {{ ((row.rank_multiplier ?? 1) * 100).toFixed(1) }}%
+                                            {{ ((row.rank_multiplier ?? 1) * 100).toFixed(2) }}%
                                         </td>
                                         <td class="px-3 py-1.5 text-right font-mono" :class="row.multiplier >= 0.9 ? 'text-green-400' : row.multiplier >= 0.5 ? 'text-yellow-400' : 'text-red-400'">
-                                            {{ (row.multiplier * 100).toFixed(1) }}%
+                                            {{ (row.multiplier * 100).toFixed(2) }}%
                                         </td>
                                         <td class="px-3 py-1.5 text-right font-mono font-bold" :class="row.map_score >= 800 ? 'text-green-400' : row.map_score >= 500 ? 'text-yellow-400' : 'text-gray-400'">
-                                            {{ row.map_score.toFixed(1) }}
+                                            {{ row.map_score.toFixed(2) }}
                                         </td>
                                         <td class="px-3 py-1.5 text-right font-mono text-gray-500">{{ row.weight.toFixed(4) }}</td>
                                         <td class="px-3 py-1.5 text-right font-mono text-orange-400/80">{{ row.contribution.toFixed(2) }}</td>
@@ -2413,20 +2421,18 @@
                         <div class="mb-4">
                             <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Mode</h3>
                             <div class="space-y-2">
-                                <!-- All Modes -->
-                                <button @click="sortByMode('all')" :class="mode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    ALL
-                                </button>
-
-                                <!-- Run Mode -->
-                                <button @click="sortByMode('run')" :class="mode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    RUN
-                                </button>
-
-                                <!-- All CTF -->
-                                <button @click="sortByMode('ctf')" :class="mode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="w-full px-4 py-2.5 rounded-lg transition-all text-sm font-bold">
-                                    CTF
-                                </button>
+                                <!-- ALL / RUN / CTF on one row -->
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button @click="sortByMode('all')" :class="mode === 'all' ? 'bg-gradient-to-r from-white/30 to-white/20 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10'" class="px-2 py-2 rounded-lg transition-all text-sm font-bold">
+                                        ALL
+                                    </button>
+                                    <button @click="sortByMode('run')" :class="mode === 'run' ? 'bg-gradient-to-r from-green-600/80 to-green-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-green-600/20 text-gray-400 hover:text-white border border-green-500/20'" class="px-2 py-2 rounded-lg transition-all text-sm font-bold">
+                                        RUN
+                                    </button>
+                                    <button @click="sortByMode('ctf')" :class="mode === 'ctf' ? 'bg-gradient-to-r from-red-600/80 to-red-500/60 text-white shadow-lg' : 'bg-white/5 hover:bg-red-600/20 text-gray-400 hover:text-white border border-red-500/20'" class="px-2 py-2 rounded-lg transition-all text-sm font-bold">
+                                        CTF
+                                    </button>
+                                </div>
 
                                 <!-- CTF 1-7 -->
                                 <div class="grid grid-cols-7 gap-1">
@@ -2437,9 +2443,9 @@
                             </div>
                         </div>
 
-                        <!-- Filter Buttons (MOVED BELOW MODES) -->
+                        <!-- Sort options (MOVED BELOW MODES) -->
                         <div class="pt-4 border-t border-white/10">
-                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Filters</h3>
+                            <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 px-1">Sort by</h3>
                             <div class="space-y-2">
                                 <button v-for="(data, option) in options" :key="option" @click="selectOption(option)"
                                      :class="selectedOption === option
