@@ -280,12 +280,13 @@ class CalculateRatings implements ShouldQueue
             '));
 
         // compute weights using exp decay
-        // weight = exp(-CFG_D * record_player_rank)
+        // weight = exp(-CFG_D * (record_player_rank - 1))
+        // — so the best record (rank 1) gets weight 1.0
         $query = DB::table(DB::raw("({$query->toSql()}) as sub"))
             ->mergeBindings($query)
             ->addSelect('*')
             ->addSelect(DB::raw('
-                EXP(-' . self::CFG_D . ' * record_player_rank)
+                EXP(-' . self::CFG_D . ' * (record_player_rank - 1))
                 AS weight
             '));
 

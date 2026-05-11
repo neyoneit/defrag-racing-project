@@ -901,7 +901,7 @@
             <div v-if="record.map_score"
                 class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full cursor-help"
                 style="line-height: 16px;"
-                @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
+                @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
                 @mouseleave="$emit('scoreHover', null)">
                 {{ Math.round(record.map_score) }}
             </div>
