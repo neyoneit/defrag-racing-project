@@ -166,6 +166,14 @@
             return;
         }
 
+        // Rivals/competitors are now gated behind auth — skip the fetch for
+        // anon visitors. The matching template sections check the same flag
+        // and won't render, so there's nothing to fill.
+        if (!page.props.auth?.user) {
+            loadingExtras.value = false;
+            return;
+        }
+
         try {
             const response = await fetch(`/api/profile/${mddId}/extras`);
             if (response.ok) {
@@ -650,9 +658,6 @@
 
     const selectedOption = ref(props.type || 'latest');
     const loading = ref('');
-    const selectedRival = ref(null);
-    const beatableRecords = ref([]);
-    const loadingBeatable = ref(false);
 
     // Direct Competitor Comparison
     const competitorSearch = ref('');
@@ -744,27 +749,6 @@
         onRecordsSearchInput();
     };
 
-    const loadBeatableRecords = async (rivalMddId, rivalName) => {
-        selectedRival.value = { id: rivalMddId, name: rivalName };
-        loadingBeatable.value = true;
-
-        try {
-            const profileId = props.user?.id || props.profile?.id;
-            const response = await fetch(`/api/profile/${profileId}/beatable-records/${rivalMddId}?physics=cpm`);
-            const data = await response.json();
-            beatableRecords.value = data;
-        } catch (error) {
-            console.error('Error loading beatable records:', error);
-            beatableRecords.value = [];
-        } finally {
-            loadingBeatable.value = false;
-        }
-    }
-
-    const closeBeatableRecords = () => {
-        selectedRival.value = null;
-        beatableRecords.value = [];
-    }
 
     // Direct Competitor Comparison Methods
     let searchTimeout = null;
@@ -2366,7 +2350,8 @@
                             <div
                                 v-for="alias in aliases"
                                 :key="alias.alias_colored || alias.alias"
-                                class="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-sm text-indigo-300 flex items-center gap-2"
+                                class="px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-[4px] text-sm flex items-center gap-2"
+                                style="background: rgba(71,85,105,0.55);"
                                 :title="alias.usage_count ? alias.usage_count + ' records with this name' : ''"
                             >
                                 <span v-html="q3tohtml(alias.alias_colored || alias.alias)"></span>
@@ -2753,7 +2738,29 @@
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->
-            <div v-if="showSection('similar_skill_rivals') && (cpmCompetitors || cpmRivals || loadingExtras)" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden" :style="{ order: sectionOrder('similar_skill_rivals') }">
+            <div v-if="showSection('similar_skill_rivals') && ($page.props.auth.user ? (cpmCompetitors || cpmRivals || loadingExtras) : true)" class="bg-black/40 backdrop-blur-sm rounded-xl shadow-2xl border border-white/5 mb-6 overflow-hidden relative" :style="{ order: sectionOrder('similar_skill_rivals') }">
+                <!-- Anon teaser overlay: blurred skeleton + sign-in CTA -->
+                <div v-if="!$page.props.auth.user" class="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-md">
+                    <div class="text-center px-6 py-8">
+                        <div class="text-lg font-bold text-white mb-1">Similar skill rivals</div>
+                        <div class="text-sm text-gray-400 mb-4 max-w-sm">Sign in to see who's in this player's league and who they regularly beat (or get beaten by).</div>
+                        <Link :href="route('login')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-200 text-sm font-semibold transition">
+                            Sign in to use
+                        </Link>
+                    </div>
+                </div>
+                <!-- Skeleton placeholder behind the overlay so the panel has bulk -->
+                <div v-if="!$page.props.auth.user" class="p-5 opacity-40 pointer-events-none select-none">
+                    <div class="h-5 w-48 bg-white/10 rounded mb-4"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            <div v-for="n in 4" :key="'sk1-'+n" class="h-10 bg-white/5 rounded"></div>
+                        </div>
+                        <div class="space-y-2">
+                            <div v-for="n in 4" :key="'sk2-'+n" class="h-10 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                </div>
                 <!-- Loading skeleton -->
                 <div v-if="loadingExtras" class="p-5">
                     <div class="animate-pulse space-y-3">
@@ -2789,7 +2796,8 @@
                                 <div class="space-y-1.5">
                                     <Link v-for="player in cpmCompetitors.better" :key="player.id"
                                           :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
-                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-green-500/10 border border-transparent hover:border-green-500/20 transition-all group cursor-pointer">
+                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg border border-white/10 hover:border-green-500/40 backdrop-blur-[4px] transition-all group cursor-pointer"
+                                          style="background: rgba(71,85,105,0.55);">
                                         <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
                                              class="w-8 h-8 rounded-full" :alt="player.plain_name" />
                                         <div class="flex-1 min-w-0">
@@ -2807,7 +2815,8 @@
                                 <div class="space-y-1.5">
                                     <Link v-for="player in cpmCompetitors.worse" :key="player.id"
                                           :href="route(player.user?.id ? 'profile.index' : 'profile.mdd', player.user?.id || player.id)"
-                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20 transition-all group cursor-pointer">
+                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg border border-white/10 hover:border-orange-500/40 backdrop-blur-[4px] transition-all group cursor-pointer"
+                                          style="background: rgba(71,85,105,0.55);">
                                         <img :src="player.user?.profile_photo_path ? `/storage/${player.user.profile_photo_path}` : '/images/null.jpg'"
                                              class="w-8 h-8 rounded-full" :alt="player.plain_name" />
                                         <div class="flex-1 min-w-0">
@@ -2840,7 +2849,8 @@
                                 <div class="space-y-1.5">
                                     <Link v-for="rival in cpmRivals.beaten" :key="rival.id"
                                           :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
-                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 transition-all group cursor-pointer">
+                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg border border-white/10 hover:border-blue-500/40 backdrop-blur-[4px] transition-all group cursor-pointer"
+                                          style="background: rgba(71,85,105,0.55);">
                                         <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
                                              class="w-8 h-8 rounded-full" :alt="rival.plain_name" />
                                         <div class="flex-1 min-w-0">
@@ -2858,7 +2868,8 @@
                                 <div class="space-y-1.5">
                                     <Link v-for="rival in cpmRivals.beaten_by" :key="rival.id"
                                           :href="route(rival.user?.id ? 'profile.index' : 'profile.mdd', rival.user?.id || rival.id)"
-                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all group cursor-pointer">
+                                          class="w-full flex items-center gap-2.5 p-2 rounded-lg border border-white/10 hover:border-red-500/40 backdrop-blur-[4px] transition-all group cursor-pointer"
+                                          style="background: rgba(71,85,105,0.55);">
                                         <img :src="rival.user?.profile_photo_path ? `/storage/${rival.user.profile_photo_path}` : '/images/null.jpg'"
                                              class="w-8 h-8 rounded-full" :alt="rival.plain_name" />
                                         <div class="flex-1 min-w-0">
@@ -2875,7 +2886,27 @@
             </div>
 
             <!-- Direct Competitor Comparison -->
-            <div v-if="showSection('competitor_comparison')" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('competitor_comparison') }">
+            <div v-if="showSection('competitor_comparison')" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6 relative" :style="{ order: sectionOrder('competitor_comparison') }">
+                <!-- Anon teaser overlay -->
+                <template v-if="!$page.props.auth.user">
+                    <div class="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-md">
+                        <div class="text-center px-6 py-8">
+                            <div class="text-lg font-bold text-white mb-1">Direct competitor comparison</div>
+                            <div class="text-sm text-gray-400 mb-4 max-w-sm">Sign in to pick any rival and see the easiest maps where you can grab time on them.</div>
+                            <Link :href="route('login')" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-200 text-sm font-semibold transition">
+                                Sign in to use
+                            </Link>
+                        </div>
+                    </div>
+                    <div class="opacity-40 pointer-events-none select-none">
+                        <div class="h-5 w-56 bg-white/10 rounded mb-4"></div>
+                        <div class="h-10 bg-white/5 rounded mb-4"></div>
+                        <div class="space-y-2">
+                            <div v-for="n in 5" :key="'cc-sk-'+n" class="h-10 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+                </template>
+                <template v-else>
                 <h2 class="text-xl font-bold text-white mb-4">
                     Direct Competitor Comparison
                 </h2>
@@ -3052,10 +3083,11 @@
                 <div v-else class="text-center py-5">
                     <svg class="w-12 h-12 mx-auto mb-2 text-gray-700 fill-current opacity-50" viewBox="0 0 20 20">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
                     </svg>
                     <div class="text-sm text-gray-500">Search for a player to see head-to-head comparison</div>
                 </div>
+                </template>
             </div>
 
             <!-- User's Featured Maplists -->

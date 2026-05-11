@@ -2,7 +2,9 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Inertia\Inertia;
 use Throwable;
@@ -19,6 +21,24 @@ class Handler extends ExceptionHandler
         'password',
         'password_confirmation',
     ];
+
+    /**
+     * Authentication failures on /api/* are always returned as a JSON 401,
+     * regardless of the request's Accept header. The default framework
+     * behaviour redirects to /login when the Accept header isn't JSON,
+     * which produces a useless HTML redirect for AJAX calls that
+     * forgot to set the header.
+     */
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        if ($request->is('api/*')) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 401);
+        }
+
+        return parent::unauthenticated($request, $exception);
+    }
 
     /**
      * Register the exception handling callbacks for the application.

@@ -70,6 +70,7 @@ Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name
 Route::get('/community-tasks', [CommunityTasksController::class, 'index'])->middleware(['auth', 'verified'])->name('community.tasks');
 Route::post('/community-tasks/refresh', [CommunityTasksController::class, 'refresh'])->middleware(['auth', 'verified'])->name('community.tasks.refresh');
 Route::post('/community-tasks/vote', [CommunityTasksController::class, 'vote'])->middleware(['auth', 'verified'])->name('community.tasks.vote');
+Route::post('/community-tasks/skip', [CommunityTasksController::class, 'skip'])->middleware(['auth', 'verified'])->name('community.tasks.skip');
 Route::post('/community-tasks/save-session', [CommunityTasksController::class, 'saveSession'])->middleware(['auth', 'verified'])->name('community.tasks.save');
 Route::get('/community-tasks/leaderboard', [CommunityTasksController::class, 'fullLeaderboard'])->middleware(['auth', 'verified'])->name('community.tasks.leaderboard');
 Route::post('/community-tasks/request-render', [CommunityTasksController::class, 'requestDifficultyRender'])->middleware(['auth', 'verified'])->name('community.tasks.request-render');
@@ -286,6 +287,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'index'])->name('launcher-tokens.index');
     Route::post('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'store'])->name('launcher-tokens.store');
     Route::delete('/user/launcher-tokens/{tokenId}', [\App\Http\Controllers\LauncherTokenController::class, 'destroy'])->name('launcher-tokens.destroy');
+
+    // General-purpose personal API access tokens (api:read ability)
+    Route::get('/user/api-tokens', [\App\Http\Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::post('/user/api-tokens', [\App\Http\Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('/user/api-tokens/{tokenId}', [\App\Http\Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     // Server hosting (SFTP serverdemo credentials)
     Route::get('/server-hosting', [\App\Http\Controllers\ServerHostingController::class, 'index'])->name('server-hosting.index');

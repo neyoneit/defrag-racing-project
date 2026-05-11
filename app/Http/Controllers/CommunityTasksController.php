@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommunityHelperScore;
+use App\Models\CommunityTaskMapSkip;
 use App\Models\CommunityTaskSession;
 use App\Models\CommunityTaskVote;
 use App\Models\Map;
@@ -79,6 +80,24 @@ class CommunityTasksController extends Controller
             return response()->json(['error' => 'Already voted on this demo'], 422);
         }
 
+        $demo = UploadedDemo::find($demoId);
+
+        // Reject "better match" votes that re-select the currently-assigned
+        // record — that's a no-op gaming the +3 point reward (user clicks
+        // "better match" without actually picking a different rival).
+        if ($voteType === 'better_match') {
+            if (!$request->selected_record_id) {
+                return response()->json([
+                    'error' => '"Better match" requires picking a different record',
+                ], 422);
+            }
+            if ($demo && (int) $demo->record_id === (int) $request->selected_record_id) {
+                return response()->json([
+                    'error' => '"Better match" must be a different record than the one already assigned. Use "Correct" if the current assignment is right.',
+                ], 422);
+            }
+        }
+
         // Create the vote
         $vote = CommunityTaskVote::create([
             'user_id' => $user->id,
@@ -89,7 +108,6 @@ class CommunityTasksController extends Controller
         ]);
 
         $points = 0;
-        $demo = UploadedDemo::find($demoId);
 
         // Handle immediate actions
         switch ($voteType) {
@@ -126,7 +144,9 @@ class CommunityTasksController extends Controller
                         ->whereNull('consensus_status')
                         ->update(['consensus_status' => 'needs_review']);
                 }
-                $points = 1;
+                // Skips don't earn points — they only feed cooldown and
+                // the 3×-trigger consensus logic above.
+                $points = 0;
                 break;
 
             case 'no_match':
@@ -140,6 +160,8 @@ class CommunityTasksController extends Controller
                         ->whereNull('consensus_status')
                         ->update(['consensus_status' => 'needs_review']);
                 }
+                // Real decision ("none of these records match"), worth 1
+                // like correct/unassign.
                 $points = 1;
                 break;
         }
@@ -220,11 +242,74 @@ class CommunityTasksController extends Controller
 
     // ─── Task generation ───────────────────────────────────
 
+    /** How long (days) to skip ALL demos on a map after the user has
+     *  voted "not_sure" on any demo on that map, or skipped its
+     *  difficulty rating / tagging. Without this, a map with many
+     *  uploads keeps coming back even after the reviewer said "no idea".
+     */
+    private const SKIP_MAP_COOLDOWN_DAYS = 7;
+
+    /**
+     * Map names this user has signalled "no idea about" in the cooldown
+     * window — covers not_sure votes (community_task_votes) AND rating/
+     * tag skips (community_task_map_skips). Both task generators exclude
+     * demos on these maps so the reviewer doesn't see the same map
+     * repeatedly with different demos.
+     */
+    private function getCooldownMapNames(int $userId): \Illuminate\Support\Collection
+    {
+        $since = now()->subDays(self::SKIP_MAP_COOLDOWN_DAYS);
+
+        $fromVotes = DB::table('community_task_votes')
+            ->join('uploaded_demos', 'uploaded_demos.id', '=', 'community_task_votes.demo_id')
+            ->where('community_task_votes.user_id', $userId)
+            ->where('community_task_votes.vote_type', 'not_sure')
+            ->where('community_task_votes.created_at', '>=', $since)
+            ->whereNotNull('uploaded_demos.map_name')
+            ->pluck('uploaded_demos.map_name');
+
+        $fromMapSkips = DB::table('community_task_map_skips')
+            ->join('maps', 'maps.id', '=', 'community_task_map_skips.map_id')
+            ->where('community_task_map_skips.user_id', $userId)
+            ->where('community_task_map_skips.created_at', '>=', $since)
+            ->pluck('maps.name');
+
+        return $fromVotes->merge($fromMapSkips)->unique()->values();
+    }
+
+    /**
+     * Records a rating/tag skip server-side so the map enters the user's
+     * cooldown. Returns 0 points — skips are no-effort and we only
+     * reward actual decisions (rating submitted, tag added, etc.).
+     */
+    public function skip(Request $request)
+    {
+        $request->validate([
+            'map_id' => 'required|integer|exists:maps,id',
+            'kind'   => 'required|in:rating,tag',
+        ]);
+
+        $user = Auth::user();
+
+        CommunityTaskMapSkip::create([
+            'user_id'    => $user->id,
+            'map_id'     => $request->map_id,
+            'kind'       => $request->kind,
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'points'  => 0,
+        ]);
+    }
+
     private function generateAssignmentTasks($user, int $count): array
     {
         // Get demo IDs this user already voted on
         $votedDemoIds = CommunityTaskVote::where('user_id', $user->id)->pluck('demo_id');
         $lockedDemoIds = $this->getLockedDemoIds($user->id);
+        $cooldownMaps = $this->getCooldownMapNames($user->id);
 
         // Priority 1: Demos with "not_sure" votes that need more reviewers (re-review)
         $reReviewDemoIds = DB::table('community_task_votes')
@@ -236,6 +321,15 @@ class CommunityTasksController extends Controller
             ->groupBy('demo_id')
             ->havingRaw('COUNT(*) < 3')
             ->pluck('demo_id');
+
+        // Strip out any re-review demos that sit on a cooled-down map.
+        // The pluck above returns demo ids; we filter via map_name here.
+        if ($cooldownMaps->isNotEmpty() && $reReviewDemoIds->isNotEmpty()) {
+            $reReviewDemoIds = UploadedDemo::query()
+                ->whereIn('id', $reReviewDemoIds)
+                ->whereNotIn('map_name', $cooldownMaps)
+                ->pluck('id');
+        }
 
         // Priority 2: Fresh unassigned demos
         $freshDemos = UploadedDemo::query()
@@ -251,6 +345,7 @@ class CommunityTasksController extends Controller
             ->whereNotIn('id', $votedDemoIds)
             ->whereNotIn('id', $lockedDemoIds)
             ->whereNotIn('id', $reReviewDemoIds)
+            ->when($cooldownMaps->isNotEmpty(), fn ($q) => $q->whereNotIn('map_name', $cooldownMaps))
             ->inRandomOrder()
             ->limit($count * 4)
             ->pluck('id');
@@ -283,6 +378,7 @@ class CommunityTasksController extends Controller
     {
         $votedDemoIds = CommunityTaskVote::where('user_id', $user->id)->pluck('demo_id');
         $lockedDemoIds = $this->getLockedDemoIds($user->id);
+        $cooldownMaps = $this->getCooldownMapNames($user->id);
 
         $confirmedDemoIds = CommunityTaskVote::where('vote_type', 'correct')
             ->distinct()
@@ -297,6 +393,7 @@ class CommunityTasksController extends Controller
             ->whereNotIn('id', $votedDemoIds)
             ->whereNotIn('id', $lockedDemoIds)
             ->whereNotIn('id', $confirmedDemoIds)
+            ->when($cooldownMaps->isNotEmpty(), fn ($q) => $q->whereNotIn('map_name', $cooldownMaps))
             ->where(function ($q) use ($user) {
                 $q->where('user_id', '!=', $user->id)
                   ->orWhereNull('user_id');

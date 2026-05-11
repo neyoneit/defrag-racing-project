@@ -187,6 +187,55 @@ class CommunityTaskReviewResource extends Resource
                     })
                     ->modalWidth('lg'),
 
+                Tables\Actions\Action::make('viewMapRecords')
+                    ->label('Map records')
+                    ->icon('heroicon-o-table-cells')
+                    ->color('warning')
+                    ->modalHeading(fn (CommunityTaskVote $record) => "Records on {$record->demo?->map_name}")
+                    ->modalDescription('All records on the demo\'s map+gametype. Use the time difference column to find the rival run.')
+                    ->modalWidth('6xl')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->modalContent(function (CommunityTaskVote $record) {
+                        $demo = $record->demo;
+                        if (!$demo) {
+                            return new \Illuminate\Support\HtmlString(
+                                '<div class="p-4 text-red-300">Demo not found.</div>'
+                            );
+                        }
+
+                        // Records.gametype is a `run_<physics>` string
+                        // (matches Map\Record convention). The demo's
+                        // own `gametype` is often a mod string ("mdf",
+                        // ...), so duplicate the public flow's
+                        // resolveGametype() logic here.
+                        $resolvedGametype = ($demo->gametype && str_starts_with($demo->gametype, 'run_'))
+                            ? $demo->gametype
+                            : ('run_' . strtolower($demo->physics ?? 'vq3'));
+
+                        $records = \App\Models\Record::query()
+                            ->where('mapname', $demo->map_name)
+                            ->where('gametype', $resolvedGametype)
+                            ->whereNull('deleted_at')
+                            ->with([
+                                'user:id,name',
+                                'uploadedDemos:id,record_id',
+                                'renderedVideos:id,record_id',
+                            ])
+                            ->orderBy('time')
+                            ->limit(200)
+                            ->get();
+
+                        return view('filament.community-task-review.map-records-modal', [
+                            'mapName'         => $demo->map_name,
+                            'physics'         => $demo->physics,
+                            'gametype'        => $resolvedGametype,
+                            'demoTimeMs'      => $demo->time_ms,
+                            'demoPlayerHtml'  => $demo->player_name ? UserResource::q3tohtml($demo->player_name) : '—',
+                            'records'         => $records,
+                        ]);
+                    }),
+
                 Tables\Actions\Action::make('assignRecord')
                     ->label('Assign')
                     ->icon('heroicon-o-link')

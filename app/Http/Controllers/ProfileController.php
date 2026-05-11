@@ -790,66 +790,6 @@ class ProfileController extends Controller {
         ];
     }
 
-    public function getBeatableRecords($myMddId, $rivalMddId, $physics = 'cpm') {
-        // Find records where:
-        // 1. Rival has a record
-        // 2. You either don't have a record OR your record is worse but within 20% time difference (beatable)
-
-        $beatableRecords = DB::select("
-            SELECT
-                rival.mapname,
-                rival.mode,
-                rival.physics,
-                rival.time as rival_time,
-                rival.rank as rival_rank,
-                me.time as my_time,
-                me.rank as my_rank,
-                rival.date_set as rival_date,
-                CASE
-                    WHEN me.time IS NULL THEN 0
-                    ELSE ABS(rival.time - me.time) / rival.time * 100
-                END as time_diff_percent,
-                CASE
-                    WHEN me.time IS NULL THEN 'no_record'
-                    WHEN me.time > rival.time THEN 'behind'
-                    ELSE 'ahead'
-                END as status
-            FROM records rival
-            LEFT JOIN records me ON rival.mapname = me.mapname
-                AND rival.mode = me.mode
-                AND rival.physics = me.physics
-                AND me.mdd_id = ?
-            WHERE rival.mdd_id = ?
-                AND rival.physics = ?
-                AND rival.deleted_at IS NULL
-                AND (me.deleted_at IS NULL OR me.deleted_at IS NOT NULL)
-                AND (
-                    me.time IS NULL
-                    OR (me.time > rival.time AND (me.time - rival.time) / rival.time <= 0.3)
-                )
-            ORDER BY
-                CASE
-                    WHEN me.time IS NULL THEN 2
-                    ELSE 1
-                END,
-                time_diff_percent ASC
-            LIMIT 50
-        ", [$myMddId, $rivalMddId, $physics]);
-
-        return $beatableRecords;
-    }
-
-    public function beatableRecordsApi($userId, $rivalMddId, Request $request) {
-        $user = User::find($userId);
-        if (!$user || !$user->mdd_id) {
-            return response()->json([]);
-        }
-
-        $physics = $request->input("physics", "cpm");
-        $records = $this->getBeatableRecords($user->mdd_id, $rivalMddId, $physics);
-
-        return response()->json($records);
-    }
 
     public function searchPlayers(Request $request) {
         $query = $request->input('q');

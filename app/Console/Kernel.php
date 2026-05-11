@@ -54,6 +54,13 @@ class Kernel extends ConsoleKernel
         // recalc so the page never serves a cold cache to a visitor.
         $schedule->command('mapstats:rebuild')->withoutOverlapping()->dailyAt('04:00');
 
+        // Auto-prune api_call_log rows older than 30 days. The retention
+        // policy lives on the App\Models\ApiCallLog::prunable() scope —
+        // model:prune calls that and deletes whatever matches.
+        $schedule->command('model:prune', ['--model' => [\App\Models\ApiCallLog::class]])
+            ->withoutOverlapping()
+            ->dailyAt('03:30');
+
         // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
         $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
 
