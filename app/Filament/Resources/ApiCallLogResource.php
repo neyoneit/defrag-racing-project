@@ -13,7 +13,7 @@ class ApiCallLogResource extends Resource
 {
     protected static ?string $model = ApiCallLog::class;
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Content';
     protected static ?string $navigationLabel = 'API call log';
     protected static ?int $navigationSort = 50;
     protected static bool $shouldSkipAuthorization = true;

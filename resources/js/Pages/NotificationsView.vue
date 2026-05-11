@@ -1,5 +1,5 @@
 <script setup>
-    import { Head, Link } from '@inertiajs/vue3';
+    import { Head, Link, router } from '@inertiajs/vue3';
     import { ref, computed, onMounted, nextTick } from 'vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import axios from 'axios';
@@ -10,6 +10,18 @@
         activeTab: {
             type: String,
             default: 'records'
+        },
+        recordFilter: {
+            type: String,
+            default: 'all'
+        },
+        recordCounts: {
+            type: Object,
+            default: () => ({ unread_all: 0, unread_beaten: 0, unread_worldrecords: 0, total: 0 })
+        },
+        systemUnreadCount: {
+            type: Number,
+            default: 0
         }
     });
 
@@ -34,17 +46,36 @@
     });
 
     const activeSystemTab = ref('all');
-    const activeRecordTab = ref('all');
+    const activeRecordTab = ref(props.recordFilter);
 
     const timeDiff = (time, bettertime) => {
         return Math.abs(bettertime - time);
     };
 
     const totalCount = computed(() => {
-        const unreadRecords = (props.recordNotificationsPage?.data || []).filter(n => !n.read).length;
-        const unreadSystem = (props.systemNotificationsPage?.data || []).filter(n => !n.read).length;
-        return unreadRecords + unreadSystem;
+        return (props.recordCounts?.unread_all || 0) + (props.systemUnreadCount || 0);
     });
+
+    const setRecordTab = (tab) => {
+        if (activeRecordTab.value === tab) return;
+        activeRecordTab.value = tab;
+        const url = props.activeTab === 'system'
+            ? route('notifications.system.index')
+            : route('notifications.index');
+        router.get(url, { record_filter: tab }, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const refreshCounts = () => {
+        router.reload({
+            preserveScroll: true,
+            preserveState: true,
+            only: ['recordCounts', 'systemUnreadCount'],
+        });
+    };
 
     const toggleNotificationRead = (notificationId) => {
         axios.post(route('notifications.toggle', notificationId)).then((response) => {
@@ -52,18 +83,21 @@
             if (notification) {
                 notification.read = response.data.read;
             }
+            refreshCounts();
         });
     };
 
     const markAllAsRead = () => {
         axios.post(route('notifications.clear')).then(() => {
             props.recordNotificationsPage.data.forEach(n => n.read = true);
+            refreshCounts();
         });
     };
 
     const markAllAsUnread = () => {
         axios.post(route('notifications.mark.unread')).then(() => {
             props.recordNotificationsPage.data.forEach(n => n.read = false);
+            refreshCounts();
         });
     };
 
@@ -74,43 +108,33 @@
             if (notification) {
                 notification.read = response.data.read;
             }
+            refreshCounts();
         });
     };
 
     const markAllSystemAsRead = () => {
         axios.post(route('notifications.system.clear')).then(() => {
             props.systemNotificationsPage.data.forEach(n => n.read = true);
+            refreshCounts();
         });
     };
 
     const markAllSystemAsUnread = () => {
         axios.post(route('notifications.system.mark.unread')).then(() => {
             props.systemNotificationsPage.data.forEach(n => n.read = false);
+            refreshCounts();
         });
     };
 
-    // Filter record notifications by sub-tab category
-    const filteredRecordNotifications = computed(() => {
-        const notifications = props.recordNotificationsPage?.data || [];
+    // Server filters & paginates already; just render what came back.
+    const filteredRecordNotifications = computed(() => props.recordNotificationsPage?.data || []);
 
-        if (activeRecordTab.value === 'beaten') {
-            return notifications.filter(n => !n.worldrecord);
-        } else if (activeRecordTab.value === 'worldrecords') {
-            return notifications.filter(n => n.worldrecord);
-        }
-
-        return notifications;
-    });
-
-    // Count notifications for each record sub-tab (only unread)
-    const recordTabCounts = computed(() => {
-        const notifications = (props.recordNotificationsPage?.data || []).filter(n => !n.read);
-        return {
-            all: notifications.length,
-            beaten: notifications.filter(n => !n.worldrecord).length,
-            worldrecords: notifications.filter(n => n.worldrecord).length
-        };
-    });
+    // Per-tab unread counts come from the server (full user inbox, not just page).
+    const recordTabCounts = computed(() => ({
+        all: props.recordCounts?.unread_all || 0,
+        beaten: props.recordCounts?.unread_beaten || 0,
+        worldrecords: props.recordCounts?.unread_worldrecords || 0,
+    }));
 
     // Filter system notifications by sub-tab category
     const filteredSystemNotifications = computed(() => {
@@ -322,7 +346,7 @@
                     <!-- Sub-tabs -->
                     <div class="flex border-b border-white/10 bg-black/20">
                         <button
-                            @click="activeRecordTab = 'all'"
+                            @click="setRecordTab('all')"
                             class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'all'
                                 ? 'text-orange-400 bg-orange-500/10'
@@ -342,7 +366,7 @@
                         </button>
 
                         <button
-                            @click="activeRecordTab = 'beaten'"
+                            @click="setRecordTab('beaten')"
                             class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'beaten'
                                 ? 'text-blue-400 bg-blue-500/10'
@@ -362,7 +386,7 @@
                         </button>
 
                         <button
-                            @click="activeRecordTab = 'worldrecords'"
+                            @click="setRecordTab('worldrecords')"
                             class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
                             :class="activeRecordTab === 'worldrecords'
                                 ? 'text-yellow-400 bg-yellow-500/10'

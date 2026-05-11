@@ -18,7 +18,7 @@ class ServerOwnerApplicationResource extends Resource
 {
     protected static ?string $model = ServerOwnerApplication::class;
     protected static ?string $navigationIcon = 'heroicon-o-server-stack';
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Content';
     protected static ?string $navigationLabel = 'Server hosting applications';
     protected static ?int $navigationSort = 30;
     protected static bool $shouldSkipAuthorization = true;
