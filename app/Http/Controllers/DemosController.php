@@ -735,16 +735,14 @@ class DemosController extends Controller
      */
     public function download(UploadedDemo $demo)
     {
-        // Allow download for owner, admins, or if the demo is assigned to a public record (online or offline)
+        // All uploaded demos are public by default — there's no integrity argument
+        // for blocking unlinked freestyle/trick demos, and metadata is already
+        // exposed in listings. Future serverdemos (separate feature) will gate
+        // their own visibility via per-player approval. Owner + admin still get
+        // through unconditionally; everyone else is throttled by the rate limit
+        // below. A missing physical file still returns 404 further down.
         $currentUser = Auth::user();
         $isAdmin = ($currentUser && ((isset($currentUser->is_admin) && $currentUser->is_admin) || (isset($currentUser->admin) && $currentUser->admin)));
-
-        // Allow download if: user is owner, user is admin, demo has online record, or demo has offline record
-        $hasPublicRecord = $demo->record || $demo->offlineRecord;
-
-        if ($demo->user_id !== optional($currentUser)->id && !$hasPublicRecord && !$isAdmin) {
-            abort(403, 'Unauthorized');
-        }
 
         // Rate limiting for downloads (skip for admins and demo owners)
         if (!$isAdmin && $demo->user_id !== optional($currentUser)->id) {

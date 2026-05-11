@@ -16,7 +16,7 @@ class SftpCredentialResource extends Resource
 {
     protected static ?string $model = SftpCredential::class;
     protected static ?string $navigationIcon = 'heroicon-o-key';
-    protected static ?string $navigationGroup = 'Moderation';
+    protected static ?string $navigationGroup = 'Content';
     protected static ?string $navigationLabel = 'SFTP credentials';
     protected static ?int $navigationSort = 31;
     protected static bool $shouldSkipAuthorization = true;
