@@ -60,4 +60,11 @@ return [
         'api_token' => env('DEMOME_API_TOKEN'),
     ],
 
+    'storage_vps' => [
+        'host'     => env('STORAGE_VPS_HOST'),
+        'port'     => (int) env('STORAGE_VPS_PORT', 2258),
+        'user'     => env('STORAGE_VPS_USER', 'provisioner'),
+        'key_path' => env('STORAGE_VPS_KEY_PATH'),
+    ],
+
 ];

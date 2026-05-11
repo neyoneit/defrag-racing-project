@@ -286,6 +286,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'index'])->name('launcher-tokens.index');
     Route::post('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'store'])->name('launcher-tokens.store');
     Route::delete('/user/launcher-tokens/{tokenId}', [\App\Http\Controllers\LauncherTokenController::class, 'destroy'])->name('launcher-tokens.destroy');
+
+    // Server hosting (SFTP serverdemo credentials)
+    Route::get('/server-hosting', [\App\Http\Controllers\ServerHostingController::class, 'index'])->name('server-hosting.index');
+    Route::post('/server-hosting/apply', [\App\Http\Controllers\ServerHostingController::class, 'apply'])->name('server-hosting.apply');
+    Route::post('/server-hosting/acknowledge-password', [\App\Http\Controllers\ServerHostingController::class, 'acknowledgePassword'])->name('server-hosting.acknowledge-password');
+    Route::post('/server-hosting/reset-password', [\App\Http\Controllers\ServerHostingController::class, 'resetPassword'])->name('server-hosting.reset-password');
 });
 
 
