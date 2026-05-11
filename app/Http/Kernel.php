@@ -49,7 +49,17 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // Load the session cookie unconditionally for every /api/*
+            // request. We explicitly skip Sanctum's
+            // EnsureFrontendRequestsAreStateful here because that
+            // middleware only activates session loading when a Referer
+            // or Origin header is present — pasting an /api/... URL
+            // into a fresh tab doesn't include either and would 401 an
+            // otherwise logged-in user. Bearer-token clients are
+            // unaffected; the session is just unused for them.
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
@@ -81,5 +91,6 @@ class Kernel extends HttpKernel
         'demome.token' => \App\Http\Middleware\DemomeTokenMiddleware::class,
         'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
         'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+        'log.api' => \App\Http\Middleware\LogApiCalls::class,
     ];
 }

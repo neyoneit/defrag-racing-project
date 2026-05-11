@@ -201,6 +201,15 @@ async function submitVote(demoId, voteType, taskType, selectedRecordId = null) {
 
 // ─── Assignment logic ──────────────────────────────────
 function selectRecord(task, record) {
+    // In verification flow the same demo already has an assigned record
+    // (shown as MATCHED). Clicking that record as the "better match"
+    // target is meaningless — server rejects it with 422. Block at the
+    // click level so the user gets immediate feedback instead.
+    if (task.current_record?.id === record.id) {
+        assignHints.value[task.demo.id] = 'This record is already matched — use "Correct" to confirm, or pick a different rival.';
+        return;
+    }
+
     if (selectedRecords.value[task.demo.id]?.id === record.id) {
         delete selectedRecords.value[task.demo.id];
     } else {
@@ -444,7 +453,21 @@ async function rateMap(map, level) {
 
 async function skipRating(map) {
     streak.value = 0;
-    awardPoints(1);
+    // Record server-side so the map enters the user's cooldown and the
+    // daily skip-point cap is enforced; trust the server's points value
+    // (0 once user is past the cap, 1 otherwise).
+    let pts = 1;
+    try {
+        const { data } = await axios.post(route('community.tasks.skip'), {
+            map_id: map.id,
+            kind: 'rating',
+        });
+        pts = typeof data.points === 'number' ? data.points : 0;
+    } catch (err) {
+        console.warn('Skip rating failed to record:', err.response?.data?.error || err.message);
+        pts = 0;
+    }
+    awardPoints(pts);
     completedRatings.value++;
     ratingQueue.value.shift();
     if (ratingQueue.value.length <= 1) preloadNextRound();
@@ -525,10 +548,24 @@ async function addTagToMap(tagName) {
 
 async function skipTag() {
     if (taggedCurrentMap.value) {
-        // Already tagged at least once - count as completed
+        // Already tagged at least once - count as completed (no skip recorded)
     } else {
         streak.value = 0;
-        awardPoints(1);
+        const map = currentTagMap.value;
+        let pts = 1;
+        if (map?.id) {
+            try {
+                const { data } = await axios.post(route('community.tasks.skip'), {
+                    map_id: map.id,
+                    kind: 'tag',
+                });
+                pts = typeof data.points === 'number' ? data.points : 0;
+            } catch (err) {
+                console.warn('Skip tag failed to record:', err.response?.data?.error || err.message);
+                pts = 0;
+            }
+        }
+        awardPoints(pts);
     }
     completedTags.value++;
     taggedCurrentMap.value = false;
@@ -1048,7 +1085,7 @@ onUnmounted(() => {
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                <p>Not sure? Just <strong class="text-yellow-400">Skip</strong> - you still earn a point!</p>
+                                <p>Not sure? Just <strong class="text-yellow-400">Skip</strong> — no points, but the same map won't come back to you for a week.</p>
                             </div>
                         </div>
                     </div>
@@ -1522,7 +1559,7 @@ onUnmounted(() => {
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine - you still earn a point!</p>
+                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine — no points, but it still helps. The same map won't come back for a week.</p>
                                 </div>
                             </div>
                         </div>
@@ -1661,7 +1698,7 @@ onUnmounted(() => {
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine - you still earn a point!</p>
+                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine — no points, but it still helps. The same map won't come back for a week.</p>
                                 </div>
                             </div>
                         </div>

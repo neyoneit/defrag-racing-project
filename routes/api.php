@@ -29,11 +29,20 @@ Route::prefix('launcher')
         Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
     });
 
-Route::get('/profile/{userId}/beatable-records/{rivalMddId}', [\App\Http\Controllers\ProfileController::class, 'beatableRecordsApi']);
-Route::get('/profile/{mddId}/extras', [\App\Http\Controllers\ProfileController::class, 'profileExtras']);
-Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);
-Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\ProfileController::class, 'comparePlayer']);
-Route::get('/records/search', [\App\Http\Controllers\RecordsController::class, 'search']);
+// Profile + records AJAX endpoints used by the SPA frontend and (optionally)
+// by external clients via personal API tokens. `auth:sanctum,web` accepts
+// either a Bearer token in the Authorization header OR a session cookie
+// from a logged-in browser. Anonymous requests get a 401 — the frontend
+// hides the matching panels client-side so anon profile pages stay clean.
+//
+// Per-user rate-limit kicks in automatically because `throttle:api` keys
+// by user_id when authenticated.
+Route::middleware(['auth:sanctum,web', 'log.api'])->group(function () {
+    Route::get('/profile/{mddId}/extras', [\App\Http\Controllers\ProfileController::class, 'profileExtras']);
+    Route::get('/search-players', [\App\Http\Controllers\ProfileController::class, 'searchPlayers']);
+    Route::get('/profile/{userId}/compare/{rivalId}', [\App\Http\Controllers\ProfileController::class, 'comparePlayer']);
+    Route::get('/records/search', [\App\Http\Controllers\RecordsController::class, 'search']);
+});
 
 // Demome renderer API
 Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle:api')->group(function () {
