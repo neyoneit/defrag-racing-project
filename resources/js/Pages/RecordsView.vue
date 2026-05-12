@@ -283,9 +283,11 @@
     <Teleport to="body">
         <div v-if="scoreTooltip" :style="scoreTooltipStyle"
             class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
-            <div>Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
             <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
-            <div v-if="scoreTooltip.multiplier != null">Multiplier: <span class="text-green-400">{{ scoreTooltip.multiplier }}</span></div>
+            <div v-if="scoreTooltip.base_score != null">Base score: <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
+            <div v-if="scoreTooltip.rank_multiplier != null">Rank mult: <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
+            <div v-if="scoreTooltip.multiplier != null">Map mult: <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
+            <div class="border-t border-white/10 mt-1 pt-1">Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
         </div>
     </Teleport>
 </template>

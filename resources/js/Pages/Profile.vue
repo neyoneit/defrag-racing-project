@@ -2571,7 +2571,7 @@
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
                                             <div v-if="record.map_score"
                                                 class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
-                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
+                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target }"
                                                 @mouseleave="scoreTooltip = null">
                                                 {{ Math.round(record.map_score) }}
                                             </div>
@@ -2700,7 +2700,7 @@
                                         <div class="w-8 sm:w-10 flex-shrink-0 text-center">
                                             <div v-if="record.map_score"
                                                 class="text-[10px] sm:text-xs font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
-                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target }"
+                                                @mouseenter="scoreTooltip = { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target }"
                                                 @mouseleave="scoreTooltip = null">
                                                 {{ Math.round(record.map_score) }}
                                             </div>
@@ -3406,9 +3406,11 @@
     <Teleport to="body">
         <div v-if="scoreTooltip" :style="scoreTooltipStyle"
             class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
-            <div>Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
             <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
-            <div v-if="scoreTooltip.multiplier != null">Multiplier: <span class="text-green-400">{{ scoreTooltip.multiplier }}</span></div>
+            <div v-if="scoreTooltip.base_score != null">Base score: <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
+            <div v-if="scoreTooltip.rank_multiplier != null">Rank mult: <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
+            <div v-if="scoreTooltip.multiplier != null">Map mult: <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
+            <div class="border-t border-white/10 mt-1 pt-1">Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
         </div>
     </Teleport>
 </template>

@@ -1203,6 +1203,17 @@ class ProfileController extends Controller {
             $record->map_score = $score ? round($score->map_score, 2) : null;
             $record->reltime = $score ? round($score->reltime, 4) : null;
             $record->multiplier = $score ? round($score->multiplier, 4) : null;
+            $record->rank_multiplier = $score ? round($score->rank_multiplier ?? 1, 4) : null;
+            if ($score) {
+                $mapMult = $score->multiplier ?? 1;
+                $rankMult = $score->rank_multiplier ?? 1;
+                $divisor = $mapMult * $rankMult;
+                $record->base_score = $divisor > 0
+                    ? round($score->map_score / $divisor, 2)
+                    : round($score->map_score, 2);
+            } else {
+                $record->base_score = null;
+            }
             $record->is_outlier = $score ? $score->is_outlier : false;
             $record->score_rank = $scoreRanks[$record->mapname] ?? null;
             $record->score_rank_total = $totalMaps;
