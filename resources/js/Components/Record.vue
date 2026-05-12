@@ -130,7 +130,7 @@
                     <div class="hidden sm:block w-8 sm:w-10 text-center flex-shrink-0">
                         <div v-if="record.map_score"
                             class="text-xs sm:text-sm font-black tabular-nums leading-none text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] cursor-help" style="padding-left: 5px"
-                            @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, multiplier: record.multiplier, el: $event.target })"
+                            @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
                             @mouseleave="$emit('scoreHover', null)">{{ Math.round(record.map_score) }}</div>
                     </div>
                     <div :class="[dateColWidth, 'flex-shrink-0 text-right opacity-90 group-hover:opacity-100 transition-opacity']" v-if="windowWidth >= 400">

@@ -572,10 +572,6 @@ class MapsController extends Controller
             return $record;
         });
 
-        // Attach map scores (map_score, reltime) from player_map_scores
-        $this->attachMapScores($cpmRecords, $map->name, 'cpm', $gametype);
-        $this->attachMapScores($vq3Records, $map->name, 'vq3', $gametype);
-
         $userDefaultOldtop = $request->user()?->default_show_oldtop ? 'true' : 'false';
         $showOldtop = $request->has('showOldtop') ? $request->input('showOldtop') : $userDefaultOldtop;
 
@@ -639,6 +635,14 @@ class MapsController extends Controller
             $cpmOfflineRecords = null;
             $vq3OfflineRecords = null;
         }
+
+        // Attach map scores (map_score, reltime, base_score, rank_multiplier) from
+        // player_map_scores. Done AFTER the unified-leaderboard swap so the
+        // replaced paginator gets scores too — otherwise demos top / oldtop
+        // toggles wiped scores from the main MDD records they pushed into the
+        // unified collection.
+        $this->attachMapScores($cpmRecords, $map->name, 'cpm', $gametype);
+        $this->attachMapScores($vq3Records, $map->name, 'vq3', $gametype);
 
         // Redirect clamps must respect every source that shares the page
         // parameter — main records, oldtop, and Demos Top (grouped offline).
