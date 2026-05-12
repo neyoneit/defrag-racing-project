@@ -1754,7 +1754,16 @@ class MapsController extends Controller
     {
         if (!$records || $records->isEmpty()) return;
 
-        $mddIds = $records->getCollection()->pluck('mdd_id')->unique()->toArray();
+        // Unified-leaderboard mode pushes plain stdClass DT reps (no mdd_id property)
+        // alongside Eloquent Record models. PHP 8.3 throws on undefined-property
+        // access, so coerce to null instead and skip score attachment for reps
+        // that have no mdd_id.
+        $mddIds = $records->getCollection()
+            ->map(fn ($r) => $r->mdd_id ?? null)
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
         if (empty($mddIds)) return;
 
         $scores = PlayerMapScore::where('mapname', $mapname)
@@ -1765,7 +1774,8 @@ class MapsController extends Controller
             ->keyBy('mdd_id');
 
         $records->getCollection()->transform(function ($record) use ($scores) {
-            $score = $scores->get($record->mdd_id);
+            $mddId = $record->mdd_id ?? null;
+            $score = $mddId ? $scores->get($mddId) : null;
             $record->map_score = $score ? round($score->map_score, 2) : null;
             $record->reltime = $score ? round($score->reltime, 4) : null;
             $record->multiplier = $score ? round($score->multiplier, 4) : null;
