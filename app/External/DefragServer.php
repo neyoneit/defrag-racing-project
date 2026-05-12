@@ -159,9 +159,17 @@ class DefragServer
 
         list($serverData, $playerLines) = $this->parseResponseBody(substr($data, $headerEnd + 1));
 
-        // Parse player lines - two formats:
-        // Extended (oDFe): clientId dfscore ping "name" "spectating_name" "tld" "model" "headmodel" uid "color1"
-        // Legacy (GTK):    dfscore ping "name" "spectating_name"
+        // Reject responses that aren't real statusResponse packets (e.g. "print\nBad command")
+        // so the caller can fall back to getstatus instead of saving empty data.
+        if (empty($serverData['mapname']) || empty($serverData['sv_hostname'])) {
+            return null;
+        }
+
+        // Parse player lines - three formats:
+        // KG7X (new):       dfscore ping clientId "name" spec_clientId "tld" "color1" uid "model" "headmodel"
+        // Extended (oDFe):  clientId dfscore ping "name" "spectating_name" "tld" "model" "headmodel" uid "color1"
+        // Legacy (GTK):     dfscore ping "name" "spectating_name"
+        $kg7xRegex = '/^(-?\d+)\s+(\d+)\s+(\d+)\s+"([^"]*)"\s+(-?\d+)\s+"([^"]*)"\s+"([^"]*)"\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"$/';
         $extendedRegex = '/^(\d+)\s+(-?\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+"([^"]*)"\s+(\d+)\s+"([^"]*)"$/';
         $legacyRegex = '/^(-?\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"$/';
 
@@ -172,7 +180,25 @@ class DefragServer
                 continue;
             }
 
-            if (preg_match($extendedRegex, $line, $m)) {
+            if (preg_match($kg7xRegex, $line, $m)) {
+                $clientId = (int) $m[3];
+                $color1 = $m[7];
+                $mddId = (int) $m[8];
+                $parsedPlayers[$clientId] = [
+                    'clientId' => $clientId,
+                    'dfscore' => (int) $m[1],
+                    'ping' => (int) $m[2],
+                    'name' => $m[4],
+                    'spectating_id' => (int) $m[5],
+                    'spectating' => '',
+                    'country' => strtolower($m[6]),
+                    'color1' => $color1,
+                    'mddId' => $mddId,
+                    'model' => $m[9] !== '' ? $m[9] : 'sarge',
+                    'headmodel' => $m[10] !== '' ? $m[10] : 'sarge',
+                    'nospec' => ($color1 == 'nospec' || $color1 == 'nospecpm'),
+                ];
+            } elseif (preg_match($extendedRegex, $line, $m)) {
                 $clientId = (int) $m[1];
                 $parsedPlayers[$clientId] = [
                     'clientId' => $clientId,
@@ -180,6 +206,7 @@ class DefragServer
                     'ping' => (int) $m[3],
                     'name' => $m[4],
                     'spectating' => $m[5],
+                    'spectating_id' => null,
                     'country' => strtolower($m[6]),
                     'model' => $m[7],
                     'headmodel' => $m[8],
@@ -195,6 +222,7 @@ class DefragServer
                     'ping' => (int) $m[2],
                     'name' => $m[3],
                     'spectating' => $m[4],
+                    'spectating_id' => null,
                     'country' => '_404',
                     'model' => 'sarge',
                     'headmodel' => 'sarge',
@@ -205,7 +233,7 @@ class DefragServer
             }
         }
 
-        // Build name -> clientId lookup for spectating resolution
+        // Build name -> clientId lookup for spectating resolution (legacy/extended formats)
         $nameToClientId = [];
         foreach ($parsedPlayers as $p) {
             $nameToClientId[$p['name']] = $p['clientId'];
@@ -227,9 +255,13 @@ class DefragServer
         // scores.players with player_num, time, follow_num for getPlayerScore()
         $scorePlayers = [];
         foreach ($parsedPlayers as $clientId => $p) {
-            $followNum = -1;
-            if (!empty($p['spectating']) && isset($nameToClientId[$p['spectating']])) {
-                $followNum = $nameToClientId[$p['spectating']];
+            if (isset($p['spectating_id']) && $p['spectating_id'] !== null) {
+                $followNum = $p['spectating_id'];
+            } else {
+                $followNum = -1;
+                if (!empty($p['spectating']) && isset($nameToClientId[$p['spectating']])) {
+                    $followNum = $nameToClientId[$p['spectating']];
+                }
             }
 
             $scorePlayers[] = [
