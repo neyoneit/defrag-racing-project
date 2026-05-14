@@ -67,4 +67,12 @@ return [
         'key_path' => env('STORAGE_VPS_KEY_PATH'),
     ],
 
+    'storage_vps_dl' => [
+        'host'     => env('STORAGE_VPS_DL_HOST'),
+        'port'     => (int) env('STORAGE_VPS_DL_PORT', 2258),
+        'user'     => env('STORAGE_VPS_DL_USER', 'dlbrowser'),
+        'key_path' => env('STORAGE_VPS_DL_KEY_PATH'),
+        'root'     => env('STORAGE_VPS_DL_ROOT', '/www/downloads'),
+    ],
+
 ];

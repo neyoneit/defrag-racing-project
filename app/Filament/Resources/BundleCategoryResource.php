@@ -21,6 +21,8 @@ class BundleCategoryResource extends Resource
 
     protected static ?string $navigationGroup = 'Bundles';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->isAdmin() ?? false;

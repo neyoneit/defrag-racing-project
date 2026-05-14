@@ -9,16 +9,13 @@ class BundleCategory extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
-        'name'
+        'name',
+        'position',
     ];
 
-    public function bundles () {
-        return $this->hasMany(Bundle::class, 'category_id');
+    public function bundles()
+    {
+        return $this->hasMany(Bundle::class, 'category_id')->orderBy('position');
     }
 }
