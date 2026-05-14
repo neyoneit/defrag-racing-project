@@ -9,17 +9,17 @@ class Bundle extends Model
 {
     use HasFactory;
 
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'description',
         'url',
         'file',
-        'category_id'
+        'category_id',
+        'position',
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(BundleCategory::class, 'category_id');
+    }
 }

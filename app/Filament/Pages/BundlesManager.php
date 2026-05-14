@@ -60,7 +60,7 @@ class BundlesManager extends Page
     #[Computed]
     public function categories()
     {
-        return BundleCategory::withCount('bundles')->orderBy('name')->get();
+        return BundleCategory::withCount('bundles')->orderBy('position')->orderBy('name')->get();
     }
 
     #[Computed]
@@ -114,6 +114,45 @@ class BundlesManager extends Page
         $this->closeCategoryForm();
 
         Notification::make()->title('Category saved')->success()->send();
+    }
+
+    public function reorderCategories(array $orderedIds): void
+    {
+        $orderedIds = array_values(array_filter(array_map('intval', $orderedIds)));
+        $valid = BundleCategory::whereIn('id', $orderedIds)->pluck('id')->all();
+
+        foreach ($orderedIds as $position => $id) {
+            if (! in_array($id, $valid, true)) {
+                continue;
+            }
+
+            BundleCategory::where('id', $id)->update(['position' => $position]);
+        }
+
+        unset($this->categories);
+    }
+
+    public function reorderBundles(array $orderedIds): void
+    {
+        if (! $this->selectedCategoryId) {
+            return;
+        }
+
+        $orderedIds = array_values(array_filter(array_map('intval', $orderedIds)));
+        $valid = Bundle::where('category_id', $this->selectedCategoryId)
+            ->whereIn('id', $orderedIds)
+            ->pluck('id')
+            ->all();
+
+        foreach ($orderedIds as $position => $id) {
+            if (! in_array($id, $valid, true)) {
+                continue;
+            }
+
+            Bundle::where('id', $id)->update(['position' => $position]);
+        }
+
+        unset($this->selectedCategory);
     }
 
     public function deleteCategory(int $id): void

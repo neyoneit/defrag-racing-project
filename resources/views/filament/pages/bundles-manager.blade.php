@@ -34,12 +34,27 @@
                     onmouseout="this.style.backgroundColor='rgba(234,88,12,0.15)'"
                     title="New category">+</button>
             </div>
-            <div>
+            <div
+                x-data
+                x-init="
+                    new Sortable($el, {
+                        handle: '.cat-drag-handle',
+                        animation: 150,
+                        ghostClass: 'sortable-ghost-cat',
+                        onEnd: () => {
+                            const ids = Array.from($el.querySelectorAll('[data-cat-id]')).map(el => el.dataset.catId);
+                            $wire.call('reorderCategories', ids);
+                        }
+                    });
+                "
+            >
                 @forelse ($categories as $cat)
                     @php $isActive = $selectedCat && $selectedCat->id === $cat->id; @endphp
-                    <div style="display:flex;align-items:center;border-left:3px solid {{ $isActive ? '#ea580c' : 'transparent' }};background:{{ $isActive ? 'rgba(234,88,12,0.10)' : 'transparent' }};transition:background-color 120ms;"
+                    <div data-cat-id="{{ $cat->id }}"
+                        style="display:flex;align-items:center;border-left:3px solid {{ $isActive ? '#ea580c' : 'transparent' }};background:{{ $isActive ? 'rgba(234,88,12,0.10)' : 'transparent' }};transition:background-color 120ms;"
                         onmouseover="if(!{{ $isActive ? 'true' : 'false' }})this.style.backgroundColor='rgba(255,255,255,0.04)'"
                         onmouseout="if(!{{ $isActive ? 'true' : 'false' }})this.style.backgroundColor='transparent'">
+                        <span class="cat-drag-handle" style="cursor:grab;padding:0 6px 0 8px;color:#52525b;user-select:none;font-size:14px;line-height:1;" title="Drag to reorder">⋮⋮</span>
                         <button type="button"
                             wire:click="selectCategory({{ $cat->id }})"
                             style="background:transparent;border:none;cursor:pointer;flex:1;text-align:left;padding:10px 14px;color:{{ $isActive ? '#fb923c' : '#e4e4e7' }};font-size:13px;font-weight:{{ $isActive ? '700' : '500' }};display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
@@ -102,16 +117,33 @@
                 <table style="width:100%;border-collapse:collapse;font-size:13px;">
                     <thead>
                         <tr style="background:#18181b;">
+                            <th style="width:24px;"></th>
                             <th style="text-align:left;padding:10px 14px;color:#a1a1aa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Name</th>
                             <th style="text-align:left;padding:10px 14px;color:#a1a1aa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">URL</th>
                             <th style="text-align:right;padding:10px 14px;color:#a1a1aa;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;width:140px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody
+                        x-data
+                        x-init="
+                            new Sortable($el, {
+                                handle: '.bundle-drag-handle',
+                                animation: 150,
+                                ghostClass: 'sortable-ghost-bundle',
+                                onEnd: () => {
+                                    const ids = Array.from($el.querySelectorAll('tr[data-bundle-id]')).map(el => el.dataset.bundleId);
+                                    $wire.call('reorderBundles', ids);
+                                }
+                            });
+                        "
+                    >
                         @forelse($selectedCat->bundles as $bundle)
-                            <tr style="border-top:1px solid #27272a;transition:background-color 120ms;"
+                            <tr data-bundle-id="{{ $bundle->id }}" style="border-top:1px solid #27272a;transition:background-color 120ms;"
                                 onmouseover="this.style.backgroundColor='rgba(234,88,12,0.08)'"
                                 onmouseout="this.style.backgroundColor='transparent'">
+                                <td style="padding:10px 14px;width:24px;">
+                                    <span class="bundle-drag-handle" style="cursor:grab;color:#52525b;user-select:none;font-size:14px;" title="Drag to reorder">⋮⋮</span>
+                                </td>
                                 <td style="padding:10px 14px;">
                                     <div style="color:#fafafa;font-weight:600;font-size:14px;">{{ $bundle->name }}</div>
                                     @if($bundle->description)
@@ -149,7 +181,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" style="padding:32px 14px;text-align:center;color:#71717a;border-top:1px solid #27272a;">
+                                <td colspan="4" style="padding:32px 14px;text-align:center;color:#71717a;border-top:1px solid #27272a;">
                                     No bundles in this category. Click <strong style="color:#fb923c;">+ New Bundle</strong> to add one.
                                 </td>
                             </tr>
