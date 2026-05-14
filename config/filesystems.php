@@ -61,6 +61,23 @@ return [
             'throw' => true,
         ],
 
+        'dl_storage' => env('STORAGE_VPS_DL_DRIVER', 'sftp') === 'local'
+            ? [
+                'driver' => 'local',
+                'root'   => storage_path('app/dl-storage-local'),
+                'throw'  => true,
+            ]
+            : [
+                'driver'     => 'sftp',
+                'host'       => env('STORAGE_VPS_DL_HOST'),
+                'port'       => (int) env('STORAGE_VPS_DL_PORT', 2258),
+                'username'   => env('STORAGE_VPS_DL_USER', 'dlbrowser'),
+                'privateKey' => env('STORAGE_VPS_DL_KEY_PATH'),
+                'root'       => env('STORAGE_VPS_DL_ROOT', '/www/downloads'),
+                'timeout'    => 30,
+                'throw'      => true,
+            ],
+
     ],
 
     /*
