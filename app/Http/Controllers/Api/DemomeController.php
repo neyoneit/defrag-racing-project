@@ -85,6 +85,9 @@ class DemomeController extends Controller
                     'source' => $item->source,
                     'record_id' => $item->record_id,
                     'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
+                    'video_title' => \App\Services\VideoMetadataService::generateTitle($item),
+                    'video_description' => \App\Services\VideoMetadataService::generateDescription($item),
+                    'video_tags' => \App\Services\VideoMetadataService::generateTags($item),
                 ];
             });
 

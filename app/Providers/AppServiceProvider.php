@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
+use App\Models\SftpCredential;
+use App\Observers\SftpCredentialObserver;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 
@@ -25,5 +27,7 @@ class AppServiceProvider extends ServiceProvider
         FilamentAsset::register([
             Css::make('q3-stylesheet', __DIR__ . '/../../resources/css/items.css'),
         ]);
+
+        SftpCredential::observe(SftpCredentialObserver::class);
     }
 }
