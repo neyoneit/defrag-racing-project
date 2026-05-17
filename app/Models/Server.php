@@ -39,7 +39,8 @@ class Server extends Model
         'besttime_name',
         'besttime_url',
         'besttime_time',
-        'plain_name'
+        'plain_name',
+        'sftp_credential_id',
     ];
 
     public function mapdata () {
@@ -48,5 +49,10 @@ class Server extends Model
 
     public function onlinePlayers () {
         return $this->hasMany(OnlinePlayer::class)->orderByRaw('CASE WHEN time = 0 THEN 1 ELSE 0 END, time ASC');
+    }
+
+    public function sftpCredential()
+    {
+        return $this->belongsTo(SftpCredential::class);
     }
 }

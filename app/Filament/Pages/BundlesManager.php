@@ -416,6 +416,9 @@ class BundlesManager extends Page
             fclose($stream);
         }
 
+        // Drop the Livewire temp file immediately rather than waiting 24h
+        // for the cleanup job to sweep it.
+        $this->pickerUploadFile->delete();
         $this->pickerUploadFile = null;
         unset($this->pickerListing);
 
