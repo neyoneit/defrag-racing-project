@@ -14,6 +14,14 @@ class DefragServer
     private $previousData;
 
     public function __construct ($ip, $port) {
+        // socket_connect/socket_sendto on AF_INET need a numeric IPv4 — they
+        // don't resolve hostnames themselves, so credentials that declare a
+        // server by FQDN (e.g. "deimos.baseq.fr") silently never connect.
+        // Resolve once up front; on failure gethostbyname returns the input
+        // unchanged, which lets the socket call fail loudly as it would.
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            $ip = gethostbyname($ip);
+        }
         $this->ip = $ip;
         $this->port = $port;
         $this->socket = socket_create(AF_INET, SOCK_DGRAM, 0);

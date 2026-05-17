@@ -35,12 +35,19 @@ class SftpCredentialObserver
                 ->where('port', (int) $entry['port'])
                 ->first();
 
+            // Per-server location (set by owner in /server-hosting form or
+            // by admin in Filament). Falls back to owner profile country
+            // when blank — at least gives a flag instead of "_404".
+            $entryLocation = !empty($entry['location']) ? strtoupper($entry['location']) : $ownerCountry;
+
             if ($existing) {
                 // Don't clobber scraper-managed fields on existing rows;
-                // just link to the credential and refresh the rcon password.
+                // just link to the credential, refresh the rcon password,
+                // and propagate location updates (admin/owner can change it).
                 $existing->fill([
                     'sftp_credential_id' => $credential->id,
                     'rconpassword'       => $entry['rcon'] ?? $existing->rconpassword,
+                    'location'           => $entryLocation,
                 ])->save();
                 continue;
             }
@@ -52,7 +59,7 @@ class SftpCredentialObserver
                 'rconpassword'       => $entry['rcon'] ?? null,
                 'name'               => 'Pending scrape',
                 'plain_name'         => 'Pending scrape',
-                'location'           => $ownerCountry,
+                'location'           => $entryLocation,
                 'type'               => $entry['gametype'] ?? 'mixed',
                 'admin_name'         => $ownerName,
                 'map'                => '',

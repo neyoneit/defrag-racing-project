@@ -119,6 +119,7 @@ const blankServer = () => ({
     ip: '',
     port: 27960,
     rcon: '',
+    location: '',
 });
 
 const form = useForm({
@@ -282,6 +283,7 @@ const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?
                             <tr>
                                 <th class="px-3 py-2 text-left">Gametype</th>
                                 <th class="px-3 py-2 text-left">IP : Port</th>
+                                <th class="px-3 py-2 text-left">Location</th>
                                 <th class="px-3 py-2 text-left">RS code</th>
                             </tr>
                         </thead>
@@ -289,6 +291,13 @@ const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?
                             <tr v-for="(s, i) in credential.servers" :key="i">
                                 <td class="px-3 py-2 font-medium text-emerald-200/80">{{ (s.gametype || '').toUpperCase() }}</td>
                                 <td class="px-3 py-2 font-mono text-gray-300">{{ s.ip }}:{{ s.port }}</td>
+                                <td class="px-3 py-2 font-mono text-gray-300">
+                                    <span v-if="s.location" class="inline-flex items-center gap-1.5">
+                                        <img :src="`/images/flags/${s.location}.png`" class="w-4 h-3 rounded shadow-sm" :alt="s.location" onerror="this.style.display='none'">
+                                        {{ s.location }}
+                                    </span>
+                                    <span v-else class="text-gray-500 italic">not set</span>
+                                </td>
                                 <td class="px-3 py-2 font-mono">
                                     <span v-if="s.rs_code" class="text-emerald-200">{{ s.rs_code }}</span>
                                     <span v-else class="text-gray-500 italic">awaiting admin</span>
@@ -396,7 +405,7 @@ DEMO_SFTP_REMOTEDIR={{ credential.remote_path }}</code></pre>
                     <div class="space-y-2">
                         <div v-for="(s, i) in form.servers" :key="i"
                              class="grid grid-cols-12 gap-2 items-start">
-                            <div class="col-span-3">
+                            <div class="col-span-2">
                                 <select v-model="s.gametype"
                                         class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
                                                bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
@@ -406,7 +415,7 @@ DEMO_SFTP_REMOTEDIR={{ credential.remote_path }}</code></pre>
                                 </select>
                                 <p v-if="form.errors[`servers.${i}.gametype`]" class="text-xs text-red-400 mt-1">{{ form.errors[`servers.${i}.gametype`] }}</p>
                             </div>
-                            <div class="col-span-4">
+                            <div class="col-span-3">
                                 <input v-model="s.ip"
                                        type="text"
                                        placeholder="123.45.67.89"
@@ -427,6 +436,15 @@ DEMO_SFTP_REMOTEDIR={{ credential.remote_path }}</code></pre>
                                        placeholder="rcon"
                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
                                 <p v-if="form.errors[`servers.${i}.rcon`]" class="text-xs text-red-400 mt-1">{{ form.errors[`servers.${i}.rcon`] }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <input v-model="s.location"
+                                       type="text"
+                                       maxlength="2"
+                                       placeholder="US"
+                                       @input="s.location = (s.location || '').toUpperCase()"
+                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono uppercase focus:border-blue-500 focus:ring-0 transition" />
+                                <p v-if="form.errors[`servers.${i}.location`]" class="text-xs text-red-400 mt-1">{{ form.errors[`servers.${i}.location`] }}</p>
                             </div>
                             <div class="col-span-1 flex justify-end">
                                 <button type="button"

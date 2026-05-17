@@ -108,7 +108,14 @@ class SftpCredentialResource extends Resource
                                     ->columnSpan(2),
                                 \Filament\Forms\Components\TextInput::make('rcon')
                                     ->required()
-                                    ->columnSpan(3),
+                                    ->columnSpan(2),
+                                \Filament\Forms\Components\TextInput::make('location')
+                                    ->label('Country (ISO-2)')
+                                    ->placeholder('US')
+                                    ->maxLength(2)
+                                    ->extraInputAttributes(['style' => 'text-transform:uppercase'])
+                                    ->dehydrateStateUsing(fn ($state) => $state ? strtoupper($state) : null)
+                                    ->columnSpan(1),
                                 \Filament\Forms\Components\TextInput::make('rs_code')
                                     ->label('RS code')
                                     ->placeholder('e.g. 4711')
