@@ -118,6 +118,7 @@ class ServerHostingController extends Controller
             'servers.*.ip'            => ['required', 'string', 'max:255'],
             'servers.*.port'          => ['required', 'integer', 'between:1,65535'],
             'servers.*.rcon'          => ['required', 'string', 'max:255'],
+            'servers.*.location'      => ['nullable', 'string', 'size:2', 'alpha'],
         ]);
 
         $user = $request->user();
