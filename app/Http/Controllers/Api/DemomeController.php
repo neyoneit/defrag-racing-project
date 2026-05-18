@@ -20,34 +20,50 @@ class DemomeController extends Controller
     {
         $paused = SiteSetting::getBool('demome:paused', false);
 
-        // When paused, only serve force-render items (priority -1)
-        $query = RenderedVideo::where('status', 'pending');
-        if ($paused) {
-            $query->where('priority', -1);
-        }
+        // Map a RenderedVideo row to the queue payload shape — shared
+        // between the normal `items` list and the dedicated `force_render`
+        // list so they both ship filtered video_title/description/tags.
+        $mapItem = function ($item) {
+            return [
+                'id' => $item->id,
+                'demo_url' => $item->demo_url,
+                'demo_filename' => $item->demo_filename,
+                'map_name' => $item->map_name,
+                'player_name' => $item->player_name,
+                'physics' => $item->physics,
+                'time_ms' => $item->time_ms,
+                'priority' => $item->priority,
+                'source' => $item->source,
+                'record_id' => $item->record_id,
+                'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
+                'video_title' => \App\Services\VideoMetadataService::generateTitle($item),
+                'video_description' => \App\Services\VideoMetadataService::generateDescription($item),
+                'video_tags' => \App\Services\VideoMetadataService::generateTags($item),
+            ];
+        };
 
-        $items = $query->orderBy('priority', 'asc')
+        // Force-render queue: always served, ignores `paused`. Items land
+        // here when admin clicks the Filament "Force render" action, which
+        // sets priority=-1. Bot processes this list unconditionally.
+        $forceRender = RenderedVideo::where('status', 'pending')
+            ->where('priority', -1)
             ->orderBy('created_at', 'asc')
             ->limit(5)
             ->get()
-            ->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'demo_url' => $item->demo_url,
-                    'demo_filename' => $item->demo_filename,
-                    'map_name' => $item->map_name,
-                    'player_name' => $item->player_name,
-                    'physics' => $item->physics,
-                    'time_ms' => $item->time_ms,
-                    'priority' => $item->priority,
-                    'source' => $item->source,
-                    'record_id' => $item->record_id,
-                    'map_page_url' => 'https://defrag.racing/maps/' . $item->map_name,
-                    'video_title' => \App\Services\VideoMetadataService::generateTitle($item),
-                    'video_description' => \App\Services\VideoMetadataService::generateDescription($item),
-                    'video_tags' => \App\Services\VideoMetadataService::generateTags($item),
-                ];
-            });
+            ->map($mapItem);
+
+        // Normal queue: served only when not paused, and explicitly
+        // EXCLUDES priority=-1 to avoid double-shipping force-render items
+        // (the bot reads them from force_render section only).
+        $items = $paused
+            ? collect()
+            : RenderedVideo::where('status', 'pending')
+                ->where('priority', '>=', 0)
+                ->orderBy('priority', 'asc')
+                ->orderBy('created_at', 'asc')
+                ->limit(5)
+                ->get()
+                ->map($mapItem);
 
         // Find stale items stuck in 'rendering' status (crashed uploads)
         // Exclude items that already have a youtube_url (were completed but status got stuck)
@@ -94,6 +110,7 @@ class DemomeController extends Controller
         return response()->json([
             'paused' => $paused,
             'items' => $items,
+            'force_render' => $forceRender,
             'stale_rendering' => $staleRendering,
             'upload_pending' => $uploadPending,
         ]);
