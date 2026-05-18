@@ -23,8 +23,7 @@ class SftpCredentialResource extends Resource
 
     public static function canAccess(): bool
     {
-        $user = auth()->user();
-        return $user && ($user->admin || $user->is_moderator);
+        return auth()->user()?->hasModeratorPermission('sftp_credentials') ?? false;
     }
 
     public static function table(Table $table): Table

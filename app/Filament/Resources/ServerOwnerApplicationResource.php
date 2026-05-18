@@ -25,8 +25,7 @@ class ServerOwnerApplicationResource extends Resource
 
     public static function canAccess(): bool
     {
-        $user = auth()->user();
-        return $user && ($user->admin || $user->is_moderator);
+        return auth()->user()?->hasModeratorPermission('server_owner_applications') ?? false;
     }
 
     public static function getNavigationBadge(): ?string

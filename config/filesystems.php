@@ -78,6 +78,28 @@ return [
                 'throw'      => true,
             ],
 
+        // Serverdemo storage on the same VPS — read-only view of
+        // /var/lib/serverdemos/<sftp_user>/ where the ingest daemon
+        // parks .dm_68 uploads. Reuses the dlbrowser key + host since
+        // dlbrowser is internal-sftp only (no shell) and we grant it
+        // read ACL on /var/lib/serverdemos.
+        'serverdemos' => env('STORAGE_VPS_DEMOS_DRIVER', 'sftp') === 'local'
+            ? [
+                'driver' => 'local',
+                'root'   => storage_path('app/serverdemos-local'),
+                'throw'  => true,
+            ]
+            : [
+                'driver'     => 'sftp',
+                'host'       => env('STORAGE_VPS_DL_HOST'),
+                'port'       => (int) env('STORAGE_VPS_DL_PORT', 2258),
+                'username'   => env('STORAGE_VPS_DL_USER', 'dlbrowser'),
+                'privateKey' => env('STORAGE_VPS_DL_KEY_PATH'),
+                'root'       => env('STORAGE_VPS_DEMOS_ROOT', '/var/lib/serverdemos'),
+                'timeout'    => 30,
+                'throw'      => true,
+            ],
+
     ],
 
     /*
