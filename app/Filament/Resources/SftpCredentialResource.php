@@ -109,17 +109,21 @@ class SftpCredentialResource extends Resource
                                 \Filament\Forms\Components\TextInput::make('rcon')
                                     ->required()
                                     ->columnSpan(2),
-                                \Filament\Forms\Components\TextInput::make('location')
-                                    ->label('Country (ISO-2)')
-                                    ->placeholder('US')
-                                    ->maxLength(2)
-                                    ->extraInputAttributes(['style' => 'text-transform:uppercase'])
-                                    ->dehydrateStateUsing(fn ($state) => $state ? strtoupper($state) : null)
-                                    ->columnSpan(1),
+                                \Filament\Forms\Components\Select::make('location')
+                                    ->label('Country')
+                                    ->options(\App\Support\Countries::options())
+                                    ->searchable()
+                                    ->native(false)
+                                    ->columnSpan(2),
                                 \Filament\Forms\Components\TextInput::make('rs_code')
                                     ->label('RS code')
                                     ->placeholder('e.g. 4711')
-                                    ->columnSpan(2),
+                                    ->columnSpan(1),
+                                \Filament\Forms\Components\Textarea::make('admin_note')
+                                    ->label('Admin note')
+                                    ->placeholder('Engine, special config, things to remember — not shown to the user')
+                                    ->rows(2)
+                                    ->columnSpan(12),
                             ])
                             ->columns(12)
                             ->addable() // admin can add rows post-approval if user adds servers
