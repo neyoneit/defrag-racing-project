@@ -41,11 +41,19 @@ class ServerHostingController extends Controller
             $pendingPassword = $credential->password_pending;
         }
 
+        $credentialPayload = null;
+        if ($credential) {
+            $credentialPayload = $credential->only(['id', 'sftp_username', 'host', 'port', 'remote_path', 'status', 'servers']);
+            // admin_note is admin-only metadata; never leak it to the user.
+            $credentialPayload['servers'] = array_map(
+                fn ($s) => collect($s)->except('admin_note')->all(),
+                $credentialPayload['servers'] ?? []
+            );
+        }
+
         return Inertia::render('ServerHosting', [
             'application'     => $application,
-            'credential'      => $credential
-                ? $credential->only(['id', 'sftp_username', 'host', 'port', 'remote_path', 'status', 'servers'])
-                : null,
+            'credential'      => $credentialPayload,
             'pendingPassword' => $pendingPassword,
             'countries'       => \App\Support\Countries::options(),
         ]);
