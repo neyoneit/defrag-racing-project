@@ -44,6 +44,7 @@ zipperhead
 slanteye
 
 # --- Severe sexual orientation / gender slurs ---
+fag
 faggot
 homofag
 queerbait
