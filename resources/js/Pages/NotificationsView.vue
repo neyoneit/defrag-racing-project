@@ -647,6 +647,12 @@
                                         <span>Announcement: </span>
                                         <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
                                     </template>
+                                    <template v-else-if="notification.type === 'render_completed'">
+                                        <Link v-if="notification.subheadline" class="text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline" v-html="q3tohtml(notification.before)"></Link>
+                                        <span v-else v-html="q3tohtml(notification.before)"></span>
+                                        <span> </span>
+                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                    </template>
                                     <template v-else>
                                         <span v-html="q3tohtml(notification.before)"></span>
                                         <span> </span>

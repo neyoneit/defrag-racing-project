@@ -201,14 +201,18 @@ class DemomeController extends Controller
 
         $mapName = $renderedVideo->map_name ?: 'unknown map';
         $cleanMap = \App\Services\ContentFilter::filterText($mapName);
+        $mapUrl = $renderedVideo->map_name
+            ? route('maps.map', ['mapname' => $renderedVideo->map_name])
+            : null;
 
         \App\Models\Notification::create([
-            'user_id'   => $renderedVideo->user_id,
-            'type'      => 'render_completed',
-            'before'    => $cleanMap,
-            'headline'  => 'render is ready',
-            'after'     => '', // column is NOT NULL in DB
-            'url'       => $renderedVideo->youtube_url,
+            'user_id'     => $renderedVideo->user_id,
+            'type'        => 'render_completed',
+            'before'      => $cleanMap,
+            'headline'    => 'render is ready',
+            'after'       => '', // column is NOT NULL in DB
+            'subheadline' => $mapUrl, // map page link, rendered as a separate clickable on the map name
+            'url'         => $renderedVideo->youtube_url,
         ]);
     }
 
