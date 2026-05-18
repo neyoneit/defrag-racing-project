@@ -162,6 +162,8 @@ class DemomeController extends Controller
         Cache::put('demome:current_status', 'idle', now()->addMinutes(30));
         Cache::forget('demome:current_video_id');
 
+        $this->notifyRenderResult($renderedVideo, true);
+
         return response()->json(['success' => true]);
     }
 
@@ -181,6 +183,33 @@ class DemomeController extends Controller
         Cache::forget('demome:current_video_id');
 
         return response()->json(['success' => true, 'will_retry' => $renderedVideo->retry_count < 3]);
+    }
+
+    /**
+     * Drop a "render is ready" notification into the user's inbox after
+     * a render completes. No-op for auto-rendered rows (nobody asked
+     * for them, no expectation of feedback) or rows with no linked
+     * user_id (Discord renders by non-registered authors). Failures
+     * intentionally do NOT notify — the user can't act on a failure,
+     * admin will retry from Filament.
+     */
+    protected function notifyRenderResult(RenderedVideo $renderedVideo, bool $success): void
+    {
+        if (!$success || !$renderedVideo->user_id || $renderedVideo->source === 'auto') {
+            return;
+        }
+
+        $mapName = $renderedVideo->map_name ?: 'unknown map';
+        $cleanMap = \App\Services\ContentFilter::filterText($mapName);
+
+        \App\Models\Notification::create([
+            'user_id'   => $renderedVideo->user_id,
+            'type'      => 'render_completed',
+            'before'    => $cleanMap,
+            'headline'  => 'render is ready',
+            'after'     => '', // column is NOT NULL in DB
+            'url'       => $renderedVideo->youtube_url,
+        ]);
     }
 
     public function resetToPending(RenderedVideo $renderedVideo)
