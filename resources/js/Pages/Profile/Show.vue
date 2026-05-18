@@ -2316,6 +2316,10 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
                                         <span class="text-xs text-gray-300">Tournament Notifications</span>
                                     </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" :checked="notifsForm.preview_system.includes('render')" @change="togglePreviewSystem('render')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">Render Notifications</span>
+                                    </label>
                                 </div>
                             </div>
 

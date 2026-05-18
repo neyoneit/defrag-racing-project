@@ -72,7 +72,7 @@ class HandleInertiaRequests extends Middleware
             }
 
             // Filter system notifications based on preview_system setting
-            $previewSystem = $user->preview_system ?? ['announcement', 'clan', 'tournament'];
+            $previewSystem = $user->preview_system ?? ['announcement', 'clan', 'tournament', 'render'];
 
             $systemQuery = Notification::where('read', false)
                 ->where('user_id', $user->id);
@@ -94,6 +94,10 @@ class HandleInertiaRequests extends Middleware
                 $allowedTypes = array_merge($allowedTypes, [
                     'tournament_start', 'round_start', 'round_end'
                 ]);
+            }
+
+            if (in_array('render', $previewSystem)) {
+                $allowedTypes[] = 'render_completed';
             }
 
             if (!empty($allowedTypes)) {

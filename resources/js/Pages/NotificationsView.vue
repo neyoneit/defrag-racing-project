@@ -150,6 +150,8 @@
             return notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type));
         } else if (activeSystemTab.value === 'profile') {
             return notifications.filter(n => n.type === 'alias_suggestion');
+        } else if (activeSystemTab.value === 'render') {
+            return notifications.filter(n => n.type === 'render_completed');
         }
 
         return notifications;
@@ -163,7 +165,8 @@
             announcements: notifications.filter(n => n.type === 'announcement').length,
             clan: notifications.filter(n => ['clan_invite', 'clan_kick', 'clan_accept', 'clan_leave', 'clan_transfer', 'clan_request', 'clan_request_accept', 'clan_request_reject'].includes(n.type)).length,
             tournament: notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type)).length,
-            profile: notifications.filter(n => n.type === 'alias_suggestion').length
+            profile: notifications.filter(n => n.type === 'alias_suggestion').length,
+            render: notifications.filter(n => n.type === 'render_completed').length,
         };
     });
 
@@ -260,6 +263,13 @@
                 bgColor: 'bg-indigo-500/20',
                 borderColor: 'border-indigo-500/30',
                 iconColor: 'text-indigo-400'
+            },
+            'render_completed': {
+                label: 'Render Done',
+                icon: 'm15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z',
+                bgColor: 'bg-emerald-500/20',
+                borderColor: 'border-emerald-500/30',
+                iconColor: 'text-emerald-400'
             }
         };
 
@@ -579,6 +589,26 @@
                                 </span>
                             </div>
                             <div v-if="activeSystemTab === 'profile'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-indigo-400 to-transparent"></div>
+                        </button>
+
+                        <button
+                            @click="activeSystemTab = 'render'"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
+                            :class="activeSystemTab === 'render'
+                                ? 'text-emerald-400 bg-emerald-500/10'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        >
+                            <div class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                                <span>Render</span>
+                                <span v-if="systemTabCounts.render" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                                      :class="activeSystemTab === 'render' ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-gray-400'">
+                                    {{ systemTabCounts.render }}
+                                </span>
+                            </div>
+                            <div v-if="activeSystemTab === 'render'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"></div>
                         </button>
                     </div>
 

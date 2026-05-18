@@ -53,7 +53,7 @@ class SettingsController extends Controller
             'records_cpm'       =>      ['required', 'string', 'in:all,wr'],
             'preview_records'   =>      ['required', 'string', 'in:all,wr,none'],
             'preview_system'    =>      ['required', 'array'],
-            'preview_system.*'  =>      ['string', 'in:announcement,clan,tournament']
+            'preview_system.*'  =>      ['string', 'in:announcement,clan,tournament,render']
         ]);
 
         $user = $request->user();

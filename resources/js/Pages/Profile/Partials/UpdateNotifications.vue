@@ -125,6 +125,13 @@
                             Tournament Notifications
                         </span>
                     </label>
+
+                    <label class="flex items-center cursor-pointer mb-2">
+                        <Checkbox :checked="form.preview_system.includes('render')" @change="togglePreviewSystem('render')" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            Render Notifications (your demos rendered to YouTube)
+                        </span>
+                    </label>
                 </div>
 
                 <!-- Record Notification Preview -->
