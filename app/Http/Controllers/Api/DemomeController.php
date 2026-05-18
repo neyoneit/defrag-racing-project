@@ -52,18 +52,20 @@ class DemomeController extends Controller
             ->get()
             ->map($mapItem);
 
-        // Normal queue: served only when not paused, and explicitly
-        // EXCLUDES priority=-1 to avoid double-shipping force-render items
-        // (the bot reads them from force_render section only).
-        $items = $paused
-            ? collect()
-            : RenderedVideo::where('status', 'pending')
-                ->where('priority', '>=', 0)
-                ->orderBy('priority', 'asc')
-                ->orderBy('created_at', 'asc')
-                ->limit(5)
-                ->get()
-                ->map($mapItem);
+        // Normal queue: when paused, falls back to the old behavior of
+        // serving ONLY priority=-1 items via items[] too. This is
+        // intentional redundancy with force_render[] above — an old
+        // bot binary that doesn't know about force_render[] still sees
+        // force-render rows here and processes them. Newer bots dedupe
+        // by id so the row isn't rendered twice.
+        $items = ($paused
+            ? RenderedVideo::where('status', 'pending')->where('priority', -1)
+            : RenderedVideo::where('status', 'pending'))
+            ->orderBy('priority', 'asc')
+            ->orderBy('created_at', 'asc')
+            ->limit(5)
+            ->get()
+            ->map($mapItem);
 
         // Find stale items stuck in 'rendering' status (crashed uploads)
         // Exclude items that already have a youtube_url (were completed but status got stuck)
