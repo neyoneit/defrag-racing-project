@@ -28,7 +28,7 @@ class StorageBrowser extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasModeratorPermission('storage_browser') ?? false;
     }
 
     public function mount(): void

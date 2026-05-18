@@ -91,6 +91,10 @@ class UserResource extends Resource
                                 'about_me' => 'About Me (moderation)',
                                 'rating_breakdown' => 'Rating Breakdown (view on profiles)',
                                 'rating_settings' => 'Rating Settings (view/edit)',
+                                'sftp_credentials' => 'SFTP Credentials',
+                                'server_owner_applications' => 'Server Owner Applications',
+                                'storage_browser' => 'Storage Browser (dl.defrag.racing)',
+                                'serverdemos_browser' => 'Serverdemos Browser',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),

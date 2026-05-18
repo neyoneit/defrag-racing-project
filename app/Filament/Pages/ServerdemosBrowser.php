@@ -29,8 +29,7 @@ class ServerdemosBrowser extends Page
 
     public static function canAccess(): bool
     {
-        $u = auth()->user();
-        return $u && ($u->admin || $u->is_moderator);
+        return auth()->user()?->hasModeratorPermission('serverdemos_browser') ?? false;
     }
 
     public function mount(): void
