@@ -170,6 +170,17 @@
         };
     });
 
+    // Inline label prefix shown before before/headline/after in the
+    // Notification Center. Mirrors the categorization used in the
+    // header bell pill so users see "Clan:", "Tournament:" etc.
+    const getNotificationPrefix = (type) => {
+        if (!type) return null;
+        if (type.startsWith('clan_')) return 'Clan:';
+        if (type.startsWith('tournament_') || type.startsWith('round_')) return 'Tournament:';
+        if (type === 'alias_suggestion') return 'Alias:';
+        return null;
+    };
+
     // Get icon and color for notification type
     const getNotificationTypeInfo = (type) => {
         const types = {
@@ -644,23 +655,39 @@
                                 <!-- Content -->
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
                                     <template v-if="notification.type === 'announcement'">
-                                        <span>Announcement: </span>
-                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span class="text-gray-400">Announcement:</span>
+                                        <Link @click.stop class="ml-1.5 text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
                                     </template>
                                     <template v-else-if="notification.type === 'render_completed'">
-                                        <Link v-if="notification.subheadline" class="text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline" v-html="q3tohtml(notification.before)"></Link>
-                                        <span v-else v-html="q3tohtml(notification.before)"></span>
-                                        <span> </span>
-                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span class="text-gray-400">Render:</span>
+                                        <Link v-if="notification.subheadline" @click.stop class="ml-1.5 inline-flex items-center gap-1 align-middle text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                                            </svg>
+                                            <span v-html="q3tohtml(notification.before)"></span>
+                                        </Link>
+                                        <span v-else class="ml-1.5" v-html="q3tohtml(notification.before)"></span>
+                                        <span class="mx-1.5 text-gray-500">-</span>
+                                        <a @click.stop class="inline-flex items-center gap-1 align-middle text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" target="_blank" rel="noopener noreferrer">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
+                                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                            </svg>
+                                            <span v-html="q3tohtml(notification.headline)"></span>
+                                        </a>
                                     </template>
                                     <template v-else>
-                                        <span v-html="q3tohtml(notification.before)"></span>
-                                        <span> </span>
-                                        <Link class="text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
-                                        <span> </span>
-                                        <span v-html="q3tohtml(notification.after)"></span>
-                                        <span v-if="notification.type === 'alias_suggestion'">. </span>
-                                        <Link v-if="notification.type === 'alias_suggestion'" class="text-blue-400 hover:text-blue-300 hover:underline transition-colors" :href="notification.url">Click here to approve or reject</Link>
+                                        <span v-if="getNotificationPrefix(notification.type)" class="text-gray-400 mr-1.5">{{ getNotificationPrefix(notification.type) }}</span>
+                                        <span v-if="notification.before" class="text-gray-400" v-html="q3tohtml(notification.before)"></span>
+                                        <Link @click.stop class="mx-1.5 text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span v-if="notification.after" class="text-gray-400" v-html="q3tohtml(notification.after)"></span>
+                                        <template v-if="notification.type === 'alias_suggestion'">
+                                            <Link @click.stop class="ml-1.5 inline-flex items-center gap-1 align-middle text-yellow-400 hover:text-yellow-300 hover:underline transition-colors" :href="notification.url">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                </svg>
+                                                Approve / reject
+                                            </Link>
+                                        </template>
                                     </template>
                                 </div>
 

@@ -635,8 +635,17 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                                         </svg>
-                                        <span class="text-gray-500">{{ currentSystemNotification.type?.startsWith('clan_') ? 'Clan:' : currentSystemNotification.type?.startsWith('tournament_') || currentSystemNotification.type?.startsWith('round_') ? 'Tournament:' : currentSystemNotification.type?.startsWith('render_') ? 'Render:' : 'Announcement:' }}</span>
-                                        <span class="font-bold text-blue-400 truncate" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                        <span class="text-gray-500 shrink-0">{{ currentSystemNotification.type?.startsWith('clan_') ? 'Clan:' : currentSystemNotification.type?.startsWith('tournament_') || currentSystemNotification.type?.startsWith('round_') ? 'Tournament:' : currentSystemNotification.type?.startsWith('render_') ? 'Render:' : 'Announcement:' }}</span>
+                                        <template v-if="currentSystemNotification.type === 'render_completed'">
+                                            <span class="font-bold text-emerald-300 truncate" v-html="q3tohtml(currentSystemNotification.before || '')"></span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
+                                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                            </svg>
+                                            <span class="font-bold text-blue-400 truncate">ready</span>
+                                        </template>
+                                        <template v-else>
+                                            <span class="font-bold text-blue-400 truncate" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                        </template>
                                     </div>
                                     <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-500 text-white text-xs font-bold rounded">
                                         {{ systemNotifications.length }}
