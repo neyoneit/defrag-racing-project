@@ -14,7 +14,14 @@ const props = defineProps({
     application: Object,
     credential: Object,
     pendingPassword: { type: String, default: null },
+    countries: { type: Object, default: () => ({}) },
 });
+
+// Backend ships countries as { "CZ": "CZ — Czechia", ... } already sorted.
+// Convert to an array of {code,label} for v-for stability.
+const countryOptions = computed(() =>
+    Object.entries(props.countries).map(([code, label]) => ({ code, label }))
+);
 
 const page = usePage();
 const successMsg = computed(() => page.props.success);
@@ -159,6 +166,40 @@ const submittedServerInfoString = computed(() => {
 });
 
 const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?? value;
+
+// Add-server form (only shown when state === 'active'). Pre-fills IP from
+// the user's most-recent declared server so the common "another port on
+// the same box" case is one click — they only tweak port + gametype.
+const addServerOpen = ref(false);
+
+const existingIps = computed(() => {
+    const list = props.credential?.servers || [];
+    return [...new Set(list.map(s => s.ip).filter(Boolean))];
+});
+
+const addServerForm = useForm({
+    gametype: 'mixed',
+    ip: '',
+    port: 27960,
+    rcon: '',
+    location: '',
+});
+
+const openAddServer = () => {
+    addServerForm.reset();
+    addServerForm.ip = existingIps.value[0] ?? '';
+    addServerOpen.value = true;
+};
+
+const submitAddServer = () => {
+    addServerForm.post(route('server-hosting.add-server'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            addServerOpen.value = false;
+            addServerForm.reset();
+        },
+    });
+};
 </script>
 
 <template>
@@ -309,6 +350,88 @@ const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?
                 <p class="text-xs text-gray-500 mt-2">
                     Put each RS code into <code>sv.conf</code> as <code>rs&lt;PORT&gt;=&lt;rs_code&gt;</code> (set <code>MDD_ENABLED=1</code> too).
                 </p>
+
+                <!-- Add another server (reuses existing SFTP credential) -->
+                <div class="mt-4">
+                    <button v-if="!addServerOpen"
+                            type="button"
+                            @click="openAddServer"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm transition">
+                        <span class="text-base leading-none">+</span> Add another server
+                    </button>
+
+                    <form v-else
+                          @submit.prevent="submitAddServer"
+                          class="rounded-lg border border-emerald-500/20 bg-black/30 p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-semibold text-emerald-200">Register another server</h4>
+                            <p class="text-xs text-gray-500">Reuses your existing SFTP credentials — no new password.</p>
+                        </div>
+
+                        <div class="grid grid-cols-12 gap-2 items-start">
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1">Gametype</label>
+                                <select v-model="addServerForm.gametype"
+                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
+                                               bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
+                                               bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
+                                    <option v-for="g in GAMETYPES" :key="g.value" :value="g.value"
+                                            class="bg-slate-900 text-gray-200">{{ g.label }}</option>
+                                </select>
+                            </div>
+                            <div class="col-span-3">
+                                <label class="block text-xs text-gray-500 mb-1">IP</label>
+                                <input v-model="addServerForm.ip"
+                                       :list="existingIps.length ? 'existing-ips' : null"
+                                       type="text" placeholder="123.45.67.89"
+                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                <datalist v-if="existingIps.length" id="existing-ips">
+                                    <option v-for="ip in existingIps" :key="ip" :value="ip" />
+                                </datalist>
+                                <p v-if="addServerForm.errors.ip" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.ip }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1">Port</label>
+                                <input v-model.number="addServerForm.port"
+                                       type="number" min="1" max="65535" placeholder="27960"
+                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                <p v-if="addServerForm.errors.port" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.port }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1">Rcon</label>
+                                <input v-model="addServerForm.rcon"
+                                       type="text" placeholder="rcon"
+                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                <p v-if="addServerForm.errors.rcon" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.rcon }}</p>
+                            </div>
+                            <div class="col-span-3">
+                                <label class="block text-xs text-gray-500 mb-1">Country</label>
+                                <select v-model="addServerForm.location"
+                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
+                                               bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
+                                               bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
+                                    <option value="" class="bg-slate-900 text-gray-400">— flag —</option>
+                                    <option v-for="c in countryOptions" :key="c.code" :value="c.code"
+                                            class="bg-slate-900 text-gray-200">{{ c.label }}</option>
+                                </select>
+                                <p v-if="addServerForm.errors.location" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.location }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button type="button"
+                                    @click="addServerOpen = false"
+                                    class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    :disabled="addServerForm.processing"
+                                    class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
+                                {{ addServerForm.processing ? 'Adding…' : 'Add server' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <details class="mt-6 group">
@@ -438,12 +561,14 @@ DEMO_SFTP_REMOTEDIR={{ credential.remote_path }}</code></pre>
                                 <p v-if="form.errors[`servers.${i}.rcon`]" class="text-xs text-red-400 mt-1">{{ form.errors[`servers.${i}.rcon`] }}</p>
                             </div>
                             <div class="col-span-2">
-                                <input v-model="s.location"
-                                       type="text"
-                                       maxlength="2"
-                                       placeholder="US"
-                                       @input="s.location = (s.location || '').toUpperCase()"
-                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono uppercase focus:border-blue-500 focus:ring-0 transition" />
+                                <select v-model="s.location"
+                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
+                                               bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
+                                               bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
+                                    <option value="" class="bg-slate-900 text-gray-400">— flag —</option>
+                                    <option v-for="c in countryOptions" :key="c.code" :value="c.code"
+                                            class="bg-slate-900 text-gray-200">{{ c.label }}</option>
+                                </select>
                                 <p v-if="form.errors[`servers.${i}.location`]" class="text-xs text-red-400 mt-1">{{ form.errors[`servers.${i}.location`] }}</p>
                             </div>
                             <div class="col-span-1 flex justify-end">

@@ -50,9 +50,13 @@ class ServerResource extends Resource
                 TextInput::make('port')
                     ->required()
                     ->numeric(),
-                TextInput::make('location')
+                Select::make('location')
+                    ->label('Country (ISO-2)')
                     ->required()
-                    ->maxLength(255),
+                    ->options(\App\Support\Countries::options())
+                    ->searchable()
+                    ->native(false)
+                    ->helperText('Drives the flag icon shown next to the server.'),
                 Select::make('type')
                     ->label('Server Type')
                     ->required()

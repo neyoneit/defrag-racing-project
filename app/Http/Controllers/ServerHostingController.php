@@ -47,6 +47,7 @@ class ServerHostingController extends Controller
                 ? $credential->only(['id', 'sftp_username', 'host', 'port', 'remote_path', 'status', 'servers'])
                 : null,
             'pendingPassword' => $pendingPassword,
+            'countries'       => \App\Support\Countries::options(),
         ]);
     }
 
@@ -118,7 +119,7 @@ class ServerHostingController extends Controller
             'servers.*.ip'            => ['required', 'string', 'max:255'],
             'servers.*.port'          => ['required', 'integer', 'between:1,65535'],
             'servers.*.rcon'          => ['required', 'string', 'max:255'],
-            'servers.*.location'      => ['nullable', 'string', 'size:2', 'alpha'],
+            'servers.*.location'      => ['nullable', 'string', 'size:2', 'alpha', \Illuminate\Validation\Rule::in(\App\Support\Countries::CODES)],
         ]);
 
         $user = $request->user();
@@ -148,5 +149,67 @@ class ServerHostingController extends Controller
         ]);
 
         return back()->with('success', 'Application submitted. Admins will review it shortly.');
+    }
+
+    /**
+     * Append a new server entry to an already-approved user's credential.
+     * Does NOT touch SFTP provisioning — the user reuses their existing
+     * account on the storage VPS. Only the per-server metadata
+     * (gametype/ip/port/rcon/location) grows. rs_code is left null and
+     * admins fill it in from Filament after light review.
+     */
+    public function addServer(Request $request)
+    {
+        $request->validate([
+            'gametype' => ['required', 'string', 'in:mixed,cpm,vq3,teamruns,fastcaps,freestyle'],
+            'ip'       => ['required', 'string', 'max:255'],
+            'port'     => ['required', 'integer', 'between:1,65535'],
+            'rcon'     => ['required', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'size:2', 'alpha', \Illuminate\Validation\Rule::in(\App\Support\Countries::CODES)],
+        ]);
+
+        $user = $request->user();
+
+        $credential = SftpCredential::where('user_id', $user->id)
+            ->active()
+            ->latest()
+            ->first();
+
+        if (!$credential) {
+            return back()->with('danger', 'No active credential — you must be an approved server owner to add servers.');
+        }
+
+        $rateKey = 'sftp-add-server:' . $user->id;
+        if (RateLimiter::tooManyAttempts($rateKey, 10)) {
+            $retry = RateLimiter::availableIn($rateKey);
+            return back()->with('danger', "Too many additions. Try again in {$retry} seconds.");
+        }
+        RateLimiter::hit($rateKey, 3600);
+
+        $servers = $credential->servers ?? [];
+
+        $ip   = trim($request->input('ip'));
+        $port = (int) $request->input('port');
+
+        foreach ($servers as $existing) {
+            if (($existing['ip'] ?? null) === $ip && (int) ($existing['port'] ?? 0) === $port) {
+                return back()->withErrors([
+                    'ip' => "You already have a server registered at {$ip}:{$port}.",
+                ]);
+            }
+        }
+
+        $servers[] = [
+            'gametype' => $request->input('gametype'),
+            'ip'       => $ip,
+            'port'     => $port,
+            'rcon'     => $request->input('rcon'),
+            'location' => $request->input('location'),
+            'rs_code'  => null,
+        ];
+
+        $credential->update(['servers' => $servers]);
+
+        return back()->with('success', 'Server added. Admin will assign an RS code shortly.');
     }
 }
