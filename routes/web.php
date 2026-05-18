@@ -298,6 +298,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/server-hosting/apply', [\App\Http\Controllers\ServerHostingController::class, 'apply'])->name('server-hosting.apply');
     Route::post('/server-hosting/acknowledge-password', [\App\Http\Controllers\ServerHostingController::class, 'acknowledgePassword'])->name('server-hosting.acknowledge-password');
     Route::post('/server-hosting/reset-password', [\App\Http\Controllers\ServerHostingController::class, 'resetPassword'])->name('server-hosting.reset-password');
+    Route::post('/server-hosting/add-server', [\App\Http\Controllers\ServerHostingController::class, 'addServer'])->name('server-hosting.add-server');
 });
 
 
