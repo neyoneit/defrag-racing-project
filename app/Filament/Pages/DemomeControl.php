@@ -80,26 +80,48 @@ class DemomeControl extends Page
                     ),
                 ];
             }),
-            'queue_by_priority' => [
-                'wr' => RenderedVideo::where('status', 'pending')->where('priority', 1)->count(),
-                'verified' => RenderedVideo::where('status', 'pending')->where('priority', 2)->count(),
-                'normal' => RenderedVideo::where('status', 'pending')->where('priority', 3)->count(),
-            ],
-            'unlisted_count' => RenderedVideo::where('status', 'completed')
-                ->where('source', 'auto')
-                ->where('publish_approved', false)
-                ->whereNull('published_at')
-                ->whereNotNull('youtube_video_id')
-                ->count(),
-            'unlisted_tier_counts' => $this->getUnlistedTierCounts(),
-            'unlisted_videos' => $this->getUnlistedVideosPaginated(),
-            'unlisted_total_pages' => $this->getUnlistedTotalPages(),
-            'publishing_count' => RenderedVideo::where('status', 'completed')
-                ->where('publish_approved', true)
-                ->whereNull('published_at')
-                ->count(),
+            // Filament re-renders the whole page on every wire:click action,
+            // and the rendered_videos table is several hundred thousand rows
+            // on prod — every uncached COUNT/SELECT here piled up to a
+            // multi-minute Livewire round-trip + Cloudflare 504s on 2026-05-19.
+            // Cache the global aggregates with a short TTL and invalidate from
+            // the handful of action methods that actually mutate this data.
+            'queue_by_priority' => Cache::remember('demome:control_queue_by_priority', 60, function () {
+                return [
+                    'wr' => RenderedVideo::where('status', 'pending')->where('priority', 1)->count(),
+                    'verified' => RenderedVideo::where('status', 'pending')->where('priority', 2)->count(),
+                    'normal' => RenderedVideo::where('status', 'pending')->where('priority', 3)->count(),
+                ];
+            }),
+            'unlisted_count' => Cache::remember('demome:control_unlisted_count', 60, function () {
+                return RenderedVideo::where('status', 'completed')
+                    ->where('source', 'auto')
+                    ->where('publish_approved', false)
+                    ->whereNull('published_at')
+                    ->whereNotNull('youtube_video_id')
+                    ->count();
+            }),
+            'unlisted_tier_counts' => Cache::remember('demome:control_unlisted_tier_counts', 60, fn () => $this->getUnlistedTierCounts()),
+            // Cache the page list per (tier, page) so changing tier or paging
+            // doesn't pay the full filter+sort cost every click.
+            'unlisted_videos' => Cache::remember(
+                "demome:control_unlisted_videos:{$this->unlistedTier}:{$this->unlistedPage}:{$this->unlistedPerPage}",
+                30,
+                fn () => $this->getUnlistedVideosPaginated()
+            ),
+            'unlisted_total_pages' => Cache::remember(
+                "demome:control_unlisted_total_pages:{$this->unlistedTier}:{$this->unlistedPerPage}",
+                60,
+                fn () => $this->getUnlistedTotalPages()
+            ),
+            'publishing_count' => Cache::remember('demome:control_publishing_count', 60, function () {
+                return RenderedVideo::where('status', 'completed')
+                    ->where('publish_approved', true)
+                    ->whereNull('published_at')
+                    ->count();
+            }),
             'manual_bulk_history' => $this->getManualBulkHistory(),
-            'bulk_tier_buttons' => $this->getBulkTierButtonData(),
+            'bulk_tier_buttons' => Cache::remember('demome:control_bulk_tier_buttons', 60, fn () => $this->getBulkTierButtonData()),
             'backlog' => $this->getBacklogStats(),
             'discordRestartMarker' => SiteSetting::get('demome:discord_restart_from_message_id') ?: null,
             'discordReprocessMarker' => SiteSetting::get('demome:discord_reprocess_single_message_id') ?: null,
@@ -267,6 +289,27 @@ class DemomeControl extends Page
         });
     }
 
+    /**
+     * Drop every cache key the view layer relies on for rendered_videos
+     * aggregates. Call this from any action that mutates publish_approved,
+     * status, or other columns that feed the counts on screen — without it
+     * the new state is invisible until the per-key TTL elapses, which makes
+     * the panel look broken even though the change went through.
+     */
+    private function flushDemomeViewCache(): void
+    {
+        Cache::forget('demome:control_stats');
+        Cache::forget('demome:control_queue_by_priority');
+        Cache::forget('demome:control_unlisted_count');
+        Cache::forget('demome:control_unlisted_tier_counts');
+        Cache::forget('demome:control_publishing_count');
+        Cache::forget('demome:control_bulk_tier_buttons');
+        // unlisted_videos / unlisted_total_pages are keyed by tier+page; we
+        // can't enumerate cheaply, so we let them expire on their short TTL
+        // (30s/60s). The list view is the least state-sensitive piece — a
+        // 30s lag on tier/page transitions is acceptable.
+    }
+
     public function togglePause(): void
     {
         $currentState = SiteSetting::getBool('demome:paused', false);
@@ -295,6 +338,8 @@ class DemomeControl extends Page
     {
         \Artisan::call('demome:populate-queue', ['--force' => true]);
 
+        $this->flushDemomeViewCache();
+
         Notification::make()
             ->title('Queue Populated')
             ->body(\Artisan::output())
@@ -310,6 +355,8 @@ class DemomeControl extends Page
         }
 
         $video->update(['publish_approved' => true]);
+
+        $this->flushDemomeViewCache();
 
         Notification::make()
             ->title('Video Queued for Publishing')
@@ -342,6 +389,8 @@ class DemomeControl extends Page
         $breakdown = collect($tierCounts)->map(fn($c, $l) => "{$c}x {$l}")->join(', ');
 
         $this->recordManualBulk("Mix 12 ({$breakdown})", $batch->count());
+
+        $this->flushDemomeViewCache();
 
         Notification::make()
             ->title("Publish Queued: {$batch->count()} videos")
@@ -388,8 +437,8 @@ class DemomeControl extends Page
 
         $this->recordManualBulk($label, $count);
 
-        // Invalidate the unlisted stats cache so the UI immediately reflects the change.
-        \Illuminate\Support\Facades\Cache::forget('demome:control_stats');
+        // Invalidate every view cache key so the UI immediately reflects the change.
+        $this->flushDemomeViewCache();
 
         Notification::make()
             ->title("Bulk Publish Queued: {$count} videos")
