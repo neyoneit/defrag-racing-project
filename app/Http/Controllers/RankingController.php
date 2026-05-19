@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\PlayerRating;
+use App\Models\RatingSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
@@ -214,9 +215,14 @@ class RankingController extends Controller
             }
         }
 
+        $ratingSettings = collect(RatingSetting::allAsArray())
+            ->map(fn ($v) => is_numeric($v) ? (float) $v : $v)
+            ->all();
+
         return Inertia::render('RankingHowItWorks', [
             'categoryStats'      => $categoryStats,
             'categoryStatsAsOf'  => $lastUpdated,
+            'ratingSettings'     => $ratingSettings,
         ]);
     }
 }

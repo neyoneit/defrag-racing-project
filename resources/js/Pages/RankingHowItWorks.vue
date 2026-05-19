@@ -5,6 +5,7 @@ import { computed } from 'vue';
 const props = defineProps({
     categoryStats: { type: Object, default: () => ({}) },
     categoryStatsAsOf: { type: String, default: null },
+    ratingSettings: { type: Object, default: () => ({}) },
 });
 
 // Display order — matches the rust service and ranking UI.
@@ -40,85 +41,104 @@ function formatAsOf(raw) {
     return d.toISOString().slice(0, 10);
 }
 
-// Reproduce the formulas for interactive examples
-const CFG_A = 1.2;
-const CFG_B = 1.33;
-const CFG_M = 0.3;
-const CFG_V = 0.1;
-const CFG_Q = 0.5;
-const CFG_D = 0.02;
-const MULT_L = 1.0;
-const MULT_N = 2.0;
-const RANK_N = 1.5;
-const RANK_V = 2.0;
+// Live parameters from rating_settings DB (admin-editable via Filament).
+// Defaults are fallbacks only — the prop is the source of truth at runtime.
+const s = computed(() => {
+    const r = props.ratingSettings ?? {};
+    const num = (key, fallback) => {
+        const v = r[key];
+        return v === undefined || v === null || v === '' ? fallback : Number(v);
+    };
+    return {
+        cfg_a: num('cfg_a', 1.2),
+        cfg_b: num('cfg_b', 1.33),
+        cfg_m: num('cfg_m', 0.3),
+        cfg_v: num('cfg_v', 0.1),
+        cfg_q: num('cfg_q', 0.5),
+        cfg_d: num('cfg_d', 0.02),
+        mult_l: num('mult_l', 1.0),
+        mult_n: num('mult_n', 2.0),
+        rank_n: num('rank_exponent', 1.5),
+        rank_v: num('rank_v', 2.0),
+        min_map_players: num('min_map_players', 5),
+        min_top1_time: num('min_top1_time', 500),
+        max_tied_wr_players: num('max_tied_wr_players', 3),
+        min_total_records: num('min_total_records', 10),
+    };
+});
+
+// Trim trailing zeros so 1.20 → "1.2" and 0.3300 → "0.33".
+function fmt(value, digits = 4) {
+    if (value === undefined || value === null || Number.isNaN(value)) return '–';
+    const fixed = Number(value).toFixed(digits);
+    return fixed.replace(/\.?0+$/, '') || '0';
+}
 
 function calcRankMultiplier(totalPlayers, yourRank) {
-    if (totalPlayers <= 1 || yourRank === 0) return 1.0;
-    const numerator = (totalPlayers * RANK_V) - yourRank;
-    const denominator = (totalPlayers * RANK_V) - 1;
+    const cfg = s.value;
+    if (cfg.rank_n === 0 || cfg.rank_v === 0 || totalPlayers <= 1 || yourRank === 0) return 1.0;
+    const numerator = (totalPlayers * cfg.rank_v) - yourRank;
+    const denominator = (totalPlayers * cfg.rank_v) - 1;
     if (denominator <= 0) return 1.0;
-    return Math.pow(Math.max(numerator / denominator, 0), RANK_N);
+    return Math.pow(Math.max(numerator / denominator, 0), cfg.rank_n);
 }
 
 function calcMapScore(reltime) {
-    return 1000 * (CFG_A + (-CFG_A / Math.pow(1 + CFG_Q * Math.exp(-CFG_B * (reltime - CFG_M)), 1 / CFG_V)));
+    const c = s.value;
+    return 1000 * (c.cfg_a + (-c.cfg_a / Math.pow(1 + c.cfg_q * Math.exp(-c.cfg_b * (reltime - c.cfg_m)), 1 / c.cfg_v)));
 }
 
 function calcMultiplier(players, median) {
+    const cfg = s.value;
     const k = Math.max(median / 2, 1);
     const x = players;
-    return (MULT_L * Math.pow(x, MULT_N)) / (Math.pow(k, MULT_N) + Math.pow(x, MULT_N));
+    return (cfg.mult_l * Math.pow(x, cfg.mult_n)) / (Math.pow(k, cfg.mult_n) + Math.pow(x, cfg.mult_n));
 }
 
 function calcPlayerRating(scores) {
+    const cfg = s.value;
     const sorted = [...scores].sort((a, b) => b - a);
     let weightedSum = 0;
     let weightSum = 0;
     for (let i = 0; i < sorted.length; i++) {
-        // weight = exp(-D * (rank - 1)) — best record (rank 1) gets weight 1.0
-        const weight = Math.exp(-CFG_D * i);
+        const weight = Math.exp(-cfg.cfg_d * i);
         weightedSum += sorted[i] * weight;
         weightSum += weight;
     }
     let rating = weightedSum / weightSum;
-    if (sorted.length < 10) {
-        rating *= sorted.length / 10;
+    if (sorted.length < cfg.min_total_records) {
+        rating *= sorted.length / cfg.min_total_records;
     }
     return rating;
 }
 
-// Example data
-const exampleWR = 15000; // 15.000s
-const exampleTime = 18500; // 18.500s
+// Median used in examples — prefer VQ3 Overall live data, fall back to 13.
+const exampleMedian = computed(() => {
+    const live = props.categoryStats?.run?.overall?.vq3?.median;
+    return live && live > 0 ? Math.round(live) : 13;
+});
+const exampleK = computed(() => Math.max(exampleMedian.value / 2, 1));
+
+const exampleWR = 15000;
+const exampleTime = 18500;
 const exampleReltime = exampleTime / exampleWR;
-const exampleBaseScore = calcMapScore(exampleReltime);
-const exampleMultiplier = calcMultiplier(25, 13);
-const exampleFinalScore = exampleBaseScore * exampleMultiplier;
-
-const exampleSmallMap = calcMultiplier(4, 13);
-const exampleMedMap = calcMultiplier(13, 13);
-const exampleBigMap = calcMultiplier(50, 13);
-
-const exampleRankMult1 = calcRankMultiplier(50, 1);
-const exampleRankMult5 = calcRankMultiplier(50, 5);
-const exampleRankMult25 = calcRankMultiplier(50, 25);
-const exampleRankMult50 = calcRankMultiplier(50, 50);
+const exampleBaseScore = computed(() => calcMapScore(exampleReltime));
+const exampleMultiplier = computed(() => calcMultiplier(25, exampleMedian.value));
+const exampleFinalScore = computed(() => exampleBaseScore.value * exampleMultiplier.value);
 
 const exampleScores = [850, 780, 720, 650, 600, 550, 500, 480, 420, 380, 350, 300];
-const exampleRating = calcPlayerRating(exampleScores);
+const exampleRating = computed(() => calcPlayerRating(exampleScores));
 const exampleFewScores = [850, 780, 720];
-const exampleFewRating = calcPlayerRating(exampleFewScores);
+const exampleFewRating = computed(() => calcPlayerRating(exampleFewScores));
 
-// Share of total weight carried by the top-N records, in the limit
-// of a very large record count. Derived from the geometric series:
-// sum_{i=0..N-1} exp(-D*i) / sum_{i=0..inf} exp(-D*i)  =  1 - exp(-D*N).
-// This is the "best case" upper bound on top-N contribution; for a
-// finite roster the share is even higher.
+// Share of total weight carried by the top-N records in the limit of a
+// very large record count: 1 - exp(-D*N). For a finite roster the share
+// is even higher.
 function topNWeightShare(n) {
-    return (1 - Math.exp(-CFG_D * n)) * 100;
+    return (1 - Math.exp(-s.value.cfg_d * n)) * 100;
 }
-const top100Share = topNWeightShare(100);
-const top200Share = topNWeightShare(200);
+const top100Share = computed(() => topNWeightShare(100));
+const top200Share = computed(() => topNWeightShare(200));
 </script>
 
 <template>
@@ -204,15 +224,15 @@ const top200Share = topNWeightShare(200);
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 space-y-2">
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>At least <strong class="text-white">5 unique players</strong> must have a record on the map for the given physics (VQ3 and CPM are counted separately)</span>
+                        <span>At least <strong class="text-white">{{ s.min_map_players }} unique players</strong> must have a record on the map for the given physics (VQ3 and CPM are counted separately)</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>The fastest time must be at least <strong class="text-white">500ms</strong> (0.5 seconds) - eliminates bugged/trivial maps</span>
+                        <span>The fastest time must be at least <strong class="text-white">{{ s.min_top1_time }}ms</strong> ({{ (s.min_top1_time / 1000).toFixed(1) }} seconds) - eliminates bugged/trivial maps</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>No more than <strong class="text-white">3 players</strong> can share the exact same WR time - if 4+ players have identical best times, the map is considered "free WR" and is excluded</span>
+                        <span>No more than <strong class="text-white">{{ s.max_tied_wr_players }} players</strong> can share the exact same WR time - if {{ s.max_tied_wr_players + 1 }}+ players have identical best times, the map is considered "free WR" and is excluded</span>
                     </div>
                 </div>
                 <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300">
@@ -277,11 +297,11 @@ const top200Share = topNWeightShare(200);
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">A = 1.2</span> <span class="text-gray-500">— amplitude</span></div>
-                        <div><span class="text-white font-mono">B = 1.33</span> <span class="text-gray-500">— steepness</span></div>
-                        <div><span class="text-white font-mono">M = 0.3</span> <span class="text-gray-500">— midpoint shift</span></div>
-                        <div><span class="text-white font-mono">V = 0.1</span> <span class="text-gray-500">— curve shape</span></div>
-                        <div><span class="text-white font-mono">Q = 0.5</span> <span class="text-gray-500">— initial value</span></div>
+                        <div><span class="text-white font-mono">A = {{ fmt(s.cfg_a) }}</span> <span class="text-gray-500">— amplitude</span></div>
+                        <div><span class="text-white font-mono">B = {{ fmt(s.cfg_b) }}</span> <span class="text-gray-500">— steepness</span></div>
+                        <div><span class="text-white font-mono">M = {{ fmt(s.cfg_m) }}</span> <span class="text-gray-500">— midpoint shift</span></div>
+                        <div><span class="text-white font-mono">V = {{ fmt(s.cfg_v) }}</span> <span class="text-gray-500">— curve shape</span></div>
+                        <div><span class="text-white font-mono">Q = {{ fmt(s.cfg_q) }}</span> <span class="text-gray-500">— initial value</span></div>
                     </div>
                 </div>
 
@@ -333,57 +353,57 @@ const top200Share = topNWeightShare(200);
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— number of unique players on the map</span></div>
                         <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— median(players per map in category) / 2 (the halfway point)</span></div>
-                        <div><span class="text-white font-mono">L = 1.0</span> <span class="text-gray-500">— maximum multiplier (100%)</span></div>
-                        <div><span class="text-white font-mono">n = 2.0</span> <span class="text-gray-500">— steepness of the curve</span></div>
+                        <div><span class="text-white font-mono">L = {{ fmt(s.mult_l) }}</span> <span class="text-gray-500">— maximum multiplier (100%)</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.mult_n) }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
                     </div>
                 </div>
 
-                <p class="mb-3 text-sm">For VQ3 Overall (median = 13 players, so k = 6.5):</p>
+                <p class="mb-3 text-sm">For VQ3 Overall (median = {{ exampleMedian }} players, so k = {{ fmt(exampleK, 1) }}):</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="space-y-3">
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
                                 <span>4 players (small map)</span>
-                                <span class="font-mono text-red-400 font-bold">{{ (calcMultiplier(4, 13) * 100).toFixed(1) }}%</span>
+                                <span class="font-mono text-red-400 font-bold">{{ (calcMultiplier(4, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
-                                <div class="bg-red-500 h-2 rounded-full" :style="`width: ${calcMultiplier(4, 13) * 100}%`"></div>
+                                <div class="bg-red-500 h-2 rounded-full" :style="`width: ${calcMultiplier(4, exampleMedian) * 100}%`"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>7 players (k = 6.5)</span>
-                                <span class="font-mono text-yellow-400 font-bold">{{ (calcMultiplier(7, 13) * 100).toFixed(1) }}%</span>
+                                <span>7 players (k ≈ {{ fmt(exampleK, 1) }})</span>
+                                <span class="font-mono text-yellow-400 font-bold">{{ (calcMultiplier(7, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
-                                <div class="bg-yellow-500 h-2 rounded-full" :style="`width: ${calcMultiplier(7, 13) * 100}%`"></div>
+                                <div class="bg-yellow-500 h-2 rounded-full" :style="`width: ${calcMultiplier(7, exampleMedian) * 100}%`"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>13 players (median)</span>
-                                <span class="font-mono text-lime-400 font-bold">{{ (calcMultiplier(13, 13) * 100).toFixed(1) }}%</span>
+                                <span>{{ exampleMedian }} players (median)</span>
+                                <span class="font-mono text-lime-400 font-bold">{{ (calcMultiplier(exampleMedian, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
-                                <div class="bg-lime-500 h-2 rounded-full" :style="`width: ${calcMultiplier(13, 13) * 100}%`"></div>
+                                <div class="bg-lime-500 h-2 rounded-full" :style="`width: ${calcMultiplier(exampleMedian, exampleMedian) * 100}%`"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
                                 <span>25 players</span>
-                                <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(25, 13) * 100).toFixed(1) }}%</span>
+                                <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(25, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
-                                <div class="bg-green-500 h-2 rounded-full" :style="`width: ${calcMultiplier(25, 13) * 100}%`"></div>
+                                <div class="bg-green-500 h-2 rounded-full" :style="`width: ${calcMultiplier(25, exampleMedian) * 100}%`"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
                                 <span>50 players (popular map)</span>
-                                <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(50, 13) * 100).toFixed(1) }}%</span>
+                                <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(50, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
-                                <div class="bg-green-500 h-2 rounded-full" :style="`width: ${calcMultiplier(50, 13) * 100}%`"></div>
+                                <div class="bg-green-500 h-2 rounded-full" :style="`width: ${calcMultiplier(50, exampleMedian) * 100}%`"></div>
                             </div>
                         </div>
                     </div>
@@ -486,8 +506,8 @@ const top200Share = topNWeightShare(200);
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— number of unique players on the map</span></div>
                         <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— your position on the map leaderboard (1 = WR)</span></div>
-                        <div><span class="text-white font-mono">n = {{ RANK_N }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
-                        <div><span class="text-white font-mono">v = {{ RANK_V }}</span> <span class="text-gray-500">— total_players modifier</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
+                        <div><span class="text-white font-mono">v = {{ fmt(s.rank_v) }}</span> <span class="text-gray-500">— total_players modifier</span></div>
                     </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
@@ -519,7 +539,7 @@ const top200Share = topNWeightShare(200);
                     final_score = base_score * map_multiplier * rank_multiplier
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, rank #3, VQ3 overall median = 13)</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, rank #3, VQ3 overall median = {{ exampleMedian }})</div>
                     <div class="text-sm space-y-1">
                         <div>Your reltime: <span class="text-white font-mono">{{ exampleReltime.toFixed(4) }}</span></div>
                         <div>Base score: <span class="text-white font-mono">{{ exampleBaseScore.toFixed(1) }}</span></div>
@@ -556,7 +576,7 @@ const top200Share = topNWeightShare(200);
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">i</span> <span class="text-gray-500">— rank position in your sorted map scores (1 = your best map)</span></div>
                         <div><span class="text-white font-mono">score_i</span> <span class="text-gray-500">— the final map score (after multipliers) on your i-th best map</span></div>
-                        <div><span class="text-white font-mono">D = {{ CFG_D }}</span> <span class="text-gray-500">— decay constant; smaller value means slower decay (more records contribute)</span></div>
+                        <div><span class="text-white font-mono">D = {{ fmt(s.cfg_d) }}</span> <span class="text-gray-500">— decay constant; smaller value means slower decay (more records contribute)</span></div>
                     </div>
                 </div>
 
@@ -564,7 +584,7 @@ const top200Share = topNWeightShare(200);
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">How it works</div>
                     <div class="text-sm space-y-2">
                         <p>1. All your map scores are <strong class="text-white">sorted from highest to lowest</strong></p>
-                        <p>2. Each score gets a weight: <span class="font-mono text-white">exp(-{{ CFG_D }} * (i - 1))</span> where i starts at 1</p>
+                        <p>2. Each score gets a weight: <span class="font-mono text-white">exp(-{{ fmt(s.cfg_d) }} * (i - 1))</span> where i starts at 1</p>
                         <p>3. Your best map gets weight 1.0, your 10th best ~0.84, your 50th best ~0.38</p>
                         <p>4. The final rating is the weighted average of all scores</p>
                     </div>
@@ -575,7 +595,7 @@ const top200Share = topNWeightShare(200);
                         <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
                         <div class="text-sm">
                             <div class="font-bold text-blue-300 mb-1">Which records actually matter?</div>
-                            <div class="text-xs text-gray-300">With <span class="font-mono text-white">D = {{ CFG_D }}</span>, your <strong class="text-white">top 100 records carry ~{{ top100Share.toFixed(1) }}%</strong> of the total weight in your rating, and your <strong class="text-white">top 200 carry ~{{ top200Share.toFixed(1) }}%</strong>. So pushing your best maps a little harder will move your number much more than adding a hundred more average runs.</div>
+                            <div class="text-xs text-gray-300">With <span class="font-mono text-white">D = {{ fmt(s.cfg_d) }}</span>, your <strong class="text-white">top 100 records carry ~{{ top100Share.toFixed(1) }}%</strong> of the total weight in your rating, and your <strong class="text-white">top 200 carry ~{{ top200Share.toFixed(1) }}%</strong>. So pushing your best maps a little harder will move your number much more than adding a hundred more average runs.</div>
                             <div class="text-[10px] text-gray-500 mt-1">(Computed dynamically from D — if the decay constant changes, this number changes too.)</div>
                         </div>
                     </div>
@@ -587,7 +607,7 @@ const top200Share = topNWeightShare(200);
                         <div v-for="(score, i) in exampleScores" :key="i" class="bg-gray-800 rounded px-2 py-1 text-center">
                             <div class="text-gray-500">#{{ i + 1 }}</div>
                             <div class="font-mono" :class="i < 3 ? 'text-green-400' : i < 6 ? 'text-yellow-400' : 'text-gray-400'">{{ score }}</div>
-                            <div class="text-gray-600 text-[9px]">w={{ Math.exp(-CFG_D * i).toFixed(3) }}</div>
+                            <div class="text-gray-600 text-[9px]">w={{ Math.exp(-s.cfg_d * i).toFixed(3) }}</div>
                         </div>
                     </div>
                     <div class="text-sm">
@@ -599,9 +619,9 @@ const top200Share = topNWeightShare(200);
                 <!-- Penalty for few records -->
                 <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
                     <div class="text-sm font-bold text-red-400 mb-2">Penalty for few records</div>
-                    <p class="text-sm mb-2">Players with fewer than <strong class="text-white">10 records</strong> receive a proportional penalty:</p>
+                    <p class="text-sm mb-2">Players with fewer than <strong class="text-white">{{ s.min_total_records }} records</strong> receive a proportional penalty:</p>
                     <div class="bg-gray-900/60 rounded-lg p-3 font-mono text-center text-white text-sm mb-2">
-                        penalized_rating = rating * (num_records / 10)
+                        penalized_rating = rating * (num_records / {{ s.min_total_records }})
                     </div>
                     <div class="text-sm">
                         Example: same top 3 scores (850, 780, 720) but only 3 records:
@@ -657,7 +677,7 @@ const top200Share = topNWeightShare(200);
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-gray-500">
-                    Each category has its own median for the map multiplier calculation. For example, strafe maps in CPM have a median of 27 players, while LG maps have a median of only 14.
+                    Each category has its own median for the map multiplier calculation — see the live table in <a href="#multiplier" class="text-blue-400 hover:text-blue-300">section 5</a>. Different categories sit at very different player counts, which is why <span class="font-mono">k</span> shifts per category.
                 </div>
             </section>
 
@@ -735,9 +755,9 @@ const top200Share = topNWeightShare(200);
                     <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                         <div class="text-sm font-bold text-blue-400 mb-2">Step 4: Apply map multiplier</div>
                         <div class="text-xs text-gray-400">
-                            <div>Category median: <span class="text-white">13 players</span>, k = 6.5</div>
+                            <div>Category median: <span class="text-white">{{ exampleMedian }} players</span>, k = {{ fmt(exampleK, 1) }}</div>
                             <div>Map has <span class="text-white">25 players</span></div>
-                            <div>map_multiplier = (25^2) / (6.5^2 + 25^2) = <span class="text-blue-400 font-mono font-bold">{{ exampleMultiplier.toFixed(4) }}</span></div>
+                            <div>map_multiplier = (25<sup>{{ fmt(s.mult_n) }}</sup>) / ({{ fmt(exampleK, 1) }}<sup>{{ fmt(s.mult_n) }}</sup> + 25<sup>{{ fmt(s.mult_n) }}</sup>) = <span class="text-blue-400 font-mono font-bold">{{ exampleMultiplier.toFixed(4) }}</span></div>
                             <div class="mt-1">scaled = {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} = <span class="text-blue-400 font-mono font-bold">{{ exampleFinalScore.toFixed(1) }}</span></div>
                         </div>
                     </div>
@@ -747,7 +767,7 @@ const top200Share = topNWeightShare(200);
                         <div class="text-sm font-bold text-pink-400 mb-2">Step 5: Apply rank multiplier</div>
                         <div class="text-xs text-gray-400">
                             <div>Your rank on the map: <span class="text-white">#3 of 25 players</span></div>
-                            <div>rank_mult = ((25*{{ RANK_V }} - 3) / (25*{{ RANK_V }} - 1))<sup>{{ RANK_N }}</sup> = <span class="text-pink-400 font-mono font-bold">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span></div>
+                            <div>rank_mult = ((25*{{ fmt(s.rank_v) }} - 3) / (25*{{ fmt(s.rank_v) }} - 1))<sup>{{ fmt(s.rank_n) }}</sup> = <span class="text-pink-400 font-mono font-bold">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span></div>
                             <div class="mt-1">final_score = {{ exampleFinalScore.toFixed(1) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
                         </div>
                     </div>
