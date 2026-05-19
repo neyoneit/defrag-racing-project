@@ -88,6 +88,11 @@ class RenderQueuePreview extends Page
             'demo_filename' => $demo->original_filename,
         ]);
 
+        // Drop the cached aggregates so the new pending count + tier counts
+        // show up on the next render instead of waiting for the TTL.
+        Cache::forget('demome:render_queue_preview_stats');
+        Cache::forget('demome:pool_counts');
+
         Notification::make()->title("Queued: {$demo->map_name}")->success()->send();
 
         // Refresh preview
@@ -109,14 +114,19 @@ class RenderQueuePreview extends Page
 
     public function getCurrentQueueStats(): array
     {
-        return [
-            'pending' => RenderedVideo::where('status', 'pending')->count(),
-            'rendering' => RenderedVideo::where('status', 'rendering')->count(),
-            'completed_today' => RenderedVideo::where('status', 'completed')
-                ->where('updated_at', '>=', now()->startOfDay())->count(),
-            'published_today' => RenderedVideo::where('status', 'completed')
-                ->whereNotNull('published_at')
-                ->where('published_at', '>=', now()->startOfDay())->count(),
-        ];
+        // Called from the blade on every render — without caching, every
+        // wire:click (loadPreview, queueDemo) ran 4 fresh COUNTs against
+        // ~340k rendered_videos and could stack into a CDN-timeout.
+        return Cache::remember('demome:render_queue_preview_stats', 60, function () {
+            return [
+                'pending' => RenderedVideo::where('status', 'pending')->count(),
+                'rendering' => RenderedVideo::where('status', 'rendering')->count(),
+                'completed_today' => RenderedVideo::where('status', 'completed')
+                    ->where('updated_at', '>=', now()->startOfDay())->count(),
+                'published_today' => RenderedVideo::where('status', 'completed')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '>=', now()->startOfDay())->count(),
+            ];
+        });
     }
 }
