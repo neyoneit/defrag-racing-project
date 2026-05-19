@@ -20,8 +20,9 @@ struct RatingConfig {
     cfg_d: f64,
     mult_l: f64,
     mult_n: f64,
+    rank_k: f64,
     rank_n: f64,
-    rank_v: f64,
+    rank_p: f64,
 }
 
 impl RatingConfig {
@@ -53,8 +54,9 @@ impl RatingConfig {
             cfg_d: get_f64("cfg_d", 0.02),
             mult_l: get_f64("mult_l", 1.0),
             mult_n: get_f64("mult_n", 2.0),
-            rank_n: get_f64("rank_exponent", 1.5),
-            rank_v: get_f64("rank_v", 2.0),
+            rank_k: get_f64("rank_k", 0.80),
+            rank_n: get_f64("rank_n", 0.95),
+            rank_p: get_f64("rank_p", 0.05),
         }
     }
 }
@@ -117,19 +119,24 @@ fn calculate_map_score(reltime: f64, cfg: &RatingConfig) -> f64 {
 }
 
 /// Rank-based multiplier: rewards higher ranks on a map.
-/// rank_multiplier = (((total_players * v) - your_rank) / ((total_players * v) - 1)) ^ n
+/// Generalized stretched exponential with a position-dependent exponent:
+///   t = (your_rank - 1) / (total_players - 1)
+///   rank_multiplier = k ^ (t ^ (n + p * (1 - t)))
+/// k is the floor for the worst rank (t = 1), the WR (t = 0) always
+/// gets exactly 1.0. n controls overall steepness, p shifts where the
+/// steep section sits along the curve.
 fn calculate_rank_multiplier(total_players: usize, your_rank: usize, cfg: &RatingConfig) -> f64 {
-    if cfg.rank_n == 0.0 || cfg.rank_v == 0.0 || total_players <= 1 || your_rank == 0 {
+    if total_players <= 1 || your_rank == 0 {
         return 1.0;
     }
     let tp = total_players as f64;
     let rank = your_rank as f64;
-    let numerator = (tp * cfg.rank_v) - rank;
-    let denominator = (tp * cfg.rank_v) - 1.0;
-    if denominator <= 0.0 {
+    let t = ((rank - 1.0) / (tp - 1.0)).clamp(0.0, 1.0);
+    if t == 0.0 {
         return 1.0;
     }
-    (numerator / denominator).max(0.0).powf(cfg.rank_n)
+    let exponent = t.powf(cfg.rank_n + cfg.rank_p * (1.0 - t));
+    cfg.rank_k.powf(exponent)
 }
 
 /// Map score multiplier based on number of records/players on given map.
@@ -835,8 +842,8 @@ fn main() -> Result<()> {
 
     // Load rating config from database (rating_settings table)
     let cfg = RatingConfig::from_db(&mut conn);
-    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, RANK_N={}, RANK_V={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
-        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n, cfg.rank_n, cfg.rank_v,
+    println!("Config: D={}, A={}, B={}, M={}, V={}, Q={}, MULT_L={}, MULT_N={}, RANK_K={}, RANK_N={}, RANK_P={}, min_players={}, min_time={}, max_tied_wr={}, min_records={}",
+        cfg.cfg_d, cfg.cfg_a, cfg.cfg_b, cfg.cfg_m, cfg.cfg_v, cfg.cfg_q, cfg.mult_l, cfg.mult_n, cfg.rank_k, cfg.rank_n, cfg.rank_p,
         cfg.min_map_total_participators, cfg.min_top1_time, cfg.max_tied_wr_players, cfg.min_total_records);
 
     // Load maps for category filtering

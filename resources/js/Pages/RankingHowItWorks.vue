@@ -58,8 +58,9 @@ const s = computed(() => {
         cfg_d: num('cfg_d', 0.02),
         mult_l: num('mult_l', 1.0),
         mult_n: num('mult_n', 2.0),
-        rank_n: num('rank_exponent', 1.5),
-        rank_v: num('rank_v', 2.0),
+        rank_k: num('rank_k', 0.80),
+        rank_n: num('rank_n', 0.95),
+        rank_p: num('rank_p', 0.05),
         min_map_players: num('min_map_players', 5),
         min_top1_time: num('min_top1_time', 500),
         max_tied_wr_players: num('max_tied_wr_players', 3),
@@ -76,11 +77,11 @@ function fmt(value, digits = 4) {
 
 function calcRankMultiplier(totalPlayers, yourRank) {
     const cfg = s.value;
-    if (cfg.rank_n === 0 || cfg.rank_v === 0 || totalPlayers <= 1 || yourRank === 0) return 1.0;
-    const numerator = (totalPlayers * cfg.rank_v) - yourRank;
-    const denominator = (totalPlayers * cfg.rank_v) - 1;
-    if (denominator <= 0) return 1.0;
-    return Math.pow(Math.max(numerator / denominator, 0), cfg.rank_n);
+    if (totalPlayers <= 1 || yourRank === 0) return 1.0;
+    const t = Math.min(Math.max((yourRank - 1) / (totalPlayers - 1), 0), 1);
+    if (t === 0) return 1.0;
+    const exponent = Math.pow(t, cfg.rank_n + cfg.rank_p * (1 - t));
+    return Math.pow(cfg.rank_k, exponent);
 }
 
 function calcMapScore(reltime) {
@@ -499,15 +500,20 @@ const top200Share = computed(() => topNWeightShare(200));
                 </h2>
                 <p class="mb-3">Your rank on each map further scales your score. Higher ranks earn a bigger multiplier:</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
-                    rank_mult = (((total_players * v) - your_rank) / ((total_players * v) - 1)) ^ n
+                    t = (your_rank - 1) / (total_players - 1)<br>
+                    rank_mult = k ^ (t ^ (n + p * (1 - t)))
+                </div>
+                <div class="text-xs text-gray-500 mb-3">
+                    Generalized stretched exponential with a position-dependent exponent. WR (t = 0) always gets exactly 1.0; the worst rank on the map (t = 1) gets exactly <span class="font-mono">k</span>.
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— number of unique players on the map</span></div>
                         <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— your position on the map leaderboard (1 = WR)</span></div>
-                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
-                        <div><span class="text-white font-mono">v = {{ fmt(s.rank_v) }}</span> <span class="text-gray-500">— total_players modifier</span></div>
+                        <div><span class="text-white font-mono">k = {{ fmt(s.rank_k) }}</span> <span class="text-gray-500">— rank_mult value for the worst-ranked record on the map</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— overall curve steepness</span></div>
+                        <div><span class="text-white font-mono">p = {{ fmt(s.rank_p) }}</span> <span class="text-gray-500">— position of the steep section along the curve</span></div>
                     </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
@@ -767,7 +773,8 @@ const top200Share = computed(() => topNWeightShare(200));
                         <div class="text-sm font-bold text-pink-400 mb-2">Step 5: Apply rank multiplier</div>
                         <div class="text-xs text-gray-400">
                             <div>Your rank on the map: <span class="text-white">#3 of 25 players</span></div>
-                            <div>rank_mult = ((25*{{ fmt(s.rank_v) }} - 3) / (25*{{ fmt(s.rank_v) }} - 1))<sup>{{ fmt(s.rank_n) }}</sup> = <span class="text-pink-400 font-mono font-bold">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span></div>
+                            <div>t = (3 - 1) / (25 - 1) = <span class="text-white font-mono">{{ (2/24).toFixed(4) }}</span></div>
+                            <div>rank_mult = {{ fmt(s.rank_k) }}<sup>(t ^ ({{ fmt(s.rank_n) }} + {{ fmt(s.rank_p) }} * (1 - t)))</sup> = <span class="text-pink-400 font-mono font-bold">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span></div>
                             <div class="mt-1">final_score = {{ exampleFinalScore.toFixed(1) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
                         </div>
                     </div>

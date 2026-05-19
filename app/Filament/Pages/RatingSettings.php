@@ -29,8 +29,9 @@ class RatingSettings extends Page
     public string $min_map_players = '';
     public string $min_top1_time = '';
     public string $max_tied_wr_players = '';
-    public string $rank_exponent = '';
-    public string $rank_v = '';
+    public string $rank_k = '';
+    public string $rank_n = '';
+    public string $rank_p = '';
     public string $min_total_records = '';
 
     // Recalc controls
@@ -41,7 +42,7 @@ class RatingSettings extends Page
         'cfg_a', 'cfg_b', 'cfg_m', 'cfg_v', 'cfg_q', 'cfg_d',
         'mult_l', 'mult_n',
         'min_map_players', 'min_top1_time', 'max_tied_wr_players',
-        'rank_exponent', 'rank_v', 'min_total_records',
+        'rank_k', 'rank_n', 'rank_p', 'min_total_records',
     ];
 
     public static function canAccess(): bool
@@ -200,8 +201,9 @@ class RatingSettings extends Page
                 'min_total_records' => 'Min records before penalty applies',
             ],
             'Rank Multiplier' => [
-                'rank_exponent' => 'Steepness exponent (n)',
-                'rank_v' => 'Total players modifier (v)',
+                'rank_k' => 'Floor for worst-ranked record (k)',
+                'rank_n' => 'Overall curve steepness (n)',
+                'rank_p' => 'Position of steep section (p)',
             ],
         ];
     }
