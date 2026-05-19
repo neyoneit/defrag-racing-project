@@ -1,5 +1,44 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const props = defineProps({
+    categoryStats: { type: Object, default: () => ({}) },
+    categoryStatsAsOf: { type: String, default: null },
+});
+
+// Display order — matches the rust service and ranking UI.
+const STATS_CATEGORIES = ['overall', 'strafe', 'lg', 'rocket', 'plasma', 'grenade', 'slick', 'tele', 'bfg'];
+const CTF_MODES = ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7'];
+
+// Categories that actually have data for the 'run' mode (skip empty rows).
+const runCategoriesWithData = computed(() => {
+    const run = props.categoryStats?.run ?? {};
+    return STATS_CATEGORIES.filter(cat => run[cat] && (run[cat].vq3 || run[cat].cpm));
+});
+
+// CTF modes that actually have any 'overall' data in either physics.
+const ctfModesWithData = computed(() => {
+    return CTF_MODES.filter(mode => {
+        const o = props.categoryStats?.[mode]?.overall;
+        return o && (o.vq3 || o.cpm);
+    });
+});
+
+const hasCategoryStats = computed(() =>
+    runCategoriesWithData.value.length > 0 || ctfModesWithData.value.length > 0
+);
+
+function statCell(mode, category, physics) {
+    return props.categoryStats?.[mode]?.[category]?.[physics] ?? null;
+}
+
+function formatAsOf(raw) {
+    if (!raw) return null;
+    const d = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T') + 'Z');
+    if (isNaN(d.getTime())) return raw;
+    return d.toISOString().slice(0, 10);
+}
 
 // Reproduce the formulas for interactive examples
 const CFG_A = 1.2;
@@ -351,6 +390,85 @@ const top200Share = topNWeightShare(200);
                 </div>
                 <div class="mt-3 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
                     <strong>Why?</strong> A WR on a map with 4 players is less impressive than a WR on a map with 50 active competitors. The multiplier ensures that popular, competitive maps carry more weight.
+                </div>
+
+                <!-- Live category medians (drives k for each game type / physics) -->
+                <div v-if="hasCategoryStats" class="mt-6 bg-gray-900/60 border border-gray-800 rounded-xl p-4">
+                    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider">Median players per ranked map (live)</div>
+                        <div v-if="categoryStatsAsOf" class="text-[10px] text-gray-600">as of {{ formatAsOf(categoryStatsAsOf) }}</div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">Each cell shows <span class="font-mono text-gray-400">median</span> (and <span class="font-mono text-gray-400">k = median / 2</span>) for that game type / physics / category combo. Updated by the nightly full recalculation.</p>
+
+                    <!-- Run mode: matrix of categories × physics -->
+                    <div v-if="runCategoriesWithData.length > 0" class="mb-5">
+                        <div class="text-xs font-semibold text-gray-400 mb-2">Run</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-gray-500 border-b border-gray-800">
+                                        <th class="text-left font-semibold py-2 pr-3">Category</th>
+                                        <th class="text-right font-semibold py-2 px-3">VQ3 median <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-right font-semibold py-2 pl-3">CPM median <span class="text-gray-600 font-normal">(k)</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="cat in runCategoriesWithData" :key="cat" class="border-b border-gray-800/60 last:border-0">
+                                        <td class="py-1.5 pr-3 text-gray-300 capitalize">{{ cat }}</td>
+                                        <td class="py-1.5 px-3 text-right font-mono">
+                                            <template v-if="statCell('run', cat, 'vq3')">
+                                                <span class="text-white">{{ statCell('run', cat, 'vq3').median.toFixed(1) }}</span>
+                                                <span class="text-gray-500 ml-1">({{ statCell('run', cat, 'vq3').k.toFixed(1) }})</span>
+                                            </template>
+                                            <span v-else class="text-gray-700">—</span>
+                                        </td>
+                                        <td class="py-1.5 pl-3 text-right font-mono">
+                                            <template v-if="statCell('run', cat, 'cpm')">
+                                                <span class="text-white">{{ statCell('run', cat, 'cpm').median.toFixed(1) }}</span>
+                                                <span class="text-gray-500 ml-1">({{ statCell('run', cat, 'cpm').k.toFixed(1) }})</span>
+                                            </template>
+                                            <span v-else class="text-gray-700">—</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- CTF modes: only overall is computed -->
+                    <div v-if="ctfModesWithData.length > 0">
+                        <div class="text-xs font-semibold text-gray-400 mb-2">CTF (overall only)</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-gray-500 border-b border-gray-800">
+                                        <th class="text-left font-semibold py-2 pr-3">Mode</th>
+                                        <th class="text-right font-semibold py-2 px-3">VQ3 median <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-right font-semibold py-2 pl-3">CPM median <span class="text-gray-600 font-normal">(k)</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="mode in ctfModesWithData" :key="mode" class="border-b border-gray-800/60 last:border-0">
+                                        <td class="py-1.5 pr-3 text-gray-300 uppercase">{{ mode }}</td>
+                                        <td class="py-1.5 px-3 text-right font-mono">
+                                            <template v-if="statCell(mode, 'overall', 'vq3')">
+                                                <span class="text-white">{{ statCell(mode, 'overall', 'vq3').median.toFixed(1) }}</span>
+                                                <span class="text-gray-500 ml-1">({{ statCell(mode, 'overall', 'vq3').k.toFixed(1) }})</span>
+                                            </template>
+                                            <span v-else class="text-gray-700">—</span>
+                                        </td>
+                                        <td class="py-1.5 pl-3 text-right font-mono">
+                                            <template v-if="statCell(mode, 'overall', 'cpm')">
+                                                <span class="text-white">{{ statCell(mode, 'overall', 'cpm').median.toFixed(1) }}</span>
+                                                <span class="text-gray-500 ml-1">({{ statCell(mode, 'overall', 'cpm').k.toFixed(1) }})</span>
+                                            </template>
+                                            <span v-else class="text-gray-700">—</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
 

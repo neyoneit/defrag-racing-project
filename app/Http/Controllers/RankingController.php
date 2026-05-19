@@ -197,6 +197,26 @@ class RankingController extends Controller
 
     public function howItWorks()
     {
-        return Inertia::render('RankingHowItWorks');
+        $rows = DB::table('category_stats')
+            ->select('physics', 'mode', 'category', 'median_players', 'ranked_maps', 'updated_at')
+            ->get();
+
+        $categoryStats = [];
+        $lastUpdated = null;
+        foreach ($rows as $row) {
+            $categoryStats[$row->mode][$row->category][$row->physics] = [
+                'median' => (float) $row->median_players,
+                'k'      => max((float) $row->median_players / 2, 1),
+                'maps'   => (int) $row->ranked_maps,
+            ];
+            if (!$lastUpdated || $row->updated_at > $lastUpdated) {
+                $lastUpdated = $row->updated_at;
+            }
+        }
+
+        return Inertia::render('RankingHowItWorks', [
+            'categoryStats'      => $categoryStats,
+            'categoryStatsAsOf'  => $lastUpdated,
+        ]);
     }
 }
