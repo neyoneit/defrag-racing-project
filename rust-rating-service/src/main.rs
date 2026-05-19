@@ -6,9 +6,6 @@ use rayon::prelude::*;
 
 // Constants - read from environment variables (shared with PHP via .env)
 // Fallback defaults match config/ratings.php
-#[allow(dead_code)]
-const OUTLIER_THRESHOLD: f64 = 0.6; // ratio below this = outlier detected (currently disabled)
-
 
 struct RatingConfig {
     min_map_total_participators: usize,
@@ -112,25 +109,7 @@ struct MapStats {
     times: Vec<i32>,
     mdd_ids: Vec<i32>,
     total_participators: usize,
-    ref_index: usize,
     is_ranked: bool,
-}
-
-/// Find where the "normal" cluster starts by scanning consecutive time ratios.
-/// Returns the index of the first time in the normal cluster.
-/// DISABLED: outlier normalization commented out - rank 1 and 2 get same reward which is wrong
-fn find_normal_cluster_start(_times: &[i32]) -> usize {
-    return 0;
-    // if times.len() < 2 {
-    //     return 0;
-    // }
-    // for i in 0..times.len() - 1 {
-    //     let ratio = times[i] as f64 / times[i + 1] as f64;
-    //     if ratio >= OUTLIER_THRESHOLD {
-    //         return i;
-    //     }
-    // }
-    // times.len() - 1
 }
 
 fn calculate_map_score(reltime: f64, cfg: &RatingConfig) -> f64 {
@@ -226,33 +205,14 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
     }
 
     let times = &stats.times;
-    let ref_index = stats.ref_index;
-    let ref_time = times[ref_index].max(cfg.min_top1_time) as f64;
+    let ref_time = times[0].max(cfg.min_top1_time) as f64;
 
     records.iter().filter_map(|record| {
-        let is_in_outlier_group = if ref_index > 0 {
-            let mut found_outlier = false;
-            for idx in 0..ref_index {
-                if times[idx] == record.time {
-                    found_outlier = true;
-                    break;
-                }
-            }
-            found_outlier
-        } else {
-            false
-        };
-
-        let reltime = if is_in_outlier_group {
-            if ref_index + 1 < times.len() {
-                let next_time = times[ref_index + 1].max(cfg.min_top1_time) as f64;
-                ref_time / next_time
-            } else {
-                1.0
-            }
-        } else if record.time as f64 <= ref_time {
-            if ref_index + 1 < times.len() {
-                ref_time / times[ref_index + 1].max(cfg.min_top1_time) as f64
+        // The WR holder is benchmarked against the 2nd-place time rather than
+        // their own, so reltime stays meaningful at the top of the leaderboard.
+        let reltime = if record.time as f64 <= ref_time {
+            if times.len() > 1 {
+                ref_time / times[1].max(cfg.min_top1_time) as f64
             } else {
                 1.0
             }
@@ -261,10 +221,8 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
         };
 
         let base_score = calculate_map_score(reltime, cfg);
-        // Apply map multiplier based on number of records/players on given map
         let multiplier = calculate_map_multiplier(stats.total_participators, category_median, cfg);
 
-        // Apply rank multiplier: find player's rank on this map (1-indexed)
         let your_rank = times.iter().position(|&t| t == record.time).map(|p| p + 1).unwrap_or(stats.total_participators);
         let rank_mult = calculate_rank_multiplier(stats.total_participators, your_rank, cfg);
 
@@ -276,7 +234,7 @@ fn process_map_records(records: &[Record], stats: &MapStats, category_median: f6
             map_score,
             multiplier,
             rank_multiplier: rank_mult,
-            is_outlier: is_in_outlier_group,
+            is_outlier: false,
         })
     }).collect()
 }
@@ -331,22 +289,20 @@ fn build_map_stats(records: &[Record], cfg: &RatingConfig) -> HashMap<String, Ma
         let top1_time = times[0];
         if total_participators < cfg.min_map_total_participators || top1_time < cfg.min_top1_time {
             map_stats.insert(mapname, MapStats {
-                times, mdd_ids, total_participators, ref_index: 0, is_ranked: false,
+                times, mdd_ids, total_participators, is_ranked: false,
             });
             continue;
         }
 
         if is_free_wr_map(&times, &mdd_ids, cfg) {
             map_stats.insert(mapname, MapStats {
-                times, mdd_ids, total_participators, ref_index: 0, is_ranked: false,
+                times, mdd_ids, total_participators, is_ranked: false,
             });
             continue;
         }
 
-        let ref_index = find_normal_cluster_start(&times);
-
         map_stats.insert(mapname, MapStats {
-            times, mdd_ids, total_participators, ref_index, is_ranked: true,
+            times, mdd_ids, total_participators, is_ranked: true,
         });
     }
 
@@ -425,15 +381,12 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
         .filter(|(_, s)| s.is_ranked)
         .map(|(n, _)| n.clone())
         .collect();
-    let outlier_count = map_stats.iter()
-        .filter(|(_, s)| s.is_ranked && s.ref_index > 0)
-        .count();
     let free_wr_count = map_stats.iter()
         .filter(|(_, s)| !s.is_ranked && s.total_participators >= cfg.min_map_total_participators && s.times.first().map_or(false, |&t| t >= cfg.min_top1_time))
         .count();
 
-    println!("  Ranked maps: {}, outlier-normalized: {}, free WR excluded: {}",
-        ranked_maps.len(), outlier_count, free_wr_count);
+    println!("  Ranked maps: {}, free WR excluded: {}",
+        ranked_maps.len(), free_wr_count);
 
     // Step 3: Process records
     println!("Step 3: Processing records...");
@@ -663,10 +616,6 @@ fn incremental_recalc(conn: &mut PooledConn, physics: &str, mode: &str, map_name
             map_name.replace("'", "''"), physics, mode
         ))?;
         return Ok(());
-    }
-
-    if stats.ref_index > 0 {
-        println!("  Outlier detected: {} outlier player(s), ref_index={}", stats.ref_index, stats.ref_index);
     }
 
     // Step 3: Calculate category median for map multiplier
