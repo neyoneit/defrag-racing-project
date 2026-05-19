@@ -67,6 +67,21 @@ class Kernel extends ConsoleKernel
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
+        // Pre-warm RenderQueueService::getPoolCounts() so the /defraghq/render-queue-preview
+        // and /defraghq/demome-control pages never hit a cold cache. The query is
+        // ~8 large JOIN + NOT EXISTS aggregates against rendered_videos / records /
+        // uploaded_demos that easily stretch past Cloudflare's 100s timeout on
+        // first visit after the 30-min TTL expires. Force a fresh rebuild every
+        // 20 minutes so the cache is continuously valid and an admin visit
+        // never has to wait on the rebuild itself.
+        $schedule->call(function () {
+            \Illuminate\Support\Facades\Cache::forget('demome:pool_counts');
+            for ($tier = 1; $tier <= 8; $tier++) {
+                \Illuminate\Support\Facades\Cache::forget("tier_pool_count_{$tier}");
+            }
+            \App\Services\RenderQueueService::getPoolCounts();
+        })->name('warm-pool-counts')->withoutOverlapping()->everyTwentyMinutes();
+
         // NOTE: Triweekly auto-publish scheduler removed. Bulk publishing is now manual-only
         // via the per-tier buttons in Filament DemomeControl page. The Python bot's every-4h
         // deficit check (auto_publish_deficit) still keeps a steady 12 videos/day trickle.
