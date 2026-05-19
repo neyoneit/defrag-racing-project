@@ -620,7 +620,16 @@ class DemomeController extends Controller
             ->first();
 
         if ($existing) {
-            return response()->json([
+            // If this demo already has a completed render on YouTube, surface
+            // that here so the bot can short-circuit and just reply with the
+            // existing URL instead of re-rendering / re-uploading.
+            $completedVideo = RenderedVideo::where('demo_id', $existing->id)
+                ->where('status', 'completed')
+                ->whereNotNull('youtube_video_id')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            $payload = [
                 'success' => true,
                 'duplicate' => true,
                 'demo_id' => $existing->id,
@@ -630,7 +639,18 @@ class DemomeController extends Controller
                 'time_ms' => $existing->time_ms,
                 'gametype' => $existing->gametype,
                 'record_id' => $existing->record_id,
-            ]);
+            ];
+
+            if ($completedVideo) {
+                $payload['existing_video'] = [
+                    'id'               => $completedVideo->id,
+                    'youtube_video_id' => $completedVideo->youtube_video_id,
+                    'youtube_url'      => $completedVideo->youtube_url,
+                    'source'           => $completedVideo->source,
+                ];
+            }
+
+            return response()->json($payload);
         }
 
         // Create UploadedDemo record
@@ -874,16 +894,37 @@ class DemomeController extends Controller
                 ->first();
         }
 
-        // Build a temporary RenderedVideo-like object for metadata generation
-        $metaItem = new \stdClass();
-        $metaItem->map_name = $demo->map_name;
-        $metaItem->player_name = $demo->player_name;
-        $metaItem->physics = $demo->physics;
-        $metaItem->time_ms = $demo->time_ms;
-        $metaItem->gametype = $demo->gametype;
-        $metaItem->record_id = $demo->record_id;
-        $metaItem->demo_id = $demo->id;
-        $metaItem->demo_filename = $demo->processed_filename ?? $demo->original_filename;
+        // Build a RenderedVideo-like instance for metadata generation. We use
+        // an unsaved RenderedVideo (not stdClass) because VideoMetadataService
+        // has a strict RenderedVideo type hint and crashes the request with a
+        // 500 if you hand it anything else — which is exactly how the bot's
+        // dedup short-circuit silently fell through on 2026-05-19 and caused
+        // duplicate renders/uploads.
+        $metaItem = new RenderedVideo([
+            'map_name'      => $demo->map_name,
+            'player_name'   => $demo->player_name,
+            'physics'       => $demo->physics,
+            'time_ms'       => $demo->time_ms,
+            'gametype'      => $demo->gametype,
+            'record_id'     => $demo->record_id,
+            'demo_id'       => $demo->id,
+            'demo_filename' => $demo->processed_filename ?? $demo->original_filename,
+        ]);
+
+        // Defense in depth: even if VideoMetadataService blows up for some
+        // edge case (missing demo metadata, content filter quirk, etc.), we
+        // must still return the existing_video block — that is what the bot
+        // relies on for dedup. Title/description/tags are nice-to-have.
+        $safeMeta = function (callable $fn, $default) {
+            try {
+                return $fn();
+            } catch (\Throwable $e) {
+                \Log::warning('lookupByHash: metadata generation failed', [
+                    'error' => $e->getMessage(),
+                ]);
+                return $default;
+            }
+        };
 
         $response = [
             'success' => true,
@@ -896,9 +937,9 @@ class DemomeController extends Controller
             'record_id' => $demo->record_id,
             'demo_filename' => $demo->processed_filename ?? $demo->original_filename,
             'download_url' => "https://defrag.racing/demos/{$demo->id}/download",
-            'video_title' => \App\Services\VideoMetadataService::generateTitle($metaItem),
-            'video_description' => \App\Services\VideoMetadataService::generateDescription($metaItem),
-            'video_tags' => \App\Services\VideoMetadataService::generateTags($metaItem),
+            'video_title' => $safeMeta(fn () => \App\Services\VideoMetadataService::generateTitle($metaItem), null),
+            'video_description' => $safeMeta(fn () => \App\Services\VideoMetadataService::generateDescription($metaItem), null),
+            'video_tags' => $safeMeta(fn () => \App\Services\VideoMetadataService::generateTags($metaItem), []),
         ];
 
         if ($existingVideo) {
