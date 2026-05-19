@@ -29,6 +29,7 @@ class DemomeControl extends Page
     public int $unlistedPerPage = 20;
 
     public ?string $discordRestartMessageId = null;
+    public ?string $discordReprocessMessageId = null;
 
     public static function canAccess(): bool
     {
@@ -101,6 +102,7 @@ class DemomeControl extends Page
             'bulk_tier_buttons' => $this->getBulkTierButtonData(),
             'backlog' => $this->getBacklogStats(),
             'discordRestartMarker' => SiteSetting::get('demome:discord_restart_from_message_id') ?: null,
+            'discordReprocessMarker' => SiteSetting::get('demome:discord_reprocess_single_message_id') ?: null,
         ];
     }
 
@@ -435,6 +437,48 @@ class DemomeControl extends Page
 
         Notification::make()
             ->title('Discord Restart Marker Cleared')
+            ->success()
+            ->send();
+    }
+
+    public function setDiscordReprocessMarker(): void
+    {
+        $id = trim((string) $this->discordReprocessMessageId);
+
+        if ($id === '') {
+            SiteSetting::set('demome:discord_reprocess_single_message_id', '');
+            Notification::make()
+                ->title('Single-Message Reprocess Marker Cleared')
+                ->success()
+                ->send();
+            return;
+        }
+
+        if (!preg_match('/^\d{10,25}$/', $id)) {
+            Notification::make()
+                ->title('Invalid Message ID')
+                ->body('Discord snowflake IDs are numeric (10-25 digits).')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        SiteSetting::set('demome:discord_reprocess_single_message_id', $id);
+
+        Notification::make()
+            ->title('Single-Message Reprocess Marker Set')
+            ->body("On next demome cycle it will fetch and reprocess exactly message ID {$id}.")
+            ->success()
+            ->send();
+    }
+
+    public function clearDiscordReprocessMarker(): void
+    {
+        SiteSetting::set('demome:discord_reprocess_single_message_id', '');
+        $this->discordReprocessMessageId = null;
+
+        Notification::make()
+            ->title('Single-Message Reprocess Marker Cleared')
             ->success()
             ->send();
     }

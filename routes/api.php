@@ -56,6 +56,7 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
     Route::post('/report-by-hash', [\App\Http\Controllers\Api\DemomeController::class, 'reportByHash']);
     Route::post('/start-discord-render', [\App\Http\Controllers\Api\DemomeController::class, 'startDiscordRender']);
     Route::get('/discord-restart-marker', [\App\Http\Controllers\Api\DemomeController::class, 'discordRestartMarker']);
+    Route::get('/discord-reprocess-single-message', [\App\Http\Controllers\Api\DemomeController::class, 'discordReprocessSingleMessage']);
     Route::post('/upload-demo', [\App\Http\Controllers\Api\DemomeController::class, 'uploadDemo']);
     Route::get('/download-demo/{demo}', [\App\Http\Controllers\Api\DemomeController::class, 'downloadDemo']);
     Route::get('/videos-to-publish', [\App\Http\Controllers\Api\DemomeController::class, 'videosToPublish']);

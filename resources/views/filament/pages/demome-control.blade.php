@@ -248,6 +248,50 @@
         </div>
     </x-filament::section>
 
+    {{-- Row 3.6: Single-message reprocess marker --}}
+    <x-filament::section class="mt-4">
+        <x-slot name="heading">Reprocess Single Discord Message</x-slot>
+        <x-slot name="description">
+            Force demome to fetch <strong>exactly one</strong> Discord message by ID and re-process the demo it contains.
+            Use this when one specific render failed or needs a re-run — unlike the Restart Marker above, this does not
+            touch any other messages around it. One-shot: consumed by demome on the next cycle and cleared automatically.
+            <br><br>
+            <strong>Dedup behavior:</strong> if the demo from this message is already in the system (matched by file
+            hash) and has a YouTube video, demome will reply to the original requester with the existing YouTube URL
+            instead of re-rendering. Only demos without an existing YouTube video get rendered fresh.
+        </x-slot>
+        <div class="space-y-3">
+            @if($discordReprocessMarker)
+                <div class="flex items-center justify-between p-2 bg-blue-900/20 border border-blue-800/50 rounded">
+                    <div class="text-sm">
+                        <span class="text-gray-400">Pending reprocess:</span>
+                        <code class="ml-2 text-blue-300 font-mono">{{ $discordReprocessMarker }}</code>
+                    </div>
+                    <x-filament::button wire:click="clearDiscordReprocessMarker" size="sm" color="danger" icon="heroicon-o-x-mark">
+                        Clear
+                    </x-filament::button>
+                </div>
+            @endif
+            <div class="flex items-center gap-3">
+                <input
+                    type="text"
+                    wire:model="discordReprocessMessageId"
+                    placeholder="Discord message ID (e.g. 1492601473450774711)"
+                    style="flex: 1; padding: 8px 12px; background: #1f2937; color: #e5e7eb; border: 1px solid #374151; border-radius: 6px; font-size: 13px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; outline: none;"
+                    onfocus="this.style.borderColor='#2563eb'"
+                    onblur="this.style.borderColor='#374151'"
+                />
+                <x-filament::button wire:click="setDiscordReprocessMarker" color="info" icon="heroicon-o-arrow-path">
+                    Set Marker
+                </x-filament::button>
+            </div>
+            <div class="text-xs text-gray-500">
+                Demome will fetch this single message directly by ID and process its demo attachment(s), independent of
+                its normal scraping cursor. The exact ID is used (no rewind), so paste the message you want re-rendered.
+            </div>
+        </div>
+    </x-filament::section>
+
     {{-- Row 4: Unlisted Videos with tier tabs + pagination --}}
     @if($unlisted_count > 0)
     <x-filament::section class="mt-4">
