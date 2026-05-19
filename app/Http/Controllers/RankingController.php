@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 use App\Models\PlayerRating;
+use App\Models\RatingSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
@@ -197,6 +198,31 @@ class RankingController extends Controller
 
     public function howItWorks()
     {
-        return Inertia::render('RankingHowItWorks');
+        $rows = DB::table('category_stats')
+            ->select('physics', 'mode', 'category', 'median_players', 'ranked_maps', 'updated_at')
+            ->get();
+
+        $categoryStats = [];
+        $lastUpdated = null;
+        foreach ($rows as $row) {
+            $categoryStats[$row->mode][$row->category][$row->physics] = [
+                'median' => (float) $row->median_players,
+                'k'      => max((float) $row->median_players / 2, 1),
+                'maps'   => (int) $row->ranked_maps,
+            ];
+            if (!$lastUpdated || $row->updated_at > $lastUpdated) {
+                $lastUpdated = $row->updated_at;
+            }
+        }
+
+        $ratingSettings = collect(RatingSetting::allAsArray())
+            ->map(fn ($v) => is_numeric($v) ? (float) $v : $v)
+            ->all();
+
+        return Inertia::render('RankingHowItWorks', [
+            'categoryStats'      => $categoryStats,
+            'categoryStatsAsOf'  => $lastUpdated,
+            'ratingSettings'     => $ratingSettings,
+        ]);
     }
 }

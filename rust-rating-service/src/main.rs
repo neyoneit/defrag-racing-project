@@ -455,6 +455,15 @@ fn full_recalc(conn: &mut PooledConn, physics: &str, mode: &str, category: &str,
     let category_median = median(&ranked_participators);
     println!("  Ranked maps median records/players: {}, k (median/2): {:.1}", category_median, (category_median / 2.0).max(1.0));
 
+    // Persist the median for the How It Works page. Only the full recalc
+    // writes — incremental recalcs use approximations that drift.
+    conn.query_drop(&format!(
+        "INSERT INTO category_stats (physics, mode, category, median_players, ranked_maps, updated_at)
+         VALUES ('{}', '{}', '{}', {}, {}, NOW())
+         ON DUPLICATE KEY UPDATE median_players=VALUES(median_players), ranked_maps=VALUES(ranked_maps), updated_at=NOW()",
+        physics, mode, category, category_median, ranked_participators.len()
+    ))?;
+
     let mut all_processed: Vec<ProcessedRecord> = Vec::new();
     for (mapname, map_records) in &records_by_map {
         if let Some(stats) = map_stats.get(mapname) {

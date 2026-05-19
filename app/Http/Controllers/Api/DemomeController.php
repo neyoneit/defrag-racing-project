@@ -572,6 +572,35 @@ class DemomeController extends Controller
         ]);
     }
 
+    /**
+     * Return the one-shot "reprocess this single Discord message" marker set
+     * by an admin in Filament, and clear it. Unlike discordRestartMarker
+     * (which makes the bot rescan from a point forwards), this targets one
+     * specific message and only that message — the bot fetches it directly
+     * by ID and processes whatever demo attachment(s) it carries.
+     *
+     * The stored ID is returned verbatim, no -1 rewind, because the bot
+     * fetches the message directly rather than using Discord's exclusive
+     * `after` parameter.
+     */
+    public function discordReprocessSingleMessage()
+    {
+        $key = 'demome:discord_reprocess_single_message_id';
+        $value = SiteSetting::get($key);
+
+        if (!$value) {
+            return response()->json(['message_id' => null]);
+        }
+
+        SiteSetting::set($key, '');
+
+        Log::info('discordReprocessSingleMessage: consumed marker', [
+            'message_id' => $value,
+        ]);
+
+        return response()->json(['message_id' => (string) $value]);
+    }
+
     public function uploadDemo(Request $request)
     {
         $request->validate([
