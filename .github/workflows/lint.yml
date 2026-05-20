@@ -1,0 +1,43 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+
+jobs:
+  # Catches the class of bug where Kernel.php uses a scheduler method that
+  # doesn't exist on the receiver type — e.g. ->everyTwentyMinutes() on a
+  # CallbackEvent (only Event has it). Until this check existed, those bugs
+  # only surfaced at runtime via the cron's schedule:run, which crashed
+  # silently and stopped every scheduled task. This step parses the schedule
+  # at PR time, so the build fails red before the bad code can land on master.
+  schedule-parses:
+    name: php artisan schedule:list
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, mysql, intl, gd, exif, pcntl, bcmath, redis
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Prepare .env
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+          # SQLite is enough — schedule:list doesn't touch the DB, but Laravel
+          # boots service providers that may instantiate a DB connection.
+          sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env
+          sed -i 's|^DB_DATABASE=.*|DB_DATABASE=/tmp/ci.sqlite|' .env
+          touch /tmp/ci.sqlite
+
+      - name: php artisan schedule:list
+        run: php artisan schedule:list
