@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\RankingController;
 use App\Http\Controllers\EndpointController;
+use App\Http\Controllers\LauncherController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\PagesController;
@@ -50,6 +51,13 @@ Route::post('/search', [SearchController::class, 'search'])->name('search');
 Route::get('/servers', [ServersController::class, 'index'])->name('servers');
 Route::get('/api/servers/live', [ServersController::class, 'apiServers'])->name('servers.api');
 Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers.json');
+
+// Launcher auto-update manifest — primary endpoint for the desktop
+// launcher's tauri-plugin-updater (GH Releases is its fallback). Proxies
+// the latest signed `latest.json` from GH with a 5-minute cache so we
+// don't pound their CDN on every launcher startup. The mirror exists
+// for CN/RU users who have trouble reaching GitHub directly.
+Route::get('/launcher/latest.json', [LauncherController::class, 'latestManifest'])->name('launcher.manifest');
 
 Route::get('/maps', [MapsController::class, 'index'])->name('maps');
 Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filters');
