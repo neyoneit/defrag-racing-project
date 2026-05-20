@@ -80,7 +80,7 @@ class Kernel extends ConsoleKernel
                 \Illuminate\Support\Facades\Cache::forget("tier_pool_count_{$tier}");
             }
             \App\Services\RenderQueueService::getPoolCounts();
-        })->name('warm-pool-counts')->withoutOverlapping()->everyTwentyMinutes();
+        })->name('warm-pool-counts')->withoutOverlapping()->cron('*/20 * * * *');
 
         // NOTE: Triweekly auto-publish scheduler removed. Bulk publishing is now manual-only
         // via the per-tier buttons in Filament DemomeControl page. The Python bot's every-4h
