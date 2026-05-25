@@ -38,7 +38,12 @@ class LauncherTokenController extends Controller
         ]);
 
         $user = Auth::user();
-        $token = $user->createToken('launcher:' . $data['label'], ['launcher:upload']);
+        // Two abilities so we can split read-only endpoints (server browser,
+        // notification feed) from the write-side upload endpoint without
+        // making every read require write privilege. Tokens minted before
+        // this change carry only launcher:upload and will get 403 on the
+        // read endpoints — user just regenerates from /user/launcher-tokens.
+        $token = $user->createToken('launcher:'.$data['label'], ['launcher:upload', 'launcher:read']);
 
         return response()->json([
             'id' => $token->accessToken->id,

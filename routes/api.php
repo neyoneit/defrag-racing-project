@@ -18,15 +18,25 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Desktop launcher API. Sanctum personal access token with ability
-// "launcher:upload"; users generate tokens at /user/launcher-tokens.
-// Throttle key is the token id so two launchers on different PCs with the
-// same user account each get their own bucket.
+// Desktop launcher API. Sanctum personal access tokens issued at
+// /user/launcher-tokens with abilities ["launcher:upload","launcher:read"].
+// Split into two inner groups so a future read-only token (e.g. for an
+// observer / overlay client) can be scoped without granting upload. The
+// `log.api` middleware writes every call to api_call_log — same audit
+// trail the post-incident lockdown added to the public-facing /api
+// routes, applied here proactively so we never repeat that mistake.
 Route::prefix('launcher')
-    ->middleware(['auth:sanctum', 'abilities:launcher:upload', 'throttle:launcher'])
+    ->middleware(['auth:sanctum', 'throttle:launcher', 'log.api'])
     ->group(function () {
-        Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
-        Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
+        Route::middleware('abilities:launcher:upload')->group(function () {
+            Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
+            Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
+        });
+
+        Route::middleware('abilities:launcher:read')->group(function () {
+            Route::get('/servers', [\App\Http\Controllers\Api\LauncherController::class, 'servers']);
+            Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
+        });
     });
 
 // Profile + records AJAX endpoints used by the SPA frontend and (optionally)
