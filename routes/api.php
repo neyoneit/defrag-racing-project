@@ -70,6 +70,17 @@ Route::prefix('launcher')
             Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
             Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
+            Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
+        });
+
+        // Render-video is a write op (queues a job, costs render farm
+        // time) so it requires the upload ability the same way
+        // upload-demo does. Stays in the browse bucket because the
+        // user-facing rate is "a few clicks per minute" - the
+        // 20-per-day quota inside the controller is the real cap, the
+        // bucket is just abuse defence.
+        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-browse'])->group(function () {
+            Route::post('/render-video', [\App\Http\Controllers\Api\LauncherController::class, 'renderVideo']);
         });
     });
 

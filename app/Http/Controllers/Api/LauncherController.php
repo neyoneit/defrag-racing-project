@@ -8,9 +8,11 @@ use App\Models\Map;
 use App\Models\Notification;
 use App\Models\Record;
 use App\Models\RecordNotification;
+use App\Models\RenderedVideo;
 use App\Models\UploadedDemo;
 use App\Services\ServerListService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -279,5 +281,173 @@ class LauncherController extends Controller
         return response()->json(
             $query->paginate($perPage, ['*'], 'page', $page)
         );
+    }
+
+    /**
+     * Request a YouTube render for a demo the launcher already
+     * uploaded. Mirrors the web RenderRequestController flow, with two
+     * key differences:
+     *
+     *  - lookup by file_hash OR demo_id (launcher has the hash locally
+     *    from uploaded.json without needing the demo_id round-trip)
+     *  - record_id is optional (launcher renders are demo-driven, not
+     *    record-driven; demome's pipeline handles record_id=null)
+     *
+     * If the demo already has a non-failed RenderedVideo we short-
+     * circuit and return its current status / youtube_url so the
+     * launcher can show "already rendered" without a second queue
+     * entry. Same 20-renders-per-day quota as the web button, shared
+     * cache key so the user can't exceed it by bouncing between web
+     * and launcher.
+     *
+     * Notification on completion comes for free - DemomeController's
+     * markPublished() already fires a `render_completed` Notification
+     * when the YouTube upload succeeds, regardless of source.
+     */
+    public function renderVideo(Request $request)
+    {
+        $data = $request->validate([
+            'demo_id' => 'nullable|integer|exists:uploaded_demos,id',
+            'file_hash' => 'nullable|string|size:32',
+        ]);
+
+        if (empty($data['demo_id']) && empty($data['file_hash'])) {
+            return response()->json([
+                'error' => 'Pass either demo_id or file_hash.',
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (! $user->canUploadDemos()) {
+            return response()->json([
+                'error' => 'Your account is restricted from rendering.',
+            ], 403);
+        }
+
+        $demo = isset($data['demo_id'])
+            ? UploadedDemo::find($data['demo_id'])
+            : UploadedDemo::where('file_hash', strtolower($data['file_hash']))->first();
+
+        if (! $demo) {
+            return response()->json([
+                'error' => 'Demo not found. Upload it first via /upload-demo.',
+                'needs_upload' => true,
+            ], 404);
+        }
+
+        // Already in the pipeline (any non-failed state) - hand back
+        // whatever we have so the launcher can show progress instead
+        // of double-queueing.
+        $existing = RenderedVideo::where('demo_id', $demo->id)
+            ->whereIn('status', ['pending', 'rendering', 'uploading', 'completed'])
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'already_queued' => true,
+                'id' => $existing->id,
+                'status' => $existing->status,
+                'youtube_url' => $existing->youtube_url,
+                'youtube_video_id' => $existing->youtube_video_id,
+            ]);
+        }
+
+        // Same daily quota as the web request flow - shared cache key
+        // so a user can't sidestep the cap by alternating between
+        // /render-request on the web and /render-video here.
+        $cacheKey = "render_requests_user_{$user->id}_" . now()->format('Y-m-d');
+        $todayCount = Cache::get($cacheKey, 0);
+        if ($todayCount >= 20) {
+            return response()->json([
+                'error' => 'Daily render limit reached (20/day).',
+                'remaining' => 0,
+            ], 429);
+        }
+
+        $demoUrl = config('app.url') . "/api/demome/download-demo/{$demo->id}";
+
+        $video = RenderedVideo::create([
+            'map_name' => $demo->map_name,
+            'player_name' => $demo->player_name,
+            'physics' => $demo->physics,
+            'time_ms' => $demo->time_ms,
+            'gametype' => $demo->gametype,
+            'demo_id' => $demo->id,
+            'record_id' => null,
+            'user_id' => $user->id,
+            'source' => 'launcher',
+            'requested_by' => $user->name,
+            'status' => 'pending',
+            'priority' => 0,
+            'demo_url' => $demoUrl,
+            'demo_filename' => $demo->original_filename,
+        ]);
+
+        Cache::put($cacheKey, $todayCount + 1, now()->endOfDay());
+
+        $queuePosition = RenderedVideo::where('status', 'pending')
+            ->where('id', '<', $video->id)
+            ->count() + 1;
+
+        return response()->json([
+            'success' => true,
+            'id' => $video->id,
+            'status' => 'pending',
+            'queue_position' => $queuePosition,
+            'remaining_today' => 20 - ($todayCount + 1),
+        ]);
+    }
+
+    /**
+     * Fast status check for a render the launcher previously queued.
+     * Used by the Library view to refresh the YouTube link without
+     * the user having to wait for the next notifications poll.
+     * Cheaper than fetching all notifications.
+     */
+    public function renderStatus(Request $request)
+    {
+        $data = $request->validate([
+            'demo_id' => 'nullable|integer|exists:uploaded_demos,id',
+            'file_hash' => 'nullable|string|size:32',
+        ]);
+
+        if (empty($data['demo_id']) && empty($data['file_hash'])) {
+            return response()->json([
+                'error' => 'Pass either demo_id or file_hash.',
+            ], 422);
+        }
+
+        $demo = isset($data['demo_id'])
+            ? UploadedDemo::find($data['demo_id'])
+            : UploadedDemo::where('file_hash', strtolower($data['file_hash']))->first();
+
+        if (! $demo) {
+            return response()->json([
+                'has_render' => false,
+                'reason' => 'demo_not_uploaded',
+            ]);
+        }
+
+        $video = RenderedVideo::where('demo_id', $demo->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $video) {
+            return response()->json([
+                'has_render' => false,
+                'demo_id' => $demo->id,
+            ]);
+        }
+
+        return response()->json([
+            'has_render' => true,
+            'demo_id' => $demo->id,
+            'id' => $video->id,
+            'status' => $video->status,
+            'youtube_url' => $video->youtube_url,
+            'youtube_video_id' => $video->youtube_video_id,
+        ]);
     }
 }
