@@ -43,9 +43,12 @@ class RouteServiceProvider extends ServiceProvider
         //  - launcher-upload: upload-demo. This actually does work
         //    (multipart receive, file move, ProcessDemoJob dispatch),
         //    plus the file payload is order(s) of magnitude larger
-        //    than a lookup. 60/min = 1/sec is enough for live recording
-        //    and twice that for a backlog drain; anything faster would
-        //    saturate ProcessDemoJob workers anyway.
+        //    than a lookup. We have 7 ProcessDemoJob workers at ~1-2s
+        //    per job = ~210-420 jobs/min sustained capacity. 300/min
+        //    (5/sec) per token sits comfortably under that for a
+        //    single user and absorbs bursts (1000-demo first-run
+        //    rescan finishes in ~3 minutes). Pending jobs queue up
+        //    in the DB during a burst and drain at worker rate.
         //
         // Falls back to user id or IP when somehow no token is present
         // (shouldn't happen on the launcher routes, belt & braces).
@@ -61,7 +64,7 @@ class RouteServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('launcher-upload', function (Request $request) use ($launcherKey) {
-            return Limit::perMinute(60)->by($launcherKey($request, 'launcher-upload'));
+            return Limit::perMinute(300)->by($launcherKey($request, 'launcher-upload'));
         });
 
         // Back-compat alias for any leftover route still pointing at the

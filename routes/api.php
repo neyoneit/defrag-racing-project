@@ -29,9 +29,12 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //    long-time player with thousands of cached demos hits it hard.
 //    20/sec headroom keeps that working even on a "no CPU limit" setting.
 //
-//  - launcher-upload (60/min): upload-demo only. Multipart upload is
-//    heavy, ProcessDemoJob takes seconds, 1/sec is plenty for live
-//    recording and matches what worker throughput supports anyway.
+//  - launcher-upload (300/min): upload-demo only. Multipart upload
+//    + ProcessDemoJob dispatch. 7 workers at ~1-2s/job give us
+//    ~210-420 jobs/min sustained, so 5/sec per token absorbs first-
+//    run rescan bursts (1000 demos in ~3 min) while leaving headroom
+//    when several uploaders run at once. Pending jobs queue and
+//    drain at worker rate.
 //
 // `log.api` writes every call to api_call_log for the same audit trail
 // the post-incident /api lockdown added, applied here proactively.
