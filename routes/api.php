@@ -20,21 +20,22 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Desktop launcher API. Sanctum personal access tokens issued at
 // /user/launcher-tokens with abilities ["launcher:upload","launcher:read"].
-// Split by both ability AND throttle bucket so cheap reads can't get
-// pushed into 429 by the same per-token limit that gates expensive
-// uploads:
+// Three throttle buckets, one per workload shape, so traffic in one
+// section can't starve another:
 //
-//  - launcher-read (1200/min): lookup-by-hash, servers, notifications.
-//    A rescan fires one lookup-by-hash per demo so on first run a
-//    long-time player with thousands of cached demos hits it hard.
-//    20/sec headroom keeps that working even on a "no CPU limit" setting.
+//  - launcher-lookup (6000/min = 100/sec): lookup-by-hash ONLY.
+//    Rescans hammer this; isolated so a Faster-button burst can't
+//    affect browse endpoints.
 //
-//  - launcher-upload (300/min): upload-demo only. Multipart upload
-//    + ProcessDemoJob dispatch. 7 workers at ~1-2s/job give us
-//    ~210-420 jobs/min sustained, so 5/sec per token absorbs first-
-//    run rescan bursts (1000 demos in ~3 min) while leaving headroom
-//    when several uploaders run at once. Pending jobs queue and
-//    drain at worker rate.
+//  - launcher-browse (600/min = 10/sec): servers, notifications,
+//    records, maps, me. User-initiated UI; reserved from the
+//    lookup budget so the launcher UI stays responsive even during
+//    a heavy rescan.
+//
+//  - launcher-upload (300/min = 5/sec): upload-demo only. Multipart
+//    upload + ProcessDemoJob dispatch. 7 workers at ~1-2s/job give
+//    us ~210-420 jobs/min sustained. Pending jobs queue and drain
+//    at worker rate.
 //
 // `log.api` writes every call to api_call_log for the same audit trail
 // the post-incident /api lockdown added, applied here proactively.
@@ -55,16 +56,31 @@ Route::prefix('launcher')
         });
 
         // lookup-by-hash is a write-ability route (it's POST and lives
-        // alongside upload-demo conceptually) but uses the read bucket
-        // because it's a single indexed SELECT - same cost shape as
-        // /servers and /notifications.
-        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-read'])->group(function () {
+        // alongside upload-demo conceptually) but lives in its OWN
+        // throttle bucket (launcher-lookup) so a rescan burst can't
+        // burn through the budget that gates the browse endpoints
+        // below.
+        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-lookup'])->group(function () {
             Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
         });
 
-        Route::middleware(['abilities:launcher:read', 'throttle:launcher-read'])->group(function () {
+        Route::middleware(['abilities:launcher:read', 'throttle:launcher-browse'])->group(function () {
+            Route::get('/me', [\App\Http\Controllers\Api\LauncherController::class, 'me']);
             Route::get('/servers', [\App\Http\Controllers\Api\LauncherController::class, 'servers']);
             Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
+            Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
+            Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
+            Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
+        });
+
+        // Render-video is a write op (queues a job, costs render farm
+        // time) so it requires the upload ability the same way
+        // upload-demo does. Stays in the browse bucket because the
+        // user-facing rate is "a few clicks per minute" - the
+        // 20-per-day quota inside the controller is the real cap, the
+        // bucket is just abuse defence.
+        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-browse'])->group(function () {
+            Route::post('/render-video', [\App\Http\Controllers\Api\LauncherController::class, 'renderVideo']);
         });
     });
 
