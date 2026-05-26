@@ -107,9 +107,23 @@ class Map extends Model
 
     public function processRanks () {
         DB::beginTransaction();
-        $records = Record::where('mapname', $this->name)->orderBy('time')->get()->groupBy(function ($record) {
-            return $record->physics . '_' . $record->mode;
-        });
+        // Tie-break by date_set ASC so two players with the same time
+        // get the rank in the order they actually set it (earlier =
+        // better rank), matching what MapsController computes on-the-fly
+        // for the map detail page. Without this secondary sort MySQL
+        // ordering for ties is unspecified and effectively falls back
+        // to insertion order, which can flip the rank for the player
+        // who set the time first if their row was imported later.
+        // `id` ASC is a third-level stable tie-break for paranoia in
+        // the very unlikely (date_set, time) double-tie.
+        $records = Record::where('mapname', $this->name)
+            ->orderBy('time')
+            ->orderBy('date_set')
+            ->orderBy('id')
+            ->get()
+            ->groupBy(function ($record) {
+                return $record->physics . '_' . $record->mode;
+            });
 
         foreach($records as $group => $data) {
             $i = 1;
