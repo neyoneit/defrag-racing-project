@@ -38,8 +38,17 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //
 // `log.api` writes every call to api_call_log for the same audit trail
 // the post-incident /api lockdown added, applied here proactively.
+//
+// `withoutMiddleware('throttle:api')` is critical: the api middleware
+// group applies `throttle:api` (60/min per user) to every route under
+// /api, which would otherwise dominate over the per-route launcher
+// throttles below. Demome routes already drop it for the same reason
+// (their headless renderer would burn through 60/min in seconds).
+// Without this line the launcher-read 6000/min limit was a no-op and
+// rescans got 429ed at the 60-call mark.
 Route::prefix('launcher')
     ->middleware(['auth:sanctum', 'log.api'])
+    ->withoutMiddleware('throttle:api')
     ->group(function () {
         Route::middleware(['abilities:launcher:upload', 'throttle:launcher-upload'])->group(function () {
             Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
