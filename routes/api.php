@@ -63,6 +63,7 @@ Route::prefix('launcher')
         });
 
         Route::middleware(['abilities:launcher:read', 'throttle:launcher-read'])->group(function () {
+            Route::get('/me', [\App\Http\Controllers\Api\LauncherController::class, 'me']);
             Route::get('/servers', [\App\Http\Controllers\Api\LauncherController::class, 'servers']);
             Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);

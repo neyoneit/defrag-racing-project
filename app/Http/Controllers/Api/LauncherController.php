@@ -189,6 +189,29 @@ class LauncherController extends Controller
     }
 
     /**
+     * Minimal "who am I" for the launcher. Returns the fields the
+     * launcher needs to wire up the top nav's Profile button (mdd_id
+     * for the /profile/{id} link, name + country for the badge) and
+     * nothing else. Used once per app start; cached in the launcher's
+     * config store so the button works offline thereafter.
+     *
+     * Lives under the launcher-read bucket so a misclick on the
+     * Profile button can't be turned into a 429 by the global
+     * throttle:api ceiling.
+     */
+    public function me(Request $request)
+    {
+        $user = $request->user();
+        return response()->json([
+            'id' => $user->id,
+            'mdd_id' => $user->mdd_id,
+            'name' => $user->name,
+            'plain_name' => $user->plain_name ?? null,
+            'country' => $user->country ?? null,
+        ]);
+    }
+
+    /**
      * Paginated recent records for the launcher's Records tab. Single
      * physics per call (the launcher renders two tables side-by-side
      * and queries each independently) so the response stays small and
