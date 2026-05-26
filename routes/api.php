@@ -20,20 +20,40 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Desktop launcher API. Sanctum personal access tokens issued at
 // /user/launcher-tokens with abilities ["launcher:upload","launcher:read"].
-// Split into two inner groups so a future read-only token (e.g. for an
-// observer / overlay client) can be scoped without granting upload. The
-// `log.api` middleware writes every call to api_call_log — same audit
-// trail the post-incident lockdown added to the public-facing /api
-// routes, applied here proactively so we never repeat that mistake.
+// Split by both ability AND throttle bucket so cheap reads can't get
+// pushed into 429 by the same per-token limit that gates expensive
+// uploads:
+//
+//  - launcher-read (1200/min): lookup-by-hash, servers, notifications.
+//    A rescan fires one lookup-by-hash per demo so on first run a
+//    long-time player with thousands of cached demos hits it hard.
+//    20/sec headroom keeps that working even on a "no CPU limit" setting.
+//
+//  - launcher-upload (300/min): upload-demo only. Multipart upload
+//    + ProcessDemoJob dispatch. 7 workers at ~1-2s/job give us
+//    ~210-420 jobs/min sustained, so 5/sec per token absorbs first-
+//    run rescan bursts (1000 demos in ~3 min) while leaving headroom
+//    when several uploaders run at once. Pending jobs queue and
+//    drain at worker rate.
+//
+// `log.api` writes every call to api_call_log for the same audit trail
+// the post-incident /api lockdown added, applied here proactively.
 Route::prefix('launcher')
-    ->middleware(['auth:sanctum', 'throttle:launcher', 'log.api'])
+    ->middleware(['auth:sanctum', 'log.api'])
     ->group(function () {
-        Route::middleware('abilities:launcher:upload')->group(function () {
-            Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
+        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-upload'])->group(function () {
             Route::post('/upload-demo', [\App\Http\Controllers\Api\LauncherController::class, 'uploadDemo']);
         });
 
-        Route::middleware('abilities:launcher:read')->group(function () {
+        // lookup-by-hash is a write-ability route (it's POST and lives
+        // alongside upload-demo conceptually) but uses the read bucket
+        // because it's a single indexed SELECT - same cost shape as
+        // /servers and /notifications.
+        Route::middleware(['abilities:launcher:upload', 'throttle:launcher-read'])->group(function () {
+            Route::post('/lookup-by-hash', [\App\Http\Controllers\Api\LauncherController::class, 'lookupByHash']);
+        });
+
+        Route::middleware(['abilities:launcher:read', 'throttle:launcher-read'])->group(function () {
             Route::get('/servers', [\App\Http\Controllers\Api\LauncherController::class, 'servers']);
             Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
         });
