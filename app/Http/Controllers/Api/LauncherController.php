@@ -191,6 +191,93 @@ class LauncherController extends Controller
     }
 
     /**
+     * Per-row toggle for a record notification. Flips `read` and
+     * returns the new state + fresh unread counts so the launcher
+     * can update its badge without a separate /notifications poll.
+     * 404 when the row doesn't exist OR belongs to a different user
+     * (the where on user_id is what enforces tenant isolation).
+     */
+    public function notificationRecordToggle(Request $request, int $id)
+    {
+        $userId = $request->user()->id;
+        $row = RecordNotification::where('user_id', $userId)->where('id', $id)->first();
+        if (! $row) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
+        $row->read = ! $row->read;
+        $row->save();
+        return response()->json([
+            'id' => $row->id,
+            'read' => (bool) $row->read,
+            'unread' => $this->unreadCounts($userId),
+        ]);
+    }
+
+    /** Mark every record notification for this user as read. */
+    public function notificationRecordsMarkRead(Request $request)
+    {
+        $userId = $request->user()->id;
+        RecordNotification::where('user_id', $userId)->where('read', false)->update(['read' => true]);
+        return response()->json(['unread' => $this->unreadCounts($userId)]);
+    }
+
+    /** Mark every record notification for this user as unread. */
+    public function notificationRecordsMarkUnread(Request $request)
+    {
+        $userId = $request->user()->id;
+        RecordNotification::where('user_id', $userId)->where('read', true)->update(['read' => false]);
+        return response()->json(['unread' => $this->unreadCounts($userId)]);
+    }
+
+    /** System notification equivalents. Same shape as the record ones. */
+    public function notificationSystemToggle(Request $request, int $id)
+    {
+        $userId = $request->user()->id;
+        $row = Notification::where('user_id', $userId)->where('id', $id)->first();
+        if (! $row) {
+            return response()->json(['error' => 'not_found'], 404);
+        }
+        $row->read = ! $row->read;
+        $row->save();
+        return response()->json([
+            'id' => $row->id,
+            'read' => (bool) $row->read,
+            'unread' => $this->unreadCounts($userId),
+        ]);
+    }
+
+    public function notificationSystemMarkRead(Request $request)
+    {
+        $userId = $request->user()->id;
+        Notification::where('user_id', $userId)->where('read', false)->update(['read' => true]);
+        return response()->json(['unread' => $this->unreadCounts($userId)]);
+    }
+
+    public function notificationSystemMarkUnread(Request $request)
+    {
+        $userId = $request->user()->id;
+        Notification::where('user_id', $userId)->where('read', true)->update(['read' => false]);
+        return response()->json(['unread' => $this->unreadCounts($userId)]);
+    }
+
+    /**
+     * Shared unread-count payload returned by every mark-read/unread
+     * mutation above. Keeps the launcher bell badge in sync with what
+     * the server just changed, without a separate /notifications
+     * round-trip.
+     */
+    private function unreadCounts(int $userId): array
+    {
+        $records = RecordNotification::where('user_id', $userId)->where('read', false)->count();
+        $system = Notification::where('user_id', $userId)->where('read', false)->count();
+        return [
+            'records' => $records,
+            'system' => $system,
+            'total' => $records + $system,
+        ];
+    }
+
+    /**
      * Minimal "who am I" for the launcher. Returns the fields the
      * launcher needs to wire up the top nav's Profile button (mdd_id
      * for the /profile/{id} link, name + country for the badge) and

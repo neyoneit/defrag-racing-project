@@ -71,6 +71,19 @@ Route::prefix('launcher')
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
             Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
             Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
+
+            // Mark-as-read / mark-as-unread for the launcher Notifications
+            // tab. Per-row toggle covers normal interaction; bulk endpoints
+            // back the "Mark all as read/unread" buttons so a user with 50
+            // unread doesn't fire 50 round-trips. Same throttle bucket as
+            // the read endpoints - all mutations here are tiny single-row
+            // updates (or one UPDATE for the bulk variants).
+            Route::post('/notifications/records/{id}/toggle', [\App\Http\Controllers\Api\LauncherController::class, 'notificationRecordToggle']);
+            Route::post('/notifications/records/mark-read', [\App\Http\Controllers\Api\LauncherController::class, 'notificationRecordsMarkRead']);
+            Route::post('/notifications/records/mark-unread', [\App\Http\Controllers\Api\LauncherController::class, 'notificationRecordsMarkUnread']);
+            Route::post('/notifications/system/{id}/toggle', [\App\Http\Controllers\Api\LauncherController::class, 'notificationSystemToggle']);
+            Route::post('/notifications/system/mark-read', [\App\Http\Controllers\Api\LauncherController::class, 'notificationSystemMarkRead']);
+            Route::post('/notifications/system/mark-unread', [\App\Http\Controllers\Api\LauncherController::class, 'notificationSystemMarkUnread']);
         });
 
         // Render-video is a write op (queues a job, costs render farm
