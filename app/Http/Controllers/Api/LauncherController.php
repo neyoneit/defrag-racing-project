@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDemoJob;
+use App\Models\Map;
 use App\Models\Notification;
+use App\Models\Record;
 use App\Models\RecordNotification;
 use App\Models\UploadedDemo;
 use App\Services\ServerListService;
@@ -184,5 +186,75 @@ class LauncherController extends Controller
                 'total' => $unreadRecords + $unreadSystem,
             ],
         ]);
+    }
+
+    /**
+     * Paginated recent records for the launcher's Records tab. Single
+     * physics per call (the launcher renders two tables side-by-side
+     * and queries each independently) so the response stays small and
+     * the per-page count is honest.
+     *
+     * Deliberately a minimal projection of what RecordsController
+     * returns to the web Inertia page - no PlayerMapScore enrichment,
+     * no rating multipliers, no offline_records merge. The launcher
+     * lists "newest records, by physics" as a quick browser; users
+     * who want the rich rating context click through to the web map
+     * page anyway.
+     *
+     * Query: ?physics=vq3|cpm  (defaults to vq3)
+     *        &page=1
+     */
+    public function records(Request $request)
+    {
+        $data = $request->validate([
+            'physics' => 'nullable|in:vq3,cpm',
+            'page' => 'nullable|integer|min:1|max:1000',
+        ]);
+
+        $physics = $data['physics'] ?? 'vq3';
+        $page = $data['page'] ?? 1;
+        $perPage = 100;
+
+        $records = Record::query()
+            ->where('physics', $physics)
+            ->with(['user:id,name,plain_name,country,profile_photo_path'])
+            ->orderBy('date_set', 'DESC')
+            ->paginate($perPage, ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics', 'mode'], 'page', $page);
+
+        return response()->json($records);
+    }
+
+    /**
+     * Paginated map list for the launcher's Maps tab. Newest first,
+     * optional name search. The launcher intentionally doesn't expose
+     * the web's MapFilters surface - if the user wants to filter by
+     * weapon / gametype / NSFW / etc. they click through to the
+     * matching map page and get the web's full filter UI.
+     *
+     * Query: ?page=1  &search=optional-substring
+     */
+    public function maps(Request $request)
+    {
+        $data = $request->validate([
+            'page' => 'nullable|integer|min:1|max:1000',
+            'search' => 'nullable|string|max:64',
+        ]);
+
+        $page = $data['page'] ?? 1;
+        $search = $data['search'] ?? null;
+        $perPage = 50;
+
+        $query = Map::query()
+            ->select('id', 'name', 'author', 'thumbnail', 'physics', 'gametype', 'is_nsfw', 'date_added')
+            ->orderBy('date_added', 'DESC')
+            ->orderBy('id', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $query->where('name', 'LIKE', '%' . $search . '%');
+        }
+
+        return response()->json(
+            $query->paginate($perPage, ['*'], 'page', $page)
+        );
     }
 }
