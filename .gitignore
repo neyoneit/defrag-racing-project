@@ -70,6 +70,8 @@ PRODUCTION_CREDENTIALS.md
 # Don't commit one-off player rename commands
 /app/Console/Commands/RenamePlayer.php
 *.sql
+*.sql.gz
+*.sql.zip
 
 # Documentation/instruction files (local only)
 ODFE_GETDFSTATUS.md
