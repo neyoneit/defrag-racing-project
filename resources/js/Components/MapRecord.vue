@@ -73,6 +73,7 @@
     const renderRequested = ref(false);
     const renderError = ref(null);
     const showRenderConfirm = ref(false);
+    const etiquetteAccepted = ref(false);
 
     const renderedVideo = computed(() => {
         const videos = props.record.rendered_videos;
@@ -105,15 +106,17 @@
 
     const confirmRender = () => {
         renderError.value = null;
+        etiquetteAccepted.value = false;
         showRenderConfirm.value = true;
     };
 
     const cancelRender = () => {
         showRenderConfirm.value = false;
+        etiquetteAccepted.value = false;
     };
 
     const requestRender = async () => {
-        if (renderRequesting.value || !canRequestRender.value) return;
+        if (renderRequesting.value || !canRequestRender.value || !etiquetteAccepted.value) return;
         renderRequesting.value = true;
         renderError.value = null;
         try {
@@ -922,7 +925,7 @@
     <!-- Render Confirm Dialog -->
     <Teleport to="body" v-if="showRenderConfirm">
         <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" @click.self="cancelRender">
-            <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
+            <div class="bg-gray-900 border border-white/10 rounded-xl p-5 shadow-2xl max-w-md mx-4">
                 <template v-if="!renderRequested">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
@@ -930,13 +933,29 @@
                         </div>
                         <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
                     </div>
-                    <p class="text-xs text-gray-400 mb-4">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
+                    <p class="text-xs text-gray-400 mb-3">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
+
+                    <div class="border border-white/10 bg-white/[0.02] rounded-lg p-3 mb-3">
+                        <h4 class="text-xs font-bold text-white mb-2">Render etiquette</h4>
+                        <ul class="text-[11px] text-gray-400 space-y-1.5 list-disc pl-4">
+                            <li>Render the best attempt you have. Don't dump your whole time history when you already have, or will soon have, a better time.</li>
+                            <li>Same map, near identical times a few ms apart? Pick one.</li>
+                            <li>Exception: a run with a specific cool trick or something worth showing off. A slower time is totally fine then.</li>
+                            <li>Renders aren't free - we're capped by a daily YouTube upload limit, so spending it on time history burns the budget for everyone.</li>
+                        </ul>
+                    </div>
+
+                    <label class="flex items-start gap-2 mb-3 cursor-pointer select-none">
+                        <input type="checkbox" v-model="etiquetteAccepted" class="mt-0.5 w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-red-600 focus:ring-red-500 focus:ring-offset-0">
+                        <span class="text-xs text-gray-300">I have read and will follow the render etiquette.</span>
+                    </label>
+
                     <p v-if="renderError" class="text-xs text-red-400 mb-3">{{ renderError }}</p>
                     <div class="flex gap-2 justify-end">
                         <button @click="cancelRender" class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
                             Cancel
                         </button>
-                        <button @click="requestRender" :disabled="renderRequesting" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-lg transition-colors">
+                        <button @click="requestRender" :disabled="renderRequesting || !etiquetteAccepted" class="px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
                             {{ renderRequesting ? '...' : 'Render' }}
                         </button>
                     </div>
