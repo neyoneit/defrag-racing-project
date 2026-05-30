@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class DemomeController extends Controller
@@ -1055,6 +1056,32 @@ class DemomeController extends Controller
             'auto' => $auto,
             'web' => $web,
             'discord' => $discord,
+        ]);
+    }
+
+    /**
+     * Rolling N-hour upload count + when the oldest upload in the window expires.
+     * Bot uses this for a proactive throttle that respects YouTube's rolling 24h
+     * channel-level cap (uploadLimitExceeded), which `uploadCountsToday` doesn't
+     * catch — that one resets at local midnight, YouTube's cap doesn't.
+     */
+    public function recentUploadCount(Request $request)
+    {
+        $hours = max(1, min(168, (int) $request->input('hours', 24)));
+        $since = Carbon::now()->subHours($hours);
+
+        $base = RenderedVideo::where('status', 'completed')
+            ->whereNotNull('youtube_url')
+            ->where('updated_at', '>=', $since);
+
+        $count = (clone $base)->count();
+        $oldest = (clone $base)->orderBy('updated_at', 'asc')->first();
+
+        return response()->json([
+            'count' => $count,
+            'hours' => $hours,
+            'oldest_at' => $oldest?->updated_at?->toIso8601String(),
+            'oldest_expires_at' => $oldest?->updated_at?->addHours($hours)->toIso8601String(),
         ]);
     }
 
