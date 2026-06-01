@@ -85,6 +85,7 @@ class RenderedVideoResource extends Resource
                                 'discord' => 'Discord',
                                 'web' => 'Web',
                                 'auto' => 'Auto',
+                                'launcher' => 'DefragLauncher',
                             ]),
                         Forms\Components\Toggle::make('is_visible')
                             ->label('Visible'),
@@ -189,10 +190,12 @@ class RenderedVideoResource extends Resource
                     ]),
 
                 Tables\Columns\BadgeColumn::make('source')
+                    ->formatStateUsing(fn ($state) => $state === 'launcher' ? 'DefragLauncher' : $state)
                     ->colors([
                         'info' => 'discord',
                         'success' => 'web',
                         'gray' => 'auto',
+                        'warning' => 'launcher',
                     ]),
 
                 Tables\Columns\TextColumn::make('priority')
@@ -267,6 +270,7 @@ class RenderedVideoResource extends Resource
                         'discord' => 'Discord',
                         'web' => 'Web',
                         'auto' => 'Auto',
+                        'launcher' => 'DefragLauncher',
                         'community_tasks' => 'Community Tasks',
                     ]),
                 Tables\Filters\SelectFilter::make('priority')
