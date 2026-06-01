@@ -933,21 +933,27 @@
                         </div>
                         <h3 class="text-sm font-bold text-white">Render to YouTube?</h3>
                     </div>
-                    <p class="text-xs text-gray-400 mb-3">This will queue the demo for rendering to a YouTube video. The process may take several minutes.</p>
+                    <p class="text-xs text-gray-400 mb-3">This queues your demo to be rendered into a video and uploaded to the defrag.racing YouTube channel. Rendering can take several minutes.</p>
+
+                    <div class="border border-red-500/30 bg-red-500/[0.06] rounded-lg p-3 mb-3">
+                        <p class="text-[11px] text-gray-300 leading-relaxed">
+                            <span class="font-bold text-red-300">Renders cost real money.</span>
+                            The render farm time and storage are paid for by defrag.racing out of the project's own pocket, and YouTube caps how many videos demome can upload per day. Every render you queue spends part of that shared, limited budget - so please only render runs that are worth keeping.
+                        </p>
+                    </div>
 
                     <div class="border border-white/10 bg-white/[0.02] rounded-lg p-3 mb-3">
                         <h4 class="text-xs font-bold text-white mb-2">Render etiquette</h4>
                         <ul class="text-[11px] text-gray-400 space-y-1.5 list-disc pl-4">
-                            <li>Render the best attempt you have. Don't dump your whole time history when you already have, or will soon have, a better time.</li>
-                            <li>Same map, near identical times a few ms apart? Pick one.</li>
-                            <li>Exception: a run with a specific cool trick or something worth showing off. A slower time is totally fine then.</li>
-                            <li>Renders aren't free - we're capped by a daily YouTube upload limit, so spending it on time history burns the budget for everyone.</li>
+                            <li>Render your best run. Don't queue your whole time history when you already have - or will beat in minutes or hours - a faster time.</li>
+                            <li>Several near-identical times on the same map, a few ms apart? Pick one.</li>
+                            <li>Slower time but a genuinely cool trick or something worth showing off? That's totally fine, go for it.</li>
                         </ul>
                     </div>
 
                     <label class="flex items-start gap-2 mb-3 cursor-pointer select-none">
                         <input type="checkbox" v-model="etiquetteAccepted" class="mt-0.5 w-3.5 h-3.5 rounded border-white/20 bg-white/5 text-red-600 focus:ring-red-500 focus:ring-offset-0">
-                        <span class="text-xs text-gray-300">I have read and will follow the render etiquette.</span>
+                        <span class="text-xs text-gray-300">I won't render my whole time history - just the runs actually worth keeping.</span>
                     </label>
 
                     <p v-if="renderError" class="text-xs text-red-400 mb-3">{{ renderError }}</p>
