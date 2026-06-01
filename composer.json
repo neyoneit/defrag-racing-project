@@ -26,6 +26,7 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "league/flysystem-sftp-v3": "*",
         "mokhosh/filament-kanban": "^2.3",
+        "monicahq/laravel-cloudflare": "*",
         "opcodesio/log-viewer": "^3.1",
         "php-http/curl-client": "^2.3",
         "socialiteproviders/discord": "^4.2",

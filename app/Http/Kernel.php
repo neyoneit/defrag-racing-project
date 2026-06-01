@@ -49,17 +49,16 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // Load the session cookie unconditionally for every /api/*
-            // request. We explicitly skip Sanctum's
-            // EnsureFrontendRequestsAreStateful here because that
-            // middleware only activates session loading when a Referer
-            // or Origin header is present — pasting an /api/... URL
-            // into a fresh tab doesn't include either and would 401 an
-            // otherwise logged-in user. Bearer-token clients are
-            // unaffected; the session is just unused for them.
+            // No StartSession on /api/* on purpose. Bearer-token
+            // clients (launcher etc.) are stateless and identify via
+            // Authorization header, not cookies; running StartSession
+            // on every poll created one anonymous row in `sessions`
+            // per request, flooding the Browser Sessions UI. Browser
+            // users hitting /api/* paste-into-tab still authenticate
+            // via EnsureFrontendRequestsAreStateful when the Referer
+            // / Origin header is present.
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
