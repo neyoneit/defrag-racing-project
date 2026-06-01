@@ -189,7 +189,7 @@ const disableTwoFactorAuthentication = () => {
                 </div>
             </div>
 
-            <div class="flex flex-wrap gap-2 pt-1">
+            <div class="flex flex-wrap justify-end gap-2 pt-1">
                 <div v-if="! twoFactorEnabled">
                     <ConfirmsPassword @confirmed="enableTwoFactorAuthentication">
                         <PrimaryButton type="button" :class="{ 'opacity-25': enabling }" :disabled="enabling">
@@ -198,7 +198,7 @@ const disableTwoFactorAuthentication = () => {
                     </ConfirmsPassword>
                 </div>
 
-                <div v-else class="flex flex-wrap gap-2">
+                <div v-else class="flex flex-wrap justify-end gap-2">
                     <ConfirmsPassword @confirmed="confirmTwoFactorAuthentication">
                         <PrimaryButton
                             v-if="confirming"
