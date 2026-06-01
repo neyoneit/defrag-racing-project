@@ -11,6 +11,7 @@ export default {
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
+import LauncherBanner from '@/Components/LauncherBanner.vue';
 
 const $page = usePage();
 
@@ -1333,8 +1334,28 @@ watch(selectedPhysics, () => {
                             <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Demos</h1>
                         </div>
                         <p class="text-sm text-gray-400">Upload and manage demo files</p>
-                        <p class="text-xs text-gray-500 mt-1">Special thanks to <Link href="/profile/549" class="text-gray-300 hover:text-white underline transition-colors">Enter</Link> for his demo collection that helped populate this database.</p>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <span class="relative group inline-block">
+                                <span class="cursor-help border-b border-dotted border-gray-600 text-gray-400">Special thanks</span>
+                                <span class="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-opacity absolute left-0 top-full z-30 w-64 rounded-lg bg-gray-900 border border-white/10 px-3 py-2 text-xs text-gray-300 shadow-xl leading-snug">
+                                    Special thanks to <Link href="/profile/549" class="text-gray-200 hover:text-white underline transition-colors">Enter</Link> for his demo collection that helped populate this database.
+                                </span>
+                            </span>
+                        </p>
                     </div>
+
+                    <!-- TEMP hidden: launcher header chip (re-enable once render is confirmed working)
+                    <Link :href="route('launcher')"
+                          class="flex items-center gap-2 bg-gradient-to-r from-blue-600/30 to-blue-500/15 hover:from-blue-600/40 hover:to-blue-500/25 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/40 hover:border-blue-300/60 transition-colors text-sm">
+                        <svg class="w-5 h-5 text-blue-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
+                        <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">auto backup demos + many more features</span>
+                    </Link>
+                    -->
 
                     <!-- Limits Info (Right Side) -->
                     <div class="flex flex-col gap-2">
@@ -1392,6 +1413,10 @@ watch(selectedPhysics, () => {
 
         <div class="overflow-x-hidden">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
+
+                <!-- TEMP hidden: dismissible launcher banner (re-enable once render is confirmed working)
+                <LauncherBanner variant="demos" />
+                -->
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">

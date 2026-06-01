@@ -59,6 +59,8 @@ Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers
 // for CN/RU users who have trouble reaching GitHub directly.
 Route::get('/launcher/latest.json', [LauncherController::class, 'latestManifest'])->name('launcher.manifest');
 
+Route::get('/launcher', [LauncherController::class, 'page'])->name('launcher');
+
 Route::get('/maps', [MapsController::class, 'index'])->name('maps');
 Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filters');
 Route::get('/maps/random', [MapsController::class, 'random'])->name('maps.random');
