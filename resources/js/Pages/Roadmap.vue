@@ -1,9 +1,13 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     commits: {
+        type: Array,
+        default: () => [],
+    },
+    launcherCommits: {
         type: Array,
         default: () => [],
     },
@@ -15,7 +19,16 @@ const onCommitEnter = (e, commit) => { hoveredCommit.value = commit; commitToolt
 const onCommitMove = (e) => { commitTooltipPos.value = { x: e.clientX, y: e.clientY }; };
 const onCommitLeave = () => { hoveredCommit.value = null; };
 
-const commitItems = props.commits;
+// Web (this repo, read from local git log) vs. Launcher (separate repo,
+// fetched from the GitHub API in the controller). Tab switches which
+// feed + which GitHub repo the commit links point at.
+const activeRepo = ref('web');
+const REPOS = {
+    web: 'https://github.com/defrag-racing/defrag-racing-project',
+    launcher: 'https://github.com/Defrag-racing/defrag-racing-launcher',
+};
+const commitItems = computed(() => activeRepo.value === 'web' ? props.commits : props.launcherCommits);
+const repoUrl = computed(() => REPOS[activeRepo.value]);
 </script>
 
 <template>
@@ -60,14 +73,28 @@ const commitItems = props.commits;
             <!-- DONE — Commits from git -->
             <div class="bg-black/40 rounded-xl p-8 shadow-2xl border border-white/5 mb-8">
                 <div>
-                    <h3 class="text-xl font-bold text-green-400 mb-4 flex items-center gap-2">
-                        <span class="text-2xl">✅</span> Done — {{ commitItems.length }} Commits
-                    </h3>
-                    <div class="ml-8 space-y-2 max-h-[800px] overflow-y-auto pr-4">
+                    <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                        <h3 class="text-xl font-bold text-green-400 flex items-center gap-2">
+                            <span class="text-2xl">✅</span> Done — {{ commitItems.length }} Commits
+                        </h3>
+                        <!-- Repo tabs -->
+                        <div class="flex bg-white/5 rounded-lg overflow-hidden text-sm">
+                            <button
+                                v-for="tab in [{ v: 'web', label: 'Website' }, { v: 'launcher', label: 'Launcher' }]"
+                                :key="tab.v"
+                                @click="activeRepo = tab.v"
+                                :class="['px-4 py-1.5 font-semibold transition-colors', activeRepo === tab.v ? 'bg-green-500/25 text-green-200' : 'text-gray-400 hover:text-gray-200']"
+                            >{{ tab.label }}</button>
+                        </div>
+                    </div>
+                    <div v-if="!commitItems.length" class="ml-8 text-sm text-gray-500 italic py-6">
+                        No commits to show here yet.
+                    </div>
+                    <div v-else class="ml-8 space-y-2 max-h-[800px] overflow-y-auto pr-4">
                         <div v-for="(commit, index) in commitItems" :key="commit.hash" class="relative pl-6 border-l-2 border-green-500/20">
                             <div class="absolute left-0 top-2 w-4 h-0.5 bg-green-500/20"></div>
                             <div>
-                                <a :href="`https://github.com/defrag-racing/defrag-racing-project/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded cursor-pointer transition-all"
+                                <a :href="`${repoUrl}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded cursor-pointer transition-all"
                                     @mouseenter="onCommitEnter($event, commit)"
                                     @mousemove="onCommitMove"
                                     @mouseleave="onCommitLeave"

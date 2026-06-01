@@ -24,6 +24,7 @@
         recentWorldRecords: Array,
         rankingHighlights: Object,
         recentChangelog: Array,
+        recentChangelogLauncher: Array,
         upcomingTournaments: Array,
         latestModel: Object,
         latestMap: Object,
@@ -48,6 +49,12 @@
         localStorage.setItem('gettingStarted_discord', discordChecked.value ? '1' : '0');
     };
 
+    const launcherChecked = ref(localStorage.getItem('gettingStarted_launcher') === '1');
+    const toggleLauncher = () => {
+        launcherChecked.value = !launcherChecked.value;
+        localStorage.setItem('gettingStarted_launcher', launcherChecked.value ? '1' : '0');
+    };
+
     const formatTime = (ms) => {
         if (!ms) return '-';
         const totalSec = ms / 1000;
@@ -63,6 +70,19 @@
     const onCommitEnter = (e, commit) => { hoveredCommit.value = commit; commitTooltipPos.value = { x: e.clientX, y: e.clientY }; };
     const onCommitMove = (e) => { commitTooltipPos.value = { x: e.clientX, y: e.clientY }; };
     const onCommitLeave = () => { hoveredCommit.value = null; };
+
+    // Recent Changes feed: Website (this repo) vs. Launcher (separate repo,
+    // fetched from GitHub in the controller). Tab switches the feed + the
+    // GitHub repo the commit links point at.
+    const changesTab = ref('web');
+    const CHANGES_REPOS = {
+        web: 'https://github.com/defrag-racing/defrag-racing-project',
+        launcher: 'https://github.com/Defrag-racing/defrag-racing-launcher',
+    };
+    const activeChangelog = computed(() => changesTab.value === 'web'
+        ? (props.recentChangelog || [])
+        : (props.recentChangelogLauncher || []));
+    const changesRepoUrl = computed(() => CHANGES_REPOS[changesTab.value]);
 
     const timeAgo = (dateStr) => {
         if (!dateStr) return '';
@@ -351,22 +371,33 @@
             <!-- Row 2: Changelog -->
             <div>
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden">
-                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 gap-3 flex-wrap">
                         <h2 class="text-sm font-bold text-white flex items-center gap-2">
                             <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>
                             Recent Changes
                         </h2>
-                        <Link href="/roadmap" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Roadmap</Link>
+                        <div class="flex items-center gap-3">
+                            <!-- Website / Launcher tabs -->
+                            <div class="flex bg-white/5 rounded-lg overflow-hidden text-[11px]">
+                                <button
+                                    v-for="tab in [{ v: 'web', label: 'Website' }, { v: 'launcher', label: 'Launcher' }]"
+                                    :key="tab.v"
+                                    @click="changesTab = tab.v"
+                                    :class="['px-3 py-1 font-semibold transition-colors', changesTab === tab.v ? 'bg-cyan-500/25 text-cyan-200' : 'text-gray-400 hover:text-gray-200']"
+                                >{{ tab.label }}</button>
+                            </div>
+                            <Link href="/roadmap" class="text-xs text-blue-400 hover:text-blue-300 font-medium">Roadmap</Link>
+                        </div>
                     </div>
-                    <div v-if="recentChangelog && recentChangelog.length > 0" class="p-4 space-y-1">
-                        <div v-for="commit in recentChangelog" :key="commit.hash"
+                    <div v-if="activeChangelog.length > 0" class="p-4 space-y-1">
+                        <div v-for="commit in activeChangelog" :key="commit.hash"
                              class="relative pl-5 border-l-2 border-green-500/20"
                              :class="commit.description ? 'cursor-help' : ''"
                              @mouseenter="commit.description ? onCommitEnter($event, commit) : null"
                              @mousemove="commit.description ? onCommitMove($event) : null"
                              @mouseleave="onCommitLeave">
                             <div class="absolute left-0 top-2.5 w-3 h-0.5 bg-green-500/20"></div>
-                            <a :href="`https://github.com/defrag-racing/defrag-racing-project/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
+                            <a :href="`${changesRepoUrl}/commit/${commit.hash}`" target="_blank" class="flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-green-500/10 to-transparent hover:from-green-500/20 rounded transition-all">
                                 <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
                                 <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
                                 <span class="text-xs font-mono text-green-400/70">{{ commit.hash }}</span>
@@ -374,7 +405,9 @@
                             </a>
                         </div>
                     </div>
-                    <div v-else class="px-5 py-8 text-center text-sm text-gray-500">No recent changes</div>
+                    <div v-else class="px-5 py-8 text-center text-sm text-gray-500">
+                        {{ changesTab === 'launcher' ? 'No launcher changes to show' : 'No recent changes' }}
+                    </div>
                 </div>
             </div>
 
@@ -448,6 +481,24 @@
                             </div>
                         </Link>
                         <button v-if="isAuthenticated" @click="toggleDownload" :class="['shrink-0 w-10 rounded-lg border-2 flex items-center justify-center transition-all', downloadChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                        </button>
+                    </div>
+
+                    <!-- Download Launcher -->
+                    <div class="flex gap-2 items-stretch">
+                        <Link :href="route('launcher')" :class="['flex-1 backdrop-blur-sm rounded-xl border p-5 transition-all group', launcherChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-blue-500/50']">
+                            <div class="flex items-center gap-4">
+                                <div :class="['p-3 rounded-lg shrink-0', launcherChecked ? 'bg-green-500/20' : 'bg-blue-500/20']">
+                                    <svg :class="['w-6 h-6', launcherChecked ? 'text-green-400' : 'text-blue-400']" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5m0 0 5-5m-5 5V3" /></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 :class="['text-base font-bold transition-colors', launcherChecked ? 'text-green-400' : 'text-white group-hover:text-blue-400']">Download Launcher</h3>
+                                    <p class="text-xs text-gray-400 mt-0.5">Auto-backup demos, 1-click Connect &amp; more</p>
+                                </div>
+                            </div>
+                        </Link>
+                        <button v-if="isAuthenticated" @click="toggleLauncher" :class="['shrink-0 w-10 rounded-lg border-2 flex items-center justify-center transition-all', launcherChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                         </button>
                     </div>

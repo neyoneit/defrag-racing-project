@@ -16,9 +16,62 @@ use App\Models\PlayerRating;
 use App\Models\PlayerModel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class WebController extends Controller
 {
+    /**
+     * Recent commits for the desktop launcher, pulled from the GitHub API.
+     * The launcher lives in a separate repo that isn't checked out on the
+     * web server, so unlike the web changelog (read from local `git log`)
+     * we have to fetch these over HTTP. Cached for an hour - GitHub's
+     * unauthenticated limit is 60 req/h per IP and one call/hour stays
+     * comfortably under it. Returns the same shape as the web changelog
+     * (hash/title/description/date/author) so the frontend renders both
+     * feeds with one template.
+     */
+    private function launcherCommits(int $limit = 100) {
+        return Cache::remember("launcher_commits_v1_{$limit}", 3600, function () use ($limit) {
+            try {
+                $resp = Http::withHeaders([
+                    'User-Agent' => 'defrag-racing-web',
+                    'Accept' => 'application/vnd.github+json',
+                ])->timeout(8)->get(
+                    'https://api.github.com/repos/Defrag-racing/defrag-racing-launcher/commits',
+                    ['per_page' => min($limit, 100)]
+                );
+
+                if (! $resp->ok()) return [];
+
+                $commits = [];
+                foreach ($resp->json() as $c) {
+                    $message = $c['commit']['message'] ?? '';
+                    $lines = explode("\n", $message);
+                    $title = trim($lines[0] ?? '');
+                    if ($title === '') continue;
+                    if (str_starts_with($title, 'Merge pull request') || str_starts_with($title, 'Merge branch')) continue;
+
+                    $body = trim(implode("\n", array_slice($lines, 1)));
+                    $body = preg_replace('/\n*Co-Authored-By:.*$/s', '', $body);
+                    $body = trim($body);
+
+                    $rawDate = $c['commit']['author']['date'] ?? null;
+                    $author = $c['commit']['author']['name'] ?? ($c['author']['login'] ?? '');
+
+                    $commits[] = [
+                        'hash' => substr($c['sha'] ?? '', 0, 7),
+                        'title' => $title,
+                        'description' => $body,
+                        'date' => $rawDate ? date('Y-m-d', strtotime($rawDate)) : null,
+                        'author' => $author,
+                    ];
+                }
+                return $commits;
+            } catch (\Throwable $e) {
+                return [];
+            }
+        });
+    }
     public function home() {
         $announcements = Cache::remember('home:announcements', 300, function () {
             $latest = Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first();
@@ -128,6 +181,9 @@ class WebController extends Controller
             return array_slice($commits, 0, 5);
         });
 
+        // Recent launcher changelog (GitHub API, separate repo)
+        $recentChangelogLauncher = array_slice($this->launcherCommits(15), 0, 5);
+
         // Upcoming/current tournaments
         $upcomingTournaments = Cache::remember('home:upcoming_tournaments', 600, function () {
             return Tournament::where(function ($q) {
@@ -164,6 +220,7 @@ class WebController extends Controller
             ->with('recentWorldRecords', $recentWorldRecords)
             ->with('rankingHighlights', $rankingHighlights)
             ->with('recentChangelog', $recentChangelog)
+            ->with('recentChangelogLauncher', $recentChangelogLauncher)
             ->with('upcomingTournaments', $upcomingTournaments)
             ->with('latestModel', $latestModel)
             ->with('latestMap', $latestMap);
@@ -240,8 +297,13 @@ class WebController extends Controller
             return array_reverse($commits);
         });
 
+        // Launcher commits (GitHub API). API returns newest-first; reverse
+        // to oldest-first so the roadmap reads chronologically like the web list.
+        $launcherCommits = array_reverse($this->launcherCommits(100));
+
         return Inertia::render('Roadmap', [
             'commits' => $commits,
+            'launcherCommits' => $launcherCommits,
         ]);
     }
 }
