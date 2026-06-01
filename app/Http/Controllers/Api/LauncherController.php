@@ -475,7 +475,11 @@ class LauncherController extends Controller
             'time_ms' => $demo->time_ms,
             'gametype' => $demo->gametype,
             'demo_id' => $demo->id,
-            'record_id' => null,
+            // Inherit the demo's online record link so the render surfaces
+            // under that MDD record on the map (same as the web render flow).
+            // Null for offline / unmatched demos - those surface via the
+            // demo's own renderedVideo relation in Demos Top instead.
+            'record_id' => $demo->record_id,
             'user_id' => $user->id,
             'source' => 'launcher',
             'requested_by' => $user->name,
