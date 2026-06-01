@@ -42,6 +42,18 @@ class LogApiCalls
                     ? $token->id
                     : null;
 
+                // Stamp the token row with the current IP + UA so the
+                // user's profile can show "Connected apps" with where
+                // each launcher device is being used from. Sanctum
+                // already manages last_used_at; the two columns we
+                // touch were added in 2026_06_01_000002.
+                if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
+                    $token->forceFill([
+                        'last_used_ip' => substr((string) $request->ip(), 0, 45),
+                        'last_used_user_agent' => substr((string) $request->userAgent(), 0, 255),
+                    ])->saveQuietly();
+                }
+
                 $queryString = $request->getQueryString();
 
                 ApiCallLog::create([

@@ -288,8 +288,13 @@ Route::get('/announcements', [ChangelogController::class, 'announcements'])->nam
 
 // Settings (overrides Jetstream's /user/profile)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/user/settings', [\Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('settings.show');
+    Route::get('/user/settings', [\App\Http\Controllers\Inertia\UserProfileController::class, 'show'])->name('settings.show');
     Route::redirect('/user/profile', '/user/settings', 301);
+
+    // Per-row browser session revoke. Handle is sha256(session.id) so
+    // we never put the real session id (= cookie value) into the HTML.
+    Route::delete('/user/browser-sessions/{handle}', [\App\Http\Controllers\BrowserSessionsController::class, 'destroy'])
+        ->name('browser-sessions.destroy');
 
     // Launcher personal access tokens
     Route::get('/user/launcher-tokens', [\App\Http\Controllers\LauncherTokenController::class, 'index'])->name('launcher-tokens.index');

@@ -26,6 +26,8 @@ class LauncherTokenController extends Controller
                 'label' => substr($t->name, strlen('launcher:')),
                 'last_used_at' => $t->last_used_at,
                 'created_at' => $t->created_at,
+                'last_used_ip' => $t->last_used_ip,
+                'last_used_user_agent' => $t->last_used_user_agent,
             ]);
 
         return response()->json(['tokens' => $tokens]);

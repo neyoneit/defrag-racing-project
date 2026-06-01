@@ -278,6 +278,18 @@ class LauncherController extends Controller
     }
 
     /**
+     * Lightweight bell-badge poll target. Returns ONLY the unread
+     * counts (~30B JSON) so the launcher's background poll doesn't
+     * fetch 50 records + 50 system notifications every 3 minutes.
+     * The full /notifications endpoint is reserved for the Notifications
+     * view (mount + manual refresh).
+     */
+    public function notificationsUnreadCount(Request $request)
+    {
+        return response()->json($this->unreadCounts($request->user()->id));
+    }
+
+    /**
      * Minimal "who am I" for the launcher. Returns the fields the
      * launcher needs to wire up the top nav's Profile button (mdd_id
      * for the /profile/{id} link, name + country for the badge) and
@@ -325,13 +337,14 @@ class LauncherController extends Controller
 
         $physics = $data['physics'] ?? 'vq3';
         $page = $data['page'] ?? 1;
-        $perPage = 100;
+        $perPage = 50;
 
         $records = Record::query()
             ->where('physics', $physics)
             ->with(['user:id,name,plain_name,country,profile_photo_path'])
             ->orderBy('date_set', 'DESC')
-            ->paginate($perPage, ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics', 'mode'], 'page', $page);
+            ->orderBy('id', 'DESC')
+            ->simplePaginate($perPage, ['id', 'name', 'country', 'mdd_id', 'mapname', 'rank', 'time', 'date_set', 'physics', 'mode'], 'page', $page);
 
         return response()->json($records);
     }

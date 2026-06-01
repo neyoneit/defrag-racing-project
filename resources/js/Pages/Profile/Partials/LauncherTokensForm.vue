@@ -75,8 +75,19 @@
     };
 
     const formatDate = (iso) => {
-        if (! iso) return '—';
+        if (! iso) return '-';
         return new Date(iso).toLocaleString();
+    };
+
+    // Parses our launcher's User-Agent string into a short label.
+    // Format we send from the launcher: "defrag-launcher/0.1.9 (windows)".
+    // Anything else (curl, postman, python-requests) we show verbatim so
+    // the user notices "that doesn't look like the launcher".
+    const formatAgent = (ua) => {
+        if (! ua) return null;
+        const m = ua.match(/^defrag-launcher\/(\S+)\s+\(([^)]+)\)/i);
+        if (m) return `Launcher ${m[1]} - ${m[2]}`;
+        return ua.length > 60 ? ua.slice(0, 60) + '...' : ua;
     };
 </script>
 
@@ -163,6 +174,11 @@
                     <div class="text-white font-medium truncate">{{ t.label }}</div>
                     <div class="text-xs text-gray-500 mt-0.5">
                         Created {{ formatDate(t.created_at) }} · Last used {{ formatDate(t.last_used_at) }}
+                    </div>
+                    <div v-if="t.last_used_ip || t.last_used_user_agent" class="text-xs text-gray-500 mt-0.5">
+                        <span v-if="formatAgent(t.last_used_user_agent)" class="text-gray-400">{{ formatAgent(t.last_used_user_agent) }}</span>
+                        <span v-if="t.last_used_ip && formatAgent(t.last_used_user_agent)"> · </span>
+                        <span v-if="t.last_used_ip" class="font-mono">{{ t.last_used_ip }}</span>
                     </div>
                 </div>
                 <button
