@@ -68,6 +68,7 @@ Route::prefix('launcher')
             Route::get('/me', [\App\Http\Controllers\Api\LauncherController::class, 'me']);
             Route::get('/servers', [\App\Http\Controllers\Api\LauncherController::class, 'servers']);
             Route::get('/notifications', [\App\Http\Controllers\Api\LauncherController::class, 'notifications']);
+            Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\LauncherController::class, 'notificationsUnreadCount']);
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
             Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
             Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
