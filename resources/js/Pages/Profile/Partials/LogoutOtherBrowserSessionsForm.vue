@@ -126,9 +126,13 @@ const revokeOne = async (session) => {
             </div>
 
             <div class="flex justify-end pt-1">
-                <PrimaryButton @click="confirmLogout">
-                    Log Out Other Browser Sessions
-                </PrimaryButton>
+                <button
+                    type="button"
+                    @click="confirmLogout"
+                    class="text-xs px-2 py-1 rounded bg-red-500/15 hover:bg-red-500/25 text-red-300"
+                >
+                    Sign out all other sessions
+                </button>
             </div>
 
             <!-- Log Out Other Devices Confirmation Modal -->
