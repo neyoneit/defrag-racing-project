@@ -109,6 +109,25 @@ class RenderQueueService
     }
 
     /**
+     * Auto-render eligibility gate.
+     *
+     * All three queue rules (representative / not time-history, rank in the
+     * better half of the field, at most the 3 oldest of an identical time)
+     * are precomputed per demo into demos_top_ranks.auto_render_eligible by
+     * DemosTopRankService - rebuilt from the SAME Demos Top clustering the web
+     * shows. The queue just checks the flag, which also enforces one demo per
+     * main record (only that record's single renderable demo gets a row).
+     *
+     * $d is the uploaded_demos table alias in the surrounding query.
+     */
+    private static function autoEligibleSql(string $d): string
+    {
+        return "EXISTS (SELECT 1 FROM demos_top_ranks dtr"
+            . " WHERE dtr.uploaded_demo_id = {$d}.id"
+            . " AND dtr.auto_render_eligible = 1)";
+    }
+
+    /**
      * Get candidate demos for a specific tier (not yet in rendered_videos).
      */
     public static function getCandidatesForTier(int $tier, int $limit = 5): \Illuminate\Support\Collection
@@ -116,7 +135,8 @@ class RenderQueueService
         $query = UploadedDemo::query()
             ->whereDoesntHave('renderedVideo')
             ->where('time_ms', '>', 0)
-            ->whereNotNull('map_name');
+            ->whereNotNull('map_name')
+            ->whereRaw(self::autoEligibleSql('uploaded_demos'));
 
         switch ($tier) {
             case self::TIER_ONLINE_WR:
@@ -131,6 +151,7 @@ class RenderQueueService
                     JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
                     WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms <= r.time
                     AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    AND " . self::autoEligibleSql('d') . "
                     ORDER BY d.time_ms ASC LIMIT ?
                 ", [$limit]);
                 return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
@@ -148,6 +169,7 @@ class RenderQueueService
                     JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
                     WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms > r.time AND d.time_ms <= r.time * 1.1
                     AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    AND " . self::autoEligibleSql('d') . "
                     ORDER BY (d.time_ms / r.time) ASC LIMIT ?
                 ", [$limit]);
                 return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
@@ -165,6 +187,7 @@ class RenderQueueService
                     JOIN records r ON r.mapname = d.map_name AND r.physics = d.physics AND r.rank = 1 AND r.deleted_at IS NULL
                     WHERE d.record_id IS NULL AND d.time_ms > 0 AND d.time_ms > r.time * 1.1 AND d.time_ms <= r.time * 1.5
                     AND NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id)
+                    AND " . self::autoEligibleSql('d') . "
                     ORDER BY (d.time_ms / r.time) ASC LIMIT ?
                 ", [$limit]);
                 return UploadedDemo::whereIn('id', collect($ids)->pluck('id'))->with('record')->get();
@@ -382,7 +405,10 @@ class RenderQueueService
     private static function countTierPool(int $tier): int
     {
         return \Illuminate\Support\Facades\Cache::remember("tier_pool_count_{$tier}", 3600, function () use ($tier) {
-            $base = "NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id) AND d.time_ms > 0 AND d.map_name IS NOT NULL";
+            // The auto-render eligibility gate (rank-half / identical-time /
+            // representative rules) lives in demos_top_ranks, so the pool count
+            // applies it once here in $base for every tier.
+            $base = "NOT EXISTS (SELECT 1 FROM rendered_videos rv WHERE rv.demo_id = d.id) AND d.time_ms > 0 AND d.map_name IS NOT NULL AND " . self::autoEligibleSql('d');
 
             $sql = match ($tier) {
                 self::TIER_ONLINE_WR => "SELECT COUNT(*) as c FROM uploaded_demos d JOIN records r ON r.id = d.record_id WHERE r.rank = 1 AND r.deleted_at IS NULL AND {$base}",

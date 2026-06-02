@@ -200,6 +200,10 @@ class GetLastMddRecords implements ShouldQueue
             // Refresh rank from DB and update the cached records page
             $newrecord->refresh();
             RecordsController::prependToCache($newrecord);
+
+            // New MDD record -> refresh that map's materialized Demos Top
+            // ranking (queue eligibility). Coalesced per map.
+            \App\Jobs\RebuildDemosTopRanksJob::dispatch($serverMap->name);
         }
 
         $mdd_profile = MddProfile::where('id', $newrecord->mdd_id)->first();

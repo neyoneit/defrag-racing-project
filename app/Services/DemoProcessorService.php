@@ -616,6 +616,9 @@ class DemoProcessorService
         $outcome = $autoAssigner->attemptAssignToRecord($demo);
 
         if ($outcome === DemoAutoAssigner::OUTCOME_RECORD) {
+            // Demo joined an online record's field -> refresh that map's
+            // materialized Demos Top ranking (queue eligibility).
+            \App\Jobs\RebuildDemosTopRanksJob::dispatch($demo->map_name ?? '');
             return;
         }
 
@@ -716,6 +719,10 @@ class DemoProcessorService
             ]);
             throw $e;
         }
+
+        // New/updated offline record -> refresh that map's materialized
+        // Demos Top ranking (queue eligibility). Coalesced per map.
+        \App\Jobs\RebuildDemosTopRanksJob::dispatch($demo->map_name ?? '');
 
         // Determine status based on whether this is an online demo (rematchable) or offline demo (final)
         // Online demos (mdf/mfs/mfc) that create offline_record should use 'fallback-assigned' (can be rematched later)
