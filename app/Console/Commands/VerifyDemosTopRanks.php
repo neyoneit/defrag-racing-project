@@ -24,9 +24,17 @@ class VerifyDemosTopRanks extends Command
 
     public function handle(): int
     {
+        // Sample the biggest fields first (most ranked rows ~= most-played
+        // maps like cityrocket), not alphabetical no-name maps - that's where
+        // parity matters most and where the clustering is hardest.
         $maps = $this->option('map')
             ? [$this->option('map')]
-            : DemosTopRank::select('map_name')->distinct()->limit((int) $this->option('limit'))->pluck('map_name')->all();
+            : DemosTopRank::selectRaw('map_name, COUNT(*) as c')
+                ->groupBy('map_name')
+                ->orderByDesc('c')
+                ->limit((int) $this->option('limit'))
+                ->pluck('map_name')
+                ->all();
 
         if (empty($maps)) {
             $this->warn('No maps in demos_top_ranks. Run demos:rebuild-top-ranks first.');
