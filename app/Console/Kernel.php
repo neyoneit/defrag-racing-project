@@ -67,6 +67,12 @@ class Kernel extends ConsoleKernel
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
+        // Nightly full rebuild of the materialized Demos Top ranking
+        // (demos_top_ranks). Incremental per-map rebuilds run inline on new
+        // records/demos via RebuildDemosTopRanksJob; this is the safety net
+        // that heals any group missed by an invalidation hook.
+        $schedule->command('demos:rebuild-top-ranks')->withoutOverlapping()->dailyAt('04:30');
+
         // Pre-warm RenderQueueService::getPoolCounts() so the /defraghq/render-queue-preview
         // and /defraghq/demome-control pages never hit a cold cache. The query is
         // ~8 large JOIN + NOT EXISTS aggregates against rendered_videos / records /
