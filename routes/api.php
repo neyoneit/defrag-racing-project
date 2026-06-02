@@ -72,6 +72,7 @@ Route::prefix('launcher')
             Route::get('/records', [\App\Http\Controllers\Api\LauncherController::class, 'records']);
             Route::get('/maps', [\App\Http\Controllers\Api\LauncherController::class, 'maps']);
             Route::get('/render-status', [\App\Http\Controllers\Api\LauncherController::class, 'renderStatus']);
+            Route::get('/rendered-index', [\App\Http\Controllers\Api\LauncherController::class, 'renderedIndex']);
 
             // Mark-as-read / mark-as-unread for the launcher Notifications
             // tab. Per-row toggle covers normal interaction; bulk endpoints

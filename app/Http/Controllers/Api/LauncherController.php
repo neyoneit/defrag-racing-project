@@ -554,4 +554,58 @@ class LauncherController extends Controller
             'youtube_video_id' => $video->youtube_video_id,
         ]);
     }
+
+    /**
+     * Bulk reconcile of completed YouTube renders for the launcher.
+     *
+     * Returns a compact { file_hash => youtube_video_id } map of every
+     * completed, visible render (the launcher rebuilds the watch URL from the
+     * id, so we ship the minimal 11-char string, not the full URL), letting
+     * the Demos list show "watch on YouTube" without a per-demo round-trip.
+     *
+     * Pass ?since=<unix ts> for a delta: only renders whose row changed after
+     * that time come back, plus a `removed` list of hashes whose render is no
+     * longer completed/visible (unpublished/hidden), so a long-open launcher
+     * stays in sync cheaply. `synced_at` is the cursor to pass as `since` next
+     * time (rewound 2s so a same-second update can't slip through the crack;
+     * the launcher merge is idempotent so the re-overlap is harmless).
+     */
+    public function renderedIndex(Request $request)
+    {
+        $sinceTs = (int) $request->query('since', 0);
+        $since = $sinceTs > 0 ? \Illuminate\Support\Carbon::createFromTimestamp($sinceTs) : null;
+
+        $base = RenderedVideo::query()
+            ->join('uploaded_demos', 'uploaded_demos.id', '=', 'rendered_videos.demo_id')
+            ->whereNotNull('uploaded_demos.file_hash')
+            ->when($since, fn ($q) => $q->where('rendered_videos.updated_at', '>', $since));
+
+        $map = (clone $base)
+            ->where('rendered_videos.status', 'completed')
+            ->where('rendered_videos.is_visible', true)
+            ->whereNotNull('rendered_videos.youtube_video_id')
+            ->orderBy('rendered_videos.id') // newest render per hash wins on dedupe
+            ->pluck('rendered_videos.youtube_video_id', 'uploaded_demos.file_hash');
+
+        // Removals only matter for a delta - a full sync (no `since`) starts
+        // from an empty launcher cache, so there's nothing to remove.
+        $removed = [];
+        if ($since) {
+            $removed = (clone $base)
+                ->where(function ($q) {
+                    $q->where('rendered_videos.status', '!=', 'completed')
+                      ->orWhere('rendered_videos.is_visible', false)
+                      ->orWhereNull('rendered_videos.youtube_video_id');
+                })
+                ->pluck('uploaded_demos.file_hash')
+                ->unique()
+                ->values();
+        }
+
+        return response()->json([
+            'map' => $map,
+            'removed' => $removed,
+            'synced_at' => now()->subSeconds(2)->timestamp,
+        ]);
+    }
 }
