@@ -336,21 +336,26 @@
         return props.record.user?.id === userId;
     });
 
-    // For offline records and online demos in Demos Top, ALWAYS show player_name from demo file
-    // For regular online records, use user's login name
+    // A row that resolved to a registered profile (via its cluster's alias
+    // match) shows that PROFILE's name — even for an offline demo. The demo
+    // file's nick is just one of the player's aliases, so once we know whose
+    // profile it is we display the profile, consistent with the avatar +
+    // profile link (getRoute) which already use record.user. Only fall back
+    // to the raw demo player_name when no profile was matched.
     const displayName = computed(() => {
-        // ALWAYS use player_name for offline records (from demo file)
+        // Offline records: profile name if matched, else the demo file nick.
         if (isOfflineRecord.value) {
-            return props.record.player_name || props.record.name;
+            return props.record.user?.name ?? props.record.player_name ?? props.record.name;
         }
         // For online demos assigned to records, ALWAYS use the 'name' field from backend
         // Backend sets this to record owner's name (either user.name or record.name)
         if (isOnlineDemo.value && props.record.record_id && props.record.name) {
             return props.record.name;
         }
-        // For online demos NOT assigned to records (fallback-assigned), use player_name from demo
+        // Online demos NOT assigned to records (fallback): profile name if
+        // matched, else the demo file nick.
         if (isOnlineDemo.value) {
-            return props.record.player_name || props.record.name;
+            return props.record.user?.name ?? props.record.player_name ?? props.record.name;
         }
         // For regular online records, use user's login name
         return props.record.user?.name ?? props.record.name;

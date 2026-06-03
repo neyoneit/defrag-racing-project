@@ -44,8 +44,13 @@ class Kernel extends ConsoleKernel
         // Process overdue Headhunter challenge disputes and auto-ban creators
         $schedule->command('headhunter:process-disputes')->withoutOverlapping()->daily();
 
-        // Rematch all unassigned demos against current user aliases (runs daily at 2am)
-        $schedule->command('demos:rematch-all')->withoutOverlapping()->dailyAt('02:00');
+        // Backstop rematch of all demos against current aliases. Manual alias
+        // add/remove now rematches the affected demos immediately (see
+        // AliasController + RematchAliasDemosJob), so this full ~360k-demo
+        // sweep is only insurance for what the targeted pass can't catch:
+        // colour-coded player_names, bulk MDD alias imports, account claims,
+        // and creating missing offline_records. Weekly is plenty for that.
+        $schedule->command('demos:rematch-all')->withoutOverlapping()->weeklyOn(1, '02:00');
 
         // Recalculate all player profile stats (WRs, totals, avg rank, etc.) daily at 3am
         $schedule->command('process-all-player-stats')->withoutOverlapping()->dailyAt('03:00');
