@@ -140,3 +140,12 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
     Route::get('/video-metadata/{renderedVideo}', [\App\Http\Controllers\Api\DemomeController::class, 'videoMetadata']);
     Route::get('/videos-needing-metadata-update', [\App\Http\Controllers\Api\DemomeController::class, 'videosNeedingMetadataUpdate']);
 });
+
+// DefragLive bridge ingest. The Python WebSocket bridge POSTs each chat /
+// serverstate broadcast here so the web becomes the source of truth (DB +
+// Filament + giveaway), replacing console.json + the cron docker cp. The
+// bridge keeps its realtime WS fan-out to the extension untouched. Token-
+// guarded server-to-server, exempt from the api throttle like demome.
+Route::prefix('defraglive')->middleware('defraglive.token')->withoutMiddleware('throttle:api')->group(function () {
+    Route::post('/ingest', [\App\Http\Controllers\Api\DefragliveIngestController::class, 'ingest']);
+});

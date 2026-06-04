@@ -60,6 +60,21 @@ return [
         'api_token' => env('DEMOME_API_TOKEN'),
     ],
 
+    'defraglive' => [
+        // Shared bearer token the DefragLive WebSocket bridge uses to POST
+        // chat / serverstate into the web (DefragliveIngestController).
+        'ingest_token' => env('DEFRAGLIVE_INGEST_TOKEN'),
+        // Filesystem dir the public tw.defrag.racing/{console,serverstate}.json
+        // are served from. defraglive:write-json rewrites those two files here
+        // from the DB every minute, replacing the old cron `docker cp` out of
+        // the bridge container. Empty = writer disabled (so it can't fight the
+        // legacy cron until the VPS cutover).
+        'public_path' => env('DEFRAGLIVE_PUBLIC_PATH', ''),
+        // How many recent messages console.json keeps (parity with the
+        // bridge's old last-100 behaviour the extension expects).
+        'console_limit' => (int) env('DEFRAGLIVE_CONSOLE_LIMIT', 100),
+    ],
+
     'storage_vps' => [
         'host'     => env('STORAGE_VPS_HOST'),
         'port'     => (int) env('STORAGE_VPS_PORT', 2258),

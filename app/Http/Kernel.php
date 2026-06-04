@@ -88,6 +88,7 @@ class Kernel extends HttpKernel
         'tournaments.news.pinned' => \App\Http\Middleware\TournamentPinnedNewsMiddleware::class,
         'tournaments.tournamentaccess' => \App\Http\Middleware\TournamentAccessMiddleware::class,
         'demome.token' => \App\Http\Middleware\DemomeTokenMiddleware::class,
+        'defraglive.token' => \App\Http\Middleware\DefragliveTokenMiddleware::class,
         'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
         'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         'log.api' => \App\Http\Middleware\LogApiCalls::class,
