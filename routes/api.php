@@ -160,4 +160,5 @@ Route::prefix('defraglive')->middleware('throttle:120,1')->group(function () {
     Route::get('/settings', [\App\Http\Controllers\Api\DefragliveController::class, 'getSettings']);
     Route::post('/settings', [\App\Http\Controllers\Api\DefragliveController::class, 'applySettings']);
     Route::post('/command', [\App\Http\Controllers\Api\DefragliveController::class, 'command']);
+    Route::post('/say', [\App\Http\Controllers\Api\DefragliveController::class, 'say']);
 });

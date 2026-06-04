@@ -64,21 +64,55 @@ class DefragliveController extends Controller
         return response()->json(['status' => 'ok']);
     }
 
-    /** Generic bot command (e.g. spectate a player from the player list). bot_secret gated. */
+    /**
+     * Relay a structured ext_command from the extension to the bot (spectate,
+     * spectate_request, afk_control, connect, delete_message, ...). Broadcast
+     * in the exact origin:twitch / ext_command shape the bridge used, so the
+     * bot's existing handle_ws_command runs unchanged. bot_secret gated.
+     */
     public function command(Request $request)
     {
         if (!$this->validBotSecret($request)) {
             return response()->json(['error' => 'Invalid bot secret'], 403);
         }
 
-        $command = $request->input('command');
-        if (!is_string($command) || $command === '') {
-            return response()->json(['error' => 'No command'], 422);
+        $content = $request->input('content');
+        if (!is_array($content) || !isset($content['action'])) {
+            return response()->json(['error' => 'No command content'], 422);
         }
 
         DefragliveStreamEvent::dispatchLive([
-            'action' => 'execute_command',
-            'command' => $command,
+            'origin' => 'twitch',
+            'action' => 'ext_command',
+            'message' => [
+                'content' => $content,
+                'author' => $request->input('author', 'Guest'),
+            ],
+        ]);
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Viewer chat typed in the extension, relayed into the game. Broadcast as
+     * an origin:twitch message; the bot's on_ws_message says it in-game (and
+     * handles "!" proxy commands). Open + throttled, matching the bridge's old
+     * behaviour; the bot sanitises (strips ';' injections, filters.py).
+     */
+    public function say(Request $request)
+    {
+        $content = (string) $request->input('content', '');
+        if (trim($content) === '') {
+            return response()->json(['error' => 'Empty message'], 422);
+        }
+
+        DefragliveStreamEvent::dispatchLive([
+            'origin' => 'twitch',
+            'action' => 'message',
+            'message' => [
+                'content' => $content,
+                'author' => $request->input('author', 'Guest'),
+            ],
         ]);
 
         return response()->json(['status' => 'ok']);
