@@ -26,6 +26,21 @@ class DefragliveStreamEvent implements ShouldBroadcastNow
     {
     }
 
+    /**
+     * Broadcast a payload on the `defraglive` channel, but only when Reverb is
+     * the active broadcaster. Single guarded entry point shared by the ingest
+     * tap, the command/relay endpoints and the moderation hook, so the whole
+     * realtime path stays dormant on prod until BROADCAST_DRIVER=reverb.
+     */
+    public static function dispatchLive(array $payload): void
+    {
+        if (config('broadcasting.default') !== 'reverb') {
+            return;
+        }
+
+        broadcast(new self($payload));
+    }
+
     public function broadcastOn(): Channel
     {
         return new Channel('defraglive');

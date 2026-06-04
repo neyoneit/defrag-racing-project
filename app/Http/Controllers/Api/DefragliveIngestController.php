@@ -94,10 +94,6 @@ class DefragliveIngestController extends Controller
      */
     private function broadcastLive(array $data): void
     {
-        if (config('broadcasting.default') !== 'reverb') {
-            return;
-        }
-
-        broadcast(new DefragliveStreamEvent($data));
+        DefragliveStreamEvent::dispatchLive($data);
     }
 }
