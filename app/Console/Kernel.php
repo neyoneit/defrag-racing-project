@@ -69,6 +69,12 @@ class Kernel extends ConsoleKernel
         // Unlock demos stuck in 'processing' for more than 15 minutes and re-queue them
         $schedule->command('demos:unlock-stuck')->withoutOverlapping()->everyFiveMinutes();
 
+        // Rebuild the public DefragLive console.json/serverstate.json from the
+        // DB every minute - same cadence as the old cron `docker cp` out of the
+        // bridge container it replaces. No-ops until DEFRAGLIVE_PUBLIC_PATH is
+        // set (the VPS cutover), so it can't fight the legacy cron before then.
+        $schedule->command('defraglive:write-json')->withoutOverlapping()->everyMinute();
+
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 
