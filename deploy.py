@@ -1,9 +1,38 @@
 import os
+import sys
 import subprocess
 
 PROJECT_PATH = "/var/www/defrag-racing-project/production"
 REPOSITORY_URL = "https://github.com/Defrag-racing/defrag-racing-project.git"
 PROJECT_NAME = "defrag-racing-project"
+
+def get_deployed_sha():
+    """Commit SHA of the release the `current` symlink points at, i.e. what is
+    live right now. None if there's no current release yet (first deploy) or it
+    can't be read."""
+    current = f"{PROJECT_PATH}/current"
+    if not os.path.exists(current):
+        return None
+    result = subprocess.run(
+        "git rev-parse HEAD", shell=True, cwd=current,
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+def get_remote_sha():
+    """Commit SHA at the tip of origin/master right now (what a fresh clone
+    would check out). None if it can't be read - e.g. a network error or
+    GitHub replication lag returning nothing. The full clone below is the
+    source of truth; this is only used for the 'anything new?' pre-check."""
+    result = subprocess.run(
+        f"git ls-remote {REPOSITORY_URL} refs/heads/master",
+        shell=True, capture_output=True, text=True
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.split()[0].strip()
 
 def get_next_id():
 	result = 0
@@ -85,7 +114,39 @@ def pipeline_cmds(name):
 
     return cmds
 
-def deploy():
+def deploy(force=False):
+    # Skip the whole deploy if the live release is already on the remote
+    # master tip - cloning + rebuilding + restarting octane for an identical
+    # codebase is pure churn. `--force` overrides this (e.g. to redeploy the
+    # same commit after a .env change or to re-warm caches).
+    remote = get_remote_sha()
+    deployed = get_deployed_sha()
+
+    if remote is None:
+        print("!!! Could not read remote master (git ls-remote failed); "
+              "deploying anyway.", flush=True)
+    elif deployed is None:
+        print(f"==> No current release yet; deploying remote master "
+              f"{remote[:10]}.", flush=True)
+    elif remote == deployed:
+        if force:
+            print(f"==> Nothing new (live release already at {remote[:10]}), "
+                  f"but --force given - redeploying anyway.", flush=True)
+        else:
+            # deploy.py is always run by hand, so just ask - lets you still
+            # redeploy the same commit (e.g. after a .env change) by answering
+            # yes, without needing --force.
+            print(f"==> Nothing new: live release is already at remote master "
+                  f"{remote[:10]}.", flush=True)
+            answer = input("    Deploy anyway? [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("    Aborted.", flush=True)
+                return
+            print("    Redeploying the same commit anyway.", flush=True)
+    else:
+        print(f"==> New commits to deploy: live {deployed[:10]} -> remote "
+              f"{remote[:10]}.", flush=True)
+
     name = get_next_release_name()
 
     git_clone_cmd = get_git_clone_cmd(name)
@@ -105,5 +166,5 @@ def deploy():
             print(f"!!! exit {result.returncode} from: {cmd}", flush=True)
 
 if __name__ == "__main__":
-    deploy()
+    deploy(force="--force" in sys.argv)
 
