@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\DefragliveStreamEvent;
 use App\Http\Controllers\Controller;
 use App\Models\DefragliveChatMessage;
 use App\Models\DefragliveServerState;
@@ -41,11 +42,23 @@ class DefragliveIngestController extends Controller
         }
 
         if ($action === 'serverstate') {
-            // Single evolving snapshot - the bridge stored data['message'].
-            DefragliveServerState::query()->updateOrCreate(
-                ['id' => 1],
-                ['payload' => $data['message'] ?? []]
+            // Single evolving snapshot (the bridge stored data['message']).
+            // The bridge POSTs concurrently (fire-and-forget threads), so use an
+            // atomic upsert keyed on id=1 - updateOrCreate would race two first
+            // inserts into duplicate rows (and id isn't fillable). This always
+            // keeps exactly one row.
+            DefragliveServerState::upsert(
+                [[
+                    'id' => 1,
+                    'payload' => json_encode($data['message'] ?? []),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]],
+                ['id'],
+                ['payload', 'updated_at']
             );
+
+            $this->broadcastLive($data);
 
             return response()->json(['status' => 'ok']);
         }
@@ -62,11 +75,25 @@ class DefragliveIngestController extends Controller
                 'payload'       => $data,
             ]);
 
+            $this->broadcastLive($data);
+
             return response()->json(['status' => 'ok']);
         }
 
         // translation_result / settings_applied / current_settings / connect_*
         // are realtime-only and not persisted - the live WS handles them.
         return response()->json(['status' => 'ignored']);
+    }
+
+    /**
+     * Fan the ingested item out live over Reverb to the `defraglive` channel
+     * (the web-native replacement for the bridge's WS broadcast). Guarded on
+     * the active broadcaster so it stays fully dormant on prod until
+     * BROADCAST_DRIVER=reverb is set - no log spam, no behaviour change, until
+     * the new extension is ready to consume it.
+     */
+    private function broadcastLive(array $data): void
+    {
+        DefragliveStreamEvent::dispatchLive($data);
     }
 }

@@ -148,4 +148,17 @@ Route::prefix('demome')->middleware('demome.token')->withoutMiddleware('throttle
 // guarded server-to-server, exempt from the api throttle like demome.
 Route::prefix('defraglive')->middleware('defraglive.token')->withoutMiddleware('throttle:api')->group(function () {
     Route::post('/ingest', [\App\Http\Controllers\Api\DefragliveIngestController::class, 'ingest']);
+    // Bot pushes the live game settings in (sync_settings parity).
+    Route::post('/sync-settings', [\App\Http\Controllers\Api\DefragliveController::class, 'syncSettings']);
+});
+
+// DefragLive extension-facing command surface. Public (the Twitch extension
+// calls these), throttled; anything that drives the bot is bot_secret-gated
+// inside the controller. Replaces the bridge's inbound settings/command WS
+// handling.
+Route::prefix('defraglive')->middleware('throttle:120,1')->group(function () {
+    Route::get('/settings', [\App\Http\Controllers\Api\DefragliveController::class, 'getSettings']);
+    Route::post('/settings', [\App\Http\Controllers\Api\DefragliveController::class, 'applySettings']);
+    Route::post('/command', [\App\Http\Controllers\Api\DefragliveController::class, 'command']);
+    Route::post('/say', [\App\Http\Controllers\Api\DefragliveController::class, 'say']);
 });
