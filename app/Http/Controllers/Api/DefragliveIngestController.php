@@ -41,10 +41,20 @@ class DefragliveIngestController extends Controller
         }
 
         if ($action === 'serverstate') {
-            // Single evolving snapshot - the bridge stored data['message'].
-            DefragliveServerState::query()->updateOrCreate(
-                ['id' => 1],
-                ['payload' => $data['message'] ?? []]
+            // Single evolving snapshot (the bridge stored data['message']).
+            // The bridge POSTs concurrently (fire-and-forget threads), so use an
+            // atomic upsert keyed on id=1 - updateOrCreate would race two first
+            // inserts into duplicate rows (and id isn't fillable). This always
+            // keeps exactly one row.
+            DefragliveServerState::upsert(
+                [[
+                    'id' => 1,
+                    'payload' => json_encode($data['message'] ?? []),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]],
+                ['id'],
+                ['payload', 'updated_at']
             );
 
             return response()->json(['status' => 'ok']);
