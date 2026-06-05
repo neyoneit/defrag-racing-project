@@ -78,6 +78,11 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                             everyone who lets the bot spectate them is the one putting on the show for viewers around the world.
                             The more the bot watches you, the more raffle tickets you earn - but anyone with a ticket can win.
                         </p>
+                        <p>
+                            Curious what's been on? Browse the
+                            <Link href="/defraglive/maps" class="text-[#a970ff] hover:text-[#bf94ff] font-semibold hover:underline">full map log</Link>
+                            - every map the bot streamed, from when to when, and who it spectated.
+                        </p>
                     </div>
                     <div class="mt-3 flex items-start gap-2 text-sm text-amber-100 bg-amber-500/20 border border-amber-400/40 rounded-lg px-3.5 py-2.5">
                         <svg class="w-5 h-5 shrink-0 mt-px text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -163,16 +168,16 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                         <div class="text-3xl md:text-4xl font-black text-emerald-400">
                             {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.prize_amount }}{{ contest.prize_currency !== 'USD' ? ' ' + contest.prize_currency : '' }}
                         </div>
-                        <div class="text-xs uppercase tracking-wide text-gray-500">prize</div>
+                        <div class="text-sm font-bold uppercase tracking-widest text-gray-300">prize</div>
                     </div>
-                    <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2 font-mono">
+                    <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2.5 font-mono">
                         <div v-for="part in [['d', timeLeft.d], ['h', timeLeft.h], ['m', timeLeft.m], ['s', timeLeft.s]]" :key="part[0]"
-                            class="bg-black/40 rounded-lg px-2.5 py-1 text-center min-w-[44px]">
-                            <div class="text-xl font-bold text-white">{{ String(part[1]).padStart(2, '0') }}</div>
-                            <div class="text-[10px] uppercase text-gray-500">{{ part[0] }}</div>
+                            class="bg-black/40 rounded-xl px-3.5 py-2 text-center min-w-[60px]">
+                            <div class="text-3xl md:text-4xl font-black text-white tabular-nums leading-none">{{ String(part[1]).padStart(2, '0') }}</div>
+                            <div class="text-sm font-bold uppercase tracking-widest text-gray-300 mt-1">{{ part[0] }}</div>
                         </div>
                     </div>
-                    <div v-else-if="timeLeft" class="text-sm text-amber-400 font-semibold">Period ended<br>awaiting draw</div>
+                    <div v-else-if="timeLeft" class="text-base text-amber-400 font-semibold">Period ended<br>awaiting draw</div>
                 </div>
             </div>
 
