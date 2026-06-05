@@ -52,9 +52,9 @@ const byDay = computed(() => {
 <template>
     <Head title="DefragLive Map Log" />
 
-    <div class="max-w-5xl mx-auto px-4 md:px-6 py-8">
+    <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <!-- Header -->
-        <div class="mb-6">
+        <div class="rounded-2xl border border-purple-500/20 bg-black/40 backdrop-blur-sm p-6 md:p-8 mb-6 shadow-2xl">
             <div class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold mb-1">DefragLive</div>
             <h1 class="text-3xl md:text-4xl font-black text-white">Map log</h1>
             <p class="text-gray-400 mt-2 text-sm leading-relaxed max-w-2xl">
@@ -75,7 +75,10 @@ const byDay = computed(() => {
 
         <div v-else class="space-y-8">
             <div v-for="grp in byDay" :key="grp.day">
-                <div class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 pl-1">{{ grp.day }}</div>
+                <div class="flex items-center gap-3 mb-4">
+                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">{{ grp.day }}</h2>
+                    <div class="flex-1 h-px bg-white/10"></div>
+                </div>
 
                 <div class="space-y-3">
                     <div v-for="(b, i) in grp.blocks" :key="grp.day + '-' + i"

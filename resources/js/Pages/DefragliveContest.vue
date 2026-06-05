@@ -168,16 +168,16 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                         <div class="text-3xl md:text-4xl font-black text-emerald-400">
                             {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.prize_amount }}{{ contest.prize_currency !== 'USD' ? ' ' + contest.prize_currency : '' }}
                         </div>
-                        <div class="text-xs uppercase tracking-wide text-gray-500">prize</div>
+                        <div class="text-sm font-bold uppercase tracking-widest text-gray-300">prize</div>
                     </div>
-                    <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2 font-mono">
+                    <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2.5 font-mono">
                         <div v-for="part in [['d', timeLeft.d], ['h', timeLeft.h], ['m', timeLeft.m], ['s', timeLeft.s]]" :key="part[0]"
-                            class="bg-black/40 rounded-lg px-2.5 py-1 text-center min-w-[44px]">
-                            <div class="text-xl font-bold text-white">{{ String(part[1]).padStart(2, '0') }}</div>
-                            <div class="text-[10px] uppercase text-gray-500">{{ part[0] }}</div>
+                            class="bg-black/40 rounded-xl px-3.5 py-2 text-center min-w-[60px]">
+                            <div class="text-3xl md:text-4xl font-black text-white tabular-nums leading-none">{{ String(part[1]).padStart(2, '0') }}</div>
+                            <div class="text-sm font-bold uppercase tracking-widest text-gray-300 mt-1">{{ part[0] }}</div>
                         </div>
                     </div>
-                    <div v-else-if="timeLeft" class="text-sm text-amber-400 font-semibold">Period ended<br>awaiting draw</div>
+                    <div v-else-if="timeLeft" class="text-base text-amber-400 font-semibold">Period ended<br>awaiting draw</div>
                 </div>
             </div>
 
