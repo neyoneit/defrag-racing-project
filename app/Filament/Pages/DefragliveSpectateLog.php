@@ -57,7 +57,10 @@ class DefragliveSpectateLog extends Page
                 'from' => optional($s->started_at)->format('H:i:s'),
                 'to' => $s->ended_at ? $s->ended_at->format('H:i:s') : null,
                 'live' => $s->ended_at === null,
-                'duration' => self::duration((int) $s->seconds),
+                // Open session = still watching; show the live span to now.
+                'duration' => self::duration(
+                    $s->ended_at ? (int) $s->seconds : max(0, (int) $s->started_at->diffInSeconds(now()))
+                ),
                 'player_html' => Q3Color::toHtml($s->player_name),
                 'mapname' => $s->mapname,
                 'map_thumb' => $s->mapname ? ($thumbs[$s->mapname] ?? null) : null,

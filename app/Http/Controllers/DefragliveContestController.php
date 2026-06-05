@@ -51,7 +51,8 @@ class DefragliveContestController extends Controller
         }
 
         $open = DefragliveWatchSession::open()
-            ->where('last_seen_at', '>=', now()->subSeconds(DefragliveWatchService::GAP_CAP))
+            ->where('started_at', '>=', now()->subHours(DefragliveWatchService::ORPHAN_HOURS))
+            ->orderByDesc('id')
             ->first();
 
         return Inertia::render('DefragliveContest', [
