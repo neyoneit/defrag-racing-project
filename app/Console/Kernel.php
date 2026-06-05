@@ -75,6 +75,14 @@ class Kernel extends ConsoleKernel
         // set (the VPS cutover), so it can't fight the legacy cron before then.
         $schedule->command('defraglive:write-json')->withoutOverlapping()->everyMinute();
 
+        // Close DefragLive watch sessions left open after the bot goes offline,
+        // so dangling sessions don't accrue dead time toward the contest.
+        $schedule->command('defraglive:close-stale-sessions')->withoutOverlapping()->everyMinute();
+
+        // Keep the $5 / 2-week DefragLive contest cadence rolling (close ended
+        // windows, open the next). No-ops until the admin seeds the first one.
+        $schedule->command('defraglive:rollover-contests')->withoutOverlapping()->hourly();
+
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 

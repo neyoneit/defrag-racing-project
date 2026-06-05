@@ -669,7 +669,7 @@ const getFunctionName = (abbr) => {
                              black ^0 as a dark silhouette, white ^7
                              bright, brights (yellow/cyan/magenta)
                              punchy. -->
-                        <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
+                        <div v-if="server.online_players.length > 0" :class="['mb-4 mt-2 map-hover-fade relative z-20', hoveredMapServer === server.id ? 'opacity-0 pointer-events-none' : 'opacity-100']">
                             <div class="rounded-lg p-2 border border-white/10 backdrop-blur-[4px]" style="background: rgba(71,85,105,0.55);">
                                 <div class="space-y-1.5">
                                     <OnlinePlayer v-for="player in server.online_players" :key="player.name" :player="player" />

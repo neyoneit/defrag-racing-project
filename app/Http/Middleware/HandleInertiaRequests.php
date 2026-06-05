@@ -128,6 +128,17 @@ class HandleInertiaRequests extends Middleware
             'globalLatestAnnouncement'  =>      !$request->user() ? Cache::remember('global:latest_announcement', 300, function () {
                 return Announcement::where('type', 'home')->orderBy('created_at', 'DESC')->first(['id', 'title', 'created_at']);
             }) : null,
+            'defragliveContest'         =>      Cache::remember('defraglive:current_contest', 60, function () {
+                $contest = \App\Models\DefragliveContest::current()->first();
+
+                return $contest ? [
+                    'id' => $contest->id,
+                    'title' => $contest->title,
+                    'prize_amount' => $contest->prize_amount,
+                    'prize_currency' => $contest->prize_currency,
+                    'ends_at' => $contest->ends_at?->toIso8601String(),
+                ] : null;
+            }),
         ]);
     }
 

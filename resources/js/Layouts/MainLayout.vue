@@ -17,6 +17,7 @@
 
     import Footer from '@/Components/Footer.vue';
     import DonationProgressBar from '@/Components/DonationProgressBar.vue';
+    import DefragliveContestBanner from '@/Components/DefragliveContestBanner.vue';
 
     defineProps({
         title: String,
@@ -997,6 +998,11 @@
                 <slot />
             </main>
 
+            <!-- Contest one-liner (only while a contest is live).
+                 Hidden for now - soft-launching the contest page quietly first.
+                 Re-enable by uncommenting. -->
+            <!-- <DefragliveContestBanner variant="bar" /> -->
+
             <!-- Donation Progress Bar -->
             <div class="mt-4">
                 <DonationProgressBar />
@@ -1004,6 +1010,11 @@
 
             <Footer />
         </div>
+
+        <!-- Sitewide nudge while a contest is live (dismissible).
+             Hidden for now - soft-launching the contest page quietly first.
+             Re-enable by uncommenting. -->
+        <!-- <DefragliveContestBanner /> -->
     </div>
 </template>
 

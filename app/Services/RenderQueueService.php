@@ -332,6 +332,19 @@ class RenderQueueService
         $attempts = 0;
         $maxAttempts = count(self::PUBLISH_ROTATION) * 3;
 
+        // Same field-relative pace gate as the render eligibility: don't publish
+        // an already-rendered run that's more than `max_wr_ratio` times slower
+        // than the map WR (off the field's level). Cast float, safe to inline.
+        $maxRatio = (float) \App\Models\SiteSetting::get('demome:max_wr_ratio', 2.0);
+        $paceGate = $maxRatio > 0
+            ? "(NOT EXISTS (SELECT 1 FROM records r WHERE r.mapname = rendered_videos.map_name AND r.physics = rendered_videos.physics AND r.rank = 1 AND r.deleted_at IS NULL)"
+                . " OR EXISTS (SELECT 1 FROM records r WHERE r.mapname = rendered_videos.map_name AND r.physics = rendered_videos.physics AND r.rank = 1 AND r.deleted_at IS NULL AND rendered_videos.time_ms <= r.time * {$maxRatio}))"
+            : '1=1';
+
+        // Short runs (< 5s) are kept but deprioritized: only picked when nothing
+        // longer is available for the tier.
+        $shortThresholdMs = (int) \App\Models\SiteSetting::get('demome:short_demo_ms', 5000);
+
         // Avoid same map as recently published
         $recentPublishedMaps = RenderedVideo::where('status', 'completed')
             ->whereNotNull('published_at')
@@ -353,6 +366,9 @@ class RenderQueueService
                 ->where(fn($q) => $q->whereNull('publish_approved')->orWhere('publish_approved', false))
                 ->where('source', 'auto')
                 ->when(!empty($excludeMapNames), fn($q) => $q->whereNotIn('map_name', $excludeMapNames))
+                ->whereRaw($paceGate)
+                // Deprioritize short runs, then oldest-first within that.
+                ->orderByRaw("CASE WHEN time_ms < {$shortThresholdMs} THEN 1 ELSE 0 END ASC")
                 ->orderBy('created_at');
 
             $video = $baseQuery->where('quality_tier', $tier)->first();

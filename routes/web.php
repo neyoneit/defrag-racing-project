@@ -29,6 +29,7 @@ use App\Http\Controllers\DemoReportController;
 use App\Http\Controllers\YoutubeController;
 use App\Http\Controllers\RenderRequestController;
 use App\Http\Controllers\CommunityLeaderboardController;
+use App\Http\Controllers\DefragliveContestController;
 use App\Http\Controllers\CommunityTasksController;
 
 /*
@@ -77,6 +78,9 @@ Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
+
+// DefragLive most-watched-player contest (public leaderboard + raffle odds).
+Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');
 Route::get('/community-tasks', [CommunityTasksController::class, 'index'])->middleware(['auth', 'verified'])->name('community.tasks');
 Route::post('/community-tasks/refresh', [CommunityTasksController::class, 'refresh'])->middleware(['auth', 'verified'])->name('community.tasks.refresh');
 Route::post('/community-tasks/vote', [CommunityTasksController::class, 'vote'])->middleware(['auth', 'verified'])->name('community.tasks.vote');
