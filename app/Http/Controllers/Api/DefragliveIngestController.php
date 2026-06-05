@@ -6,7 +6,9 @@ use App\Events\DefragliveStreamEvent;
 use App\Http\Controllers\Controller;
 use App\Models\DefragliveChatMessage;
 use App\Models\DefragliveServerState;
+use App\Services\DefragliveWatchService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Ingest endpoint the DefragLive WebSocket bridge POSTs every persisted
@@ -57,6 +59,15 @@ class DefragliveIngestController extends Controller
                 ['id'],
                 ['payload', 'updated_at']
             );
+
+            // Fold this snapshot into the watch-time history powering the
+            // contest leaderboard. Never let it break ingest - the snapshot +
+            // realtime fan-out are what the live stream depends on.
+            try {
+                app(DefragliveWatchService::class)->accrue($data['message'] ?? []);
+            } catch (\Throwable $e) {
+                Log::warning('DefragLive watch accrual failed: ' . $e->getMessage());
+            }
 
             $this->broadcastLive($data);
 
