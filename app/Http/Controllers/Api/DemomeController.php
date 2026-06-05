@@ -1001,7 +1001,24 @@ class DemomeController extends Controller
 
     public function autoApprovePublish(Request $request)
     {
-        $count = min((int) $request->input('count', 2), 5);
+        // Server-side daily publish cap (overrides whatever the bot asks for, so
+        // the daily volume is controlled here without touching the bot). Counts
+        // what already counts toward today: published today + approved-today but
+        // not yet published, so repeated 4h bot calls can't overshoot.
+        $dailyTarget = (int) \App\Models\SiteSetting::get('demome:daily_publish_target', 8);
+
+        $publishedToday = RenderedVideo::whereDate('published_at', today())->count();
+        $approvedTodayPending = RenderedVideo::where('publish_approved', true)
+            ->whereNull('published_at')
+            ->whereDate('updated_at', today())
+            ->count();
+        $remaining = max(0, $dailyTarget - $publishedToday - $approvedTodayPending);
+
+        $count = min((int) $request->input('count', 2), 5, $remaining);
+
+        if ($count <= 0) {
+            return response()->json(['approved' => 0, 'reason' => 'daily target reached', 'daily_target' => $dailyTarget]);
+        }
 
         $videos = \App\Services\RenderQueueService::getNextPublishBatch($count);
 

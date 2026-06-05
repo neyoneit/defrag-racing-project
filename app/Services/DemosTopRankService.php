@@ -172,6 +172,14 @@ class DemosTopRankService
             }
         }
 
+        // Field-relative time gate: the WR (rank-1) time is the map's pace, and
+        // anything more than `max_wr_ratio` times slower is off the field's
+        // level (e.g. a 2-minute run where the map is a 20-second league) and
+        // shouldn't be auto-rendered/published no matter its rank. Tunable via
+        // SiteSetting; 0/blank disables it.
+        $wrTime = optional($ranked->firstWhere('rank', 1))->time_ms;
+        $maxRatio = (float) \App\Models\SiteSetting::get('demome:max_wr_ratio', 2.0);
+
         // --- Persist ---------------------------------------------------------
         $rows = [];
         $now = now();
@@ -185,10 +193,15 @@ class DemosTopRankService
             // rank 1 (the map's best run in the field) is always worth
             // rendering, even on a tiny field where 1*2 > group_total would
             // otherwise exclude it.
+            $withinPace = $maxRatio <= 0
+                || $wrTime === null || $wrTime <= 0
+                || $e->time_ms <= $wrTime * $maxRatio;
+
             $eligible = $e->uploaded_demo_id !== null
                 && $e->rank !== null
                 && ($e->rank === 1 || $e->rank * 2 <= $groupTotal)
-                && $identicalOk;
+                && $identicalOk
+                && $withinPace;
 
             $rows[] = [
                 'map_name' => $mapName,
