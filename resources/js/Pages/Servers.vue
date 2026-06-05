@@ -28,6 +28,14 @@ const players = ref(0);
 const interval = ref(null);
 const isRotating = ref(false);
 
+// Colour for the estimated-ping badge: green good, amber okay, red far.
+const pingClass = (ms) => ms < 50
+    ? 'bg-green-500/25 border-green-400/50 text-green-300'
+    : ms < 100
+        ? 'bg-yellow-500/25 border-yellow-400/50 text-yellow-200'
+        : 'bg-red-500/25 border-red-400/50 text-red-300';
+const pingTitle = 'Estimated ping from your location (approximate - excludes your local connection)';
+
 const formatRecordDate = (value) => {
     if (!value) return '';
     const d = new Date(value);
@@ -691,9 +699,16 @@ const getFunctionName = (abbr) => {
                                     </svg>
                                     Connect
                                 </div>
-                                <span :class="server.defrag.toLowerCase().includes('cpm') ? 'bg-purple-500/30 border-purple-400/50 text-purple-300' : 'bg-blue-500/30 border-blue-400/50 text-blue-300'" class="px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded border">
-                                    {{ server.defrag.toLowerCase().includes('cpm') ? 'CPM' : 'VQ3' }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span v-if="server.estimated_ping != null" :class="pingClass(server.estimated_ping)" :title="pingTitle"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded border tabular-nums">
+                                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
+                                        ~{{ server.estimated_ping }} ms
+                                    </span>
+                                    <span :class="server.defrag.toLowerCase().includes('cpm') ? 'bg-purple-500/30 border-purple-400/50 text-purple-300' : 'bg-blue-500/30 border-blue-400/50 text-blue-300'" class="px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded border">
+                                        {{ server.defrag.toLowerCase().includes('cpm') ? 'CPM' : 'VQ3' }}
+                                    </span>
+                                </div>
                             </a>
                         </div>
                     </div>
@@ -778,6 +793,12 @@ const getFunctionName = (abbr) => {
                                             <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                                         </svg>
                                         <span class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.online_players.length }}</span>
+                                    </div>
+
+                                    <!-- Estimated ping -->
+                                    <div v-if="server.estimated_ping != null" :class="pingClass(server.estimated_ping)" :title="pingTitle" class="flex items-center gap-1 px-2 py-1 rounded border tabular-nums">
+                                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
+                                        <span class="text-xs font-bold">~{{ server.estimated_ping }}ms</span>
                                     </div>
                                 </div>
 
@@ -882,6 +903,12 @@ const getFunctionName = (abbr) => {
                                             <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z" />
                                         </svg>
                                         <span class="text-xs font-bold text-white" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.online_players.length }}</span>
+                                    </div>
+
+                                    <!-- Estimated ping -->
+                                    <div v-if="server.estimated_ping != null" :class="pingClass(server.estimated_ping)" :title="pingTitle" class="flex items-center gap-1 px-2 py-1 rounded border tabular-nums">
+                                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
+                                        <span class="text-xs font-bold">~{{ server.estimated_ping }}ms</span>
                                     </div>
                                 </div>
 

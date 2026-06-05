@@ -57,6 +57,18 @@ class ServerResource extends Resource
                     ->searchable()
                     ->native(false)
                     ->helperText('Drives the flag icon shown next to the server.'),
+                TextInput::make('latitude')
+                    ->label('Latitude')
+                    ->numeric()
+                    ->minValue(-90)
+                    ->maxValue(90)
+                    ->helperText('Auto-filled hourly from the server IP (servers:geolocate). Set it by hand only to override - a filled value is never overwritten.'),
+                TextInput::make('longitude')
+                    ->label('Longitude')
+                    ->numeric()
+                    ->minValue(-180)
+                    ->maxValue(180)
+                    ->helperText('Auto-filled from IP. Used to estimate each visitor\'s ping; if it can\'t be resolved the ping badge just stays hidden.'),
                 Select::make('type')
                     ->label('Server Type')
                     ->required()
@@ -121,6 +133,23 @@ class ServerResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('location')
                     ->searchable(),
+                Tables\Columns\IconColumn::make('has_coords')
+                    ->label('Geo')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => $record->latitude !== null && $record->longitude !== null)
+                    ->trueIcon('heroicon-o-map-pin')
+                    ->falseIcon('heroicon-o-no-symbol')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->tooltip(fn ($record) => $record->latitude !== null
+                        ? "{$record->latitude}, {$record->longitude}"
+                        : 'No location yet - ping badge hidden (auto-fills hourly from IP)'),
+                Tables\Columns\TextColumn::make('latitude')
+                    ->label('Lat / Lon')
+                    ->formatStateUsing(fn ($state, $record) => $record->latitude !== null
+                        ? "{$record->latitude}, {$record->longitude}"
+                        : '-')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('type')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('admin_name')
@@ -150,7 +179,16 @@ class ServerResource extends Resource
             ])
             ->defaultSort('name', 'asc')
             ->filters([
-                //
+                Tables\Filters\TernaryFilter::make('has_coords')
+                    ->label('Location')
+                    ->placeholder('All servers')
+                    ->trueLabel('With location')
+                    ->falseLabel('Missing location')
+                    ->queries(
+                        true: fn ($query) => $query->whereNotNull('latitude')->whereNotNull('longitude'),
+                        false: fn ($query) => $query->where(fn ($q) => $q->whereNull('latitude')->orWhereNull('longitude')),
+                        blank: fn ($query) => $query,
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
