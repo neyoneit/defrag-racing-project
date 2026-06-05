@@ -54,6 +54,37 @@ class SftpCredentialResource extends Resource
                         'revoked' => 'danger',
                         default   => 'gray',
                     }),
+                Tables\Columns\TextColumn::make('geo_coverage')
+                    ->label('Geo')
+                    ->badge()
+                    ->getStateUsing(function ($record) {
+                        $servers = collect($record->servers ?? [])
+                            ->filter(fn ($e) => ! empty($e['ip']) && ! empty($e['port']));
+                        $total = $servers->count();
+                        if ($total === 0) {
+                            return 'no servers';
+                        }
+                        $located = $servers->filter(fn ($e) => self::serverLocated($e))->count();
+
+                        return "{$located}/{$total} located";
+                    })
+                    ->color(function ($state) {
+                        if (! str_contains($state, '/')) {
+                            return 'gray';
+                        }
+                        [$located, $rest] = explode('/', $state);
+
+                        return (int) $located === (int) $rest ? 'success' : 'warning';
+                    })
+                    ->tooltip(function ($record) {
+                        $missing = collect($record->servers ?? [])
+                            ->filter(fn ($e) => ! empty($e['ip']) && ! empty($e['port']))
+                            ->reject(fn ($e) => self::serverLocated($e))
+                            ->map(fn ($e) => $e['ip'].':'.$e['port'])
+                            ->all();
+
+                        return $missing ? 'Missing location: '.implode(', ', $missing) : 'All servers located';
+                    }),
                 Tables\Columns\TextColumn::make('provisioned_at')
                     ->dateTime()
                     ->sortable(),
@@ -78,9 +109,26 @@ class SftpCredentialResource extends Resource
                     ->modalHeading('Manage declared servers + RS codes')
                     ->modalDescription("Each row is one of the user's defrag servers. Fill in the RS code we issued for that server (matches the rs<PORT>=<id> entry in their sv.conf).")
                     ->modalWidth('4xl')
-                    ->fillForm(fn ($record) => [
-                        'servers' => $record->servers ?? [],
-                    ])
+                    ->fillForm(function ($record) {
+                        // Prefill the coordinate fields from the live Server row
+                        // (auto-geolocated or previously set) so the admin sees
+                        // the current value and only edits the ones that need it.
+                        $servers = $record->servers ?? [];
+                        foreach ($servers as &$entry) {
+                            if (empty($entry['ip']) || empty($entry['port'])) {
+                                continue;
+                            }
+                            $srv = \App\Models\Server::where('ip', $entry['ip'])
+                                ->where('port', (int) $entry['port'])
+                                ->first();
+                            if ($srv) {
+                                $entry['latitude'] = $entry['latitude'] ?? $srv->latitude;
+                                $entry['longitude'] = $entry['longitude'] ?? $srv->longitude;
+                            }
+                        }
+
+                        return ['servers' => $servers];
+                    })
                     ->form([
                         \Filament\Forms\Components\Repeater::make('servers')
                             ->label(false)
@@ -118,6 +166,20 @@ class SftpCredentialResource extends Resource
                                     ->label('RS code')
                                     ->placeholder('e.g. 4711')
                                     ->columnSpan(1),
+                                \Filament\Forms\Components\TextInput::make('latitude')
+                                    ->label('Latitude')
+                                    ->numeric()
+                                    ->minValue(-90)
+                                    ->maxValue(90)
+                                    ->columnSpan(3)
+                                    ->helperText('Auto-filled from IP. Set by hand only when it couldn\'t resolve (e.g. a hostname).'),
+                                \Filament\Forms\Components\TextInput::make('longitude')
+                                    ->label('Longitude')
+                                    ->numeric()
+                                    ->minValue(-180)
+                                    ->maxValue(180)
+                                    ->columnSpan(3)
+                                    ->helperText('Drives the visitor ping badge. Leave blank to keep it hidden for this server.'),
                                 \Filament\Forms\Components\Textarea::make('admin_note')
                                     ->label('Admin note')
                                     ->placeholder('Engine, special config, things to remember — not shown to the user')
@@ -218,5 +280,15 @@ class SftpCredentialResource extends Resource
         return [
             'index' => Pages\ListSftpCredentials::route('/'),
         ];
+    }
+
+    /** Does the live Server row for this declared entry have coordinates? */
+    private static function serverLocated(array $entry): bool
+    {
+        $srv = \App\Models\Server::where('ip', $entry['ip'])
+            ->where('port', (int) $entry['port'])
+            ->first();
+
+        return $srv && $srv->latitude !== null && $srv->longitude !== null;
     }
 }

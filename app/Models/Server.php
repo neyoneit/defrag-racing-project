@@ -16,6 +16,12 @@ class Server extends Model
      */
     protected $hidden = ['rconpassword'];
 
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'geo_checked_at' => 'datetime',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -26,6 +32,8 @@ class Server extends Model
         'ip',
         'port',
         'location',
+        'latitude',
+        'longitude',
         'type',
         'admin_name',
         'admin_contact',

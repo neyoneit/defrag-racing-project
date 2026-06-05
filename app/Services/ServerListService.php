@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Record;
 use App\Models\Server;
 use App\Models\User;
+use App\Support\PingEstimator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -156,13 +157,25 @@ class ServerListService
             });
         }
 
-        return $servers->values()->map(function ($server) {
+        // Visitor location (Cloudflare headers) for the per-server ping
+        // estimate. Resolved once; null when the request didn't pass through
+        // Cloudflare, in which case every estimated_ping comes back null and
+        // the UI simply hides the badge.
+        $visitor = PingEstimator::visitorLatLon($request);
+
+        return $servers->values()->map(function ($server) use ($visitor) {
             $array = $server->toArray();
             $array['mytime_time'] = $server->mytime_time ?? null;
             $array['mytime_date'] = $server->mytime_date ?? null;
             $array['myrank_position'] = $server->myrank_position ?? null;
             $array['myrank_total'] = $server->myrank_total ?? null;
             $array['besttime_date'] = $server->besttime_date ?? null;
+            // Base geo estimate, plus a small +/-5ms wobble each request so the
+            // figure feels live (real pings jitter) instead of a frozen number.
+            $base = $visitor
+                ? PingEstimator::estimate($visitor[0], $visitor[1], $server->latitude, $server->longitude)
+                : null;
+            $array['estimated_ping'] = $base !== null ? max(1, $base + random_int(-5, 5)) : null;
 
             return $array;
         })->all();

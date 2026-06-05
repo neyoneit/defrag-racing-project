@@ -83,6 +83,11 @@ class Kernel extends ConsoleKernel
         // windows, open the next). No-ops until the admin seeds the first one.
         $schedule->command('defraglive:rollover-contests')->withoutOverlapping()->hourly();
 
+        // Auto-fill lat/lon from IP for any server missing it (drives the
+        // visitor ping estimate). No-op once all servers are geolocated; never
+        // overwrites existing coordinates.
+        $schedule->command('servers:geolocate')->withoutOverlapping()->hourly();
+
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 

@@ -40,15 +40,28 @@ class SftpCredentialObserver
             // when blank — at least gives a flag instead of "_404".
             $entryLocation = !empty($entry['location']) ? strtoupper($entry['location']) : $ownerCountry;
 
+            // Optional manual coordinates (admin fills these for servers whose
+            // IP/hostname the auto-geolocator can't resolve). Only applied when
+            // present, so they never wipe auto-filled values.
+            $hasCoords = isset($entry['latitude'], $entry['longitude'])
+                && $entry['latitude'] !== '' && $entry['longitude'] !== '';
+            $entryLat = $hasCoords ? (float) $entry['latitude'] : null;
+            $entryLon = $hasCoords ? (float) $entry['longitude'] : null;
+
             if ($existing) {
                 // Don't clobber scraper-managed fields on existing rows;
                 // just link to the credential, refresh the rcon password,
                 // and propagate location updates (admin/owner can change it).
-                $existing->fill([
+                $fill = [
                     'sftp_credential_id' => $credential->id,
                     'rconpassword'       => $entry['rcon'] ?? $existing->rconpassword,
                     'location'           => $entryLocation,
-                ])->save();
+                ];
+                if ($hasCoords) {
+                    $fill['latitude'] = $entryLat;
+                    $fill['longitude'] = $entryLon;
+                }
+                $existing->fill($fill)->save();
                 continue;
             }
 
@@ -60,6 +73,8 @@ class SftpCredentialObserver
                 'name'               => 'Pending scrape',
                 'plain_name'         => 'Pending scrape',
                 'location'           => $entryLocation,
+                'latitude'           => $entryLat,
+                'longitude'          => $entryLon,
                 'type'               => $entry['gametype'] ?? 'mixed',
                 'admin_name'         => $ownerName,
                 'map'                => '',
