@@ -27,21 +27,33 @@ use Illuminate\Support\Facades\DB;
 class DefragliveWatchService
 {
     /**
-     * Max gap (seconds) since the last serverstate before we treat the bot as
-     * having been offline rather than continuously watching. The bot only emits
-     * serverstate on CHANGE (not on a fixed heartbeat), so a single watch can
-     * span well over a tick interval with no update in between - hence a roomy
-     * cap. Beyond it we assume a real offline gap and don't credit the dead time.
+     * Window (seconds) the public "now watching" indicator treats an open
+     * session as live for. The bot emits serverstate only on change, so during
+     * a quiet watch there are no updates - we still consider it live well past a
+     * tick interval. Purely cosmetic (which session is "current"); it never
+     * affects credited time.
      */
-    public const GAP_CAP = 120;
+    public const LIVE_WINDOW = 600;
+
+    /**
+     * Safety net only: a session open longer than this with no update is treated
+     * as an orphan from a crashed/stopped bot and closed at its last sighting,
+     * so it doesn't credit unbounded time. Set well above any real single watch.
+     */
+    public const ORPHAN_HOURS = 6;
 
     /** Seconds of watch time per raffle ticket (1 minute = 1 ticket). */
     public const SECONDS_PER_TICKET = 60;
 
     /**
-     * Fold one serverstate snapshot into the open watch session. Called from
-     * the ingest serverstate branch. Cheap and idempotent-ish; safe under the
-     * bot's concurrent fire-and-forget POSTs via a row lock on the open session.
+     * Fold one serverstate snapshot into the open watch session. Called from the
+     * ingest serverstate branch (safe under concurrent POSTs via a row lock).
+     *
+     * Model: the bot is always spectating exactly one player. Silence just means
+     * "still on the same player, nothing changed" - NOT a gap. So a watch runs
+     * from when it started until the bot moves to someone else (or goes idle),
+     * and that move is always reported by an emit. We credit the previous player
+     * the full span up to that moment. No gap cap, no "offline" guessing.
      */
     public function accrue(array $serverstate): void
     {
@@ -73,46 +85,37 @@ class DefragliveWatchService
 
             if ($open) {
                 $openKey = $this->keyFor($open->mdd_id, $open->player_name_clean);
-                $gap = now()->diffInSeconds($open->last_seen_at ?? $open->started_at);
 
-                // Within the cap the bot was alive the whole time, so the watch
-                // ran from started_at until NOW - credit the full span. This is
-                // what makes 0s sessions impossible when serverstate only fires
-                // on a player switch (the switch itself is the end boundary).
-                if ($gap <= self::GAP_CAP) {
-                    if ($openKey === $key) {
-                        // Same player still watched: extend the span to now.
-                        $open->seconds = $this->span($open->started_at, now());
-                        $open->last_seen_at = now();
-                        $open->mapname = $mapname ?: $open->mapname;
-                        if (!$open->mdd_id && $identity['mdd_id']) {
-                            $open->mdd_id = $identity['mdd_id'];
-                            $open->user_id = $identity['user_id'];
-                        }
-                        $open->save();
-
-                        return;
-                    }
-
-                    // Switched player: the previous watch ended now.
+                if ($openKey === $key) {
+                    // Still the same player: extend the running span to now.
                     $open->seconds = $this->span($open->started_at, now());
-                    $open->ended_at = now();
+                    $open->last_seen_at = now();
+                    $open->mapname = $mapname ?: $open->mapname;
+                    if (!$open->mdd_id && $identity['mdd_id']) {
+                        $open->mdd_id = $identity['mdd_id'];
+                        $open->user_id = $identity['user_id'];
+                    }
                     $open->save();
-                } else {
-                    // Long gap = the bot was offline; don't credit the dead time,
-                    // close at the last point we actually saw it.
-                    $end = $open->last_seen_at ?? $open->started_at;
-                    $open->seconds = $this->span($open->started_at, $end);
-                    $open->ended_at = $end;
-                    $open->save();
+
+                    return;
                 }
+
+                // Switched to a different player: the previous one was watched
+                // continuously until this very moment, so credit the full span.
+                $open->seconds = $this->span($open->started_at, now());
+                $open->ended_at = now();
+                $open->save();
             }
 
             $this->openSession($identity, $name, $clean, $ip, $mapname);
         });
     }
 
-    /** Close the currently open session, if any (player switch / idle / offline). */
+    /**
+     * Close the currently open session (player switch reported as idle / bot
+     * self-spectating). The watch ran continuously until now, so credit the
+     * full span to now.
+     */
     public function closeOpenSession(): void
     {
         DB::transaction(function () {
@@ -121,25 +124,22 @@ class DefragliveWatchService
                 return;
             }
 
-            // Idle/bot reached within the cap = the watch ran until now; beyond
-            // it the bot was offline, so credit only up to the last sighting.
-            $gap = now()->diffInSeconds($open->last_seen_at ?? $open->started_at);
-            $end = $gap <= self::GAP_CAP ? now() : ($open->last_seen_at ?? $open->started_at);
-            $open->seconds = $this->span($open->started_at, $end);
-            $open->ended_at = $end;
+            $open->seconds = $this->span($open->started_at, now());
+            $open->ended_at = now();
             $open->save();
         });
     }
 
     /**
-     * Close any open session whose last sighting is older than the gap cap (the
-     * bot crashed/stopped mid-watch). Credits up to the last sighting, not the
-     * dead time since. Run on a schedule so sessions don't dangle open.
+     * Safety net for a crashed/stopped bot only: a session left open for hours
+     * with no update is an orphan (the bot is gone, no switch ever came). Close
+     * it at its last sighting so it can't credit unbounded time. Normal watches
+     * are closed by the next switch/idle, long before this fires.
      */
     public function closeStaleSessions(): int
     {
         $stale = DefragliveWatchSession::open()
-            ->where('last_seen_at', '<', now()->subSeconds(self::GAP_CAP))
+            ->where('last_seen_at', '<', now()->subHours(self::ORPHAN_HOURS))
             ->get();
 
         foreach ($stale as $s) {
@@ -240,7 +240,7 @@ class DefragliveWatchService
             ->where('started_at', '>=', $contest->starts_at)
             ->where('started_at', '<=', $contest->ends_at)
             ->orderBy('id')
-            ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds']);
+            ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $groups = [];
         foreach ($rows as $r) {
@@ -254,7 +254,11 @@ class DefragliveWatchService
                     'seconds' => 0,
                 ];
             }
-            $groups[$key]['seconds'] += (int) $r->seconds;
+            // Still-open session = currently being watched; count it live to now
+            // (its stored seconds only updates on an emit, which may be silent).
+            $groups[$key]['seconds'] += $r->ended_at
+                ? (int) $r->seconds
+                : $this->span($r->started_at, now());
             // Keep the latest seen colored name / resolved identity.
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
             if ($r->mdd_id) {
