@@ -27,11 +27,13 @@ use Illuminate\Support\Facades\DB;
 class DefragliveWatchService
 {
     /**
-     * Max gap (seconds) between two ingest ticks we still count as continuous
-     * watching. Ticks arrive ~every 2.5s; a larger gap means the bot was paused
-     * / offline, so we don't credit that dead time.
+     * Max gap (seconds) since the last serverstate before we treat the bot as
+     * having been offline rather than continuously watching. The bot only emits
+     * serverstate on CHANGE (not on a fixed heartbeat), so a single watch can
+     * span well over a tick interval with no update in between - hence a roomy
+     * cap. Beyond it we assume a real offline gap and don't credit the dead time.
      */
-    public const GAP_CAP = 30;
+    public const GAP_CAP = 120;
 
     /** Seconds of watch time per raffle ticket (1 minute = 1 ticket). */
     public const SECONDS_PER_TICKET = 60;
@@ -71,29 +73,39 @@ class DefragliveWatchService
 
             if ($open) {
                 $openKey = $this->keyFor($open->mdd_id, $open->player_name_clean);
-                $delta = $open->last_seen_at
-                    ? now()->diffInSeconds($open->last_seen_at)
-                    : 0;
+                $gap = now()->diffInSeconds($open->last_seen_at ?? $open->started_at);
 
-                if ($openKey === $key && $delta <= self::GAP_CAP) {
-                    // Still on the same player within a normal tick gap: extend.
-                    $open->seconds += $delta;
-                    $open->last_seen_at = now();
-                    $open->mapname = $mapname ?: $open->mapname;
-                    // Backfill identity if it resolved later than the first tick.
-                    if (!$open->mdd_id && $identity['mdd_id']) {
-                        $open->mdd_id = $identity['mdd_id'];
-                        $open->user_id = $identity['user_id'];
+                // Within the cap the bot was alive the whole time, so the watch
+                // ran from started_at until NOW - credit the full span. This is
+                // what makes 0s sessions impossible when serverstate only fires
+                // on a player switch (the switch itself is the end boundary).
+                if ($gap <= self::GAP_CAP) {
+                    if ($openKey === $key) {
+                        // Same player still watched: extend the span to now.
+                        $open->seconds = $this->span($open->started_at, now());
+                        $open->last_seen_at = now();
+                        $open->mapname = $mapname ?: $open->mapname;
+                        if (!$open->mdd_id && $identity['mdd_id']) {
+                            $open->mdd_id = $identity['mdd_id'];
+                            $open->user_id = $identity['user_id'];
+                        }
+                        $open->save();
+
+                        return;
                     }
+
+                    // Switched player: the previous watch ended now.
+                    $open->seconds = $this->span($open->started_at, now());
+                    $open->ended_at = now();
                     $open->save();
-
-                    return;
+                } else {
+                    // Long gap = the bot was offline; don't credit the dead time,
+                    // close at the last point we actually saw it.
+                    $end = $open->last_seen_at ?? $open->started_at;
+                    $open->seconds = $this->span($open->started_at, $end);
+                    $open->ended_at = $end;
+                    $open->save();
                 }
-
-                // Switched player (or a gap big enough to be a new sitting):
-                // close the previous stretch at its last confirmed tick.
-                $open->ended_at = $open->last_seen_at ?? now();
-                $open->save();
             }
 
             $this->openSession($identity, $name, $clean, $ip, $mapname);
@@ -105,23 +117,49 @@ class DefragliveWatchService
     {
         DB::transaction(function () {
             $open = DefragliveWatchSession::open()->lockForUpdate()->first();
-            if ($open) {
-                $open->ended_at = $open->last_seen_at ?? now();
-                $open->save();
+            if (!$open) {
+                return;
             }
+
+            // Idle/bot reached within the cap = the watch ran until now; beyond
+            // it the bot was offline, so credit only up to the last sighting.
+            $gap = now()->diffInSeconds($open->last_seen_at ?? $open->started_at);
+            $end = $gap <= self::GAP_CAP ? now() : ($open->last_seen_at ?? $open->started_at);
+            $open->seconds = $this->span($open->started_at, $end);
+            $open->ended_at = $end;
+            $open->save();
         });
     }
 
     /**
-     * Close any open session whose last tick is older than the gap cap. Run on a
-     * schedule so a crashed/offline bot doesn't leave a session dangling open
-     * (and the public "currently watching" stays honest).
+     * Close any open session whose last sighting is older than the gap cap (the
+     * bot crashed/stopped mid-watch). Credits up to the last sighting, not the
+     * dead time since. Run on a schedule so sessions don't dangle open.
      */
     public function closeStaleSessions(): int
     {
-        return DefragliveWatchSession::open()
+        $stale = DefragliveWatchSession::open()
             ->where('last_seen_at', '<', now()->subSeconds(self::GAP_CAP))
-            ->update(['ended_at' => DB::raw('last_seen_at')]);
+            ->get();
+
+        foreach ($stale as $s) {
+            $end = $s->last_seen_at ?? $s->started_at;
+            $s->seconds = $this->span($s->started_at, $end);
+            $s->ended_at = $end;
+            $s->save();
+        }
+
+        return $stale->count();
+    }
+
+    /** Whole seconds between two timestamps (>= 0). */
+    private function span($start, $end): int
+    {
+        if (!$start || !$end) {
+            return 0;
+        }
+
+        return max(0, (int) $start->diffInSeconds($end));
     }
 
     private function openSession(array $identity, string $name, string $clean, ?string $ip, ?string $mapname): void
