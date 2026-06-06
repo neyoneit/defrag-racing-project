@@ -26,6 +26,14 @@ class PingEstimator
      */
     private const ROUTE_FACTOR = 1.6;
 
+    /**
+     * Flat overhead added to every estimate for the part geography can't see:
+     * the visitor's last mile (home wifi / ISP / mobile) plus server-side and
+     * protocol overhead. Measured in-game pings ran ~20-30ms above the pure
+     * distance estimate, so we add this baseline. Tune if real pings drift.
+     */
+    private const BASE_MS = 25;
+
     /** Earth's mean radius in kilometres. */
     private const EARTH_KM = 6371.0;
 
@@ -59,7 +67,7 @@ class PingEstimator
 
         $km = self::haversineKm($aLat, $aLon, $bLat, $bLon);
 
-        return max(1, (int) round($km / 100 * self::ROUTE_FACTOR));
+        return self::BASE_MS + (int) round($km / 100 * self::ROUTE_FACTOR);
     }
 
     /** Great-circle distance in kilometres. */
