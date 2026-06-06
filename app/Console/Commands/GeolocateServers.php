@@ -48,7 +48,7 @@ class GeolocateServers extends Command
 
         // ip-api batch: up to 100 queries per POST. Key results by the bare IP.
         foreach ($servers->chunk(100) as $chunk) {
-            $ips = $chunk->map(fn ($s) => $this->bareIp($s->ip))->values()->all();
+            $ips = $chunk->map(fn ($s) => $this->resolveIp($s->ip))->unique()->values()->all();
 
             try {
                 $resp = Http::timeout(20)->post('http://ip-api.com/batch?fields=status,lat,lon,query', $ips);
@@ -77,7 +77,7 @@ class GeolocateServers extends Command
                 // backs off to the daily cadence instead of retrying hourly.
                 $server->geo_checked_at = now();
 
-                $coords = $byIp[$this->bareIp($server->ip)] ?? null;
+                $coords = $byIp[$this->resolveIp($server->ip)] ?? null;
                 if (! $coords) {
                     $server->save();
                     $this->warn("  - {$server->plain_name} ({$server->ip}): not resolved");
@@ -98,9 +98,20 @@ class GeolocateServers extends Command
         return self::SUCCESS;
     }
 
-    /** Strip any accidental :port so ip-api gets a clean host. */
-    private function bareIp(string $ip): string
+    /**
+     * Strip any :port and resolve a hostname to an IP - ip-api's batch endpoint
+     * only accepts IPs, not hostnames (e.g. deimos.baseq.fr). gethostbyname
+     * returns the host unchanged on DNS failure, which ip-api then reports as a
+     * miss, so the server just stays without coordinates.
+     */
+    private function resolveIp(string $ip): string
     {
-        return explode(':', trim($ip))[0];
+        $host = explode(':', trim($ip))[0];
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return $host;
+        }
+
+        return gethostbyname($host);
     }
 }
