@@ -370,7 +370,7 @@ class LauncherController extends Controller
         $perPage = 50;
 
         $query = Map::query()
-            ->select('id', 'name', 'author', 'thumbnail', 'physics', 'gametype', 'is_nsfw', 'date_added', 'pk3')
+            ->select('id', 'name', 'author', 'thumbnail', 'physics', 'gametype', 'is_nsfw', 'date_added', 'pk3', 'weapons', 'items', 'functions')
             ->orderBy('date_added', 'DESC')
             ->orderBy('id', 'DESC');
 
