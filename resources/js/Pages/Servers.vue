@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3';
 import { defineAsyncComponent, onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
-import LauncherBanner from '@/Components/LauncherBanner.vue';
+// import LauncherBanner from '@/Components/LauncherBanner.vue'; // launcher promo temporarily disabled
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const page = usePage();
@@ -388,6 +388,7 @@ const getFunctionName = (abbr) => {
                         Live Servers
                     </h1>
 
+                    <!-- Launcher promo chip - temporarily disabled
                     <Link :href="route('launcher')"
                           class="flex items-center gap-2 bg-gradient-to-r from-blue-600/30 to-blue-500/15 hover:from-blue-600/40 hover:to-blue-500/25 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/40 hover:border-blue-300/60 transition-colors text-sm">
                         <svg class="w-5 h-5 text-blue-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -398,6 +399,7 @@ const getFunctionName = (abbr) => {
                         <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
                         <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">connect to servers in 1 click + many more features</span>
                     </Link>
+                    -->
 
                     <div class="flex items-center gap-3 text-sm">
                         <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/30">
@@ -510,7 +512,8 @@ const getFunctionName = (abbr) => {
 
         <!-- Servers Grid/List -->
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
-            <LauncherBanner variant="servers" />
+            <!-- <LauncherBanner variant="servers" /> -->
+
             <!-- Loading skeleton while deferred data loads -->
             <div v-if="!serversLoaded" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div v-for="i in 6" :key="i" class="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden animate-pulse">
