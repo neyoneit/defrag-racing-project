@@ -84,9 +84,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('defraglive:rollover-contests')->withoutOverlapping()->hourly();
 
         // Auto-fill lat/lon from IP for any server missing it (drives the
-        // visitor ping estimate). No-op once all servers are geolocated; never
+        // visitor ping estimate). Daily is plenty - new servers are rare and a
+        // ping badge appearing within a day is fine. No-op once all servers are
+        // geolocated (a cheap "WHERE latitude IS NULL" returning nothing); never
         // overwrites existing coordinates.
-        $schedule->command('servers:geolocate')->withoutOverlapping()->hourly();
+        $schedule->command('servers:geolocate')->withoutOverlapping()->daily();
 
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
