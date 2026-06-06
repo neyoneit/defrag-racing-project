@@ -20,8 +20,12 @@ class GeolocateServers extends Command
 
     protected $description = 'Auto-fill server latitude/longitude from their IP (only missing ones by default)';
 
-    /** Don't re-hit the geo API for an unresolvable server more often than this. */
-    private const RETRY_AFTER_HOURS = 24;
+    /**
+     * Don't re-hit the geo API for an unresolvable server more often than this.
+     * Below the daily schedule interval so the once-a-day run always retries
+     * failures (rather than skipping a day on timing drift).
+     */
+    private const RETRY_AFTER_HOURS = 12;
 
     public function handle(): int
     {
