@@ -1344,7 +1344,6 @@ watch(selectedPhysics, () => {
                         </p>
                     </div>
 
-                    <!-- TEMP hidden: launcher header chip (re-enable once render is confirmed working)
                     <Link :href="route('launcher')"
                           class="flex items-center gap-2 bg-gradient-to-r from-blue-600/30 to-blue-500/15 hover:from-blue-600/40 hover:to-blue-500/25 backdrop-blur-sm px-3 py-2 rounded-lg border border-blue-400/40 hover:border-blue-300/60 transition-colors text-sm">
                         <svg class="w-5 h-5 text-blue-300 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1355,7 +1354,6 @@ watch(selectedPhysics, () => {
                         <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
                         <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">auto backup demos + many more features</span>
                     </Link>
-                    -->
 
                     <!-- Limits Info (Right Side) -->
                     <div class="flex flex-col gap-2">
@@ -1414,9 +1412,7 @@ watch(selectedPhysics, () => {
         <div class="overflow-x-hidden">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12">
 
-                <!-- TEMP hidden: dismissible launcher banner (re-enable once render is confirmed working)
                 <LauncherBanner variant="demos" />
-                -->
 
                 <!-- Upload Section (visible to all users; guests will have restricted actions) -->
                 <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 mb-4 shadow-2xl border border-white/5">

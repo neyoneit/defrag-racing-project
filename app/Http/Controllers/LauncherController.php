@@ -106,9 +106,14 @@ class LauncherController extends Controller
             ];
 
             if (str_ends_with($name, '.msi')) {
-                $by['windows'][] = $entry + ['kind' => 'msi', 'label' => 'Installer (.msi)', 'recommended' => true];
+                // Legacy: we stopped shipping the per-machine MSI from
+                // launcher 0.1.17 on (it forced a UAC prompt on every
+                // auto-update). Kept here so older releases still render.
+                $by['windows'][] = $entry + ['kind' => 'msi', 'label' => 'Installer (.msi)', 'recommended' => false];
             } elseif (str_ends_with($name, '.exe')) {
-                $by['windows'][] = $entry + ['kind' => 'exe', 'label' => 'Setup (.exe)', 'recommended' => false];
+                // The per-user NSIS installer - now the primary Windows
+                // download (no admin prompt, silent auto-updates).
+                $by['windows'][] = $entry + ['kind' => 'exe', 'label' => 'Installer (.exe)', 'recommended' => true];
             } elseif (str_ends_with($name, '.dmg')) {
                 $isArm = str_contains($name, 'aarch64') || str_contains($name, 'arm64');
                 $by['macos'][] = $entry + [
