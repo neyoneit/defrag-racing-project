@@ -223,8 +223,9 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
 
                     <div class="min-w-0 flex-1">
                         <component :is="e.user ? Link : 'span'" :href="e.user ? `/profile/${e.user.id}` : undefined"
-                            class="font-semibold truncate block" :class="e.user ? 'hover:underline' : ''"
-                            v-html="q3tohtml(e.name)"></component>
+                            class="font-semibold truncate block" :class="e.user ? 'hover:underline' : ''">
+                            <span v-html="q3tohtml(e.name)"></span>
+                        </component>
                         <div class="mt-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
                             <div class="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-400"
                                 :style="{ width: Math.max(3, (e.seconds / maxSeconds) * 100) + '%' }"></div>
@@ -251,7 +252,9 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                     class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3">
                     <div class="min-w-0">
                         <component :is="w.winner_user_id ? Link : 'span'" :href="w.winner_user_id ? `/profile/${w.winner_user_id}` : undefined"
-                            class="font-semibold truncate block" v-html="q3tohtml(w.winner_name)"></component>
+                            class="font-semibold truncate block">
+                            <span v-html="q3tohtml(w.winner_name)"></span>
+                        </component>
                         <div class="text-xs text-gray-500 truncate">{{ w.title }}</div>
                     </div>
                     <div class="text-right shrink-0">
@@ -273,8 +276,9 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                     <img :src="photo(h.user)" class="w-8 h-8 rounded-full object-cover shrink-0" alt="">
                     <img v-if="h.user?.country" :src="`/images/flags/${h.user.country}.png`" class="w-5 h-3.5 shrink-0" onerror="this.style.display='none'">
                     <component :is="h.user ? Link : 'span'" :href="h.user ? `/profile/${h.user.id}` : undefined"
-                        class="min-w-0 flex-1 font-semibold truncate" :class="h.user ? 'hover:underline' : ''"
-                        v-html="q3tohtml(h.name)"></component>
+                        class="min-w-0 flex-1 font-semibold truncate" :class="h.user ? 'hover:underline' : ''">
+                        <span v-html="q3tohtml(h.name)"></span>
+                    </component>
                     <div class="text-right shrink-0">
                         <div class="font-bold text-white">{{ h.wins }} {{ h.wins === 1 ? 'win' : 'wins' }}</div>
                         <div class="text-xs text-emerald-400">{{ h.currency === 'USD' ? '$' : '' }}{{ h.total.toFixed(2) }}{{ h.currency !== 'USD' ? ' ' + h.currency : '' }} won</div>
