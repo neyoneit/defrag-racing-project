@@ -223,6 +223,26 @@ const features = [
                 <a :href="releaseUrl" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 underline">all assets on GitHub</a>.
             </div>
 
+            <!-- Video walkthrough: download, setup and a tour of every feature -->
+            <div class="max-w-2xl mx-auto mb-8">
+                <div class="bg-black/30 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                    <div class="relative w-full overflow-hidden rounded-xl" style="padding-top: 56.25%;">
+                        <iframe
+                            class="absolute inset-0 w-full h-full"
+                            src="https://www.youtube-nocookie.com/embed/bnzjhuL8OQ0"
+                            title="Defrag Racing Launcher - full walkthrough"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allowfullscreen
+                        ></iframe>
+                    </div>
+                    <p class="text-center text-xs text-gray-500 mt-2 mb-1">
+                        Full walkthrough: installation, account token setup and a tour of every feature.
+                    </p>
+                </div>
+            </div>
+
             <!-- Showcase: launcher screenshots (below the download options) -->
             <div v-if="showcaseSlides.length" class="max-w-2xl mx-auto mb-12">
                 <LauncherShowcase :slides="showcaseSlides" />
