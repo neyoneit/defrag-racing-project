@@ -9,6 +9,20 @@ export default {
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref, onMounted } from 'vue';
+import LauncherShowcase from '@/Components/LauncherShowcase.vue';
+
+// Media shown under the hero. Drop the files in public/launcher/media/ (see the
+// README there for the expected names). First slide is the looping demo clip.
+const showcaseSlides = [
+    { type: 'image', src: '/launcher/media/player.png', alt: 'Demo playing inside the launcher', caption: 'Watch demos right inside the launcher' },
+    { type: 'image', src: '/launcher/media/compare.png', alt: 'Demos compared side by side', caption: 'Compare up to four runs side by side, locked together' },
+    { type: 'image', src: '/launcher/media/demos.png', alt: 'Demos tab with auto-backup', caption: 'Auto-backup every run as you play' },
+    { type: 'image', src: '/launcher/media/servers.png', alt: 'Server browser', caption: 'Browse servers and connect in one click' },
+    { type: 'image', src: '/launcher/media/records.png', alt: 'Records tab', caption: 'Latest VQ3 + CPM records on your desktop' },
+    { type: 'image', src: '/launcher/media/maps.png', alt: 'Maps browser', caption: 'Find maps and run them offline' },
+    { type: 'image', src: '/launcher/media/history.png', alt: 'Connection history', caption: 'Reconnect to servers you recently joined' },
+    { type: 'image', src: '/launcher/media/notifications.png', alt: 'Notifications', caption: 'Record alerts and render-ready notifications' },
+];
 
 const props = defineProps({
     version: { type: String, default: null },
@@ -76,6 +90,16 @@ const publishedLabel = computed(() => {
 
 const features = [
     {
+        title: 'Watch demos in the launcher',
+        body: 'Play any .dm_68 demo embedded right in the window - a bundled engine renders it inline, with a full transport bar: play/pause, speeds from 0.1x to 8x, frame-accurate scrubbing and millisecond zoom. No separate game launch.',
+        icon: 'play',
+    },
+    {
+        title: 'Compare runs side by side',
+        body: 'Load up to four demos at once into a synced split-screen grid - one transport drives them all, with per-run sync offsets to line the starts up. The ultimate way to study a route against the WR.',
+        icon: 'columns',
+    },
+    {
         title: 'Auto-backup your demos',
         body: 'Drops a watcher on your Defrag demos folder and uploads new runs to defrag.racing in the background. You never lose a demo, even on a crash.',
         icon: 'cloud-upload',
@@ -87,13 +111,33 @@ const features = [
     },
     {
         title: 'Native server browser',
-        body: 'Browse the same server list as the website, with the same filters, from a small desktop window. Quick-launch a server in two clicks.',
+        body: 'Browse the same live server list as the website, with the same filters and your personal bests per map, from a small desktop window. Connect in one click.',
         icon: 'list',
     },
     {
-        title: 'Records + notifications on the desktop',
-        body: 'Bell-badge notifications when someone breaks your record. Records and Maps tabs let you check times without opening a browser.',
+        title: 'Maps browser, online + offline',
+        body: 'Search every map on defrag.racing and launch it instantly, or browse the maps already installed on your disk and run them offline - VQ3 or CPM.',
+        icon: 'map',
+    },
+    {
+        title: 'Records on your desktop',
+        body: 'Latest VQ3 and CPM records, newest first, without opening a browser. Click any name or map to jump to the full page on the web.',
+        icon: 'trophy',
+    },
+    {
+        title: 'Notifications + render alerts',
+        body: 'Bell-badge notifications when someone breaks your record, plus a ping when your demo render is ready - with a one-click Watch on YouTube.',
         icon: 'bell',
+    },
+    {
+        title: 'Reconnect history',
+        body: 'Every server you joined via a defrag:// link is remembered, newest first, with the maps it rotated through. Hop back into a session in one click.',
+        icon: 'clock',
+    },
+    {
+        title: 'Auto-updating, lives in the tray',
+        body: 'Updates itself silently in the background and can sit in the system tray from boot, keeping the demo watcher and Connect handler ready. Windows, macOS and Linux.',
+        icon: 'refresh',
     },
 ];
 </script>
@@ -104,14 +148,14 @@ const features = [
     <div class="relative pt-10 pb-16">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-            <div class="text-center mb-10">
+            <div class="text-center mb-6">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-4">
                     Desktop launcher
                 </div>
                 <h1 class="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
                     Defrag Racing <span class="text-blue-500">Launcher</span>
                 </h1>
-                <p class="text-base text-gray-400 max-w-2xl mx-auto mb-8">
+                <p class="text-base text-gray-400 max-w-2xl mx-auto mb-5">
                     Auto-backup your demos, browse servers natively, and make every
                     <code class="text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded text-sm">defrag://</code>
                     connect button on this site work.
@@ -140,7 +184,7 @@ const features = [
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div v-for="p in platforms" :key="p.id"
                      class="bg-black/40 backdrop-blur-sm rounded-2xl p-5 border border-white/10 hover:border-blue-500/40 transition-all">
                     <div class="flex items-center gap-3 mb-4">
@@ -174,9 +218,14 @@ const features = [
                 </div>
             </div>
 
-            <div class="text-center mb-12 text-sm text-gray-500">
+            <div class="text-center mb-6 text-sm text-gray-500">
                 Need another format or an older version? See
                 <a :href="releaseUrl" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 underline">all assets on GitHub</a>.
+            </div>
+
+            <!-- Showcase: launcher screenshots (below the download options) -->
+            <div v-if="showcaseSlides.length" class="max-w-2xl mx-auto mb-12">
+                <LauncherShowcase :slides="showcaseSlides" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
@@ -188,6 +237,12 @@ const features = [
                             <svg v-else-if="f.icon === 'plug'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0V8z"/><path d="M12 18v4"/></svg>
                             <svg v-else-if="f.icon === 'list'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.5"/><circle cx="3.5" cy="12" r="1.5"/><circle cx="3.5" cy="18" r="1.5"/></svg>
                             <svg v-else-if="f.icon === 'bell'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            <svg v-else-if="f.icon === 'play'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor" stroke="none"/></svg>
+                            <svg v-else-if="f.icon === 'columns'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>
+                            <svg v-else-if="f.icon === 'map'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/><line x1="8" y1="3" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="21"/></svg>
+                            <svg v-else-if="f.icon === 'trophy'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M5 4H3v2a3 3 0 0 0 3 3"/><path d="M19 4h2v2a3 3 0 0 1-3 3"/></svg>
+                            <svg v-else-if="f.icon === 'clock'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                            <svg v-else-if="f.icon === 'refresh'" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                         </div>
                         <div>
                             <div class="text-white font-semibold mb-1">{{ f.title }}</div>

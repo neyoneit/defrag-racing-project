@@ -6,9 +6,11 @@ const props = defineProps({
     variant: { type: String, default: 'servers' },
 });
 
+// Bumped to _v2 on the launcher re-launch so anyone who dismissed the old
+// banner (before it was temporarily disabled) sees it again.
 const STORAGE_KEYS = {
-    servers: 'launcher_banner_dismissed_servers',
-    demos: 'launcher_banner_dismissed_demos',
+    servers: 'launcher_banner_dismissed_servers_v2',
+    demos: 'launcher_banner_dismissed_demos_v2',
 };
 
 const dismissed = ref(true);
