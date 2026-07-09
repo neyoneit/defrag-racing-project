@@ -1,6 +1,6 @@
 # Launcher showcase media
 
-Files served statically at `/launcher/media/...` and listed in
+Files served statically at `/launcher-media/...` and listed in
 `resources/js/Pages/Launcher.vue` (`showcaseSlides`). Drop the files here with
 these names and the showcase lights up automatically. To add/remove/reorder
 slides, edit the `showcaseSlides` array.
