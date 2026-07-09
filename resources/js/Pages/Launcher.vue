@@ -11,17 +11,17 @@ import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref, onMounted } from 'vue';
 import LauncherShowcase from '@/Components/LauncherShowcase.vue';
 
-// Media shown under the hero. Drop the files in public/launcher/media/ (see the
+// Media shown under the hero. Drop the files in public/launcher-media/ (see the
 // README there for the expected names). First slide is the looping demo clip.
 const showcaseSlides = [
-    { type: 'image', src: '/launcher/media/player.png', alt: 'Demo playing inside the launcher', caption: 'Watch demos right inside the launcher' },
-    { type: 'image', src: '/launcher/media/compare.png', alt: 'Demos compared side by side', caption: 'Compare up to four runs side by side, locked together' },
-    { type: 'image', src: '/launcher/media/demos.png', alt: 'Demos tab with auto-backup', caption: 'Auto-backup every run as you play' },
-    { type: 'image', src: '/launcher/media/servers.png', alt: 'Server browser', caption: 'Browse servers and connect in one click' },
-    { type: 'image', src: '/launcher/media/records.png', alt: 'Records tab', caption: 'Latest VQ3 + CPM records on your desktop' },
-    { type: 'image', src: '/launcher/media/maps.png', alt: 'Maps browser', caption: 'Find maps and run them offline' },
-    { type: 'image', src: '/launcher/media/history.png', alt: 'Connection history', caption: 'Reconnect to servers you recently joined' },
-    { type: 'image', src: '/launcher/media/notifications.png', alt: 'Notifications', caption: 'Record alerts and render-ready notifications' },
+    { type: 'image', src: '/launcher-media/player.png', alt: 'Demo playing inside the launcher', caption: 'Watch demos right inside the launcher' },
+    { type: 'image', src: '/launcher-media/compare.png', alt: 'Demos compared side by side', caption: 'Compare up to four runs side by side, locked together' },
+    { type: 'image', src: '/launcher-media/demos.png', alt: 'Demos tab with auto-backup', caption: 'Auto-backup every run as you play' },
+    { type: 'image', src: '/launcher-media/servers.png', alt: 'Server browser', caption: 'Browse servers and connect in one click' },
+    { type: 'image', src: '/launcher-media/records.png', alt: 'Records tab', caption: 'Latest VQ3 + CPM records on your desktop' },
+    { type: 'image', src: '/launcher-media/maps.png', alt: 'Maps browser', caption: 'Find maps and run them offline' },
+    { type: 'image', src: '/launcher-media/history.png', alt: 'Connection history', caption: 'Reconnect to servers you recently joined' },
+    { type: 'image', src: '/launcher-media/notifications.png', alt: 'Notifications', caption: 'Record alerts and render-ready notifications' },
 ];
 
 const props = defineProps({
