@@ -179,13 +179,19 @@ class DefragliveContestResource extends Resource
                             }
                             // Credit the prize back as a real site donation so it
                             // shows up in the donations progress right away.
+                            // donor_email matters: isDonor()/getDonationTotal()
+                            // aggregate a user's donations by email match, so
+                            // without it the prize wouldn't count toward the
+                            // winner's donor stats.
                             \App\Models\SiteDonation::create([
                                 'user_id' => $record->winner_user_id,
+                                'donor_email' => $record->winner?->email,
                                 'donor_name' => $plainWinner ?: 'DefragLive contest winner',
                                 'amount' => $record->prize_amount,
                                 'currency' => $record->prize_currency,
                                 'donation_date' => now()->toDateString(),
-                                'note' => "DefragLive contest prize donated back ({$record->title})",
+                                'note' => "DefragLive contest prize donated back ({$record->title}) - "
+                                    . url('/defraglive/contest'),
                                 'status' => 'approved',
                             ]);
                             Notification::make()->title('Marked as donated')

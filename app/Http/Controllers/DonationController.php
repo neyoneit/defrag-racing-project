@@ -16,8 +16,12 @@ class DonationController extends Controller
     {
         $currentYear = now()->year;
 
-        // Get only approved donations and self-raised money
-        $donations = SiteDonation::approved()->orderBy('donation_date', 'desc')->get();
+        // Get only approved donations and self-raised money. The linked user
+        // (if any) drives the avatar + profile link on the donation card.
+        $donations = SiteDonation::approved()
+            ->with('user:id,name,profile_photo_path')
+            ->orderBy('donation_date', 'desc')
+            ->get();
         $selfRaisedMoney = SelfRaisedMoney::orderBy('earned_date', 'desc')->get();
         $goal = DonationGoal::where('year', $currentYear)->first();
         $allGoals = DonationGoal::all()->keyBy('year'); // Get all goals indexed by year
