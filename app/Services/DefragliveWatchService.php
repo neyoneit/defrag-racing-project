@@ -8,7 +8,6 @@ use App\Models\OnlinePlayer;
 use App\Models\Server;
 use App\Models\User;
 use App\Models\UserAlias;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -61,7 +60,7 @@ class DefragliveWatchService
 
         // No one being spectated, or the bot is watching itself (idle) -> the
         // current watch stretch is over; close it and credit nobody.
-        if (!is_array($current) || $this->isBot($current, $serverstate)) {
+        if (! is_array($current) || $this->isBot($current, $serverstate)) {
             $this->closeOpenSession();
 
             return;
@@ -91,7 +90,7 @@ class DefragliveWatchService
                     $open->seconds = $this->span($open->started_at, now());
                     $open->last_seen_at = now();
                     $open->mapname = $mapname ?: $open->mapname;
-                    if (!$open->mdd_id && $identity['mdd_id']) {
+                    if (! $open->mdd_id && $identity['mdd_id']) {
                         $open->mdd_id = $identity['mdd_id'];
                         $open->user_id = $identity['user_id'];
                     }
@@ -120,7 +119,7 @@ class DefragliveWatchService
     {
         DB::transaction(function () {
             $open = DefragliveWatchSession::open()->lockForUpdate()->first();
-            if (!$open) {
+            if (! $open) {
                 return;
             }
 
@@ -155,7 +154,7 @@ class DefragliveWatchService
     /** Whole seconds between two timestamps (>= 0). */
     private function span($start, $end): int
     {
-        if (!$start || !$end) {
+        if (! $start || ! $end) {
             return 0;
         }
 
@@ -204,7 +203,7 @@ class DefragliveWatchService
         }
 
         // 2) Clean-name match against the live player map.
-        if (!$mddId && $clean !== '') {
+        if (! $mddId && $clean !== '') {
             $op = OnlinePlayer::whereNotNull('mdd_id')
                 ->get(['name', 'mdd_id'])
                 ->first(fn ($p) => $this->cleanName((string) $p->name) === $clean);
@@ -214,7 +213,7 @@ class DefragliveWatchService
         }
 
         // 3) Approved alias history.
-        if (!$mddId && $clean !== '') {
+        if (! $mddId && $clean !== '') {
             $alias = UserAlias::query()
                 ->whereNotNull('mdd_id')
                 ->get(['mdd_id', 'alias'])
@@ -236,16 +235,26 @@ class DefragliveWatchService
      */
     public function leaderboard(DefragliveContest $contest, ?int $limit = 10): array
     {
+        $periodStart = $contest->starts_at->copy();
+        $periodEnd = $contest->ends_at->copy();
+        $now = now();
+        $windowEnd = $now->lessThan($periodEnd) ? $now : $periodEnd;
+
         $rows = DefragliveWatchSession::query()
-            ->where('started_at', '>=', $contest->starts_at)
-            ->where('started_at', '<=', $contest->ends_at)
+            // Include every session that overlaps the contest. A continuous
+            // watch can start in the previous period or end in the next one.
+            ->where('started_at', '<', $periodEnd)
+            ->where(function ($query) use ($periodStart) {
+                $query->whereNull('ended_at')
+                    ->orWhere('ended_at', '>', $periodStart);
+            })
             ->orderBy('id')
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $groups = [];
         foreach ($rows as $r) {
             $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
-            if (!isset($groups[$key])) {
+            if (! isset($groups[$key])) {
                 $groups[$key] = [
                     'mdd_id' => $r->mdd_id ? (int) $r->mdd_id : null,
                     'user_id' => $r->user_id ? (int) $r->user_id : null,
@@ -254,11 +263,18 @@ class DefragliveWatchService
                     'seconds' => 0,
                 ];
             }
-            // Still-open session = currently being watched; count it live to now
-            // (its stored seconds only updates on an emit, which may be silent).
-            $groups[$key]['seconds'] += $r->ended_at
-                ? (int) $r->seconds
-                : $this->span($r->started_at, now());
+            // Count only the part inside this contest. Using the timestamps
+            // avoids credit leaking across rollover boundaries, including for
+            // an open session whose stored seconds updates only on an emit.
+            $sessionStart = $r->started_at->lessThan($periodStart)
+                ? $periodStart
+                : $r->started_at;
+            $rawEnd = $r->ended_at ?? $windowEnd;
+            $sessionEnd = $rawEnd->greaterThan($windowEnd)
+                ? $windowEnd
+                : $rawEnd;
+
+            $groups[$key]['seconds'] += $this->span($sessionStart, $sessionEnd);
             // Keep the latest seen colored name / resolved identity.
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
             if ($r->mdd_id) {
@@ -287,6 +303,69 @@ class DefragliveWatchService
         foreach ($entries as &$e) {
             $e['tickets'] = intdiv($e['seconds'], self::SECONDS_PER_TICKET);
             $e['user'] = $e['user_id'] ? $users->get($e['user_id']) : null;
+        }
+
+        return $entries;
+    }
+
+    /**
+     * All-time watch totals across EVERY recorded session (no contest window),
+     * grouped by the same identity rules as leaderboard(). Powers the public
+     * page's expandable "all-time stats" view; $limit = null returns everyone.
+     */
+    public function allTimeLeaderboard(?int $limit = null): array
+    {
+        $rows = DefragliveWatchSession::query()
+            ->orderBy('id')
+            ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
+
+        $groups = [];
+        foreach ($rows as $r) {
+            $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
+            if (! isset($groups[$key])) {
+                $groups[$key] = [
+                    'mdd_id' => $r->mdd_id ? (int) $r->mdd_id : null,
+                    'user_id' => $r->user_id ? (int) $r->user_id : null,
+                    'name' => $r->player_name,
+                    'seconds' => 0,
+                    'sessions' => 0,
+                ];
+            }
+            // An open session is being watched right now - count it live.
+            $groups[$key]['seconds'] += $r->ended_at
+                ? (int) $r->seconds
+                : $this->span($r->started_at, now());
+            $groups[$key]['sessions']++;
+            $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
+            if ($r->mdd_id) {
+                $groups[$key]['mdd_id'] = (int) $r->mdd_id;
+            }
+            if ($r->user_id) {
+                $groups[$key]['user_id'] = (int) $r->user_id;
+            }
+        }
+
+        $entries = array_values($groups);
+        usort($entries, fn ($a, $b) => $b['seconds'] <=> $a['seconds']);
+
+        if ($limit !== null) {
+            $entries = array_slice($entries, 0, $limit);
+        }
+
+        $userIds = array_values(array_filter(array_column($entries, 'user_id')));
+        $users = $userIds
+            ? User::whereIn('id', $userIds)
+                ->get(['id', 'name', 'plain_name', 'profile_photo_path', 'country', 'mdd_id'])
+                ->keyBy('id')
+            : collect();
+
+        foreach ($entries as &$e) {
+            $u = $e['user_id'] ? $users->get($e['user_id']) : null;
+            $e['user'] = $u ? [
+                'id' => $u->id,
+                'profile_photo_path' => $u->profile_photo_path,
+                'country' => $u->country,
+            ] : null;
         }
 
         return $entries;
@@ -348,7 +427,7 @@ class DefragliveWatchService
 
     private function keyFor($mddId, ?string $clean): string
     {
-        return $mddId ? 'mdd:' . (int) $mddId : 'name:' . (string) $clean;
+        return $mddId ? 'mdd:'.(int) $mddId : 'name:'.(string) $clean;
     }
 
     /** Is the "current player" actually the bot self-spectating (idle)? */

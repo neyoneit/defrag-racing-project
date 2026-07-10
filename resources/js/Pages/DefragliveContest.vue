@@ -1,6 +1,6 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from 'vue';
 
 const props = defineProps({
     contest: Object,
@@ -10,6 +10,7 @@ const props = defineProps({
     nowWatching: Object,
     pastWinners: Array,
     hallOfFame: Array,
+    allTimeWatchers: Array,
 });
 
 const { proxy } = getCurrentInstance();
@@ -19,9 +20,24 @@ const TWITCH_CHANNEL = 'defraglive';
 
 // Live countdown to the end of the period.
 const now = ref(Date.now());
+const receivedAt = ref(Date.now());
 let timer = null;
-onMounted(() => { timer = setInterval(() => { now.value = Date.now(); }, 1000); });
-onUnmounted(() => { if (timer) clearInterval(timer); });
+let refreshTimer = null;
+onMounted(() => {
+    timer = setInterval(() => { now.value = Date.now(); }, 1000);
+    refreshTimer = setInterval(() => {
+        router.reload({
+            only: ['leaderboard', 'totalTickets', 'myEntry', 'nowWatching'],
+            preserveScroll: true,
+            preserveState: true,
+        });
+    }, 30000);
+});
+onUnmounted(() => {
+    if (timer) clearInterval(timer);
+    if (refreshTimer) clearInterval(refreshTimer);
+});
+watch(() => props.nowWatching, () => { receivedAt.value = Date.now(); });
 
 const timeLeft = computed(() => {
     if (!props.contest?.ends_at) return null;
@@ -46,10 +62,70 @@ const fmtWatch = (seconds) => {
     return `${s}s`;
 };
 
-const maxSeconds = computed(() => Math.max(1, ...(props.leaderboard || []).map(e => e.seconds || 0)));
+const liveDelta = computed(() => Math.max(0, Math.floor((now.value - receivedAt.value) / 1000)));
+const entrySeconds = (entry) => Math.max(0, Number(entry?.seconds || 0)) + (entry?.is_current ? liveDelta.value : 0);
+const currentWatchSeconds = computed(() => props.nowWatching ? entrySeconds({
+    seconds: props.nowWatching.seconds,
+    is_current: true,
+}) : 0);
+const maxSeconds = computed(() => Math.max(1, ...(props.leaderboard || []).map(entrySeconds)));
 const odds = (tickets) => props.totalTickets > 0 ? (tickets / props.totalTickets * 100) : 0;
 const photo = (u) => u?.profile_photo_path ? '/storage/' + u.profile_photo_path : '/images/null.jpg';
 const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-500';
+
+// All-time watch stats: lazy Inertia prop, fetched when the view is expanded.
+// Loads 40 rows at a time; scrolling near the bottom of the list fetches the
+// next 40 (the server just re-slices with a bigger limit).
+const WATCHERS_PAGE = 40;
+const showAllTime = ref(false);
+const allTimeLoading = ref(false);
+const watchersLimit = ref(0); // last limit actually requested
+const watchersDone = computed(() =>
+    watchersLimit.value > 0 && (props.allTimeWatchers?.length ?? 0) < watchersLimit.value);
+
+const fetchWatchers = (limit, onDone) => {
+    allTimeLoading.value = true;
+    router.reload({
+        only: ['allTimeWatchers'],
+        data: { watchers_limit: limit },
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => { allTimeLoading.value = false; watchersLimit.value = limit; onDone?.(); },
+    });
+};
+const toggleAllTime = () => {
+    if (showAllTime.value) { showAllTime.value = false; return; }
+    if (props.allTimeWatchers) { showAllTime.value = true; return; }
+    fetchWatchers(WATCHERS_PAGE, () => { showAllTime.value = true; });
+};
+const onWatchersScroll = (e) => {
+    const el = e.target;
+    if (allTimeLoading.value || watchersDone.value) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+        fetchWatchers(watchersLimit.value + WATCHERS_PAGE);
+    }
+};
+
+// Long durations read better with days: "3d 7h", then "5h 12m", then "42m".
+const fmtLong = (seconds) => {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    if (d) return `${d}d ${h}h`;
+    if (h) return `${h}h ${m}m`;
+    return `${m}m`;
+};
+
+// How a past contest's prize was settled (see DefragliveContest statuses).
+const statusLabel = (s) => ({
+    paid: 'paid',
+    donated: 'donated to the site',
+    forwarded: 'forwarded to next winner',
+}[s] || 'payout pending');
+const statusColor = (s) => ({
+    paid: 'text-emerald-500',
+    donated: 'text-sky-400',
+    forwarded: 'text-indigo-400',
+}[s] || 'text-amber-500');
 </script>
 
 <template>
@@ -127,6 +203,7 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                                 <div class="text-[11px] uppercase tracking-wide text-gray-300">Now spectating</div>
                                 <div class="text-2xl md:text-3xl font-black leading-tight" v-html="q3tohtml(nowWatching.name)"></div>
                                 <div v-if="nowWatching.mapname" class="text-sm text-gray-300 mt-0.5">on <span class="font-semibold text-white">{{ nowWatching.mapname }}</span></div>
+                                <div class="text-xs text-purple-200 mt-1">Watched for {{ fmtWatch(currentWatchSeconds) }}</div>
                             </template>
                             <template v-else>
                                 <div class="text-xl font-black text-white">DefragLive</div>
@@ -160,6 +237,7 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                         <span class="text-gray-400">Now spectating</span>
                         <span class="font-bold" v-html="q3tohtml(nowWatching.name)"></span>
                         <span v-if="nowWatching.mapname" class="text-gray-500">on {{ nowWatching.mapname }}</span>
+                        <span class="text-purple-300 font-semibold">for {{ fmtWatch(currentWatchSeconds) }}</span>
                     </div>
                 </div>
 
@@ -169,6 +247,12 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                             {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.prize_amount }}{{ contest.prize_currency !== 'USD' ? ' ' + contest.prize_currency : '' }}
                         </div>
                         <div class="text-sm font-bold uppercase tracking-widest text-gray-300">prize</div>
+                        <!-- Pool transparency: base prize vs what previous winners forwarded in -->
+                        <div v-if="contest.carried_over_amount > 0" class="text-[11px] text-purple-200/90 mt-1 leading-snug">
+                            {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ (contest.prize_amount - contest.carried_over_amount).toFixed(2) }} base
+                            + {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.carried_over_amount.toFixed(2) }}
+                            carried over from previous winners
+                        </div>
                     </div>
                     <div v-if="timeLeft && !timeLeft.ended" class="flex gap-2.5 font-mono">
                         <div v-for="part in [['d', timeLeft.d], ['h', timeLeft.h], ['m', timeLeft.m], ['s', timeLeft.s]]" :key="part[0]"
@@ -195,7 +279,7 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
             </div>
             <div>
                 <div class="text-xs uppercase text-gray-500">Watched</div>
-                <div class="text-2xl font-black text-white">{{ fmtWatch(myEntry.seconds) }}</div>
+                <div class="text-2xl font-black text-white">{{ fmtWatch(entrySeconds(myEntry)) }}</div>
             </div>
             <div>
                 <div class="text-xs uppercase text-gray-500">Tickets</div>
@@ -225,15 +309,16 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                         <component :is="e.user ? Link : 'span'" :href="e.user ? `/profile/${e.user.id}` : undefined"
                             class="font-semibold truncate block" :class="e.user ? 'hover:underline' : ''">
                             <span v-html="q3tohtml(e.name)"></span>
+                            <span v-if="e.is_current" class="ml-2 text-[10px] uppercase tracking-wider text-red-400">Live</span>
                         </component>
                         <div class="mt-1 h-1.5 rounded-full bg-gray-800 overflow-hidden">
                             <div class="h-full rounded-full bg-gradient-to-r from-purple-500 to-emerald-400"
-                                :style="{ width: Math.max(3, (e.seconds / maxSeconds) * 100) + '%' }"></div>
+                                :style="{ width: Math.max(3, (entrySeconds(e) / maxSeconds) * 100) + '%' }"></div>
                         </div>
                     </div>
 
                     <div class="text-right shrink-0">
-                        <div class="font-bold text-white tabular-nums">{{ fmtWatch(e.seconds) }}</div>
+                        <div class="font-bold text-white tabular-nums">{{ fmtWatch(entrySeconds(e)) }}</div>
                         <div class="text-xs text-gray-500">{{ e.tickets }} tickets &middot; {{ odds(e.tickets).toFixed(1) }}%</div>
                     </div>
                 </div>
@@ -244,22 +329,42 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
             </div>
         </div>
 
-        <!-- Past winners -->
+        <!-- Past winners - vertical timeline: center line, cards alternating
+             left/right, newest draw at the top. Collapses to a single left-lined
+             column on mobile. -->
         <div v-if="pastWinners.length">
-            <h2 class="font-bold text-gray-300 mb-3">Past winners</h2>
-            <div class="grid gap-2 sm:grid-cols-2">
+            <h2 class="font-bold text-gray-300 mb-4">Past winners</h2>
+            <div class="relative">
+                <div class="absolute top-1 bottom-1 left-4 sm:left-1/2 w-px bg-gradient-to-b from-purple-400/70 via-white/20 to-transparent"></div>
                 <div v-for="(w, i) in pastWinners" :key="i"
-                    class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3">
-                    <div class="min-w-0">
-                        <component :is="w.winner_user_id ? Link : 'span'" :href="w.winner_user_id ? `/profile/${w.winner_user_id}` : undefined"
-                            class="font-semibold truncate block">
-                            <span v-html="q3tohtml(w.winner_name)"></span>
-                        </component>
-                        <div class="text-xs text-gray-500 truncate">{{ w.title }}</div>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <div class="font-bold text-emerald-400">{{ w.prize_currency === 'USD' ? '$' : '' }}{{ w.prize_amount }}</div>
-                        <div class="text-[11px] uppercase" :class="w.status === 'paid' ? 'text-emerald-500' : 'text-amber-500'">{{ w.status }}</div>
+                    class="relative pl-10 pb-6 sm:pl-0 sm:pb-8 sm:w-[calc(50%-1.5rem)]"
+                    :class="[i % 2 === 0 ? 'sm:mr-auto' : 'sm:ml-auto', i > 0 ? 'sm:-mt-[4.5rem]' : '']">
+                    <!-- node on the line -->
+                    <div class="absolute top-5 left-4 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-purple-400 ring-4 ring-purple-400/20"
+                        :class="i % 2 === 0 ? 'sm:left-auto sm:-right-6 sm:translate-x-1/2' : 'sm:-left-6 sm:-translate-x-1/2'"></div>
+                    <!-- connector from card to the line -->
+                    <div class="hidden sm:block absolute top-[1.35rem] w-6 h-px bg-white/15"
+                        :class="i % 2 === 0 ? '-right-6' : '-left-6'"></div>
+                    <div class="text-[11px] text-gray-500 mb-1" :class="i % 2 === 0 ? 'sm:text-right' : ''">{{ w.drawn_at }}</div>
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3">
+                        <div class="min-w-0">
+                            <component :is="w.winner_user_id ? Link : 'span'" :href="w.winner_user_id ? `/profile/${w.winner_user_id}` : undefined"
+                                class="font-semibold truncate block">
+                                <span v-html="q3tohtml(w.winner_name)"></span>
+                            </component>
+                            <div class="text-xs text-gray-500 truncate">{{ w.title }}</div>
+                            <div v-if="w.winner_seconds" class="text-xs text-purple-300/80 truncate">
+                                {{ fmtWatch(w.winner_seconds) }} watched
+                                <template v-if="w.total_tickets"> · {{ w.winner_tickets }}/{{ w.total_tickets }} tickets ({{ (w.winner_tickets / w.total_tickets * 100).toFixed(1) }}% odds)</template>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="font-bold text-emerald-400">{{ w.prize_currency === 'USD' ? '$' : '' }}{{ w.prize_amount }}</div>
+                            <div v-if="w.carried_over_amount > 0" class="text-[10px] text-purple-300/80 leading-tight">
+                                incl. {{ w.prize_currency === 'USD' ? '$' : '' }}{{ w.carried_over_amount.toFixed(2) }} carried over
+                            </div>
+                            <div class="text-[11px] uppercase" :class="statusColor(w.status)">{{ statusLabel(w.status) }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -282,9 +387,44 @@ const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300'
                     <div class="text-right shrink-0">
                         <div class="font-bold text-white">{{ h.wins }} {{ h.wins === 1 ? 'win' : 'wins' }}</div>
                         <div class="text-xs text-emerald-400">{{ h.currency === 'USD' ? '$' : '' }}{{ h.total.toFixed(2) }}{{ h.currency !== 'USD' ? ' ' + h.currency : '' }} won</div>
+                        <div v-if="h.seconds" class="text-[11px] text-purple-300/80">{{ fmtWatch(h.seconds) }} watched</div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- All-time watch stats - every watcher ever, loaded on demand -->
+        <div class="mt-8">
+            <button @click="toggleAllTime"
+                class="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm font-semibold text-gray-300 hover:bg-white/5 transition-colors">
+                <span>📊</span>
+                <span>{{ showAllTime ? 'Hide all-time watch stats' : 'Show all-time watch stats' }}</span>
+                <svg class="w-4 h-4 transition-transform" :class="showAllTime ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                <svg v-if="allTimeLoading" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" class="opacity-25"/><path d="M22 12a10 10 0 0 1-10 10" class="opacity-75"/></svg>
+            </button>
+            <div v-if="showAllTime && allTimeWatchers?.length" class="mt-3 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden shadow-2xl">
+                <div class="px-4 py-2.5 text-xs text-gray-500 border-b border-white/5">
+                    Everyone who has ever been watched on the DefragLive stream - total spectated time across all contests.
+                </div>
+                <div class="max-h-96 overflow-y-auto divide-y divide-white/5" @scroll.passive="onWatchersScroll">
+                    <div v-for="(t, i) in allTimeWatchers" :key="i" class="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5">
+                        <div class="w-7 text-center font-black" :class="rankColor(i)">{{ i + 1 }}</div>
+                        <img :src="photo(t.user)" class="w-7 h-7 rounded-full object-cover shrink-0" alt="">
+                        <img v-if="t.user?.country" :src="`/images/flags/${t.user.country}.png`" class="w-5 h-3.5 shrink-0" onerror="this.style.display='none'">
+                        <component :is="t.user ? Link : 'span'" :href="t.user ? `/profile/${t.user.id}` : undefined"
+                            class="min-w-0 flex-1 font-semibold truncate text-sm" :class="t.user ? 'hover:underline' : ''">
+                            <span v-html="q3tohtml(t.name)"></span>
+                        </component>
+                        <div class="text-right shrink-0">
+                            <div class="font-bold text-purple-300 text-sm">{{ fmtLong(t.seconds) }}</div>
+                            <div class="text-[11px] text-gray-500">{{ t.sessions }} {{ t.sessions === 1 ? 'session' : 'sessions' }}</div>
+                        </div>
+                    </div>
+                    <div v-if="allTimeLoading" class="py-3 text-center text-xs text-gray-500">Loading more…</div>
+                    <div v-else-if="watchersDone" class="py-3 text-center text-xs text-gray-600">That's everyone!</div>
+                </div>
+            </div>
+            <div v-else-if="showAllTime" class="mt-3 text-center text-sm text-gray-500 py-4">No watch time recorded yet.</div>
         </div>
     </div>
 </template>

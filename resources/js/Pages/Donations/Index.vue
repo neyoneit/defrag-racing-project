@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Teleport } from 'vue';
 
 const props = defineProps({
@@ -437,6 +437,36 @@ const formatDate = (dateString) => {
     });
 };
 
+// --- Donation row presentation helpers -------------------------------------
+
+// Split a note into text/link parts so URLs render as safe <a> tags (we never
+// v-html user content).
+const noteParts = (note) => {
+    const parts = [];
+    const re = /https?:\/\/[^\s]+/g;
+    let last = 0, m;
+    while ((m = re.exec(note)) !== null) {
+        if (m.index > last) parts.push({ link: false, v: note.slice(last, m.index) });
+        parts.push({ link: true, v: m[0] });
+        last = m.index + m[0].length;
+    }
+    if (last < note.length) parts.push({ link: false, v: note.slice(last) });
+    return parts;
+};
+
+// Prizes donated back from the DefragLive watch contest get a special badge
+// (the note is machine-written by the admin "Resolve prize" action).
+const isContestDonation = (note) => (note || '').startsWith('DefragLive contest prize donated back');
+
+// Fallback avatar: initials on a hue picked from the donor's name, so rows
+// without a linked account still get a distinct, stable color.
+const donorInitials = (name) => (name || 'A').trim().slice(0, 2).toUpperCase();
+const donorHue = (name) => {
+    let h = 0;
+    for (const c of (name || 'anon')) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return h;
+};
+
 // Currency symbols
 const currencySymbol = computed(() => {
     const symbols = {
@@ -703,14 +733,18 @@ const getYearProgress = (year, yearTotal) => {
                                 </svg>
                                 <h3 class="text-2xl font-bold text-white">{{ yearData.year }}</h3>
                             </div>
-                            <div class="flex flex-col items-end gap-1">
-                                <div class="text-2xl font-bold text-green-400">{{ currencySymbol }}{{ yearData.total.toFixed(2) }}</div>
-                                <div class="flex gap-3 text-xs text-gray-400">
-                                    <span v-if="yearData.donationsTotal > 0" class="flex items-center gap-1">
+                            <div class="flex flex-col items-end gap-2">
+                                <div class="text-4xl font-black text-green-400 tabular-nums leading-none drop-shadow-[0_0_12px_rgba(34,197,94,0.35)]">
+                                    {{ currencySymbol }}{{ yearData.total.toFixed(2) }}
+                                </div>
+                                <div class="flex gap-2">
+                                    <span v-if="yearData.donationsTotal > 0"
+                                        class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/25 text-xs font-semibold text-green-300 tabular-nums">
                                         <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                                         {{ currencySymbol }}{{ yearData.donationsTotal.toFixed(2) }} crowd
                                     </span>
-                                    <span v-if="yearData.selfRaisedTotal > 0" class="flex items-center gap-1">
+                                    <span v-if="yearData.selfRaisedTotal > 0"
+                                        class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs font-semibold text-purple-300 tabular-nums">
                                         <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
                                         {{ currencySymbol }}{{ yearData.selfRaisedTotal.toFixed(2) }} self
                                     </span>
@@ -725,21 +759,21 @@ const getYearProgress = (year, yearTotal) => {
                             <!-- Crowd-raised portion (green) -->
                             <div
                                 v-if="yearData.donationsTotal > 0"
-                                class="absolute h-full bg-green-500 transition-all duration-1000"
+                                class="absolute h-full bg-gradient-to-r from-green-600 to-emerald-400 transition-all duration-1000"
                                 :style="{ width: ((yearData.donationsTotal / getYearGoal(yearData.year).amount) * 100) + '%' }"
                             ></div>
                             <!-- Self-raised portion (purple) -->
                             <div
                                 v-if="yearData.selfRaisedTotal > 0"
-                                class="absolute h-full bg-purple-500 transition-all duration-1000"
+                                class="absolute h-full bg-gradient-to-r from-purple-600 to-fuchsia-400 transition-all duration-1000"
                                 :style="{ left: ((yearData.donationsTotal / getYearGoal(yearData.year).amount) * 100) + '%', width: ((yearData.selfRaisedTotal / getYearGoal(yearData.year).amount) * 100) + '%' }"
                             ></div>
                             <!-- Percentage label -->
                             <div class="absolute inset-0 flex items-center justify-end pr-3">
-                                <span class="text-white font-bold text-xs">{{ getYearProgress(yearData.year, yearData.total).percentage }}%</span>
+                                <span class="text-white font-black text-sm tabular-nums drop-shadow">{{ getYearProgress(yearData.year, yearData.total).percentage }}%</span>
                             </div>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1 text-center">
+                        <div class="text-xs font-semibold text-gray-400 mt-1.5 text-center tabular-nums">
                             Goal: {{ currencySymbol }}{{ getYearProgress(yearData.year, yearData.total).goal }}
                         </div>
                     </div>
@@ -748,41 +782,90 @@ const getYearProgress = (year, yearTotal) => {
                     <div v-if="isYearExpanded(yearData.year)">
                         <!-- Donations -->
                         <div v-if="yearData.donations.length > 0" class="mb-4">
-                            <h4 class="text-sm font-bold text-gray-300 mb-2">Donations</h4>
-                            <div class="space-y-1.5">
+                            <div class="flex items-center gap-2.5 mb-3">
+                                <span class="w-1 h-5 rounded-full bg-green-500"></span>
+                                <h4 class="text-base font-black text-white uppercase tracking-wider">Donations</h4>
+                                <span class="px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/25 text-xs font-semibold text-green-300 tabular-nums">{{ yearData.donations.length }}</span>
+                            </div>
+                            <div class="space-y-2">
                                 <div
                                     v-for="donation in yearData.donations"
                                     :key="donation.id"
-                                    class="p-2 bg-black/20 rounded-lg border border-green-500/20"
+                                    class="flex items-start gap-3 p-3 bg-black/30 rounded-xl border transition-colors"
+                                    :class="isContestDonation(donation.note)
+                                        ? 'border-purple-500/30 hover:border-purple-400/50'
+                                        : 'border-green-500/20 hover:border-green-400/40'"
                                 >
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-sm font-medium text-white">{{ donation.donor_name || 'Anonymous Donor' }}</span>
-                                            <span class="text-xs text-gray-500">{{ formatDate(donation.donation_date) }}</span>
+                                    <!-- Avatar: profile photo for linked accounts, tinted initials otherwise -->
+                                    <component :is="donation.user ? Link : 'div'"
+                                        :href="donation.user ? `/profile/${donation.user.id}` : undefined"
+                                        class="shrink-0">
+                                        <img v-if="donation.user?.profile_photo_path"
+                                            :src="'/storage/' + donation.user.profile_photo_path"
+                                            class="w-10 h-10 rounded-full object-cover ring-2 ring-white/10" alt="">
+                                        <div v-else
+                                            class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white/90 ring-2 ring-white/10"
+                                            :style="{ background: `linear-gradient(135deg, hsl(${donorHue(donation.donor_name)}, 45%, 32%), hsl(${(donorHue(donation.donor_name) + 40) % 360}, 45%, 22%))` }">
+                                            {{ donorInitials(donation.donor_name) }}
                                         </div>
-                                        <div class="text-sm font-bold text-green-400">
-                                            {{ currencySymbol }}{{ convertCurrency(donation.amount, donation.currency).toFixed(2) }}
+                                    </component>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <component :is="donation.user ? Link : 'span'"
+                                                :href="donation.user ? `/profile/${donation.user.id}` : undefined"
+                                                class="font-bold text-white truncate" :class="donation.user ? 'hover:underline' : ''">
+                                                {{ donation.donor_name || 'Anonymous Donor' }}
+                                            </component>
+                                            <Link v-if="isContestDonation(donation.note)" href="/defraglive/contest"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-400/30 text-[11px] font-semibold text-purple-300 hover:bg-purple-500/25 transition-colors">
+                                                🎁 DefragLive prize
+                                            </Link>
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-0.5">{{ formatDate(donation.donation_date) }}</div>
+                                        <div v-if="donation.note" class="mt-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-sm text-gray-300">
+                                            <template v-for="(part, pi) in noteParts(donation.note)" :key="pi">
+                                                <a v-if="part.link" :href="part.v" class="text-blue-400 hover:text-blue-300 underline break-all">{{ part.v }}</a>
+                                                <span v-else>{{ part.v }}</span>
+                                            </template>
                                         </div>
                                     </div>
-                                    <div v-if="donation.note" class="mt-1.5 pl-3 border-l-2 border-green-500/30 text-xs text-gray-400 italic">{{ donation.note }}</div>
+                                    <div class="text-lg font-black text-green-400 shrink-0 tabular-nums text-right min-w-[6.5rem]">
+                                        {{ currencySymbol }}{{ convertCurrency(donation.amount, donation.currency).toFixed(2) }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Self-Raised Money -->
                         <div v-if="yearData.selfRaised.length > 0">
-                            <h4 class="text-sm font-bold text-gray-300 mb-2">Self-Raised (YouTube/Twitch)</h4>
-                            <div class="space-y-1.5">
+                            <div class="flex items-center gap-2.5 mb-3 mt-6 pt-5 border-t border-white/10">
+                                <span class="w-1 h-5 rounded-full bg-purple-500"></span>
+                                <h4 class="text-base font-black text-white uppercase tracking-wider">Self-Raised</h4>
+                                <span class="text-xs text-gray-500 font-semibold">YouTube / Twitch</span>
+                                <span class="px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/25 text-xs font-semibold text-purple-300 tabular-nums">{{ yearData.selfRaised.length }}</span>
+                            </div>
+                            <div class="space-y-2">
                                 <div
                                     v-for="money in yearData.selfRaised"
                                     :key="money.id"
-                                    class="flex items-center justify-between p-2 bg-black/20 rounded-lg border border-purple-500/20"
+                                    class="flex items-start gap-3 p-3 bg-black/30 rounded-xl border border-purple-500/20 hover:border-purple-400/40 transition-colors"
                                 >
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-sm font-medium text-white">{{ money.source }}</span>
-                                        <span class="text-xs text-gray-500">{{ formatDate(money.earned_date) }}</span>
+                                    <!-- Source icon: brand-tinted circle (YouTube red, Twitch purple) -->
+                                    <div class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center ring-2 ring-white/10"
+                                        :class="(money.source || '').toLowerCase().includes('youtube')
+                                            ? 'bg-red-600/25 text-red-300'
+                                            : (money.source || '').toLowerCase().includes('twitch')
+                                                ? 'bg-purple-600/25 text-purple-300'
+                                                : 'bg-white/10 text-gray-300'">
+                                        <svg v-if="(money.source || '').toLowerCase().includes('youtube')" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>
+                                        <svg v-else-if="(money.source || '').toLowerCase().includes('twitch')" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.6 4.7h1.7v5h-1.7m4.6-5h1.7v5h-1.7M7 0 2.8 4.2v15.1h5V24l4.2-4.7h3.4L23 11.8V0M21.3 11 18 14.4h-3.4l-3 3v-3H7.8V1.7h13.5z"/></svg>
+                                        <span v-else class="font-black text-sm">{{ (money.source || '?').slice(0, 1).toUpperCase() }}</span>
                                     </div>
-                                    <div class="text-sm font-bold text-purple-400">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-bold text-white truncate">{{ money.source }}</div>
+                                        <div class="text-xs text-gray-500 mt-0.5">{{ formatDate(money.earned_date) }}</div>
+                                    </div>
+                                    <div class="text-lg font-black text-purple-400 shrink-0 tabular-nums text-right min-w-[6.5rem]">
                                         {{ currencySymbol }}{{ convertCurrency(money.amount, money.currency).toFixed(2) }}
                                     </div>
                                 </div>

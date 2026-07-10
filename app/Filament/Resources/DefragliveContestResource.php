@@ -61,6 +61,8 @@ class DefragliveContestResource extends Resource
                         DefragliveContest::STATUS_ACTIVE => 'Active',
                         DefragliveContest::STATUS_CLOSED => 'Closed',
                         DefragliveContest::STATUS_PAID => 'Paid',
+                        DefragliveContest::STATUS_DONATED => 'Donated to the site',
+                        DefragliveContest::STATUS_FORWARDED => 'Forwarded to the next winner',
                     ])
                     ->default(DefragliveContest::STATUS_DRAFT)
                     ->required(),
@@ -100,6 +102,8 @@ class DefragliveContestResource extends Resource
                         DefragliveContest::STATUS_ACTIVE => 'success',
                         DefragliveContest::STATUS_CLOSED => 'warning',
                         DefragliveContest::STATUS_PAID => 'info',
+                        DefragliveContest::STATUS_DONATED => 'success',
+                        DefragliveContest::STATUS_FORWARDED => 'info',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('winner_name')
@@ -132,15 +136,103 @@ class DefragliveContestResource extends Resource
                             ->success()->send();
                     }),
 
-                // Mark a drawn contest as paid out.
-                Tables\Actions\Action::make('markPaid')
-                    ->label('Mark paid')
+                // Settle a drawn contest's prize: paid out, donated back to the
+                // site by the winner, or rolled over into the next contest's
+                // prize pool (bump that contest's prize_amount manually).
+                Tables\Actions\Action::make('resolvePrize')
+                    ->label('Resolve prize')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(fn (DefragliveContest $r) => $r->winner_name !== null && $r->status !== DefragliveContest::STATUS_PAID)
-                    ->action(function (DefragliveContest $record) {
-                        $record->update(['status' => DefragliveContest::STATUS_PAID]);
+                    ->form([
+                        Forms\Components\Radio::make('resolution')
+                            ->label('How was the prize settled?')
+                            ->options([
+                                DefragliveContest::STATUS_PAID => 'Paid to the winner',
+                                DefragliveContest::STATUS_DONATED => 'Donated to the site',
+                                DefragliveContest::STATUS_FORWARDED => 'Forwarded to the next winner',
+                            ])
+                            ->descriptions([
+                                DefragliveContest::STATUS_FORWARDED => 'Adds this prize to the next upcoming contest\'s pool, shown publicly as "carried over from previous winners".',
+                            ])
+                            ->default(DefragliveContest::STATUS_PAID)
+                            ->required()
+                            ->live(),
+                        Forms\Components\Checkbox::make('create_donation')
+                            ->label('Create a site donation record in the winner\'s name')
+                            ->helperText('Shows up immediately in the site donations progress as approved.')
+                            ->default(true)
+                            ->visible(fn (Forms\Get $get) => $get('resolution') === DefragliveContest::STATUS_DONATED),
+                    ])
+                    ->visible(fn (DefragliveContest $r) => $r->winner_name !== null
+                        && ! in_array($r->status, DefragliveContest::RESOLVED_STATUSES, true))
+                    ->action(function (DefragliveContest $record, array $data) {
+                        $record->update(['status' => $data['resolution']]);
+                        $plainWinner = trim(preg_replace('/\^[0-9A-Za-z]/', '', (string) $record->winner_name));
+
+                        if ($data['resolution'] === DefragliveContest::STATUS_DONATED) {
+                            if (empty($data['create_donation'])) {
+                                Notification::make()->title('Marked as donated')
+                                    ->body('No donation record created (checkbox was off).')
+                                    ->success()->send();
+
+                                return;
+                            }
+                            // Credit the prize back as a real site donation so it
+                            // shows up in the donations progress right away.
+                            // donor_email matters: isDonor()/getDonationTotal()
+                            // aggregate a user's donations by email match, so
+                            // without it the prize wouldn't count toward the
+                            // winner's donor stats.
+                            \App\Models\SiteDonation::create([
+                                'user_id' => $record->winner_user_id,
+                                'donor_email' => $record->winner?->email,
+                                'donor_name' => $plainWinner ?: 'DefragLive contest winner',
+                                'amount' => $record->prize_amount,
+                                'currency' => $record->prize_currency,
+                                'donation_date' => now()->toDateString(),
+                                'note' => "DefragLive contest prize donated back ({$record->title}) - "
+                                    . url('/defraglive/contest'),
+                                'status' => 'approved',
+                            ]);
+                            Notification::make()->title('Marked as donated')
+                                ->body("Site donation of {$record->prize_amount} {$record->prize_currency} recorded for {$plainWinner}.")
+                                ->success()->send();
+
+                            return;
+                        }
+
+                        if ($data['resolution'] === DefragliveContest::STATUS_FORWARDED) {
+                            // Roll the prize into the next contest (same currency,
+                            // starting after this one; draft or active).
+                            $next = DefragliveContest::query()
+                                ->whereNull('winner_name')
+                                ->whereKeyNot($record->getKey())
+                                ->where('prize_currency', $record->prize_currency)
+                                ->whereIn('status', [DefragliveContest::STATUS_DRAFT, DefragliveContest::STATUS_ACTIVE])
+                                ->where('starts_at', '>=', $record->starts_at)
+                                ->orderBy('starts_at')
+                                ->first();
+
+                            if ($next) {
+                                $next->update([
+                                    'prize_amount' => $next->prize_amount + $record->prize_amount,
+                                    // Tracked separately so the public page can
+                                    // show "base + carried over from previous
+                                    // winners" instead of one opaque number.
+                                    'carried_over_amount' => $next->carried_over_amount + $record->prize_amount,
+                                ]);
+                                Notification::make()->title('Marked as forwarded')
+                                    ->body("Prize added to \"{$next->title}\" - its pool is now {$next->fresh()->prize_amount} {$next->prize_currency} (of which {$next->fresh()->carried_over_amount} carried over).")
+                                    ->success()->send();
+                            } else {
+                                Notification::make()->title('Marked as forwarded - but no upcoming contest found')
+                                    ->body('Create the next contest and raise its prize manually by this amount.')
+                                    ->warning()->send();
+                            }
+
+                            return;
+                        }
+
                         Notification::make()->title('Marked as paid')->success()->send();
                     }),
 

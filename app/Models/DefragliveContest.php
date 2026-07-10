@@ -18,6 +18,17 @@ class DefragliveContest extends Model
     public const STATUS_ACTIVE = 'active';
     public const STATUS_CLOSED = 'closed';
     public const STATUS_PAID = 'paid';
+    // Prize resolutions other than a payout: the winner donated it back to the
+    // site, or it rolled over into the next contest's prize pool.
+    public const STATUS_DONATED = 'donated';
+    public const STATUS_FORWARDED = 'forwarded';
+
+    /** Statuses meaning the prize is settled (nothing owed to the winner). */
+    public const RESOLVED_STATUSES = [
+        self::STATUS_PAID,
+        self::STATUS_DONATED,
+        self::STATUS_FORWARDED,
+    ];
 
     protected $fillable = [
         'title',
@@ -25,6 +36,7 @@ class DefragliveContest extends Model
         'ends_at',
         'prize_amount',
         'prize_currency',
+        'carried_over_amount',
         'status',
         'winner_mdd_id',
         'winner_user_id',
@@ -42,6 +54,7 @@ class DefragliveContest extends Model
         'ends_at' => 'datetime',
         'drawn_at' => 'datetime',
         'prize_amount' => 'decimal:2',
+        'carried_over_amount' => 'decimal:2',
         'winner_seconds' => 'integer',
         'winner_tickets' => 'integer',
         'total_tickets' => 'integer',
