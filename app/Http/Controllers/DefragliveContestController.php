@@ -19,6 +19,10 @@ class DefragliveContestController extends Controller
     public function index(Request $request, DefragliveWatchService $service)
     {
         $contest = DefragliveContest::current()->first();
+        $open = DefragliveWatchSession::open()
+            ->where('last_seen_at', '>=', now()->subSeconds(DefragliveWatchService::LIVE_WINDOW))
+            ->orderByDesc('id')
+            ->first();
 
         $leaderboard = [];
         $totalTickets = 0;
@@ -42,18 +46,17 @@ class DefragliveContestController extends Controller
                         'seconds' => $e['seconds'],
                         'tickets' => $e['tickets'],
                         'odds' => $totalTickets > 0 ? round($e['tickets'] / $totalTickets * 100, 1) : 0,
+                        'is_current' => $this->isCurrent($e, $open),
                     ];
                     break;
                 }
             }
 
-            $leaderboard = array_map($this->present(...), array_slice($all, 0, 10));
+            $leaderboard = array_map(
+                fn (array $entry) => $this->present($entry, $open),
+                array_slice($all, 0, 10)
+            );
         }
-
-        $open = DefragliveWatchSession::open()
-            ->where('started_at', '>=', now()->subHours(DefragliveWatchService::ORPHAN_HOURS))
-            ->orderByDesc('id')
-            ->first();
 
         return Inertia::render('DefragliveContest', [
             'contest' => $contest ? [
@@ -61,6 +64,8 @@ class DefragliveContestController extends Controller
                 'title' => $contest->title,
                 'prize_amount' => $contest->prize_amount,
                 'prize_currency' => $contest->prize_currency,
+                // Forwarded in by previous winners; base = amount - carried.
+                'carried_over_amount' => (float) $contest->carried_over_amount,
                 'starts_at' => $contest->starts_at?->toIso8601String(),
                 'ends_at' => $contest->ends_at?->toIso8601String(),
             ] : null,
@@ -70,6 +75,7 @@ class DefragliveContestController extends Controller
             'nowWatching' => $open ? [
                 'name' => $open->player_name,
                 'mapname' => $open->mapname,
+                'seconds' => (int) ($open->started_at?->diffInSeconds(now()) ?? $open->seconds),
                 'map_thumbnail' => $open->mapname
                     ? \App\Models\Map::where('name', $open->mapname)->value('thumbnail')
                     : null,
@@ -84,10 +90,23 @@ class DefragliveContestController extends Controller
                     'winner_user_id' => $c->winner_user_id,
                     'prize_amount' => $c->prize_amount,
                     'prize_currency' => $c->prize_currency,
+                    'carried_over_amount' => (float) $c->carried_over_amount,
                     'drawn_at' => $c->drawn_at?->toDateString(),
                     'status' => $c->status,
+                    'winner_seconds' => (int) $c->winner_seconds,
+                    'winner_tickets' => (int) $c->winner_tickets,
+                    'total_tickets' => (int) $c->total_tickets,
                 ]),
             'hallOfFame' => $this->hallOfFame($service),
+            // Loaded on demand (Inertia lazy prop): the page requests it via a
+            // partial reload when the visitor expands the all-time stats view,
+            // growing watchers_limit in steps of 40 as the visitor scrolls.
+            'allTimeWatchers' => Inertia::lazy(fn () => $service->allTimeLeaderboard(
+                // Hard cap: the list grows 40 at a time as the visitor scrolls,
+                // and past rank 400 an all-time list stops being interesting -
+                // this also bounds the largest partial-reload payload.
+                max(1, min(400, (int) $request->input('watchers_limit', 40)))
+            )),
         ]);
     }
 
@@ -98,25 +117,27 @@ class DefragliveContestController extends Controller
     private function hallOfFame(DefragliveWatchService $service): array
     {
         $won = DefragliveContest::whereNotNull('winner_name')
-            ->get(['winner_user_id', 'winner_mdd_id', 'winner_name', 'prize_amount', 'prize_currency']);
+            ->get(['winner_user_id', 'winner_mdd_id', 'winner_name', 'prize_amount', 'prize_currency', 'winner_seconds']);
 
         $groups = [];
         foreach ($won as $c) {
             $key = $c->winner_user_id
-                ? 'u:' . $c->winner_user_id
-                : 'n:' . $service->cleanName((string) $c->winner_name);
+                ? 'u:'.$c->winner_user_id
+                : 'n:'.$service->cleanName((string) $c->winner_name);
 
-            if (!isset($groups[$key])) {
+            if (! isset($groups[$key])) {
                 $groups[$key] = [
                     'winner_user_id' => $c->winner_user_id,
                     'name' => $c->winner_name,
                     'wins' => 0,
                     'total' => 0.0,
                     'currency' => $c->prize_currency,
+                    'seconds' => 0,
                 ];
             }
             $groups[$key]['wins']++;
             $groups[$key]['total'] += (float) $c->prize_amount;
+            $groups[$key]['seconds'] += (int) $c->winner_seconds;
             $groups[$key]['name'] = $c->winner_name ?: $groups[$key]['name'];
         }
 
@@ -144,13 +165,14 @@ class DefragliveContestController extends Controller
     }
 
     /** Shape one leaderboard entry for the page (colored name + resolved user). */
-    private function present(array $e): array
+    private function present(array $e, ?DefragliveWatchSession $open = null): array
     {
         return [
             'name' => $e['name'],
             'seconds' => $e['seconds'],
             'tickets' => $e['tickets'],
             'mdd_id' => $e['mdd_id'],
+            'is_current' => $this->isCurrent($e, $open),
             'user' => $e['user'] ? [
                 'id' => $e['user']->id,
                 'name' => $e['user']->name,
@@ -158,5 +180,20 @@ class DefragliveContestController extends Controller
                 'country' => $e['user']->country,
             ] : null,
         ];
+    }
+
+    private function isCurrent(array $entry, ?DefragliveWatchSession $open): bool
+    {
+        if (! $open) {
+            return false;
+        }
+
+        if ($entry['mdd_id'] && $open->mdd_id) {
+            return (int) $entry['mdd_id'] === (int) $open->mdd_id;
+        }
+
+        return $entry['name_clean'] !== null
+            && $open->player_name_clean !== null
+            && (string) $entry['name_clean'] === (string) $open->player_name_clean;
     }
 }
