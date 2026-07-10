@@ -1,19 +1,55 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue';
 
 const props = defineProps({
     blocks: Array,
+    blocksTotal: Number,
 });
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
 
+// Lazy pagination: 25 blocks per chunk, the next chunk loads when the visitor
+// scrolls near the page bottom (the server just re-slices with a bigger limit).
+const BLOCKS_PAGE = 25;
+const loadingMore = ref(false);
+// Set once a fetch stops growing the list (server cap reached) so the scroll
+// handler can't loop on re-requesting the same slice forever.
+const exhausted = ref(false);
+let requestedLimit = 0;
+const hasMore = computed(() =>
+    !exhausted.value && (props.blocks?.length ?? 0) < (props.blocksTotal ?? 0));
+const onScroll = () => {
+    if (loadingMore.value || !hasMore.value) return;
+    const el = document.documentElement;
+    if (window.innerHeight + window.scrollY < el.scrollHeight - 400) return;
+    loadingMore.value = true;
+    const before = props.blocks?.length ?? 0;
+    requestedLimit = Math.max(requestedLimit, before) + BLOCKS_PAGE;
+    router.reload({
+        only: ['blocks', 'blocksTotal'],
+        data: { blocks_limit: requestedLimit },
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            loadingMore.value = false;
+            if ((props.blocks?.length ?? 0) <= before) exhausted.value = true;
+        },
+    });
+};
+
 // Tick so the open (live) block's duration keeps counting up.
 const now = ref(Date.now());
 let timer = null;
-onMounted(() => { timer = setInterval(() => { now.value = Date.now(); }, 1000); });
-onUnmounted(() => { if (timer) clearInterval(timer); });
+onMounted(() => {
+    timer = setInterval(() => { now.value = Date.now(); }, 1000);
+    window.addEventListener('scroll', onScroll, { passive: true });
+});
+onUnmounted(() => {
+    if (timer) clearInterval(timer);
+    window.removeEventListener('scroll', onScroll);
+});
 
 const photo = (u) => u?.profile_photo_path ? '/storage/' + u.profile_photo_path : '/images/null.jpg';
 
@@ -139,6 +175,9 @@ const byDay = computed(() => {
                     </div>
                 </div>
             </div>
+            <!-- Lazy-load tail: spinner while fetching the next chunk, quiet end note otherwise -->
+            <div v-if="loadingMore" class="py-6 text-center text-sm text-gray-500">Loading more…</div>
+            <div v-else-if="!hasMore && blocks?.length" class="py-6 text-center text-xs text-gray-600">That's the whole log we keep.</div>
         </div>
     </div>
 </template>

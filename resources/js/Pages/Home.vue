@@ -10,6 +10,7 @@
 <script setup>
     import { Head, usePage } from '@inertiajs/vue3';
     import { computed, ref } from 'vue';
+    import DefragliveContestBanner from '@/Components/DefragliveContestBanner.vue';
 
     const props = defineProps({
         maps: Array,
@@ -177,6 +178,12 @@
                                 </svg>
                             </Link>
                         </div>
+                    </div>
+
+                    <!-- Active DefragLive contest: prize + live countdown; hides
+                         itself automatically when no contest is running -->
+                    <div class="mt-3 max-w-3xl mx-auto">
+                        <DefragliveContestBanner variant="hero" />
                     </div>
                 </div>
             </div>

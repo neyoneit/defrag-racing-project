@@ -42,7 +42,7 @@
             rankings: route().current('ranking') || route().current('community'),
             mapsmodels: route().current('maps') || route().current('maps.stats') || route().current('models.*'),
             demos: route().current('demos.*') || route().current('youtube'),
-            challenges: route().current('headhunter.*') || route().current('marketplace.*') || route().current('community.tasks'),
+            challenges: route().current('headhunter.*') || route().current('marketplace.*') || route().current('community.tasks') || route().current('defraglive.*'),
             tournaments: route().current('tournaments.*'),
             wiki: route().current('wiki.*'),
             bundles: route().current('bundles'),
@@ -60,6 +60,7 @@
             headhunter: route().current('headhunter.*'),
             marketplace: route().current('marketplace.*'),
             communityTasks: route().current('community.tasks'),
+            defragliveContest: route().current('defraglive.contest'),
         };
     });
 
@@ -850,6 +851,7 @@
                                     <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
                                     <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
                                     <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
+                                    <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">DefragLive Contest</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -916,6 +918,7 @@
                                         <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
                                         <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
                                         <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
+                                        <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">DefragLive Contest</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items always in More (hidden inline below xl) -->

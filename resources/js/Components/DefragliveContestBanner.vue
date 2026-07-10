@@ -3,9 +3,12 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 // Sitewide nudge toward the contest while one is live, fed by the
-// `defragliveContest` shared Inertia prop (cached). Two layouts:
+// `defragliveContest` shared Inertia prop (cached). Three layouts:
 //  - variant="floating" (default): dismissible fixed card, bottom-left.
 //  - variant="bar": a full-width one-line strip to drop into the footer area.
+//  - variant="hero": in-flow card with the prize and a segmented live
+//    countdown, made for the homepage. Not dismissible - it always shows
+//    the currently active contest (renders nothing when none is live).
 const props = defineProps({
     variant: { type: String, default: 'floating' },
 });
@@ -50,11 +53,52 @@ const prize = computed(() => {
     const c = contest.value;
     return (c.prize_currency === 'USD' ? '$' : '') + c.prize_amount + (c.prize_currency !== 'USD' ? ' ' + c.prize_currency : '');
 });
+
+// Segmented countdown for the hero variant's ticker boxes.
+const countdown = computed(() => {
+    if (!contest.value?.ends_at) return null;
+    const ms = new Date(contest.value.ends_at).getTime() - now.value;
+    if (ms <= 0) return null;
+    const s = Math.floor(ms / 1000);
+    return {
+        d: Math.floor(s / 86400),
+        h: Math.floor((s % 86400) / 3600),
+        m: Math.floor((s % 3600) / 60),
+        s: s % 60,
+    };
+});
 </script>
 
 <template>
+    <!-- Homepage hero card: prize + segmented live countdown -->
+    <Link v-if="variant === 'hero' && contest" href="/defraglive/contest"
+        class="group relative z-10 flex items-center gap-4 flex-wrap justify-center sm:justify-between px-5 py-3.5 bg-purple-950/70 backdrop-blur-sm border border-[#9147ff]/50 rounded-xl hover:bg-purple-900/60 hover:border-[#9147ff]/80 hover:shadow-[0_0_50px_rgba(145,71,255,0.35)] transition-all shadow-[0_4px_20px_rgba(0,0,0,0.4),0_0_30px_rgba(145,71,255,0.2)]">
+        <div class="absolute -top-2 -right-2 px-2.5 py-0.5 bg-gradient-to-r from-[#9147ff] to-fuchsia-500 rounded-full text-[10px] font-black text-white shadow-lg">LIVE</div>
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="text-2xl leading-none">🏆</span>
+            <div class="min-w-0">
+                <div class="text-xs uppercase font-bold tracking-wider text-purple-300">DefragLive Contest</div>
+                <div class="text-sm font-bold text-white truncate">
+                    Most watched player wins <span class="text-emerald-400">{{ prize }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div v-if="countdown" class="flex gap-1.5 font-mono">
+                <div v-for="part in [['d', countdown.d], ['h', countdown.h], ['m', countdown.m], ['s', countdown.s]]" :key="part[0]"
+                    class="bg-black/40 rounded-lg px-2 py-1 text-center min-w-[42px]">
+                    <div class="text-lg font-black text-white tabular-nums leading-none">{{ String(part[1]).padStart(2, '0') }}</div>
+                    <div class="text-[9px] font-bold uppercase tracking-widest text-purple-300">{{ part[0] }}</div>
+                </div>
+            </div>
+            <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform flex-shrink-0 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </div>
+    </Link>
+
     <!-- Full-width one-line strip (footer) -->
-    <Link v-if="variant === 'bar' && contest" href="/defraglive/contest"
+    <Link v-else-if="variant === 'bar' && contest" href="/defraglive/contest"
         class="group block border-y border-[#9147ff]/30 bg-[#9147ff]/10 hover:bg-[#9147ff]/20 transition-colors">
         <div class="max-w-8xl mx-auto px-4 py-2.5 flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-sm text-center">
             <span class="text-lg leading-none">🏆</span>

@@ -20,8 +20,14 @@ use Inertia\Inertia;
  */
 class DefragliveMapLogController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
+        // Lazy pagination: the page renders the first chunk of blocks and
+        // grows blocks_limit via Inertia partial reloads as the visitor
+        // scrolls (same pattern as the contest page's all-time stats). The
+        // 800-session window still bounds the grouping work itself.
+        $blocksLimit = max(1, min(300, (int) $request->input('blocks_limit', 25)));
+
         // Most recent sessions, oldest-first so we can group in order, then we
         // present the blocks newest-first.
         $sessions = DefragliveWatchSession::query()
@@ -76,8 +82,11 @@ class DefragliveMapLogController extends Controller
             $blocks[] = $cur;
         }
 
-        // Newest first.
+        // Newest first, then slice to the requested window - thumbnail/user
+        // resolution below only runs for the blocks actually sent.
         $blocks = array_reverse($blocks);
+        $blocksTotal = count($blocks);
+        $blocks = array_slice($blocks, 0, $blocksLimit);
 
         // Batch-resolve map thumbnails and player users (no N+1).
         $thumbs = Map::whereIn('name', collect($blocks)->pluck('map')->unique()->values())
@@ -120,6 +129,7 @@ class DefragliveMapLogController extends Controller
 
         return Inertia::render('DefragliveMapLog', [
             'blocks' => $payload,
+            'blocksTotal' => $blocksTotal,
         ]);
     }
 }
