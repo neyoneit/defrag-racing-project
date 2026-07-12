@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DefragliveWatchExclusionResource\Pages;
 use App\Models\DefragliveWatchExclusion;
+use App\Models\DefragliveWatchSession;
 use App\Services\DefragliveWatchService;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -38,6 +39,22 @@ class DefragliveWatchExclusionResource extends Resource
     {
         return $form->schema([
             Forms\Components\Section::make('Player')->schema([
+                Forms\Components\Select::make('player_pick')
+                    ->label('Pick a watched player')
+                    ->options(fn () => self::playerOptions())
+                    ->searchable()
+                    ->dehydrated(false)
+                    ->live()
+                    ->afterStateUpdated(function (Forms\Set $set, ?string $state) {
+                        if (! $state) {
+                            return;
+                        }
+                        $p = json_decode($state, true);
+                        $set('player_name', $p['name']);
+                        $set('name_clean', $p['clean']);
+                        $set('mdd_id', $p['mdd']);
+                    })
+                    ->helperText('Everyone the stream has ever watched. Picking one fills the fields below - or skip it and type manually.'),
                 Forms\Components\TextInput::make('player_name')
                     ->label('Player name')
                     ->helperText('Name as seen on stream / leaderboard. Color codes are fine - matching uses the cleaned form below.')
@@ -69,6 +86,40 @@ class DefragliveWatchExclusionResource extends Resource
                     ->helperText('Why the time was excluded, e.g. "AFK-farming watch time on an endless map".'),
             ])->columns(1),
         ]);
+    }
+
+    /**
+     * Every identity the stream has ever watched, one option per leaderboard
+     * key (mdd account, else cleaned name), newest sighting's spelling wins.
+     * Option value carries the full identity as JSON for afterStateUpdated.
+     */
+    protected static function playerOptions(): array
+    {
+        $options = [];
+        $seen = [];
+        $rows = DefragliveWatchSession::query()
+            ->orderByDesc('id')
+            ->get(['mdd_id', 'player_name', 'player_name_clean']);
+        foreach ($rows as $s) {
+            $key = $s->mdd_id ? 'mdd:'.$s->mdd_id : 'name:'.$s->player_name_clean;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $value = json_encode([
+                'name' => $s->player_name,
+                'clean' => $s->player_name_clean,
+                'mdd' => $s->mdd_id ? (int) $s->mdd_id : null,
+            ]);
+            $label = trim(preg_replace('/\^[0-9A-Za-z]/', '', (string) $s->player_name)) ?: $s->player_name_clean;
+            if ($s->mdd_id) {
+                $label .= ' (mdd '.$s->mdd_id.')';
+            }
+            $options[$value] = $label;
+        }
+        natcasesort($options);
+
+        return $options;
     }
 
     public static function table(Table $table): Table
