@@ -14,7 +14,7 @@ class DefragServer
     private $previousData;
 
     public function __construct ($ip, $port) {
-        // socket_connect/socket_sendto on AF_INET need a numeric IPv4 — they
+        // socket_connect/socket_sendto on AF_INET need a numeric IPv4 - they
         // don't resolve hostnames themselves, so credentials that declare a
         // server by FQDN (e.g. "deimos.baseq.fr") silently never connect.
         // Resolve once up front; on failure gethostbyname returns the input
@@ -182,6 +182,7 @@ class DefragServer
         $legacyRegex = '/^(-?\d+)\s+(\d+)\s+"([^"]*)"\s+"([^"]*)"$/';
 
         $parsedPlayers = [];
+        $legacyFormat = false;
 
         foreach ($playerLines as $line) {
             if (empty(trim($line))) {
@@ -223,6 +224,7 @@ class DefragServer
                     'nospec' => ($m[10] == 'nospec' || $m[10] == 'nospecpm'),
                 ];
             } elseif (preg_match($legacyRegex, $line, $m)) {
+                $legacyFormat = true;
                 $idx = count($parsedPlayers);
                 $parsedPlayers[$idx] = [
                     'clientId' => $idx,
@@ -294,6 +296,9 @@ class DefragServer
                 'players' => $scorePlayers,
             ],
             'rcon' => true,
+            // Legacy GTK getdfstatus lacks uid/country/model - rcon dumpuser
+            // still gives richer data there, so the scraper falls back to it.
+            'legacy_format' => $legacyFormat,
         ];
     }
 

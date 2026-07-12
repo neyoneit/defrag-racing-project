@@ -105,29 +105,25 @@ class ScrapeServers extends Command
         try {
             $connection = new DefragServer($server->ip, $server->port);
 
-            // Try rcon first if password available
-            if ($server->rconpassword) {
-                $result = $connection->getRconData($server->rconpassword);
+            // Try getdfstatus first - new engines (KG7X/oDFe extended) send
+            // full player info, so no rcon spam on the server console
+            $result = $connection->getDfStatusData();
 
-                if ($result == 'Bad rconpassword') {
+            // Rcon only when getdfstatus failed or came back in the legacy
+            // format (no uid/country/model) - there dumpuser is still richer
+            if (($result === null || !empty($result['legacy_format'])) && $server->rconpassword) {
+                $rconResult = $connection->getRconData($server->rconpassword);
+
+                if ($rconResult == 'Bad rconpassword') {
                     $this->info('Bad rconpassword ' . $server->ip . ':' . $server->port);
-                    $result = null;
-                } elseif ($result == 'Rcon not usable') {
+                } elseif ($rconResult == 'Rcon not usable') {
                     $this->info('Rcon not usable (missing rs_id ?) ' . $server->ip . ':' . $server->port);
-                    $result = null;
+                } elseif ($rconResult !== null) {
+                    $result = $rconResult;
                 }
             }
 
-            // If rcon failed or not available, try getdfstatus
-            if ($result === null) {
-                $result = $connection->getDfStatusData();
-
-                if ($result !== null) {
-                    $this->info('Using getdfstatus for ' . $server->ip . ':' . $server->port);
-                }
-            }
-
-            // If getdfstatus also failed, fall back to basic getstatus
+            // If both failed, fall back to basic getstatus
             if ($result === null) {
                 $result = $connection->getData();
             }
