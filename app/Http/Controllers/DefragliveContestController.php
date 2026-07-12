@@ -53,9 +53,12 @@ class DefragliveContestController extends Controller
                 }
             }
 
+            // Top 10 by default; "Show all" grows the limit via partial
+            // reloads (same growing-limit pattern as the all-time stats), so
+            // everyone can find themselves. Capped like the all-time list.
             $leaderboard = array_map(
                 fn (array $entry) => $this->present($entry, $open),
-                array_slice($all, 0, 10)
+                array_slice($all, 0, max(10, min(400, (int) $request->input('leaderboard_limit', 10))))
             );
         }
 
@@ -71,6 +74,7 @@ class DefragliveContestController extends Controller
                 'ends_at' => $contest->ends_at?->toIso8601String(),
             ] : null,
             'leaderboard' => $leaderboard,
+            'leaderboardTotal' => isset($all) ? count($all) : 0,
             'totalTickets' => $totalTickets,
             'myEntry' => $myEntry,
             // Bans issued during the ACTIVE contest window - a small factual
