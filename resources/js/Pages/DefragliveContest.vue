@@ -12,6 +12,7 @@ const props = defineProps({
     hallOfFame: Array,
     allTimeWatchers: Array,
     exclusions: Array,
+    leaderboardTotal: Number,
 });
 
 const { proxy } = getCurrentInstance();
@@ -29,6 +30,8 @@ onMounted(() => {
     refreshTimer = setInterval(() => {
         router.reload({
             only: ['leaderboard', 'totalTickets', 'myEntry', 'nowWatching'],
+            // Keep the expanded list expanded across auto-refreshes.
+            data: { leaderboard_limit: boardLimit.value },
             preserveScroll: true,
             preserveState: true,
         });
@@ -73,6 +76,44 @@ const maxSeconds = computed(() => Math.max(1, ...(props.leaderboard || []).map(e
 const odds = (tickets) => props.totalTickets > 0 ? (tickets / props.totalTickets * 100) : 0;
 const photo = (u) => u?.profile_photo_path ? '/storage/' + u.profile_photo_path : '/images/null.jpg';
 const rankColor = (i) => i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-gray-500';
+
+// Period leaderboard: top 10 by default, "Show all" grows it 40 at a time by
+// scrolling (same growing-limit pattern as the all-time stats below), so
+// everyone competing can find themselves.
+const BOARD_PAGE = 40;
+const boardLimit = ref(10);
+const boardExpanded = ref(false);
+const boardLoading = ref(false);
+const boardDone = computed(() =>
+    boardLimit.value >= 400 || (props.leaderboard?.length ?? 0) < boardLimit.value);
+
+const fetchBoard = (limit) => {
+    boardLoading.value = true;
+    router.reload({
+        only: ['leaderboard'],
+        data: { leaderboard_limit: limit },
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => { boardLoading.value = false; boardLimit.value = limit; },
+    });
+};
+const toggleBoard = () => {
+    if (boardExpanded.value) {
+        boardExpanded.value = false;
+        boardLimit.value = 10;
+        fetchBoard(10);
+        return;
+    }
+    boardExpanded.value = true;
+    fetchBoard(BOARD_PAGE);
+};
+const onBoardScroll = (e) => {
+    const el = e.target;
+    if (!boardExpanded.value || boardLoading.value || boardDone.value) return;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 80) {
+        fetchBoard(boardLimit.value + BOARD_PAGE);
+    }
+};
 
 // All-time watch stats: lazy Inertia prop, fetched when the view is expanded.
 // Loads 40 rows at a time; scrolling near the bottom of the list fetches the
@@ -299,7 +340,9 @@ const statusColor = (s) => ({
                 <span class="text-xs text-gray-500">{{ totalTickets }} tickets in the pool</span>
             </div>
 
-            <div v-if="leaderboard.length" class="divide-y divide-white/5">
+            <div v-if="leaderboard.length" class="divide-y divide-white/5"
+                :class="boardExpanded ? 'max-h-[32rem] overflow-y-auto' : ''"
+                @scroll="onBoardScroll">
                 <div v-for="(e, i) in leaderboard" :key="i" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5">
                     <div class="w-7 text-center font-black text-lg" :class="rankColor(i)">{{ i + 1 }}</div>
 
@@ -327,6 +370,18 @@ const statusColor = (s) => ({
 
             <div v-else class="px-4 py-12 text-center text-gray-500">
                 No watch time recorded yet this period. Hop on a server the bot is spectating!
+            </div>
+
+            <!-- Everyone competing, not just the top 10 - fairness: anyone can
+                 find themselves. Expands in place, grows 40 rows per scroll. -->
+            <div v-if="leaderboardTotal > 10" class="px-4 py-2.5 border-t border-white/10 text-center">
+                <button @click="toggleBoard"
+                    class="text-xs font-semibold text-purple-300 hover:text-purple-200 disabled:opacity-50"
+                    :disabled="boardLoading">
+                    <span v-if="boardLoading">Loading...</span>
+                    <span v-else-if="!boardExpanded">Show everyone ({{ leaderboardTotal }})</span>
+                    <span v-else>Show top 10 only</span>
+                </button>
             </div>
 
             <!-- Bans issued during this contest: a small factual note for

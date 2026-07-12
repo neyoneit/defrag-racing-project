@@ -53,9 +53,12 @@ class DefragliveContestController extends Controller
                 }
             }
 
+            // Top 10 by default; "Show all" grows the limit via partial
+            // reloads (same growing-limit pattern as the all-time stats), so
+            // everyone can find themselves. Capped like the all-time list.
             $leaderboard = array_map(
                 fn (array $entry) => $this->present($entry, $open),
-                array_slice($all, 0, 10)
+                array_slice($all, 0, max(10, min(400, (int) $request->input('leaderboard_limit', 10))))
             );
         }
 
@@ -71,6 +74,7 @@ class DefragliveContestController extends Controller
                 'ends_at' => $contest->ends_at?->toIso8601String(),
             ] : null,
             'leaderboard' => $leaderboard,
+            'leaderboardTotal' => isset($all) ? count($all) : 0,
             'totalTickets' => $totalTickets,
             'myEntry' => $myEntry,
             // Bans issued during the ACTIVE contest window - a small factual
@@ -123,6 +127,50 @@ class DefragliveContestController extends Controller
                 max(1, min(400, (int) $request->input('watchers_limit', 40)))
             )),
         ]);
+    }
+
+    /**
+     * OBS stream overlay: a tiny self-contained page (transparent background,
+     * no Inertia/app shell) that shows the current contest's top 3 and polls
+     * overlayData() to stay live. Meant to be added as an OBS Browser Source.
+     */
+    public function overlay()
+    {
+        return response()
+            ->view('defraglive.contest-overlay')
+            // Never cache the shell either - OBS keeps sources for days.
+            ->header('Cache-Control', 'no-store');
+    }
+
+    /** JSON feed for the overlay: top 3 + pool size, cached briefly. */
+    public function overlayData(DefragliveWatchService $service)
+    {
+        $data = cache()->remember('defraglive:contest-overlay', 20, function () use ($service) {
+            $contest = DefragliveContest::current()->first();
+            if (! $contest) {
+                return ['contest' => null, 'top' => []];
+            }
+
+            $all = $service->leaderboard($contest, null);
+            $totalTickets = array_sum(array_map(fn ($e) => max(0, $e['tickets']), $all));
+
+            return [
+                'contest' => [
+                    'title' => $contest->title,
+                    'ends_at' => $contest->ends_at?->toIso8601String(),
+                    'prize_amount' => (float) $contest->prize_amount,
+                    'prize_currency' => $contest->prize_currency,
+                ],
+                'top' => array_map(fn ($e) => [
+                    'name' => $e['name'],
+                    'seconds' => $e['seconds'],
+                    'tickets' => $e['tickets'],
+                    'odds' => $totalTickets > 0 ? round($e['tickets'] / $totalTickets * 100, 1) : 0,
+                ], array_slice($all, 0, 3)),
+            ];
+        });
+
+        return response()->json($data)->header('Cache-Control', 'no-store');
     }
 
     /**
