@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DefragliveContest;
+use App\Models\DefragliveWatchExclusion;
 use App\Models\DefragliveWatchSession;
 use App\Services\DefragliveWatchService;
 use Illuminate\Http\Request;
@@ -72,6 +73,20 @@ class DefragliveContestController extends Controller
             'leaderboard' => $leaderboard,
             'totalTickets' => $totalTickets,
             'myEntry' => $myEntry,
+            // Bans issued during the ACTIVE contest window - a small factual
+            // note under the leaderboard (name, reason, date). Deliberately no
+            // hours/avatars (no trophy for cheating) and nothing for past
+            // contests; the full history stays admin-only.
+            'exclusions' => $contest
+                ? DefragliveWatchExclusion::whereBetween('excluded_before', [$contest->starts_at, $contest->ends_at])
+                    ->orderByDesc('excluded_before')
+                    ->get()
+                    ->map(fn (DefragliveWatchExclusion $x) => [
+                        'name' => trim(preg_replace('/\^[0-9A-Za-z]/', '', $x->player_name)) ?: $x->name_clean,
+                        'reason' => $x->reason,
+                        'date' => $x->excluded_before->toDateString(),
+                    ])
+                : [],
             'nowWatching' => $open ? [
                 'name' => $open->player_name,
                 'mapname' => $open->mapname,
