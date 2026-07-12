@@ -82,6 +82,9 @@ Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name
 
 // DefragLive most-watched-player contest (public leaderboard + raffle odds).
 Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');
+// OBS Browser Source overlay (transparent top-3 widget) + its JSON feed.
+Route::get('/defraglive/contest/overlay', [DefragliveContestController::class, 'overlay'])->name('defraglive.contest.overlay');
+Route::get('/defraglive/contest/overlay.json', [DefragliveContestController::class, 'overlayData'])->name('defraglive.contest.overlay.data');
 Route::get('/defraglive/maps', [DefragliveMapLogController::class, 'index'])->name('defraglive.maps');
 Route::get('/community-tasks', [CommunityTasksController::class, 'index'])->middleware(['auth', 'verified'])->name('community.tasks');
 Route::post('/community-tasks/refresh', [CommunityTasksController::class, 'refresh'])->middleware(['auth', 'verified'])->name('community.tasks.refresh');
