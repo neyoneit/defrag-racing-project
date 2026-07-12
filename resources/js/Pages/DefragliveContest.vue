@@ -11,6 +11,7 @@ const props = defineProps({
     pastWinners: Array,
     hallOfFame: Array,
     allTimeWatchers: Array,
+    exclusions: Array,
 });
 
 const { proxy } = getCurrentInstance();
@@ -326,6 +327,18 @@ const statusColor = (s) => ({
 
             <div v-else class="px-4 py-12 text-center text-gray-500">
                 No watch time recorded yet this period. Hop on a server the bot is spectating!
+            </div>
+
+            <!-- Bans issued during this contest: a small factual note for
+                 transparency (farmed time was voided) and deterrence. No
+                 hours or avatars on purpose - no trophy for cheating. -->
+            <div v-if="exclusions?.length" class="px-4 py-3 border-t border-white/10">
+                <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1.5">Removed from this contest</div>
+                <div v-for="(x, i) in exclusions" :key="i" class="text-xs text-gray-500">
+                    <span class="font-semibold text-gray-400">{{ x.name }}</span>
+                    <span class="mx-1">-</span>{{ x.reason }}
+                    <span class="mx-1">-</span>{{ x.date }}
+                </div>
             </div>
         </div>
 

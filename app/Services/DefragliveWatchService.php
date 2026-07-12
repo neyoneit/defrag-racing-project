@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DefragliveContest;
+use App\Models\DefragliveWatchExclusion;
 use App\Models\DefragliveWatchSession;
 use App\Models\OnlinePlayer;
 use App\Models\Server;
@@ -251,6 +252,8 @@ class DefragliveWatchService
             ->orderBy('id')
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
+        $cutoffs = $this->exclusionCutoffs();
+
         $groups = [];
         foreach ($rows as $r) {
             $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
@@ -269,12 +272,23 @@ class DefragliveWatchService
             $sessionStart = $r->started_at->lessThan($periodStart)
                 ? $periodStart
                 : $r->started_at;
+            // Admin exclusion: anything watched before the ban moment does not
+            // count (the effective window start moves up to the cutoff).
+            $cutoff = $this->cutoffFor($cutoffs, $r->mdd_id, $r->player_name_clean);
+            if ($cutoff && $cutoff->greaterThan($sessionStart)) {
+                $sessionStart = $cutoff;
+            }
             $rawEnd = $r->ended_at ?? $windowEnd;
             $sessionEnd = $rawEnd->greaterThan($windowEnd)
                 ? $windowEnd
                 : $rawEnd;
 
-            $groups[$key]['seconds'] += $this->span($sessionStart, $sessionEnd);
+            // Guard the clamps: a session lying entirely before the exclusion
+            // cutoff (or outside the window) must contribute nothing - span()
+            // is absolute-valued and would count a reversed interval.
+            if ($sessionStart->lessThan($sessionEnd)) {
+                $groups[$key]['seconds'] += $this->span($sessionStart, $sessionEnd);
+            }
             // Keep the latest seen colored name / resolved identity.
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
             if ($r->mdd_id) {
@@ -319,6 +333,8 @@ class DefragliveWatchService
             ->orderBy('id')
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
+        $cutoffs = $this->exclusionCutoffs();
+
         $groups = [];
         foreach ($rows as $r) {
             $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
@@ -331,10 +347,19 @@ class DefragliveWatchService
                     'sessions' => 0,
                 ];
             }
-            // An open session is being watched right now - count it live.
-            $groups[$key]['seconds'] += $r->ended_at
-                ? (int) $r->seconds
-                : $this->span($r->started_at, now());
+            // Admin exclusion: drop the part of the session before the ban
+            // moment (whole session when it ended before the ban).
+            $cutoff = $this->cutoffFor($cutoffs, $r->mdd_id, $r->player_name_clean);
+            $start = ($cutoff && $cutoff->greaterThan($r->started_at)) ? $cutoff : $r->started_at;
+            $end = $r->ended_at ?? now();
+            // An open session is being watched right now - count it live. A
+            // clipped closed session is re-measured from its timestamps
+            // (stored seconds cover the full span).
+            if ($start->lessThan($end)) {
+                $groups[$key]['seconds'] += ($r->ended_at && $start === $r->started_at)
+                    ? (int) $r->seconds
+                    : $this->span($start, $end);
+            }
             $groups[$key]['sessions']++;
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
             if ($r->mdd_id) {
@@ -414,6 +439,49 @@ class DefragliveWatchService
         ]);
 
         return $winner;
+    }
+
+    /**
+     * Per-identity exclusion cutoffs from admin bans: `key => Carbon`, where
+     * watch time BEFORE the cutoff is discarded. Keys mirror keyFor() for both
+     * identity forms so an exclusion hits sessions whether or not they resolved
+     * to an mdd account. Multiple bans of the same player keep the latest.
+     */
+    private function exclusionCutoffs(): array
+    {
+        $cutoffs = [];
+        foreach (DefragliveWatchExclusion::all() as $x) {
+            $keys = [];
+            if ($x->mdd_id) {
+                $keys[] = 'mdd:'.$x->mdd_id;
+            }
+            if ($x->name_clean) {
+                $keys[] = 'name:'.$x->name_clean;
+            }
+            foreach ($keys as $key) {
+                if (! isset($cutoffs[$key]) || $x->excluded_before->greaterThan($cutoffs[$key])) {
+                    $cutoffs[$key] = $x->excluded_before;
+                }
+            }
+        }
+
+        return $cutoffs;
+    }
+
+    /**
+     * The exclusion cutoff applying to one session row (by either identity),
+     * or null. Rows matched by name keep being excluded even after they later
+     * resolve to an mdd account and vice versa.
+     */
+    private function cutoffFor(array $cutoffs, $mddId, ?string $clean): ?\Carbon\Carbon
+    {
+        $byMdd = $mddId ? ($cutoffs['mdd:'.(int) $mddId] ?? null) : null;
+        $byName = $clean ? ($cutoffs['name:'.$clean] ?? null) : null;
+        if ($byMdd && $byName) {
+            return $byMdd->greaterThan($byName) ? $byMdd : $byName;
+        }
+
+        return $byMdd ?? $byName;
     }
 
     /** Strip Quake 3 colour codes, collapse whitespace, lowercase: a stable key. */
