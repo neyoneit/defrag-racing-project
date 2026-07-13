@@ -44,9 +44,13 @@ class StorageBrowserDownloadController extends Controller
         // Reject traversal/degenerate segments outright instead of relying on
         // Flysystem's normalizer (which throws a 500 on '..' escapes). Demo
         // filenames contain brackets etc., so only the segment shape is
-        // constrained, not the character set.
+        // constrained, not the character set. Backslash is rejected too:
+        // Flysystem rewrites '\' to '/' BEFORE resolving '..', so a segment
+        // like '..\other' would otherwise slip past this loop and then
+        // traverse.
         foreach (explode('/', $path) as $segment) {
-            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+            if ($segment === '' || $segment === '.' || $segment === '..'
+                || str_contains($segment, '\\') || str_contains($segment, "\0")) {
                 abort(404);
             }
         }
