@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Pages\Concerns\ValidatesStoragePath;
+use App\Jobs\IndexStorageDirectory;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -11,7 +12,6 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StorageBrowser extends Page
 {
@@ -46,95 +46,59 @@ class StorageBrowser extends Page
     }
 
     /**
-     * One cached listing per directory. The old code listed the directory
-     * twice (directories() + files()) and then stat'ed EVERY file for size
-     * and mtime - one SFTP round trip each, so a folder with thousands of
-     * pk3s took forever. Flysystem's listContents() carries size + mtime in
-     * the listing itself: single traversal, cached 30s (mutations below
-     * invalidate it). Files are paginated in getListingProperty().
-     *
-     * Symlinks (e.g. bsp/, maps/ on the storage VPS) arrive typed as FILES
-     * in the SFTP listing, which made them unbrowsable. Entries that look
-     * like that (no extension or unknown size) get one follow-the-link stat
-     * (directoryExists) and are reclassified as folders when they resolve to
-     * a directory.
+     * Listings are NEVER produced inline anymore: huge SFTP directories
+     * (maps/ mirrors tens of thousands of pk3s) take longer than any HTTP
+     * request may run - clicking maps/ 504'd through Cloudflare. Instead the
+     * cached index is served when present; on a miss an IndexStorageDirectory
+     * job is dispatched exactly once and null is returned, which the page
+     * renders as an "Indexing..." state polled via wire:poll until the job
+     * lands the cache entry. Mutations (upload/mkdir/rename/delete) drop the
+     * entry so the next visit re-indexes.
      */
-    private function rawListing(): array
+    private function rawListing(): ?array
     {
-        $path = $this->currentPath;
+        $cached = Cache::get(IndexStorageDirectory::cacheKey(self::DISK, $this->currentPath));
+        if ($cached !== null) {
+            return $cached;
+        }
 
-        return Cache::remember('dlstorage:list:' . $path, 30, function () use ($path) {
-            $disk = $this->disk();
-            $dirs = [];
-            $files = [];
+        // Cache::add is atomic - only the first request dispatches the job.
+        if (Cache::add(IndexStorageDirectory::pendingKey(self::DISK, $this->currentPath), 1, 600)) {
+            IndexStorageDirectory::dispatch(self::DISK, $this->currentPath);
+        }
 
-            foreach ($disk->getDriver()->listContents($path, false) as $item) {
-                $name = basename($item->path());
-                if ($item->isDir()) {
-                    $dirs[] = ['name' => $name, 'path' => $item->path(), 'type' => 'dir'];
-                } else {
-                    $files[] = [
-                        'name' => $name,
-                        'path' => $item->path(),
-                        'type' => 'file',
-                        'size' => $item->fileSize(),
-                        'mtime' => $item->lastModified(),
-                    ];
-                }
-            }
-
-            // Symlink-to-directory fixup (see docblock).
-            foreach ($files as $i => $f) {
-                $suspicious = $f['size'] === null || ! str_contains($f['name'], '.');
-                if (! $suspicious) {
-                    continue;
-                }
-                try {
-                    if ($disk->directoryExists($f['path'])) {
-                        $dirs[] = ['name' => $f['name'], 'path' => $f['path'], 'type' => 'dir'];
-                        unset($files[$i]);
-                    }
-                } catch (\Throwable) {
-                }
-            }
-
-            $byName = fn ($a, $b) => strnatcasecmp($a['name'], $b['name']);
-            usort($dirs, $byName);
-            $files = array_values($files);
-            usort($files, $byName);
-
-            return ['dirs' => $dirs, 'files' => $files];
-        });
+        return null;
     }
 
     public function getListingProperty(): array
     {
-        try {
-            $all = $this->rawListing();
-        } catch (\Throwable $e) {
+        $all = $this->rawListing();
+
+        if ($all === null) {
+            return ['dirs' => [], 'files' => [], 'totalFiles' => 0, 'indexing' => true];
+        }
+
+        if (! empty($all['error'])) {
             Notification::make()
                 ->title('Cannot list directory')
-                ->body($e->getMessage())
+                ->body($all['error'])
                 ->danger()
                 ->send();
 
-            return ['dirs' => [], 'files' => [], 'totalFiles' => 0];
+            return ['dirs' => [], 'files' => [], 'totalFiles' => 0, 'indexing' => false];
         }
 
         return [
             'dirs' => $all['dirs'],
             'files' => array_slice($all['files'], ($this->page - 1) * self::PER_PAGE, self::PER_PAGE),
             'totalFiles' => count($all['files']),
+            'indexing' => false,
         ];
     }
 
     public function getTotalPagesProperty(): int
     {
-        try {
-            $total = count($this->rawListing()['files']);
-        } catch (\Throwable) {
-            return 1;
-        }
+        $total = count($this->rawListing()['files'] ?? []);
 
         return max(1, (int) ceil($total / self::PER_PAGE));
     }
@@ -151,7 +115,7 @@ class StorageBrowser extends Page
 
     private function forgetListing(): void
     {
-        Cache::forget('dlstorage:list:' . $this->currentPath);
+        Cache::forget(IndexStorageDirectory::cacheKey(self::DISK, $this->currentPath));
     }
 
     public function getBreadcrumbsProperty(): array
@@ -205,33 +169,20 @@ class StorageBrowser extends Page
         $this->page = 1;
     }
 
+    // Same signed-url handoff as the Serverdemos Browser: Livewire can't
+    // reliably carry a streamed download (and dl_storage holds multi-hundred
+    // MB files that must never ride through a Livewire payload). The
+    // controller re-checks auth + permission and streams with no temp file.
     public function downloadFile(string $name)
     {
         $this->validateName($name);
-        $disk = $this->disk();
         $path = $this->joinPath($this->currentPath, $name);
 
-        if (! $disk->exists($path)) {
-            Notification::make()->title('File not found')->danger()->send();
-
-            return null;
-        }
-
-        $size = $disk->size($path);
-
-        return new StreamedResponse(function () use ($disk, $path) {
-            $stream = $disk->readStream($path);
-
-            if (is_resource($stream)) {
-                fpassthru($stream);
-                fclose($stream);
-            }
-        }, 200, [
-            'Content-Type' => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="' . addslashes(basename($name)) . '"',
-            'Content-Length' => (string) $size,
-            'X-Accel-Buffering' => 'no',
-        ]);
+        return redirect()->to(\Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'defraghq.storage-download',
+            now()->addMinutes(5),
+            ['disk' => self::DISK, 'path' => $path],
+        ));
     }
 
     public function mkdirAction(): Action

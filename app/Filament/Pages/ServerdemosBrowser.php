@@ -8,7 +8,6 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ServerdemosBrowser extends Page
 {
@@ -272,6 +271,11 @@ class ServerdemosBrowser extends Page
         Notification::make()->title('Stats refreshed')->success()->send();
     }
 
+    // Livewire can't reliably carry a streamed download itself (a hand-built
+    // StreamedResponse isn't recognised - the button silently did nothing on
+    // prod), so hand the browser a short-lived signed url instead. The
+    // controller re-checks auth + this panel's permission and streams the
+    // file SFTP -> HTTP with no local temp file anywhere.
     public function downloadFile(string $relPath)
     {
         if ($this->selectedUser === '') return null;
@@ -283,26 +287,10 @@ class ServerdemosBrowser extends Page
             return null;
         }
 
-        $disk = $this->disk();
-        if (!$disk->exists($relPath)) {
-            Notification::make()->title('File not found')->danger()->send();
-            return null;
-        }
-
-        $size = $disk->size($relPath);
-        $basename = basename($relPath);
-
-        return new StreamedResponse(function () use ($disk, $relPath) {
-            $stream = $disk->readStream($relPath);
-            if (is_resource($stream)) {
-                fpassthru($stream);
-                fclose($stream);
-            }
-        }, 200, [
-            'Content-Type'        => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="' . addslashes($basename) . '"',
-            'Content-Length'      => (string) $size,
-            'X-Accel-Buffering'   => 'no',
-        ]);
+        return redirect()->to(\Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'defraghq.storage-download',
+            now()->addMinutes(5),
+            ['disk' => self::DISK, 'path' => $relPath],
+        ));
     }
 }

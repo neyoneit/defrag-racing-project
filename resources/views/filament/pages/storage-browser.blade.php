@@ -48,11 +48,25 @@
             @endforeach
 
             <span style="margin-left:auto;color:#71717a;font-size:11px;">
-                {{ count($listing['dirs']) }} folder(s) &middot; {{ $listing['totalFiles'] }} file(s)
+                @if ($listing['indexing'] ?? false)
+                    indexing&hellip;
+                @else
+                    {{ count($listing['dirs']) }} folder(s) &middot; {{ $listing['totalFiles'] }} file(s)
+                @endif
             </span>
         </div>
     </div>
 
+    @if ($listing['indexing'] ?? false)
+        {{-- Big directories are indexed by a queue job (an inline SFTP listing
+             of e.g. maps/ blows every HTTP timeout); poll until it lands. --}}
+        <div wire:poll.2s style="background:#0f0f17;border:1px solid #27272a;border-radius:12px;margin-top:14px;padding:56px;text-align:center;">
+            <div style="color:#fb923c;font-weight:700;font-size:14px;">Indexing this folder&hellip;</div>
+            <div style="color:#71717a;font-size:12px;margin-top:6px;">
+                Large folders (tens of thousands of files) can take a minute on the first visit - the result is then cached.
+            </div>
+        </div>
+    @else
     {{-- Listing --}}
     <div style="background:#0f0f17;border:1px solid #27272a;border-radius:12px;overflow:hidden;margin-top:14px;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -205,8 +219,10 @@
         </table>
     </div>
 
+    @endif
+
     {{-- Pagination (files only; folders always show) --}}
-    @if ($this->totalPages > 1)
+    @if (! ($listing['indexing'] ?? false) && $this->totalPages > 1)
         <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:10px;">
             <button type="button" wire:click="prevPage" @disabled($this->page <= 1)
                 style="background:transparent;border:1px solid #27272a;cursor:pointer;color:#fb923c;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;{{ $this->page <= 1 ? 'opacity:.4;cursor:default;' : '' }}">
