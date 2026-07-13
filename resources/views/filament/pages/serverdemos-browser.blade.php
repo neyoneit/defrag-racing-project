@@ -30,7 +30,7 @@
         };
     @endphp
 
-    <div style="display:grid;grid-template-columns:320px 1fr;gap:14px;align-items:start;">
+    <div wire:init="initSidebar" style="display:grid;grid-template-columns:320px 1fr;gap:14px;align-items:start;">
 
         {{-- Sidebar: SFTP credentials --}}
         <div style="background:#0f0f17;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
@@ -55,14 +55,18 @@
                         onmouseout="this.style.background='{{ $active ? 'rgba(234,88,12,0.10)' : 'transparent' }}'">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
                             <span style="font-weight:600;color:#fafafa;font-size:13px;">{{ $c['sftp_username'] }}</span>
-                            <span style="font-size:11px;color:#fb923c;font-weight:700;">{{ $c['count'] }}</span>
+                            <span style="font-size:11px;color:#fb923c;font-weight:700;">{{ $c['count'] ?? '…' }}</span>
                         </div>
                         <div style="font-size:11px;color:#71717a;margin-top:2px;">
                             {{ $c['owner_name'] }}
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:11px;color:#52525b;margin-top:4px;">
-                            <span>{{ $fmtSize($c['bytes']) }}</span>
-                            <span>{{ $fmtAgo($c['last']) }}</span>
+                            @if ($this->sidebarReady)
+                                <span>{{ $fmtSize($c['bytes']) }}</span>
+                                <span>{{ $fmtAgo($c['last']) }}</span>
+                            @else
+                                <span>loading stats…</span>
+                            @endif
                         </div>
                     </button>
                 @endforeach
