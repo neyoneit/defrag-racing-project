@@ -110,14 +110,39 @@ class ServerdemosBrowser extends Page
         })->sortByDesc('last')->values()->all();
     }
 
-    // Main pane: the current page of files for the selected user.
+    // Main pane: the current page of files for the selected user, with the
+    // demo's mdd id (second bracket of the filename) resolved to a player -
+    // the scraped mDd nick, and a defrag.racing profile link when an account
+    // is paired to that mdd id. Resolved per page (50 rows), so it's cheap.
     public function getFilesProperty(): array
     {
-        return array_slice(
+        $rows = array_slice(
             $this->filteredRows(),
             ($this->page - 1) * self::PER_PAGE,
             self::PER_PAGE
         );
+
+        $mddIds = array_values(array_unique(array_filter(array_column($rows, 'player'))));
+        if ($mddIds) {
+            $profiles = \App\Models\MddProfile::whereIn('id', $mddIds)
+                ->get(['id', 'plain_name'])
+                ->keyBy('id');
+            $users = \App\Models\User::whereIn('mdd_id', $mddIds)
+                ->get(['id', 'mdd_id', 'plain_name', 'name'])
+                ->keyBy('mdd_id');
+
+            foreach ($rows as &$r) {
+                $mdd = $r['player'];
+                $user = $mdd ? $users->get($mdd) : null;
+                $profile = $mdd ? $profiles->get($mdd) : null;
+                $r['player_name'] = $user?->plain_name
+                    ?: ($user?->name ? preg_replace('/\^[0-9A-Za-z]/', '', $user->name) : null)
+                    ?: $profile?->plain_name;
+                $r['player_user_id'] = $user?->id;
+            }
+        }
+
+        return $rows;
     }
 
     public function getTotalFilesProperty(): int
@@ -208,7 +233,7 @@ class ServerdemosBrowser extends Page
 
     public function setSort(string $col): void
     {
-        if (!in_array($col, ['name', 'size', 'mtime', 'map', 'time'], true)) return;
+        if (!in_array($col, ['name', 'size', 'mtime', 'map', 'time', 'player'], true)) return;
         if ($this->sortBy === $col) {
             $this->sortDir = $this->sortDir === 'asc' ? 'desc' : 'asc';
         } else {
