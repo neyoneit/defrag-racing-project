@@ -80,6 +80,12 @@ Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->n
 
 Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name('community');
 
+// Signed, permission-checked download for the admin storage browsers
+// (Serverdemos Browser + Storage Browser) - streams SFTP -> browser, no disk.
+Route::get('/defraghq/storage-download', \App\Http\Controllers\StorageBrowserDownloadController::class)
+    ->middleware(['auth', 'signed'])
+    ->name('defraghq.storage-download');
+
 // DefragLive most-watched-player contest (public leaderboard + raffle odds).
 Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');
 // OBS Browser Source overlay (transparent top-3 widget) + its JSON feed.

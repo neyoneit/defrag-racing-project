@@ -11,7 +11,6 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StorageBrowser extends Page
 {
@@ -205,33 +204,20 @@ class StorageBrowser extends Page
         $this->page = 1;
     }
 
+    // Same signed-url handoff as the Serverdemos Browser: Livewire can't
+    // reliably carry a streamed download (and dl_storage holds multi-hundred
+    // MB files that must never ride through a Livewire payload). The
+    // controller re-checks auth + permission and streams with no temp file.
     public function downloadFile(string $name)
     {
         $this->validateName($name);
-        $disk = $this->disk();
         $path = $this->joinPath($this->currentPath, $name);
 
-        if (! $disk->exists($path)) {
-            Notification::make()->title('File not found')->danger()->send();
-
-            return null;
-        }
-
-        $size = $disk->size($path);
-
-        return new StreamedResponse(function () use ($disk, $path) {
-            $stream = $disk->readStream($path);
-
-            if (is_resource($stream)) {
-                fpassthru($stream);
-                fclose($stream);
-            }
-        }, 200, [
-            'Content-Type' => 'application/octet-stream',
-            'Content-Disposition' => 'attachment; filename="' . addslashes(basename($name)) . '"',
-            'Content-Length' => (string) $size,
-            'X-Accel-Buffering' => 'no',
-        ]);
+        return redirect()->to(\Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'defraghq.storage-download',
+            now()->addMinutes(5),
+            ['disk' => self::DISK, 'path' => $path],
+        ));
     }
 
     public function mkdirAction(): Action
