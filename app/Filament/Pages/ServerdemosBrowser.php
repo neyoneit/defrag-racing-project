@@ -26,6 +26,9 @@ class ServerdemosBrowser extends Page
     public string $search = '';
     public string $sortBy = 'mtime';   // mtime | name | size
     public string $sortDir = 'desc';
+    public int $page = 1;
+
+    public const PER_PAGE = 50;
 
     public static function canAccess(): bool
     {
@@ -42,90 +45,103 @@ class ServerdemosBrowser extends Page
         return Storage::disk(self::DISK);
     }
 
-    // Sidebar: every active SFTP credential + live stats from the disk.
-    // Stats are cached 60s to keep clicking responsive — the disk is SFTP,
-    // a full traversal per render would be painful with hundreds of demos.
+    /**
+     * One cached recursive listing per user dir. The old code called size()
+     * and lastModified() per file - one SFTP round trip EACH, so a server
+     * with hundreds of demos took ages to open. Flysystem's listContents()
+     * already carries size + mtime in the directory listing itself, so this
+     * is a single traversal; 60s cache makes search/sort/paging instant.
+     */
+    private function listing(string $user): array
+    {
+        return Cache::remember("serverdemos:list:{$user}", 60, function () use ($user) {
+            $rows = [];
+            // listContents() is lazy - connection/listing errors surface during
+            // iteration, so the whole loop sits inside the try.
+            try {
+                foreach ($this->disk()->getDriver()->listContents($user, true) as $item) {
+                    if (! $item->isFile()) continue;
+                    $name = basename($item->path());
+                    if (!str_ends_with(strtolower($name), '.dm_68')) continue;
+                    $parsed = $this->parseDemoFilename($name);
+                    $rows[] = [
+                        'path'  => $item->path(),
+                        'name'  => $name,
+                        'size'  => $item->fileSize(),
+                        'mtime' => $item->lastModified(),
+                        'map'   => $parsed['map'],
+                        'time'  => $parsed['time'],
+                        'player'=> $parsed['player'],
+                    ];
+                }
+            } catch (\Throwable) {
+                return [];
+            }
+            return $rows;
+        });
+    }
+
+    // Sidebar: every active SFTP credential + live stats, derived from the
+    // same cached listing the file pane uses (no separate traversal).
     public function getCredentialsProperty(): array
     {
         $creds = SftpCredential::with('user:id,name,plain_name,mdd_id')
             ->where('status', 'active')
             ->get();
 
-        $disk = $this->disk();
-
-        return $creds->map(function ($c) use ($disk) {
+        return $creds->map(function ($c) {
             $user = $c->sftp_username;
-            $stats = Cache::remember("serverdemos:stats:{$user}", 60, function () use ($disk, $user) {
-                try {
-                    $files = $disk->allFiles($user);
-                } catch (\Throwable) {
-                    return ['count' => 0, 'last' => null, 'bytes' => 0];
-                }
-
-                $count = 0;
-                $last = null;
-                $bytes = 0;
-                foreach ($files as $f) {
-                    if (!str_ends_with(strtolower($f), '.dm_68')) continue;
-                    $count++;
-                    try {
-                        $bytes += $disk->size($f) ?: 0;
-                        $m = $disk->lastModified($f);
-                        if ($m && (!$last || $m > $last)) $last = $m;
-                    } catch (\Throwable) {
-                    }
-                }
-                return ['count' => $count, 'last' => $last, 'bytes' => $bytes];
-            });
+            $files = $this->listing($user);
+            $last = null;
+            $bytes = 0;
+            foreach ($files as $f) {
+                $bytes += (int) ($f['size'] ?? 0);
+                if ($f['mtime'] && (!$last || $f['mtime'] > $last)) $last = $f['mtime'];
+            }
 
             return [
                 'sftp_username' => $user,
                 'owner_name'    => $c->user?->plain_name ?: ($c->user?->name ?: '?'),
                 'owner_id'      => $c->user_id,
-                'count'         => $stats['count'],
-                'last'          => $stats['last'],
-                'bytes'         => $stats['bytes'],
+                'count'         => count($files),
+                'last'          => $last,
+                'bytes'         => $bytes,
             ];
         })->sortByDesc('last')->values()->all();
     }
 
-    // Main pane: files for the selected user, filtered + sorted.
+    // Main pane: the current page of files for the selected user.
     public function getFilesProperty(): array
+    {
+        return array_slice(
+            $this->filteredRows(),
+            ($this->page - 1) * self::PER_PAGE,
+            self::PER_PAGE
+        );
+    }
+
+    public function getTotalFilesProperty(): int
+    {
+        return count($this->filteredRows());
+    }
+
+    public function getTotalPagesProperty(): int
+    {
+        return max(1, (int) ceil($this->totalFiles / self::PER_PAGE));
+    }
+
+    private function filteredRows(): array
     {
         if ($this->selectedUser === '') return [];
 
-        $disk = $this->disk();
+        $rows = $this->listing($this->selectedUser);
 
-        try {
-            $paths = $disk->allFiles($this->selectedUser);
-        } catch (\Throwable $e) {
-            Notification::make()->title('Cannot list demos')->body($e->getMessage())->danger()->send();
-            return [];
-        }
-
-        $rows = [];
         $needle = strtolower(trim($this->search));
-        foreach ($paths as $p) {
-            $name = basename($p);
-            if (!str_ends_with(strtolower($name), '.dm_68')) continue;
-            if ($needle !== '' && !str_contains(strtolower($name), $needle)) continue;
-
-            $size = null;
-            $mtime = null;
-            try { $size = $disk->size($p); } catch (\Throwable) {}
-            try { $mtime = $disk->lastModified($p); } catch (\Throwable) {}
-
-            $parsed = $this->parseDemoFilename($name);
-
-            $rows[] = [
-                'path'  => $p,
-                'name'  => $name,
-                'size'  => $size,
-                'mtime' => $mtime,
-                'map'   => $parsed['map'],
-                'time'  => $parsed['time'],
-                'player'=> $parsed['player'],
-            ];
+        if ($needle !== '') {
+            $rows = array_values(array_filter(
+                $rows,
+                fn ($r) => str_contains(strtolower($r['name']), $needle)
+            ));
         }
 
         $dir = $this->sortDir === 'asc' ? 1 : -1;
@@ -137,6 +153,21 @@ class ServerdemosBrowser extends Page
         });
 
         return $rows;
+    }
+
+    public function nextPage(): void
+    {
+        $this->page = min($this->totalPages, $this->page + 1);
+    }
+
+    public function prevPage(): void
+    {
+        $this->page = max(1, $this->page - 1);
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->page = 1;
     }
 
     // defrag-server-bundle filename pattern: <map>[<time>][<mddId>].dm_68
@@ -165,12 +196,14 @@ class ServerdemosBrowser extends Page
         }
         $this->selectedUser = $user;
         $this->search = '';
+        $this->page = 1;
     }
 
     public function goRoot(): void
     {
         $this->selectedUser = '';
         $this->search = '';
+        $this->page = 1;
     }
 
     public function setSort(string $col): void
@@ -182,12 +215,14 @@ class ServerdemosBrowser extends Page
             $this->sortBy = $col;
             $this->sortDir = $col === 'mtime' ? 'desc' : 'asc';
         }
+        $this->page = 1;
     }
 
     public function refreshStats(): void
     {
         foreach (SftpCredential::where('status', 'active')->pluck('sftp_username') as $u) {
             Cache::forget("serverdemos:stats:{$u}");
+            Cache::forget("serverdemos:list:{$u}");
         }
         Notification::make()->title('Stats refreshed')->success()->send();
     }
