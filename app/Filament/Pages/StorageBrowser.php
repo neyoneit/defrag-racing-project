@@ -12,6 +12,7 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Locked;
 
 class StorageBrowser extends Page
 {
@@ -27,7 +28,12 @@ class StorageBrowser extends Page
 
     public const PER_PAGE = 100;
 
+    // Locked: every change goes through the validated navigation methods -
+    // Livewire v3 would otherwise let the client overwrite the property
+    // directly and skip validatePath().
+    #[Locked]
     public string $currentPath = '';
+
     public int $page = 1;
 
     public static function canAccess(): bool
