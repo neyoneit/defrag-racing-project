@@ -56,10 +56,17 @@ class StorageBrowserDownloadController extends Controller
         }
 
         $disk = Storage::disk($diskName);
-        abort_unless($disk->exists($path), 404);
 
-        // Open the stream BEFORE the response starts: a failure here is a
-        // clean 404 instead of a broken half-sent response.
+        // Open the stream as the single source of truth for existence +
+        // readability. We deliberately DON'T gate on a separate exists()
+        // stat first: on the serverdemos disk the per-user directory is a
+        // symlink into the uploader's home, and an SFTP stat() through that
+        // symlink can report "not found" for a file the recursive listing
+        // found and readStream() opens fine - which 404'd every serverdemos
+        // download. readStream() is the operation that actually matters and
+        // still fails closed (throws -> not a resource -> 404) for a file
+        // that genuinely isn't there. Opening before the response starts
+        // also means a failure is a clean 404, not a half-sent body.
         $stream = null;
         try {
             $stream = $disk->readStream($path);
