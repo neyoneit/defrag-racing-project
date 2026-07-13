@@ -8,6 +8,7 @@ use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Attributes\Locked;
 
 class ServerdemosBrowser extends Page
 {
@@ -21,6 +22,10 @@ class ServerdemosBrowser extends Page
     protected const DISK = 'serverdemos';
 
     // User dir currently being browsed. Empty = root (user picker).
+    // Locked: only selectUser() (which verifies the name against the known
+    // SFTP credentials) may set it - Livewire v3 would otherwise let the
+    // client overwrite the property directly.
+    #[Locked]
     public string $selectedUser = '';
     public string $search = '';
     public string $sortBy = 'mtime';   // mtime | name | size
@@ -280,8 +285,17 @@ class ServerdemosBrowser extends Page
     {
         if ($this->selectedUser === '') return null;
 
-        // Hard-confine the relPath to the selected user's subtree.
+        // Hard-confine the relPath to the selected user's subtree. The prefix
+        // check alone can be defeated with 'user/../other/x', so traversal and
+        // degenerate segments are rejected too (demo names contain brackets,
+        // so only the segment shape is constrained, not the character set).
         $relPath = ltrim($relPath, '/');
+        foreach (explode('/', $relPath) as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+                Notification::make()->title('Forbidden')->danger()->send();
+                return null;
+            }
+        }
         if (!str_starts_with($relPath, $this->selectedUser . '/')) {
             Notification::make()->title('Forbidden')->danger()->send();
             return null;

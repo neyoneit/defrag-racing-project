@@ -41,25 +41,46 @@ class StorageBrowserDownloadController extends Controller
         $path = trim((string) $request->query('path'), '/');
         abort_if($path === '', 404);
 
+        // Reject traversal/degenerate segments outright instead of relying on
+        // Flysystem's normalizer (which throws a 500 on '..' escapes). Demo
+        // filenames contain brackets etc., so only the segment shape is
+        // constrained, not the character set.
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+                abort(404);
+            }
+        }
+
         $disk = Storage::disk($diskName);
         abort_unless($disk->exists($path), 404);
 
-        $size = null;
+        // Open the stream BEFORE the response starts: a failure here is a
+        // clean 404 instead of a broken half-sent response.
+        $stream = null;
         try {
-            $size = $disk->size($path);
+            $stream = $disk->readStream($path);
         } catch (\Throwable) {
         }
+        abort_unless(is_resource($stream), 404);
 
-        return response()->streamDownload(function () use ($disk, $path) {
-            $stream = $disk->readStream($path);
-            if (is_resource($stream)) {
-                fpassthru($stream);
-                fclose($stream);
+        // Octane/Swoole delivers streamed responses as chunked writes, so a
+        // manual Content-Length alongside them produces an invalid response
+        // (nginx answers 502), and Swoole's output buffer caps a single
+        // buffered body at ~2 MB anyway. Stream in small chunks and flush
+        // each one - no Content-Length, no temp file, bounded memory.
+        return response()->streamDownload(function () use ($stream) {
+            while (! feof($stream)) {
+                $chunk = fread($stream, 64 * 1024);
+                if ($chunk === false) {
+                    break;
+                }
+                echo $chunk;
+                flush();
             }
-        }, basename($path), array_filter([
+            fclose($stream);
+        }, basename($path), [
             'Content-Type' => 'application/octet-stream',
-            'Content-Length' => $size !== null ? (string) $size : null,
             'X-Accel-Buffering' => 'no',
-        ]));
+        ]);
     }
 }

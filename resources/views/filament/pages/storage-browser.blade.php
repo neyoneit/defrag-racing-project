@@ -57,6 +57,21 @@
         </div>
     </div>
 
+    {{-- Search within the current folder (filters the cached index, so it is
+         instant and works in every folder incl. huge ones like maps/). --}}
+    @if (! ($listing['indexing'] ?? false))
+        <div style="margin-top:14px;">
+            <input
+                type="search"
+                wire:model.live.debounce.400ms="search"
+                placeholder="Search this folder&hellip;"
+                style="width:100%;background:#0f0f17;border:1px solid #27272a;border-radius:12px;padding:10px 14px;color:#fafafa;font-size:13px;outline:none;"
+                onfocus="this.style.borderColor='#fb923c'"
+                onblur="this.style.borderColor='#27272a'"
+            />
+        </div>
+    @endif
+
     @if ($listing['indexing'] ?? false)
         {{-- Big directories are indexed by a queue job (an inline SFTP listing
              of e.g. maps/ blows every HTTP timeout); poll until it lands. --}}
@@ -151,7 +166,11 @@
                     @if (empty($listing['files']))
                         <tr>
                             <td colspan="5" style="padding:32px 14px;text-align:center;color:#71717a;border-top:1px solid #27272a;">
-                                Empty folder. Use <strong style="color:#fb923c;">Upload files</strong> or <strong style="color:#fb923c;">New folder</strong> above.
+                                @if (trim($this->search) !== '')
+                                    Nothing here matches &ldquo;{{ $this->search }}&rdquo;.
+                                @else
+                                    Empty folder. Use <strong style="color:#fb923c;">Upload files</strong> or <strong style="color:#fb923c;">New folder</strong> above.
+                                @endif
                             </td>
                         </tr>
                     @endif
