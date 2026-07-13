@@ -41,6 +41,16 @@ class StorageBrowserDownloadController extends Controller
         $path = trim((string) $request->query('path'), '/');
         abort_if($path === '', 404);
 
+        // Reject traversal/degenerate segments outright instead of relying on
+        // Flysystem's normalizer (which throws a 500 on '..' escapes). Demo
+        // filenames contain brackets etc., so only the segment shape is
+        // constrained, not the character set.
+        foreach (explode('/', $path) as $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+                abort(404);
+            }
+        }
+
         $disk = Storage::disk($diskName);
         abort_unless($disk->exists($path), 404);
 
