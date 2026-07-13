@@ -36,6 +36,11 @@ class StorageBrowser extends Page
 
     public int $page = 1;
 
+    // Filters the CURRENT folder's cached index (folders + files) - available
+    // in every folder, not just root. It searches the indexed listing, so it
+    // is instant and never touches SFTP.
+    public string $search = '';
+
     public static function canAccess(): bool
     {
         return auth()->user()?->hasModeratorPermission('storage_browser') ?? false;
@@ -94,6 +99,8 @@ class StorageBrowser extends Page
             return ['dirs' => [], 'files' => [], 'totalFiles' => 0, 'indexing' => false];
         }
 
+        $all = $this->applySearch($all);
+
         return [
             'dirs' => $all['dirs'],
             'files' => array_slice($all['files'], ($this->page - 1) * self::PER_PAGE, self::PER_PAGE),
@@ -102,9 +109,32 @@ class StorageBrowser extends Page
         ];
     }
 
+    private function applySearch(array $all): array
+    {
+        $needle = trim($this->search);
+        if ($needle === '') {
+            return $all;
+        }
+
+        $match = fn (array $e) => stripos($e['name'], $needle) !== false;
+
+        return [
+            'dirs' => array_values(array_filter($all['dirs'] ?? [], $match)),
+            'files' => array_values(array_filter($all['files'] ?? [], $match)),
+        ];
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->page = 1;
+    }
+
     public function getTotalPagesProperty(): int
     {
-        $total = count($this->rawListing()['files'] ?? []);
+        $all = $this->rawListing();
+        $total = ($all !== null && empty($all['error']))
+            ? count($this->applySearch($all)['files'])
+            : 0;
 
         return max(1, (int) ceil($total / self::PER_PAGE));
     }
@@ -144,9 +174,10 @@ class StorageBrowser extends Page
 
     public function enterDir(string $name): void
     {
-        $this->validateName($name);
+        $this->validateSegment($name);
         $this->currentPath = $this->joinPath($this->currentPath, $name);
         $this->page = 1;
+        $this->search = '';
     }
 
     public function goTo(string $path): void
@@ -155,6 +186,7 @@ class StorageBrowser extends Page
         $this->validatePath($path);
         $this->currentPath = $path;
         $this->page = 1;
+        $this->search = '';
     }
 
     public function goUp(): void
@@ -167,12 +199,14 @@ class StorageBrowser extends Page
         array_pop($parts);
         $this->currentPath = implode('/', $parts);
         $this->page = 1;
+        $this->search = '';
     }
 
     public function goRoot(): void
     {
         $this->currentPath = '';
         $this->page = 1;
+        $this->search = '';
     }
 
     // Same signed-url handoff as the Serverdemos Browser: Livewire can't
@@ -181,7 +215,7 @@ class StorageBrowser extends Page
     // controller re-checks auth + permission and streams with no temp file.
     public function downloadFile(string $name)
     {
-        $this->validateName($name);
+        $this->validateSegment($name);
         $path = $this->joinPath($this->currentPath, $name);
 
         return redirect()->to(\Illuminate\Support\Facades\URL::temporarySignedRoute(
@@ -250,7 +284,9 @@ class StorageBrowser extends Page
 
                 foreach ((array) $data['files'] as $tempPath) {
                     $name = basename($tempPath);
-                    $this->validateName($name);
+                    // Loose check: community files legitimately carry '+',
+                    // parentheses etc. - only traversal shapes are refused.
+                    $this->validateSegment($name);
 
                     $targetPath = $this->joinPath($this->currentPath, $name);
                     $existed = $disk->exists($targetPath);
@@ -303,7 +339,9 @@ class StorageBrowser extends Page
                 $oldName = $arguments['oldName'];
                 $newName = $data['newName'];
 
-                $this->validateName($oldName);
+                // The source may have an exotic pre-existing name; only the
+                // NEW name we create is held to the strict charset.
+                $this->validateSegment($oldName);
                 $this->validateName($newName);
 
                 if ($oldName === $newName) {
@@ -340,7 +378,7 @@ class StorageBrowser extends Page
                 $name = $arguments['name'];
                 $type = $arguments['type'];
 
-                $this->validateName($name);
+                $this->validateSegment($name);
 
                 $disk = $this->disk();
                 $path = $this->joinPath($this->currentPath, $name);
