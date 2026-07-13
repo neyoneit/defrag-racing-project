@@ -97,7 +97,7 @@
                     <input type="text" wire:model.live.debounce.300ms="search" placeholder="search by filename..."
                         style="flex:1;background:#0f0f17;border:1px solid #27272a;border-radius:6px;padding:6px 10px;color:#fafafa;font-size:12px;outline:none;"
                         onfocus="this.style.borderColor='#fb923c'" onblur="this.style.borderColor='#27272a'">
-                    <span style="color:#71717a;font-size:11px;">{{ count($files) }} file(s)</span>
+                    <span style="color:#71717a;font-size:11px;">{{ $this->totalFiles }} file(s)</span>
                 </div>
 
                 {{-- Table --}}
@@ -105,7 +105,7 @@
                     <table style="width:100%;border-collapse:collapse;font-size:12px;">
                         <thead style="position:sticky;top:0;background:#18181b;z-index:1;">
                             <tr>
-                                @foreach ([['name','Filename'],['map','Map'],['time','Run time'],['size','Size'],['mtime','Uploaded']] as [$col, $label])
+                                @foreach ([['name','Filename'],['map','Map'],['time','Run time'],['player','Player'],['size','Size'],['mtime','Uploaded']] as [$col, $label])
                                     @php $arrow = $this->sortBy === $col ? ($this->sortDir === 'asc' ? '↑' : '↓') : ''; @endphp
                                     <th style="padding:8px 10px;text-align:left;color:#a1a1aa;font-weight:600;border-bottom:1px solid #27272a;font-size:11px;text-transform:uppercase;letter-spacing:0.04em;cursor:pointer;user-select:none;"
                                         wire:click="setSort(@js($col))">
@@ -125,6 +125,19 @@
                                     <td style="padding:8px 10px;color:#fafafa;font-family:ui-monospace,monospace;">{{ $f['name'] }}</td>
                                     <td style="padding:8px 10px;color:#9ca3af;">{{ $f['map'] ?? '—' }}</td>
                                     <td style="padding:8px 10px;color:#9ca3af;font-family:ui-monospace,monospace;">{{ $fmtRunTime($f['time']) }}</td>
+                                    <td style="padding:8px 10px;">
+                                        @if ($f['player'] ?? null)
+                                            @if ($f['player_user_id'] ?? null)
+                                                <a href="{{ url('/profile/' . $f['player_user_id']) }}" target="_blank"
+                                                    style="color:#fb923c;text-decoration:none;font-weight:600;">{{ $f['player_name'] ?? 'mdd '.$f['player'] }}</a>
+                                            @else
+                                                <span style="color:#e4e4e7;">{{ $f['player_name'] ?? '—' }}</span>
+                                            @endif
+                                            <span style="color:#71717a;font-size:10px;margin-left:4px;">mdd {{ $f['player'] }}</span>
+                                        @else
+                                            <span style="color:#71717a;">—</span>
+                                        @endif
+                                    </td>
                                     <td style="padding:8px 10px;color:#9ca3af;">{{ $fmtSize($f['size']) }}</td>
                                     <td style="padding:8px 10px;color:#9ca3af;">{{ $fmtTime($f['mtime']) }}</td>
                                     <td style="padding:8px 10px;text-align:right;">
@@ -138,7 +151,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" style="padding:48px;text-align:center;color:#71717a;font-size:13px;">
+                                    <td colspan="7" style="padding:48px;text-align:center;color:#71717a;font-size:13px;">
                                         {{ $this->search ? 'No demos matching your search.' : 'No demos uploaded yet for this user.' }}
                                     </td>
                                 </tr>
@@ -146,6 +159,21 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- Pagination --}}
+                @if ($this->totalPages > 1)
+                    <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:10px;border-top:1px solid #27272a;">
+                        <button type="button" wire:click="prevPage" @disabled($this->page <= 1)
+                            style="background:transparent;border:1px solid #27272a;cursor:pointer;color:#fb923c;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;{{ $this->page <= 1 ? 'opacity:.4;cursor:default;' : '' }}">
+                            ← Prev
+                        </button>
+                        <span style="color:#a1a1aa;font-size:12px;">Page {{ $this->page }} / {{ $this->totalPages }}</span>
+                        <button type="button" wire:click="nextPage" @disabled($this->page >= $this->totalPages)
+                            style="background:transparent;border:1px solid #27272a;cursor:pointer;color:#fb923c;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;{{ $this->page >= $this->totalPages ? 'opacity:.4;cursor:default;' : '' }}">
+                            Next →
+                        </button>
+                    </div>
+                @endif
             @endif
         </div>
     </div>
