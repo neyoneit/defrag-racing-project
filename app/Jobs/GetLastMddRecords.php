@@ -31,6 +31,7 @@ class GetLastMddRecords implements ShouldQueue
     private int $duplicateCount = 0;
     private int $insertedCount = 0;
     private int $updatedCount = 0;
+    private int $failedCount = 0;
 
     public function __construct() {}
 
@@ -47,11 +48,12 @@ class GetLastMddRecords implements ShouldQueue
         $this->duplicateCount = 0;
         $this->insertedCount = 0;
         $this->updatedCount = 0;
+        $this->failedCount = 0;
 
         $this->logApiRecords($records);
         $this->processRecords($records);
 
-        echo ("Finished. Total: " . count($records) . ", New: {$this->insertedCount}, Updated: {$this->updatedCount}, Duplicates: {$this->duplicateCount}") . PHP_EOL;
+        echo ("Finished. Total: " . count($records) . ", New: {$this->insertedCount}, Updated: {$this->updatedCount}, Duplicates: {$this->duplicateCount}, Skipped: {$this->failedCount}") . PHP_EOL;
 
         // Anomaly detection: if we got a large batch with 0 duplicates, records were likely missed
         $totalRecords = count($records);
@@ -129,32 +131,54 @@ class GetLastMddRecords implements ShouldQueue
 
     private function processRecords($records) {
         foreach($records as $record) {
-            $find = Record::query()
-                    ->where('physics', $record['physics'])
-                    ->where('mode', $record['mode'])
-                    ->where('mdd_id', $record['mdd_id'])
-                    ->where('mapname', $record['map'])->first();
-
-            if (! $find) {
-                $this->insertRecord($record);
-                $this->insertedCount++;
-                continue;
+            // Isolate each record: a single bad row (e.g. a duplicate-key
+            // collision from a pre-existing orphaned record) used to throw and
+            // abort the ENTIRE minute's batch - every record after it was
+            // skipped and its RecalcMapRatingsJob never dispatched, which is
+            // what froze the rankings. Now one bad record is logged and
+            // skipped; the rest of the batch (and their rating recalcs) run.
+            try {
+                $this->processOneRecord($record);
+            } catch (\Throwable $e) {
+                $this->failedCount++;
+                Log::warning('GetLastMddRecords: skipped a record after an error', [
+                    'mdd_id'  => $record['mdd_id'] ?? null,
+                    'map'     => $record['map'] ?? null,
+                    'physics' => $record['physics'] ?? null,
+                    'mode'    => $record['mode'] ?? null,
+                    'time'    => $record['time'] ?? null,
+                    'error'   => $e->getMessage(),
+                ]);
             }
+        }
+    }
 
-            if ($find->time === $record['time']) {
-                $this->duplicateCount++;
-                echo ("Duplicate Found [" . $find->name . "] (" . $find->time . ") (" . $find->mapname . ") (" . $find->physics . ")") . PHP_EOL;
-                continue;
-            }
+    private function processOneRecord($record) {
+        $find = Record::query()
+                ->where('physics', $record['physics'])
+                ->where('mode', $record['mode'])
+                ->where('mdd_id', $record['mdd_id'])
+                ->where('mapname', $record['map'])->first();
 
-            if ($find->time !== $record['time']) {
-                $this->insertHistoricRecord($find, $record);
-                $this->updatedCount++;
-            }
-
+        if (! $find) {
             $this->insertRecord($record);
             $this->insertedCount++;
+            return;
         }
+
+        if ($find->time === $record['time']) {
+            $this->duplicateCount++;
+            echo ("Duplicate Found [" . $find->name . "] (" . $find->time . ") (" . $find->mapname . ") (" . $find->physics . ")") . PHP_EOL;
+            return;
+        }
+
+        if ($find->time !== $record['time']) {
+            $this->insertHistoricRecord($find, $record);
+            $this->updatedCount++;
+        }
+
+        $this->insertRecord($record);
+        $this->insertedCount++;
     }
 
     private function insertHistoricRecord($oldrecord, $newrecord) {
