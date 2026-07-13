@@ -132,8 +132,8 @@
                                     <td style="padding:8px 10px;">
                                         @if ($f['player'] ?? null)
                                             @php
-                                                {{-- Paired site account -> site profile; otherwise the mdd
-                                                     profile page (works for every scraped mdd id). --}}
+                                                // Paired site account -> site profile; otherwise the mdd
+                                                // profile page (works for every scraped mdd id).
                                                 $playerUrl = ($f['player_user_id'] ?? null)
                                                     ? url('/profile/' . $f['player_user_id'])
                                                     : url('/profile/mdd/' . $f['player']);
