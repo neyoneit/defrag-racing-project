@@ -289,9 +289,13 @@ class ServerdemosBrowser extends Page
         // check alone can be defeated with 'user/../other/x', so traversal and
         // degenerate segments are rejected too (demo names contain brackets,
         // so only the segment shape is constrained, not the character set).
+        // Backslash is rejected too: Flysystem rewrites '\' to '/' BEFORE
+        // resolving '..', so 'user/..\other' would otherwise pass this loop
+        // and the prefix check, then traverse out of the user's subtree.
         $relPath = ltrim($relPath, '/');
         foreach (explode('/', $relPath) as $segment) {
-            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+            if ($segment === '' || $segment === '.' || $segment === '..'
+                || str_contains($segment, '\\') || str_contains($segment, "\0")) {
                 Notification::make()->title('Forbidden')->danger()->send();
                 return null;
             }

@@ -65,7 +65,15 @@
 
 
 .q3c-0 {
-    color: black;
+    /* Pure black (^0) is unreadable on the site's dark background. Keep the
+       glyph black but add a thin light outline so the name stays legible on
+       any background while still reading as "black". */
+    color: #000;
+    text-shadow:
+        -1px -1px 0 rgba(255, 255, 255, 0.55),
+         1px -1px 0 rgba(255, 255, 255, 0.55),
+        -1px  1px 0 rgba(255, 255, 255, 0.55),
+         1px  1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .q3c-1 {

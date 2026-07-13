@@ -44,18 +44,29 @@ class StorageBrowserDownloadController extends Controller
         // Reject traversal/degenerate segments outright instead of relying on
         // Flysystem's normalizer (which throws a 500 on '..' escapes). Demo
         // filenames contain brackets etc., so only the segment shape is
-        // constrained, not the character set.
+        // constrained, not the character set. Backslash is rejected too:
+        // Flysystem rewrites '\' to '/' BEFORE resolving '..', so a segment
+        // like '..\other' would otherwise slip past this loop and then
+        // traverse.
         foreach (explode('/', $path) as $segment) {
-            if ($segment === '' || $segment === '.' || $segment === '..' || str_contains($segment, "\0")) {
+            if ($segment === '' || $segment === '.' || $segment === '..'
+                || str_contains($segment, '\\') || str_contains($segment, "\0")) {
                 abort(404);
             }
         }
 
         $disk = Storage::disk($diskName);
-        abort_unless($disk->exists($path), 404);
 
-        // Open the stream BEFORE the response starts: a failure here is a
-        // clean 404 instead of a broken half-sent response.
+        // Open the stream as the single source of truth for existence +
+        // readability. We deliberately DON'T gate on a separate exists()
+        // stat first: on the serverdemos disk the per-user directory is a
+        // symlink into the uploader's home, and an SFTP stat() through that
+        // symlink can report "not found" for a file the recursive listing
+        // found and readStream() opens fine - which 404'd every serverdemos
+        // download. readStream() is the operation that actually matters and
+        // still fails closed (throws -> not a resource -> 404) for a file
+        // that genuinely isn't there. Opening before the response starts
+        // also means a failure is a clean 404, not a half-sent body.
         $stream = null;
         try {
             $stream = $disk->readStream($path);

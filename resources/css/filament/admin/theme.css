@@ -4,7 +4,14 @@
 
 /* Q3 Color Codes */
 .q3c-0 {
-    color: black;
+    /* Black nick on the dark admin panel: keep it black but outline it so
+       it stays readable (matches the public site's .q3c-0 treatment). */
+    color: #000;
+    text-shadow:
+        -1px -1px 0 rgba(255, 255, 255, 0.55),
+         1px -1px 0 rgba(255, 255, 255, 0.55),
+        -1px  1px 0 rgba(255, 255, 255, 0.55),
+         1px  1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .q3c-1 {
