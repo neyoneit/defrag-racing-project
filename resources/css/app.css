@@ -24,13 +24,17 @@
     to { transform: translate(-90px, 45px); }
 }
 
-/* Q3 color ^0 is true black — render it as such. Containers that show
- * Q3 nicks (e.g. server cards' player list) provide a warm-glass
- * backdrop that gives every colour code a legible kontrast. No
- * outline / halo trickery here: a black glyph reads exactly as it
- * does in the game scoreboard. */
+/* Q3 color ^0 is true black. On the site's dark surfaces (leaderboards,
+ * record lists) a pure-black glyph is unreadable - it vanishes into the
+ * background. Keep the fill black so the name still reads as "black",
+ * but add a thin light outline so it stays legible on any background. */
 .q3c-0 {
     color: #000 !important;
+    text-shadow:
+        -1px -1px 0 rgba(255, 255, 255, 0.55),
+         1px -1px 0 rgba(255, 255, 255, 0.55),
+        -1px  1px 0 rgba(255, 255, 255, 0.55),
+         1px  1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .rotate-animation {
