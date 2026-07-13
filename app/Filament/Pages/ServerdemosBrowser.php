@@ -28,6 +28,14 @@ class ServerdemosBrowser extends Page
     public string $sortDir = 'desc';
     public int $page = 1;
 
+    /**
+     * The sidebar stats need a full SFTP traversal per credential, which over
+     * WAN takes seconds on a cold cache - too slow to block the initial page
+     * render on. The page paints immediately with placeholders and wire:init
+     * flips this to load the stats in a follow-up request.
+     */
+    public bool $sidebarReady = false;
+
     public const PER_PAGE = 50;
 
     public static function canAccess(): bool
@@ -54,7 +62,7 @@ class ServerdemosBrowser extends Page
      */
     private function listing(string $user): array
     {
-        return Cache::remember("serverdemos:list:{$user}", 60, function () use ($user) {
+        return Cache::remember("serverdemos:list:{$user}", 300, function () use ($user) {
             $rows = [];
             // listContents() is lazy - connection/listing errors surface during
             // iteration, so the whole loop sits inside the try.
@@ -81,8 +89,15 @@ class ServerdemosBrowser extends Page
         });
     }
 
+    public function initSidebar(): void
+    {
+        $this->sidebarReady = true;
+    }
+
     // Sidebar: every active SFTP credential + live stats, derived from the
-    // same cached listing the file pane uses (no separate traversal).
+    // same cached listing the file pane uses (no separate traversal). Until
+    // wire:init flips $sidebarReady, only the credential names render (stats
+    // null -> placeholders) so the initial page load never touches SFTP.
     public function getCredentialsProperty(): array
     {
         $creds = SftpCredential::with('user:id,name,plain_name,mdd_id')
@@ -91,19 +106,24 @@ class ServerdemosBrowser extends Page
 
         return $creds->map(function ($c) {
             $user = $c->sftp_username;
-            $files = $this->listing($user);
             $last = null;
-            $bytes = 0;
-            foreach ($files as $f) {
-                $bytes += (int) ($f['size'] ?? 0);
-                if ($f['mtime'] && (!$last || $f['mtime'] > $last)) $last = $f['mtime'];
+            $bytes = null;
+            $count = null;
+            if ($this->sidebarReady) {
+                $files = $this->listing($user);
+                $count = count($files);
+                $bytes = 0;
+                foreach ($files as $f) {
+                    $bytes += (int) ($f['size'] ?? 0);
+                    if ($f['mtime'] && (!$last || $f['mtime'] > $last)) $last = $f['mtime'];
+                }
             }
 
             return [
                 'sftp_username' => $user,
                 'owner_name'    => $c->user?->plain_name ?: ($c->user?->name ?: '?'),
                 'owner_id'      => $c->user_id,
-                'count'         => count($files),
+                'count'         => $count,
                 'last'          => $last,
                 'bytes'         => $bytes,
             ];
