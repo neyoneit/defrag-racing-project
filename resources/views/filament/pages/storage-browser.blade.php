@@ -48,7 +48,7 @@
             @endforeach
 
             <span style="margin-left:auto;color:#71717a;font-size:11px;">
-                {{ count($listing['dirs']) }} folder(s) &middot; {{ count($listing['files']) }} file(s)
+                {{ count($listing['dirs']) }} folder(s) &middot; {{ $listing['totalFiles'] }} file(s)
             </span>
         </div>
     </div>
@@ -204,6 +204,21 @@
             </tbody>
         </table>
     </div>
+
+    {{-- Pagination (files only; folders always show) --}}
+    @if ($this->totalPages > 1)
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:10px;">
+            <button type="button" wire:click="prevPage" @disabled($this->page <= 1)
+                style="background:transparent;border:1px solid #27272a;cursor:pointer;color:#fb923c;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;{{ $this->page <= 1 ? 'opacity:.4;cursor:default;' : '' }}">
+                ← Prev
+            </button>
+            <span style="color:#a1a1aa;font-size:12px;">Page {{ $this->page }} / {{ $this->totalPages }}</span>
+            <button type="button" wire:click="nextPage" @disabled($this->page >= $this->totalPages)
+                style="background:transparent;border:1px solid #27272a;cursor:pointer;color:#fb923c;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;{{ $this->page >= $this->totalPages ? 'opacity:.4;cursor:default;' : '' }}">
+                Next →
+            </button>
+        </div>
+    @endif
 
     <x-filament-actions::modals />
 </x-filament-panels::page>

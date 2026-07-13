@@ -9,6 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,7 +25,10 @@ class StorageBrowser extends Page
 
     protected const DISK = 'dl_storage';
 
+    public const PER_PAGE = 100;
+
     public string $currentPath = '';
+    public int $page = 1;
 
     public static function canAccess(): bool
     {
@@ -41,50 +45,72 @@ class StorageBrowser extends Page
         return Storage::disk(self::DISK);
     }
 
-    public function getListingProperty(): array
+    /**
+     * One cached listing per directory. The old code listed the directory
+     * twice (directories() + files()) and then stat'ed EVERY file for size
+     * and mtime - one SFTP round trip each, so a folder with thousands of
+     * pk3s took forever. Flysystem's listContents() carries size + mtime in
+     * the listing itself: single traversal, cached 30s (mutations below
+     * invalidate it). Files are paginated in getListingProperty().
+     *
+     * Symlinks (e.g. bsp/, maps/ on the storage VPS) arrive typed as FILES
+     * in the SFTP listing, which made them unbrowsable. Entries that look
+     * like that (no extension or unknown size) get one follow-the-link stat
+     * (directoryExists) and are reclassified as folders when they resolve to
+     * a directory.
+     */
+    private function rawListing(): array
     {
-        $disk = $this->disk();
         $path = $this->currentPath;
 
-        try {
-            $directories = collect($disk->directories($path))
-                ->map(fn ($p) => [
-                    'name' => basename($p),
-                    'path' => $p,
-                    'type' => 'dir',
-                ])
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
-                ->values()
-                ->all();
+        return Cache::remember('dlstorage:list:' . $path, 30, function () use ($path) {
+            $disk = $this->disk();
+            $dirs = [];
+            $files = [];
 
-            $files = collect($disk->files($path))
-                ->map(function ($p) use ($disk) {
-                    $size = null;
-                    $mtime = null;
-
-                    try {
-                        $size = $disk->size($p);
-                    } catch (\Throwable) {
-                    }
-
-                    try {
-                        $mtime = $disk->lastModified($p);
-                    } catch (\Throwable) {
-                    }
-
-                    return [
-                        'name' => basename($p),
-                        'path' => $p,
+            foreach ($disk->getDriver()->listContents($path, false) as $item) {
+                $name = basename($item->path());
+                if ($item->isDir()) {
+                    $dirs[] = ['name' => $name, 'path' => $item->path(), 'type' => 'dir'];
+                } else {
+                    $files[] = [
+                        'name' => $name,
+                        'path' => $item->path(),
                         'type' => 'file',
-                        'size' => $size,
-                        'mtime' => $mtime,
+                        'size' => $item->fileSize(),
+                        'mtime' => $item->lastModified(),
                     ];
-                })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
-                ->values()
-                ->all();
+                }
+            }
 
-            return ['dirs' => $directories, 'files' => $files];
+            // Symlink-to-directory fixup (see docblock).
+            foreach ($files as $i => $f) {
+                $suspicious = $f['size'] === null || ! str_contains($f['name'], '.');
+                if (! $suspicious) {
+                    continue;
+                }
+                try {
+                    if ($disk->directoryExists($f['path'])) {
+                        $dirs[] = ['name' => $f['name'], 'path' => $f['path'], 'type' => 'dir'];
+                        unset($files[$i]);
+                    }
+                } catch (\Throwable) {
+                }
+            }
+
+            $byName = fn ($a, $b) => strnatcasecmp($a['name'], $b['name']);
+            usort($dirs, $byName);
+            $files = array_values($files);
+            usort($files, $byName);
+
+            return ['dirs' => $dirs, 'files' => $files];
+        });
+    }
+
+    public function getListingProperty(): array
+    {
+        try {
+            $all = $this->rawListing();
         } catch (\Throwable $e) {
             Notification::make()
                 ->title('Cannot list directory')
@@ -92,8 +118,40 @@ class StorageBrowser extends Page
                 ->danger()
                 ->send();
 
-            return ['dirs' => [], 'files' => []];
+            return ['dirs' => [], 'files' => [], 'totalFiles' => 0];
         }
+
+        return [
+            'dirs' => $all['dirs'],
+            'files' => array_slice($all['files'], ($this->page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'totalFiles' => count($all['files']),
+        ];
+    }
+
+    public function getTotalPagesProperty(): int
+    {
+        try {
+            $total = count($this->rawListing()['files']);
+        } catch (\Throwable) {
+            return 1;
+        }
+
+        return max(1, (int) ceil($total / self::PER_PAGE));
+    }
+
+    public function nextPage(): void
+    {
+        $this->page = min($this->totalPages, $this->page + 1);
+    }
+
+    public function prevPage(): void
+    {
+        $this->page = max(1, $this->page - 1);
+    }
+
+    private function forgetListing(): void
+    {
+        Cache::forget('dlstorage:list:' . $this->currentPath);
     }
 
     public function getBreadcrumbsProperty(): array
@@ -118,6 +176,7 @@ class StorageBrowser extends Page
     {
         $this->validateName($name);
         $this->currentPath = $this->joinPath($this->currentPath, $name);
+        $this->page = 1;
     }
 
     public function goTo(string $path): void
@@ -125,6 +184,7 @@ class StorageBrowser extends Page
         $path = trim($path, '/');
         $this->validatePath($path);
         $this->currentPath = $path;
+        $this->page = 1;
     }
 
     public function goUp(): void
@@ -136,11 +196,13 @@ class StorageBrowser extends Page
         $parts = explode('/', $this->currentPath);
         array_pop($parts);
         $this->currentPath = implode('/', $parts);
+        $this->page = 1;
     }
 
     public function goRoot(): void
     {
         $this->currentPath = '';
+        $this->page = 1;
     }
 
     public function downloadFile(string $name)
@@ -200,6 +262,7 @@ class StorageBrowser extends Page
                 }
 
                 $disk->makeDirectory($path);
+                $this->forgetListing();
 
                 Notification::make()->title('Folder created')->success()->send();
             });
@@ -256,6 +319,8 @@ class StorageBrowser extends Page
                     }
                 }
 
+                $this->forgetListing();
+
                 Notification::make()
                     ->title("Uploaded {$uploaded} file(s)")
                     ->body($overwritten > 0 ? "{$overwritten} overwritten." : null)
@@ -299,6 +364,7 @@ class StorageBrowser extends Page
                 }
 
                 $disk->move($oldPath, $newPath);
+                $this->forgetListing();
 
                 Notification::make()->title('Renamed')->success()->send();
             });
@@ -327,6 +393,8 @@ class StorageBrowser extends Page
                 } else {
                     $disk->delete($path);
                 }
+
+                $this->forgetListing();
 
                 Notification::make()->title('Deleted')->success()->send();
             });

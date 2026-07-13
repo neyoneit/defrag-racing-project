@@ -127,12 +127,15 @@
                                     <td style="padding:8px 10px;color:#9ca3af;font-family:ui-monospace,monospace;">{{ $fmtRunTime($f['time']) }}</td>
                                     <td style="padding:8px 10px;">
                                         @if ($f['player'] ?? null)
-                                            @if ($f['player_user_id'] ?? null)
-                                                <a href="{{ url('/profile/' . $f['player_user_id']) }}" target="_blank"
-                                                    style="color:#fb923c;text-decoration:none;font-weight:600;">{{ $f['player_name'] ?? 'mdd '.$f['player'] }}</a>
-                                            @else
-                                                <span style="color:#e4e4e7;">{{ $f['player_name'] ?? '—' }}</span>
-                                            @endif
+                                            @php
+                                                {{-- Paired site account -> site profile; otherwise the mdd
+                                                     profile page (works for every scraped mdd id). --}}
+                                                $playerUrl = ($f['player_user_id'] ?? null)
+                                                    ? url('/profile/' . $f['player_user_id'])
+                                                    : url('/profile/mdd/' . $f['player']);
+                                            @endphp
+                                            <a href="{{ $playerUrl }}" target="_blank"
+                                                style="color:#fb923c;text-decoration:none;font-weight:600;">{{ $f['player_name'] ?? 'mdd '.$f['player'] }}</a>
                                             <span style="color:#71717a;font-size:10px;margin-left:4px;">mdd {{ $f['player'] }}</span>
                                         @else
                                             <span style="color:#71717a;">—</span>
