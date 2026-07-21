@@ -61,9 +61,19 @@ class SyncServerBundle extends Command
         $seen = [];
 
         foreach (self::ARCHIVES as $position => $archive) {
-            if (! $disk->exists($archive['file'])) {
-                $this->warn("Missing on {$disk->getConfig()['driver']} disk, skipping: {$archive['file']}");
-                continue;
+            // Prefer the disk (authoritative right after a build), but fall
+            // back to a HEAD request on the public URL: dfsv-baseq3.tar only
+            // exists on the prod disk, and the article should be complete no
+            // matter which host runs the sync.
+            if ($disk->exists($archive['file'])) {
+                $size = $disk->size($archive['file']);
+            } else {
+                $size = $this->remoteSize(self::PUBLIC_BASE . $archive['file']);
+
+                if ($size === null) {
+                    $this->warn("Not on the disk and unreachable at the public URL, skipping: {$archive['file']}");
+                    continue;
+                }
             }
 
             $key = 'server_bundle:' . $archive['file'];
@@ -83,7 +93,7 @@ class SyncServerBundle extends Command
                     'position' => $position,
                     'meta' => [
                         'filename' => $archive['file'],
-                        'size' => $disk->size($archive['file']),
+                        'size' => $size,
                         'built_at' => $marker['built_at'] ?? null,
                         'engine' => $marker['engine'] ?? null,
                         'mod' => $marker['mod'] ?? null,
@@ -91,7 +101,7 @@ class SyncServerBundle extends Command
                 ]
             );
 
-            $this->line("  {$archive['file']} - " . $this->human($disk->size($archive['file'])));
+            $this->line("  {$archive['file']} - " . $this->human($size));
         }
 
         if (empty($seen)) {
@@ -113,6 +123,23 @@ class SyncServerBundle extends Command
         ));
 
         return 0;
+    }
+
+    private function remoteSize(string $url): ?int
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::withOptions(['verify' => false])
+                ->timeout(20)
+                ->head($url);
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            return (int) $response->header('Content-Length') ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     private function human(int $bytes): string
