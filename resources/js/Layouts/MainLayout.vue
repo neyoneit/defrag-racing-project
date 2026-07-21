@@ -45,7 +45,7 @@
             challenges: route().current('headhunter.*') || route().current('marketplace.*') || route().current('community.tasks') || route().current('defraglive.*'),
             tournaments: route().current('tournaments.*'),
             wiki: route().current('wiki.*'),
-            bundles: route().current('bundles'),
+            bundles: route().current('downloads'),
             // Sub-items
             records: route().current('records'),
             clans: route().current('clans.*'),
@@ -872,7 +872,7 @@
 
                         <!-- 9. Downloads - visible from xl -->
                         <div class="hidden xl:inline-flex">
-                            <NavLink :href="route('bundles')" :active="navActive.bundles">
+                            <NavLink :href="route('downloads')" :active="navActive.bundles">
                                 Downloads
                             </NavLink>
                         </div>
@@ -925,7 +925,7 @@
                                     <DropdownLink :href="route('maplists.index')" :active="navActive.maplists">Maplists</DropdownLink>
                                     <DropdownLink :href="route('tournaments.index')" :active="navActive.tournaments">Tournaments</DropdownLink>
                                     <DropdownLink :href="route('wiki.index')" :active="navActive.wiki">Wiki</DropdownLink>
-                                    <DropdownLink :href="route('bundles')" :active="navActive.bundles">Downloads</DropdownLink>
+                                    <DropdownLink :href="route('downloads')" :active="navActive.bundles">Downloads</DropdownLink>
                                     <DropdownLink href="/test-map-viewer.html?map=pornstar-cpmrun">Beta</DropdownLink>
                                 </template>
                             </Dropdown>

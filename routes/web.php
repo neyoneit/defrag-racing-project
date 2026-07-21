@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\MapsController;
 use App\Http\Controllers\MapStatsController;
-use App\Http\Controllers\BundlesController;
+use App\Http\Controllers\DownloadsController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServersController;
 use App\Http\Controllers\RecordsController;
@@ -107,7 +107,13 @@ Route::post('/api/rendered-videos/{id}/report', [RenderRequestController::class,
 
 Route::get('/records', [RecordsController::class, 'index'])->name('records');
 
-Route::get('/downloads/{id?}/{slug?}', [BundlesController::class, 'index'])->name('bundles');
+// Community downloads hub. The specific segments must stay above the catch-all
+// index route, whose optional {id}/{slug} would otherwise swallow them.
+Route::get('/downloads/upload', [DownloadsController::class, 'create'])->middleware(['auth', 'verified'])->name('downloads.create');
+Route::post('/downloads/upload', [DownloadsController::class, 'store'])->middleware(['auth', 'verified'])->name('downloads.store');
+Route::get('/downloads/entry/{download}/{slug?}', [DownloadsController::class, 'show'])->name('downloads.show');
+Route::get('/downloads/file/{file}', [DownloadsController::class, 'file'])->name('downloads.file');
+Route::get('/downloads/{id?}/{slug?}', [DownloadsController::class, 'index'])->name('downloads');
 
 // Models routes
 Route::get('/models', [ModelsController::class, 'index'])->name('models.index');

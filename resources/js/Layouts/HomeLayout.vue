@@ -192,8 +192,8 @@
                                     <DropdownLink :href="route('demos.index')">
                                         Demos
                                     </DropdownLink>
-                                    <DropdownLink :href="route('bundles')">
-                                        Bundles
+                                    <DropdownLink :href="route('downloads')">
+                                        Downloads
                                     </DropdownLink>
                                     <DropdownLink :href="route('clans.index')">
                                         Clans
@@ -335,7 +335,7 @@
 
                                             <!-- Bundles -->
                                             <div v-if="bundles?.length > 0 && searchCategory == 'bundles'" @click="closeSearch">
-                                                <Link v-for="bundle in bundles" :key="bundle.id" :href="route('bundles', bundle.id)" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-yellow-500/30 hover:shadow-lg hover:shadow-yellow-500/5">
+                                                <Link v-for="bundle in bundles" :key="bundle.id" :href="bundle.url" class="group flex items-center gap-4 cursor-pointer rounded-xl hover:bg-white/5 p-3 transition-all border border-transparent hover:border-yellow-500/30 hover:shadow-lg hover:shadow-yellow-500/5">
                                                     <!-- Icon -->
                                                     <div class="shrink-0 flex items-center justify-center w-12 h-12 rounded-lg bg-yellow-500/20 ring-2 ring-white/10 group-hover:ring-yellow-500/50 transition-all">
                                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 text-yellow-400">
@@ -346,7 +346,7 @@
                                                     <!-- Bundle Info -->
                                                     <div class="flex-1 min-w-0">
                                                         <div class="text-base font-black text-white group-hover:text-yellow-400 transition-colors truncate mb-0.5">{{ bundle.name }}</div>
-                                                        <div class="text-xs text-gray-400 font-semibold">{{ bundle.maps_count }} maps</div>
+                                                        <div class="text-xs text-gray-400 font-semibold">{{ bundle.category }}</div>
                                                     </div>
 
                                                     <!-- Arrow -->
@@ -468,7 +468,7 @@
                                 <DropdownLink :href="route('demos.index')">
                                     Demos
                                 </DropdownLink>
-                                <DropdownLink :href="route('bundles')">
+                                <DropdownLink :href="route('downloads')">
                                     Bundles
                                 </DropdownLink>
                                 <DropdownLink :href="route('clans.index')">
