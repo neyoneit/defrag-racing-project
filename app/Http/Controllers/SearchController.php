@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\MddProfile;
 use App\Models\PlayerModel;
 use App\Models\UserAlias;
+use App\Models\Download;
 
 class SearchController extends Controller
 {
@@ -172,10 +173,30 @@ class SearchController extends Controller
             ->limit(10)
             ->get(['id', 'name', 'author', 'head_icon']);
 
+        // Community downloads by name (with the same fuzzy fallback). Locked
+        // entries are included: someone searching "defrag mod" should find it.
+        $downloads = Download::published()
+            ->with('category:id,name,slug')
+            ->where(function ($query) use ($request, $fuzzyPattern) {
+                $query->where('name', 'LIKE', '%' . $request->search . '%')
+                    ->orWhere('name', 'LIKE', $fuzzyPattern);
+            })
+            ->orderByDesc('downloads_count')
+            ->limit(10)
+            ->get(['id', 'name', 'slug', 'category_id', 'downloads_count'])
+            ->map(fn ($d) => [
+                'id' => $d->id,
+                'name' => $d->name,
+                'slug' => $d->slug,
+                'category' => $d->category?->name,
+                'url' => "/downloads/entry/{$d->id}/{$d->slug}",
+            ]);
+
         return [
             'maps'      => $maps,
             'players'   => $players,
-            'models'    => $models
+            'models'    => $models,
+            'bundles'   => $downloads,
         ];
     }
 }

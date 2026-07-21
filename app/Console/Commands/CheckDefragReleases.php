@@ -55,17 +55,25 @@ class CheckDefragReleases extends Command
             return 0;
         }
 
-        // Check if content changed (new file detected)
+        // Save whenever the rendered content differs, not only when a release
+        // is added. A layout change (the new hub banner, restyling) has to
+        // reach the page too, otherwise it never appears until the next
+        // release happens to land.
         $oldFileCount = substr_count($oldContent, 'defrag_1.');
         $newFileCount = substr_count($newContent, 'defrag_1.');
 
-        if ($newFileCount > $oldFileCount) {
+        if ($newContent !== $oldContent) {
             $page->content = $newContent;
             $page->save();
-            $this->info("Wiki updated! New releases detected ({$oldFileCount} -> {$newFileCount} entries).");
-            Log::info("CheckDefragReleases: New releases detected ({$oldFileCount} -> {$newFileCount}). Wiki updated.");
+
+            $note = $newFileCount > $oldFileCount
+                ? "new releases ({$oldFileCount} -> {$newFileCount} entries)"
+                : 'content changed';
+
+            $this->info("Wiki updated! ({$note})");
+            Log::info("CheckDefragReleases: Wiki updated - {$note}.");
         } else {
-            $this->info("No new releases. ({$newFileCount} entries, unchanged)");
+            $this->info("No changes. ({$newFileCount} entries, unchanged)");
         }
 
         return 0;
@@ -141,6 +149,10 @@ class CheckDefragReleases extends Command
         $latestDate = $latest ? $latest['date'] : '';
 
         $content = "<h2 style=\"{$h2}\">DeFRaG Mod Releases</h2>\n";
+        $content .= "<div style=\"background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: 0.5rem; padding: 0.75rem 1rem; margin: 0 0 1rem;\">"
+            . "<p style=\"color: #cbd5e1; margin: 0;\">The mod now lives in the "
+            . "<a href=\"/downloads/0/defrag-mod\" style=\"color: #22d3ee; font-weight: 600;\">Downloads section</a>, "
+            . "alongside the server bundle and other community files. This page is kept for reference.</p></div>\n";
         $content .= "<p style=\"{$p}\">Official DeFRaG mod releases from <a href=\"https://q3defrag.org/files/defrag/\" style=\"color: #60a5fa;\">q3defrag.org</a>. This page is <strong style=\"{$s}\">automatically updated weekly</strong>.</p>\n";
         $content .= "<p style=\"{$p}\"><strong style=\"{$s}\">Latest stable version:</strong> <code style=\"{$c}\">{$latestVersion}</code> ({$latestDate})</p>\n";
 

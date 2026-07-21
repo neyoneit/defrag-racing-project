@@ -78,6 +78,27 @@ return [
                 'throw'      => true,
             ],
 
+        // Community downloads hub uploads. Its own B2 bucket + its own
+        // bucket-scoped key, so it never touches the demo credentials.
+        // The bucket is private: links come from temporaryUrl(), never a
+        // public URL, hence no 'url' key here. Local dev runs on disk.
+        'community' => env('COMMUNITY_DISK_DRIVER', 's3') === 'local'
+            ? [
+                'driver' => 'local',
+                'root'   => storage_path('app/community-local'),
+                'throw'  => true,
+            ]
+            : [
+                'driver'   => 's3',
+                'key'      => env('B2_COMMUNITY_KEY_ID'),
+                'secret'   => env('B2_COMMUNITY_APP_KEY'),
+                'region'   => env('B2_COMMUNITY_REGION', 'eu-central-003'),
+                'bucket'   => env('B2_COMMUNITY_BUCKET', 'defrag-community'),
+                'endpoint' => env('B2_COMMUNITY_ENDPOINT', 'https://s3.eu-central-003.backblazeb2.com'),
+                'use_path_style_endpoint' => false,
+                'throw'    => true,
+            ],
+
         // Serverdemo storage on the same VPS — read-only view of
         // /var/lib/serverdemos/<sftp_user>/ where the ingest daemon
         // parks .dm_68 uploads. Reuses the dlbrowser key + host since

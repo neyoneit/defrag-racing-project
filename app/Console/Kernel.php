@@ -32,6 +32,13 @@ class Kernel extends ConsoleKernel
         // Full rating recalc daily (backup - incremental handles new records in real-time)
         $schedule->command('ratings:calculate')->withoutOverlapping()->daily();
 
+        // Rebuild the server bundle (dfsv-core.tar) when a new oDFe engine build
+        // or DeFRaG mod appears; a no-op when nothing changed. The sync right
+        // after publishes the fresh archives (size, built_at) to the downloads
+        // hub, so it has to run second.
+        $schedule->command('bundle:build-server')->withoutOverlapping()->daily();
+        $schedule->command('downloads:sync-server-bundle')->withoutOverlapping()->dailyAt('00:30');
+
         // Update last_activity in player_ratings from records (~20s)
         $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();
 
@@ -128,6 +135,14 @@ class Kernel extends ConsoleKernel
 
         // Check q3defrag.org for new DeFRaG mod releases every Sunday at 12:00
         $schedule->command('wiki:check-defrag-releases')->withoutOverlapping()->weeklyOn(0, '12:00');
+
+        // Mirror those same releases into the downloads hub, whose DeFRaG mod
+        // category renders them as a self-updating article.
+        $schedule->command('downloads:sync-defrag-mod')->withoutOverlapping()->weeklyOn(0, '12:15');
+
+        // Refresh the size and date on the family-friendly pk3 set. The files
+        // rarely change, so weekly is plenty.
+        $schedule->command('downloads:sync-family-friendly')->withoutOverlapping()->weeklyOn(0, '12:30');
 
         // Prune guest sessions older than 24h so bot traffic doesn't bloat
         // the sessions table. Logged-in sessions keep the 30-day lifetime.
