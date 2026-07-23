@@ -253,7 +253,9 @@ class WebController extends Controller
             $parts = explode('/', $map->pk3);
             $filename = end($parts);
 
-            $url = "https://dl.defrag.racing/downloads/maps/" . $filename;
+            // Names can contain URL-special characters ('#' would truncate
+            // the redirect target as a fragment, e.g. gu3#12-rawr.pk3).
+            $url = "https://dl.defrag.racing/downloads/maps/" . rawurlencode($filename);
 
             return redirect($url);
         }
