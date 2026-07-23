@@ -166,7 +166,7 @@
                         <a
                             @click.stop
                             target="_blank"
-                            :href="'https://dl.defrag.racing/downloads/maps/' + map?.pk3?.split('/').pop()"
+                            :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')"
                             class="p-0.5 text-gray-400 hover:text-blue-400 rounded transition-colors"
                             title="Download"
                         >

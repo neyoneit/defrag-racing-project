@@ -49,7 +49,9 @@ class ExtractLevelshots extends Command
             $processed++;
             $this->info("[{$processed}/{$maps->count()}] Processing: {$map->name}");
 
-            $pk3Url = "https://dl.defrag.racing/downloads/maps/" . $map->pk3;
+            // The downloads/maps pool is flat (no maps/<letter>/ sharding like
+            // the pk3 column) and names can contain URL-special characters.
+            $pk3Url = "https://dl.defrag.racing/downloads/maps/" . rawurlencode(basename($map->pk3));
 
             // Check file exists and get size
             $ch = curl_init($pk3Url);
