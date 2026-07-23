@@ -41,7 +41,11 @@ class BuildServerBundle extends Command
     private const MARKER     = 'dfsv-core.version.json'; // records what produced the current output
 
     private const ENGINE_RELEASE = 'https://api.github.com/repos/Defrag-racing/oDFe/releases/latest';
-    private const ENGINE_ASSET   = 'oDFe-linux-x86_64.zip';
+    // The i386 Linux server binary lives in the multi-platform zip under
+    // linux-x86/. It MUST be the 32-bit build: the MDD recordsystem is a
+    // 32-bit qagamei386.so, and a 64-bit oDFe.ded silently falls back to
+    // the qvm, which disables the recordsystem entirely.
+    private const ENGINE_ASSET   = 'oDFe-other.zip';
     private const MOD_INDEX      = 'https://q3defrag.org/files/defrag/';
 
     public function handle(): int
@@ -90,12 +94,11 @@ class BuildServerBundle extends Command
             $this->info('Downloading engine...');
             $this->download($engine['url'], $work . '/engine.zip');
             $this->runProcess(['unzip', '-o', '-q', $work . '/engine.zip', '-d', $work . '/engine']);
-            // The dedicated server binary ships as oDFe.ded.x64 in the x86_64
-            // zip; the bundle expects it plainly named oDFe.ded.
-            $ded = $this->findFile($work . '/engine', 'oDFe.ded.x64')
-                ?? $this->findFile($work . '/engine', 'oDFe.ded');
+            $ded = is_dir($work . '/engine/linux-x86')
+                ? $this->findFile($work . '/engine/linux-x86', 'oDFe.ded')
+                : null;
             if ($ded === null) {
-                throw new \RuntimeException('oDFe.ded(.x64) not found inside ' . self::ENGINE_ASSET);
+                throw new \RuntimeException('linux-x86/oDFe.ded (the required i386 build) not found inside ' . self::ENGINE_ASSET);
             }
             copy($ded, $stage . '/oDFe.ded');
             chmod($stage . '/oDFe.ded', 0755);
