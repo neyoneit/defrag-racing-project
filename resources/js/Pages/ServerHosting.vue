@@ -16,7 +16,7 @@ const props = defineProps({
     countries: { type: Object, default: () => ({}) },
 });
 
-// Backend ships countries as { "CZ": "CZ — Czechia", ... } already sorted.
+// Backend ships countries as { "CZ": "CZ - Czechia", ... } already sorted.
 // Convert to an array of {code,label} for v-for stability.
 const countryOptions = computed(() =>
     Object.entries(props.countries).map(([code, label]) => ({ code, label }))
@@ -173,9 +173,9 @@ const submittedServerInfoString = computed(() => {
 const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?? value;
 
 // Add-server form (one shared form; addServerOpenId tracks which
-// credential's card has it open). Pre-fills IP from that credential's
-// most-recent declared server so the common "another port on the same
-// box" case is one click — they only tweak port + gametype.
+// credential's card has it open). Pre-fills IP, rcon and country from
+// that credential's most-recent declared server so the common "another
+// port on the same box" case is one click — they only tweak port + gametype.
 const addServerOpenId = ref(null);
 
 const existingIpsFor = (cred) =>
@@ -193,7 +193,10 @@ const addServerForm = useForm({
 const openAddServer = (cred) => {
     addServerForm.reset();
     addServerForm.credential_id = cred.id;
-    addServerForm.ip = existingIpsFor(cred)[0] ?? '';
+    const last = (cred.servers || []).filter(s => s && s.ip).at(-1) ?? {};
+    addServerForm.ip = last.ip ?? existingIpsFor(cred)[0] ?? '';
+    addServerForm.rcon = last.rcon ?? '';
+    addServerForm.location = last.location ?? '';
     addServerOpenId.value = cred.id;
 };
 
