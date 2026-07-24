@@ -48,7 +48,7 @@ class Countries
                 $name = function_exists('locale_get_display_region')
                     ? locale_get_display_region('-' . $code, 'en')
                     : $code;
-                $out[$code] = $name && $name !== $code ? "{$code} — {$name}" : $code;
+                $out[$code] = $name && $name !== $code ? "{$code} - {$name}" : $code;
             }
             asort($out, SORT_NATURAL);
             return $out;
