@@ -224,6 +224,13 @@ class RenderedVideoResource extends Resource
                     })
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('demo_filename')
+                    ->label('Demo file')
+                    ->searchable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->demo_filename)
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('youtube_url')
                     ->label('YT')
                     ->url(fn ($record) => $record->youtube_url)
