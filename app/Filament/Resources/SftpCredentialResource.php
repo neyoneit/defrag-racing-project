@@ -36,6 +36,11 @@ class SftpCredentialResource extends Resource
                     ->searchable()
                     ->formatStateUsing(fn (string $state): string => UserResource::q3tohtml($state))->html()
                     ->url(fn ($record) => "/profile/{$record->user_id}"),
+                Tables\Columns\TextInputColumn::make('label')
+                    ->label('Label')
+                    ->placeholder('e.g. USA VPS')
+                    ->rules(['nullable', 'string', 'max:40'])
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('sftp_username')
                     ->label('SFTP user')
                     ->searchable()

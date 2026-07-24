@@ -9,6 +9,7 @@ class SftpCredential extends Model
     protected $fillable = [
         'user_id',
         'application_id',
+        'label',
         'sftp_username',
         'host',
         'port',

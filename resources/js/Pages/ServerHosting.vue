@@ -12,8 +12,7 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
     application: Object,
-    credential: Object,
-    pendingPassword: { type: String, default: null },
+    credentials: { type: Array, default: () => [] },
     countries: { type: Object, default: () => ({}) },
 });
 
@@ -27,11 +26,13 @@ const page = usePage();
 const successMsg = computed(() => page.props.success);
 const dangerMsg = computed(() => page.props.danger);
 
-const passwordRevealed = ref(false);
-const passwordCopied = ref(false);
+// Per-credential UI state, keyed by credential id — a user can hold
+// several credentials (one per VPS), each with its own pending password.
+const passwordRevealed = ref({});
+const passwordCopied = ref({});
 
-const ackForm = useForm({});
-const resetForm = useForm({});
+const ackForm = useForm({ credential_id: null });
+const resetForm = useForm({ credential_id: null });
 
 // Single styled confirm modal, driven by state. Replaces native
 // browser confirm() — same blocking semantics via the .onConfirm cb.
@@ -71,13 +72,16 @@ const toneClasses = {
     blue:    'bg-blue-500/20   hover:bg-blue-500/30   border-blue-500/40   text-blue-200',
 };
 
-const requestReset = () => {
+const credentialTitle = (cred) => cred.label || cred.sftp_username;
+
+const requestReset = (cred) => {
     openConfirm({
-        title: 'Generate a new password?',
-        body: 'Your current one will stop working immediately. The new password is shown only once on this page — make sure you can save it.',
+        title: `Generate a new password for "${credentialTitle(cred)}"?`,
+        body: 'The current one will stop working immediately. The new password is shown only once on this page — make sure you can save it. Your other credentials are not affected.',
         confirmLabel: 'Generate new password',
         confirmTone: 'amber',
         onConfirm: () => {
+            resetForm.credential_id = cred.id;
             resetForm.post(route('server-hosting.reset-password'), {
                 preserveScroll: true,
             });
@@ -85,26 +89,27 @@ const requestReset = () => {
     });
 };
 
-const copyPassword = async () => {
-    if (!props.pendingPassword) return;
+const copyPassword = async (cred) => {
+    if (!cred.pending_password) return;
     try {
-        await navigator.clipboard.writeText(props.pendingPassword);
-        passwordCopied.value = true;
-        setTimeout(() => { passwordCopied.value = false; }, 2500);
+        await navigator.clipboard.writeText(cred.pending_password);
+        passwordCopied.value[cred.id] = true;
+        setTimeout(() => { passwordCopied.value[cred.id] = false; }, 2500);
     } catch (e) {
         // Fallback for non-https contexts: just leave the value visible
         // so the user can select+copy manually.
-        passwordRevealed.value = true;
+        passwordRevealed.value[cred.id] = true;
     }
 };
 
-const acknowledgePassword = () => {
+const acknowledgePassword = (cred) => {
     openConfirm({
         title: 'Wipe the password from this page?',
         body: "Make sure you've saved it somewhere safe — after confirming, it cannot be shown again. You'd need to generate a new one (or ask an admin to rotate).",
         confirmLabel: "Yes, I've saved it",
         confirmTone: 'emerald',
         onConfirm: () => {
+            ackForm.credential_id = cred.id;
             ackForm.post(route('server-hosting.acknowledge-password'), {
                 preserveScroll: true,
             });
@@ -147,7 +152,7 @@ const submit = () => {
 };
 
 const state = computed(() => {
-    if (props.credential) return 'active';
+    if (props.credentials.length) return 'active';
     if (!props.application) return 'none';
     return props.application.status;
 });
@@ -167,17 +172,17 @@ const submittedServerInfoString = computed(() => {
 
 const gametypeLabel = (value) => GAMETYPES.find(g => g.value === value)?.label ?? value;
 
-// Add-server form (only shown when state === 'active'). Pre-fills IP from
-// the user's most-recent declared server so the common "another port on
-// the same box" case is one click — they only tweak port + gametype.
-const addServerOpen = ref(false);
+// Add-server form (one shared form; addServerOpenId tracks which
+// credential's card has it open). Pre-fills IP from that credential's
+// most-recent declared server so the common "another port on the same
+// box" case is one click — they only tweak port + gametype.
+const addServerOpenId = ref(null);
 
-const existingIps = computed(() => {
-    const list = props.credential?.servers || [];
-    return [...new Set(list.map(s => s.ip).filter(Boolean))];
-});
+const existingIpsFor = (cred) =>
+    [...new Set((cred.servers || []).map(s => s.ip).filter(Boolean))];
 
 const addServerForm = useForm({
+    credential_id: null,
     gametype: 'mixed',
     ip: '',
     port: 27960,
@@ -185,18 +190,37 @@ const addServerForm = useForm({
     location: '',
 });
 
-const openAddServer = () => {
+const openAddServer = (cred) => {
     addServerForm.reset();
-    addServerForm.ip = existingIps.value[0] ?? '';
-    addServerOpen.value = true;
+    addServerForm.credential_id = cred.id;
+    addServerForm.ip = existingIpsFor(cred)[0] ?? '';
+    addServerOpenId.value = cred.id;
 };
 
 const submitAddServer = () => {
     addServerForm.post(route('server-hosting.add-server'), {
         preserveScroll: true,
         onSuccess: () => {
-            addServerOpen.value = false;
+            addServerOpenId.value = null;
             addServerForm.reset();
+        },
+    });
+};
+
+// Additional-credential form — approved owners provision one SFTP account
+// per VPS so every box gets its own password.
+const newCredOpen = ref(false);
+
+const newCredForm = useForm({
+    label: '',
+});
+
+const submitNewCred = () => {
+    newCredForm.post(route('server-hosting.request-credential'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            newCredOpen.value = false;
+            newCredForm.reset();
         },
     });
 };
@@ -219,7 +243,8 @@ const submitAddServer = () => {
         </p>
         <p class="text-xs text-gray-500 mb-8">
             Install the bundle on your defrag host first, then plug your SFTP credentials into
-            <code>sv.conf</code> — we'll give them to you after approval.
+            <code>sv.conf</code> — we'll give them to you after approval. Running servers on
+            several machines? Add one credential per VPS so each box has its own login.
         </p>
 
         <div v-if="successMsg"
@@ -231,225 +256,280 @@ const submitAddServer = () => {
             {{ dangerMsg }}
         </div>
 
-        <!-- STATE: ACTIVE CREDENTIAL --------------------------------------- -->
-        <section v-if="state === 'active'"
-                 class="rounded-xl border border-emerald-500/30 bg-black/40 backdrop-blur-sm p-6 shadow-2xl">
-            <div class="flex items-center gap-2 mb-4">
-                <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-                <h2 class="text-lg font-semibold text-emerald-300">Active SFTP credentials</h2>
-            </div>
-
-            <p class="text-sm text-gray-400 mb-4">
-                Use these in your <code>sv.conf</code>. The password is shown <strong class="text-emerald-300">only once</strong>
-                — copy it now, or ask an admin to reset it later if you lose it.
-            </p>
-
-            <!-- One-time password reveal box (only when pending) -->
-            <div v-if="pendingPassword"
-                 class="mb-6 rounded-lg border border-yellow-400/40 bg-yellow-500/5 p-4">
-                <div class="flex items-start gap-3">
-                    <span class="text-yellow-300 text-xl leading-none">⚠</span>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-sm font-semibold text-yellow-200 mb-1">Save your password now</div>
-                        <p class="text-xs text-gray-400 mb-3">
-                            This is the only time you'll see it. After clicking "I've saved it", we wipe it from our DB —
-                            it lives only on the storage VPS in hashed form. If you lose it, ask an admin to rotate.
-                        </p>
-
-                        <div class="flex items-center gap-2 mb-3">
-                            <code class="flex-1 px-3 py-2 bg-black/60 border border-white/10 rounded-lg text-sm font-mono text-emerald-200 select-all break-all">
-                                <span v-if="passwordRevealed">{{ pendingPassword }}</span>
-                                <span v-else class="text-gray-500">●●●●●●●●●●●●●●●●●●●●●●●●</span>
-                            </code>
-                            <button type="button"
-                                    @click="passwordRevealed = !passwordRevealed"
-                                    class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition whitespace-nowrap">
-                                {{ passwordRevealed ? 'Hide' : 'Reveal' }}
-                            </button>
-                            <button type="button"
-                                    @click="copyPassword"
-                                    class="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-xs text-blue-200 transition whitespace-nowrap">
-                                {{ passwordCopied ? 'Copied ✓' : 'Copy' }}
-                            </button>
-                        </div>
-
-                        <button type="button"
-                                @click="acknowledgePassword"
-                                :disabled="ackForm.processing"
-                                class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
-                            ✓ I've saved it — wipe from this page
-                        </button>
+        <!-- STATE: ACTIVE CREDENTIALS (one card per VPS) --------------------- -->
+        <template v-if="state === 'active'">
+            <section v-for="cred in credentials" :key="cred.id"
+                     class="rounded-xl border border-emerald-500/30 bg-black/40 backdrop-blur-sm p-6 shadow-2xl mb-6">
+                <div class="flex items-center justify-between gap-2 mb-4">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0"></span>
+                        <h2 class="text-lg font-semibold text-emerald-300 truncate">{{ credentialTitle(cred) }}</h2>
                     </div>
+                    <span v-if="cred.label" class="text-xs text-gray-500 font-mono shrink-0">{{ cred.sftp_username }}</span>
                 </div>
-            </div>
 
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div>
-                    <dt class="text-gray-500">Host</dt>
-                    <dd class="text-gray-200 font-mono">{{ credential.host }}</dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Port</dt>
-                    <dd class="text-gray-200 font-mono">{{ credential.port }}</dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Username</dt>
-                    <dd class="text-gray-200 font-mono">{{ credential.sftp_username }}</dd>
-                </div>
-                <div>
-                    <dt class="text-gray-500">Remote path</dt>
-                    <dd class="text-gray-200 font-mono">{{ credential.remote_path }}</dd>
-                </div>
-                <div v-if="!pendingPassword" class="sm:col-span-2">
-                    <dt class="text-gray-500">Password</dt>
-                    <dd class="flex items-center gap-3 flex-wrap">
-                        <span class="text-gray-400 italic">no longer shown</span>
-                        <button type="button"
-                                @click="requestReset"
-                                :disabled="resetForm.processing"
-                                class="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs text-amber-200 transition disabled:opacity-50">
-                            {{ resetForm.processing ? 'Resetting…' : 'Generate new password' }}
-                        </button>
-                        <span class="text-xs text-gray-500">(rate-limited — max 3/hour)</span>
-                    </dd>
-                </div>
-            </dl>
-
-            <!-- Per-server RS codes (filled in by admin after approval) -->
-            <div v-if="credential.servers && credential.servers.length" class="mt-6">
-                <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Your servers</div>
-                <div class="rounded-lg border border-white/10 overflow-hidden">
-                    <table class="w-full text-sm">
-                        <thead class="bg-white/5 text-xs uppercase tracking-wide text-gray-500">
-                            <tr>
-                                <th class="px-3 py-2 text-left">Gametype</th>
-                                <th class="px-3 py-2 text-left">IP : Port</th>
-                                <th class="px-3 py-2 text-left">Location</th>
-                                <th class="px-3 py-2 text-left">RS code</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-white/5">
-                            <tr v-for="(s, i) in credential.servers" :key="i">
-                                <td class="px-3 py-2 font-medium text-emerald-200/80">{{ (s.gametype || '').toUpperCase() }}</td>
-                                <td class="px-3 py-2 font-mono text-gray-300">{{ s.ip }}:{{ s.port }}</td>
-                                <td class="px-3 py-2 font-mono text-gray-300">
-                                    <span v-if="s.location" class="inline-flex items-center gap-1.5">
-                                        <img :src="`/images/flags/${s.location}.png`" class="w-4 h-3 rounded shadow-sm" :alt="s.location" onerror="this.style.display='none'">
-                                        {{ s.location }}
-                                    </span>
-                                    <span v-else class="text-gray-500 italic">not set</span>
-                                </td>
-                                <td class="px-3 py-2 font-mono">
-                                    <span v-if="s.rs_code" class="text-emerald-200">{{ s.rs_code }}</span>
-                                    <span v-else class="text-gray-500 italic">awaiting admin</span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">
-                    Put each RS code into <code>sv.conf</code> as <code>rs&lt;PORT&gt;=&lt;rs_code&gt;</code> (set <code>MDD_ENABLED=1</code> too).
+                <p class="text-sm text-gray-400 mb-4">
+                    Use these in the <code>sv.conf</code> on this VPS. The password is shown <strong class="text-emerald-300">only once</strong>
+                    — copy it now, or generate a new one later if you lose it.
                 </p>
 
-                <!-- Add another server (reuses existing SFTP credential) -->
-                <div class="mt-4">
-                    <button v-if="!addServerOpen"
-                            type="button"
-                            @click="openAddServer"
-                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm transition">
-                        <span class="text-base leading-none">+</span> Add another server
-                    </button>
+                <!-- One-time password reveal box (only when pending) -->
+                <div v-if="cred.pending_password"
+                     class="mb-6 rounded-lg border border-yellow-400/40 bg-yellow-500/5 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="text-yellow-300 text-xl leading-none">⚠</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-yellow-200 mb-1">Save your password now</div>
+                            <p class="text-xs text-gray-400 mb-3">
+                                This is the only time you'll see it. After clicking "I've saved it", we wipe it from our DB —
+                                it lives only on the storage VPS in hashed form. If you lose it, generate a new one below.
+                            </p>
 
-                    <form v-else
-                          @submit.prevent="submitAddServer"
-                          class="rounded-lg border border-emerald-500/20 bg-black/30 p-4 space-y-3">
-                        <div class="flex items-center justify-between">
-                            <h4 class="text-sm font-semibold text-emerald-200">Register another server</h4>
-                            <p class="text-xs text-gray-500">Reuses your existing SFTP credentials — no new password.</p>
-                        </div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <code class="flex-1 px-3 py-2 bg-black/60 border border-white/10 rounded-lg text-sm font-mono text-emerald-200 select-all break-all">
+                                    <span v-if="passwordRevealed[cred.id]">{{ cred.pending_password }}</span>
+                                    <span v-else class="text-gray-500">●●●●●●●●●●●●●●●●●●●●●●●●</span>
+                                </code>
+                                <button type="button"
+                                        @click="passwordRevealed[cred.id] = !passwordRevealed[cred.id]"
+                                        class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition whitespace-nowrap">
+                                    {{ passwordRevealed[cred.id] ? 'Hide' : 'Reveal' }}
+                                </button>
+                                <button type="button"
+                                        @click="copyPassword(cred)"
+                                        class="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-xs text-blue-200 transition whitespace-nowrap">
+                                    {{ passwordCopied[cred.id] ? 'Copied ✓' : 'Copy' }}
+                                </button>
+                            </div>
 
-                        <div class="grid grid-cols-12 gap-2 items-start">
-                            <div class="col-span-2">
-                                <label class="block text-xs text-gray-500 mb-1">Gametype</label>
-                                <select v-model="addServerForm.gametype"
-                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
-                                               bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
-                                               bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                    <option v-for="g in GAMETYPES" :key="g.value" :value="g.value"
-                                            class="bg-slate-900 text-gray-200">{{ g.label }}</option>
-                                </select>
-                            </div>
-                            <div class="col-span-3">
-                                <label class="block text-xs text-gray-500 mb-1">IP</label>
-                                <input v-model="addServerForm.ip"
-                                       :list="existingIps.length ? 'existing-ips' : null"
-                                       type="text" placeholder="123.45.67.89"
-                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
-                                <datalist v-if="existingIps.length" id="existing-ips">
-                                    <option v-for="ip in existingIps" :key="ip" :value="ip" />
-                                </datalist>
-                                <p v-if="addServerForm.errors.ip" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.ip }}</p>
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs text-gray-500 mb-1">Port</label>
-                                <input v-model.number="addServerForm.port"
-                                       type="number" min="1" max="65535" placeholder="27960"
-                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
-                                <p v-if="addServerForm.errors.port" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.port }}</p>
-                            </div>
-                            <div class="col-span-2">
-                                <label class="block text-xs text-gray-500 mb-1">Rcon</label>
-                                <input v-model="addServerForm.rcon"
-                                       type="text" placeholder="rcon"
-                                       class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
-                                <p v-if="addServerForm.errors.rcon" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.rcon }}</p>
-                            </div>
-                            <div class="col-span-3">
-                                <label class="block text-xs text-gray-500 mb-1">Country</label>
-                                <select v-model="addServerForm.location"
-                                        class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
-                                               bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
-                                               bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
-                                    <option value="" class="bg-slate-900 text-gray-400">— flag —</option>
-                                    <option v-for="c in countryOptions" :key="c.code" :value="c.code"
-                                            class="bg-slate-900 text-gray-200">{{ c.label }}</option>
-                                </select>
-                                <p v-if="addServerForm.errors.location" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.location }}</p>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-end gap-2 pt-1">
                             <button type="button"
-                                    @click="addServerOpen = false"
-                                    class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition">
-                                Cancel
-                            </button>
-                            <button type="submit"
-                                    :disabled="addServerForm.processing"
-                                    class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
-                                {{ addServerForm.processing ? 'Adding…' : 'Add server' }}
+                                    @click="acknowledgePassword(cred)"
+                                    :disabled="ackForm.processing"
+                                    class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
+                                ✓ I've saved it — wipe from this page
                             </button>
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
 
-            <details class="mt-6 group">
-                <summary class="cursor-pointer text-sm text-emerald-300 hover:text-emerald-200 select-none">
-                    Example <code>sv.conf</code> snippet
-                </summary>
-                <pre class="mt-3 text-xs bg-black/60 border border-white/10 rounded-lg p-4 overflow-x-auto text-gray-300"
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Host</dt>
+                        <dd class="text-gray-200 font-mono">{{ cred.host }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Port</dt>
+                        <dd class="text-gray-200 font-mono">{{ cred.port }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Username</dt>
+                        <dd class="text-gray-200 font-mono">{{ cred.sftp_username }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Remote path</dt>
+                        <dd class="text-gray-200 font-mono">{{ cred.remote_path }}</dd>
+                    </div>
+                    <div v-if="!cred.pending_password" class="sm:col-span-2">
+                        <dt class="text-gray-500">Password</dt>
+                        <dd class="flex items-center gap-3 flex-wrap">
+                            <span class="text-gray-400 italic">no longer shown</span>
+                            <button type="button"
+                                    @click="requestReset(cred)"
+                                    :disabled="resetForm.processing"
+                                    class="px-3 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs text-amber-200 transition disabled:opacity-50">
+                                {{ resetForm.processing && resetForm.credential_id === cred.id ? 'Resetting…' : 'Generate new password' }}
+                            </button>
+                            <span class="text-xs text-gray-500">(rate-limited — max 6/hour)</span>
+                        </dd>
+                    </div>
+                </dl>
+
+                <!-- Per-server RS codes (filled in by admin after approval) -->
+                <div class="mt-6">
+                    <div v-if="cred.servers && cred.servers.length">
+                        <div class="text-xs uppercase tracking-wide text-gray-500 mb-2">Servers on this credential</div>
+                        <div class="rounded-lg border border-white/10 overflow-hidden">
+                            <table class="w-full text-sm">
+                                <thead class="bg-white/5 text-xs uppercase tracking-wide text-gray-500">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">Gametype</th>
+                                        <th class="px-3 py-2 text-left">IP : Port</th>
+                                        <th class="px-3 py-2 text-left">Location</th>
+                                        <th class="px-3 py-2 text-left">RS code</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    <tr v-for="(s, i) in cred.servers" :key="i">
+                                        <td class="px-3 py-2 font-medium text-emerald-200/80">{{ (s.gametype || '').toUpperCase() }}</td>
+                                        <td class="px-3 py-2 font-mono text-gray-300">{{ s.ip }}:{{ s.port }}</td>
+                                        <td class="px-3 py-2 font-mono text-gray-300">
+                                            <span v-if="s.location" class="inline-flex items-center gap-1.5">
+                                                <img :src="`/images/flags/${s.location}.png`" class="w-4 h-3 rounded shadow-sm" :alt="s.location" onerror="this.style.display='none'">
+                                                {{ s.location }}
+                                            </span>
+                                            <span v-else class="text-gray-500 italic">not set</span>
+                                        </td>
+                                        <td class="px-3 py-2 font-mono">
+                                            <span v-if="s.rs_code" class="text-emerald-200">{{ s.rs_code }}</span>
+                                            <span v-else class="text-gray-500 italic">awaiting admin</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            Put each RS code into <code>sv.conf</code> as <code>rs&lt;PORT&gt;=&lt;rs_code&gt;</code> (set <code>MDD_ENABLED=1</code> too).
+                        </p>
+                    </div>
+                    <p v-else class="text-xs text-gray-500">
+                        No servers declared on this credential yet — add the ones running on this VPS below.
+                    </p>
+
+                    <!-- Add another server (reuses this credential) -->
+                    <div class="mt-4">
+                        <button v-if="addServerOpenId !== cred.id"
+                                type="button"
+                                @click="openAddServer(cred)"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm transition">
+                            <span class="text-base leading-none">+</span> Add another server
+                        </button>
+
+                        <form v-else
+                              @submit.prevent="submitAddServer"
+                              class="rounded-lg border border-emerald-500/20 bg-black/30 p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-semibold text-emerald-200">Register another server</h4>
+                                <p class="text-xs text-gray-500">Reuses this credential — no new password.</p>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-2 items-start">
+                                <div class="col-span-2">
+                                    <label class="block text-xs text-gray-500 mb-1">Gametype</label>
+                                    <select v-model="addServerForm.gametype"
+                                            class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
+                                                   bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
+                                                   bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
+                                        <option v-for="g in GAMETYPES" :key="g.value" :value="g.value"
+                                                class="bg-slate-900 text-gray-200">{{ g.label }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-3">
+                                    <label class="block text-xs text-gray-500 mb-1">IP</label>
+                                    <input v-model="addServerForm.ip"
+                                           :list="existingIpsFor(cred).length ? `existing-ips-${cred.id}` : null"
+                                           type="text" placeholder="123.45.67.89"
+                                           class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                    <datalist v-if="existingIpsFor(cred).length" :id="`existing-ips-${cred.id}`">
+                                        <option v-for="ip in existingIpsFor(cred)" :key="ip" :value="ip" />
+                                    </datalist>
+                                    <p v-if="addServerForm.errors.ip" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.ip }}</p>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs text-gray-500 mb-1">Port</label>
+                                    <input v-model.number="addServerForm.port"
+                                           type="number" min="1" max="65535" placeholder="27960"
+                                           class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                    <p v-if="addServerForm.errors.port" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.port }}</p>
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs text-gray-500 mb-1">Rcon</label>
+                                    <input v-model="addServerForm.rcon"
+                                           type="text" placeholder="rcon"
+                                           class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 font-mono focus:border-blue-500 focus:ring-0 transition" />
+                                    <p v-if="addServerForm.errors.rcon" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.rcon }}</p>
+                                </div>
+                                <div class="col-span-3">
+                                    <label class="block text-xs text-gray-500 mb-1">Country</label>
+                                    <select v-model="addServerForm.location"
+                                            class="w-full bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition appearance-none cursor-pointer
+                                                   bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%23a1a1aa%22><path d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>')]
+                                                   bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] pr-8">
+                                        <option value="" class="bg-slate-900 text-gray-400">— flag —</option>
+                                        <option v-for="c in countryOptions" :key="c.code" :value="c.code"
+                                                class="bg-slate-900 text-gray-200">{{ c.label }}</option>
+                                    </select>
+                                    <p v-if="addServerForm.errors.location" class="text-xs text-red-400 mt-1">{{ addServerForm.errors.location }}</p>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-2 pt-1">
+                                <button type="button"
+                                        @click="addServerOpenId = null"
+                                        class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition">
+                                    Cancel
+                                </button>
+                                <button type="submit"
+                                        :disabled="addServerForm.processing"
+                                        class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-xs text-emerald-200 transition disabled:opacity-50">
+                                    {{ addServerForm.processing ? 'Adding…' : 'Add server' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <details class="mt-6 group">
+                    <summary class="cursor-pointer text-sm text-emerald-300 hover:text-emerald-200 select-none">
+                        Example <code>sv.conf</code> snippet
+                    </summary>
+                    <pre class="mt-3 text-xs bg-black/60 border border-white/10 rounded-lg p-4 overflow-x-auto text-gray-300"
 ><code>MDD_ENABLED=1
-<template v-for="s in (credential.servers || [])" :key="s.port">rs{{ s.port }}={{ s.rs_code || '0' }}
+<template v-for="s in (cred.servers || [])" :key="s.port">rs{{ s.port }}={{ s.rs_code || '0' }}
 </template>
 DEMO_SFTP_ENABLED=1
-DEMO_SFTP_HOST={{ credential.host }}
-DEMO_SFTP_PORT={{ credential.port }}
-DEMO_SFTP_USER={{ credential.sftp_username }}
-DEMO_SFTP_PASS={{ pendingPassword || '<your password>' }}
-DEMO_SFTP_REMOTEDIR={{ credential.remote_path }}</code></pre>
-            </details>
-        </section>
+DEMO_SFTP_HOST={{ cred.host }}
+DEMO_SFTP_PORT={{ cred.port }}
+DEMO_SFTP_USER={{ cred.sftp_username }}
+DEMO_SFTP_PASS={{ cred.pending_password || '<your password>' }}
+DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
+                </details>
+            </section>
+
+            <!-- Add another VPS credential (separate SFTP account) -->
+            <section class="rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm p-6 shadow-2xl">
+                <button v-if="!newCredOpen"
+                        type="button"
+                        @click="newCredOpen = true"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm transition">
+                    <span class="text-base leading-none">+</span> Add another VPS credential
+                </button>
+                <p v-if="!newCredOpen" class="text-xs text-gray-500 mt-2">
+                    Hosting on more than one machine? Provision a separate SFTP account per VPS —
+                    each gets its own username and password, so rotating or revoking one never
+                    breaks the others.
+                </p>
+
+                <form v-if="newCredOpen"
+                      @submit.prevent="submitNewCred"
+                      class="space-y-3">
+                    <div>
+                        <h4 class="text-sm font-semibold text-blue-200 mb-1">New SFTP account</h4>
+                        <p class="text-xs text-gray-500">
+                            Creates a fresh account on the storage VPS with its own password (shown once).
+                            Name it after the machine it's for.
+                        </p>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <div class="flex-1">
+                            <input v-model="newCredForm.label"
+                                   type="text" maxlength="40" placeholder='e.g. "USA VPS" or "Canada box"'
+                                   class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-200 focus:border-blue-500 focus:ring-0 transition" />
+                            <p v-if="newCredForm.errors.label" class="text-xs text-red-400 mt-1">{{ newCredForm.errors.label }}</p>
+                        </div>
+                        <button type="button"
+                                @click="newCredOpen = false"
+                                class="px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                :disabled="newCredForm.processing || newCredForm.label.trim().length < 2"
+                                class="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-xs text-blue-200 transition disabled:opacity-50">
+                            {{ newCredForm.processing ? 'Provisioning…' : 'Create account' }}
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </template>
 
         <!-- STATE: PENDING APPLICATION -------------------------------------- -->
         <section v-else-if="state === 'pending'"

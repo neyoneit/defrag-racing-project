@@ -107,6 +107,10 @@ class ServerOwnerApplicationResource extends Resource
                             ->helperText('lowercase, starts with a letter, 3–32 chars, [a-z0-9_-]')
                             ->default(fn ($record) => StorageVpsProvisioner::suggestUsername($record->user->username ?? $record->user->name ?? 'user' . $record->user_id))
                             ->unique('sftp_credentials', 'sftp_username'),
+                        \Filament\Forms\Components\TextInput::make('label')
+                            ->label('Credential label (optional)')
+                            ->maxLength(40)
+                            ->helperText('Users can hold one credential per VPS — the label tells them apart, e.g. "USA VPS".'),
                         \Filament\Forms\Components\Textarea::make('review_note')
                             ->label('Note to applicant (optional)')
                             ->rows(2),
@@ -135,6 +139,7 @@ class ServerOwnerApplicationResource extends Resource
                                 $credential = SftpCredential::create([
                                     'user_id'          => $record->user_id,
                                     'application_id'   => $record->id,
+                                    'label'            => $data['label'] ?? null,
                                     'sftp_username'    => $response['username'],
                                     'host'             => $response['host'],
                                     'port'             => $response['port'],
