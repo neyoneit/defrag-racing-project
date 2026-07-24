@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ServerOwnerApplication;
 use App\Models\SftpCredential;
 use App\Services\StorageVpsProvisioner;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,11 +14,14 @@ use RuntimeException;
 
 class ServerHostingController extends Controller
 {
+    /** Hard cap of active credentials per user — one per VPS is the intent. */
+    private const MAX_CREDENTIALS = 8;
+
     /**
      * Show the applicant's current state — one of:
      *   - no application yet (show form)
      *   - latest application pending / rejected
-     *   - active credential issued (show host/user/path)
+     *   - one or more active credentials issued (show each host/user/path)
      *   - revoked credential (show "apply again" hint)
      */
     public function index(Request $request)
@@ -28,43 +32,49 @@ class ServerHostingController extends Controller
             ->latest()
             ->first();
 
-        $credential = SftpCredential::where('user_id', $user->id)
+        // A user can hold several credentials — typically one per VPS —
+        // each with its own SFTP account, password and declared servers.
+        $credentials = SftpCredential::where('user_id', $user->id)
             ->active()
-            ->latest()
-            ->first();
+            ->orderBy('id')
+            ->get()
+            ->map(function (SftpCredential $credential) {
+                $payload = $credential->only(['id', 'label', 'sftp_username', 'host', 'port', 'remote_path', 'status', 'servers']);
+                // admin_note is admin-only metadata; never leak it to the user.
+                $payload['servers'] = array_map(
+                    fn ($s) => collect($s)->except('admin_note')->all(),
+                    $payload['servers'] ?? []
+                );
+                // 'encrypted' cast auto-decrypts on read. Surface to the
+                // page once — the front-end will POST to acknowledge once
+                // the user confirms they've copied it, which nulls the DB.
+                try {
+                    $payload['pending_password'] = $credential->password_pending;
+                } catch (DecryptException) {
+                    // Row encrypted under a different APP_KEY (key rotation,
+                    // prod dump in local dev) — treat as "no pending password"
+                    // instead of 500ing the whole page.
+                    $payload['pending_password'] = null;
+                }
 
-        $pendingPassword = null;
-        if ($credential && $credential->password_pending) {
-            // 'encrypted' cast auto-decrypts on read. Surface to the
-            // page once — the front-end will POST to acknowledge once
-            // the user confirms they've copied it, which nulls the DB.
-            $pendingPassword = $credential->password_pending;
-        }
-
-        $credentialPayload = null;
-        if ($credential) {
-            $credentialPayload = $credential->only(['id', 'sftp_username', 'host', 'port', 'remote_path', 'status', 'servers']);
-            // admin_note is admin-only metadata; never leak it to the user.
-            $credentialPayload['servers'] = array_map(
-                fn ($s) => collect($s)->except('admin_note')->all(),
-                $credentialPayload['servers'] ?? []
-            );
-        }
+                return $payload;
+            })
+            ->values();
 
         return Inertia::render('ServerHosting', [
-            'application'     => $application,
-            'credential'      => $credentialPayload,
-            'pendingPassword' => $pendingPassword,
-            'countries'       => \App\Support\Countries::options(),
+            'application' => $application,
+            'credentials' => $credentials,
+            'countries'   => \App\Support\Countries::options(),
         ]);
     }
 
     public function acknowledgePassword(Request $request)
     {
-        $credential = SftpCredential::where('user_id', $request->user()->id)
-            ->active()
-            ->latest()
-            ->firstOrFail();
+        $request->validate([
+            'credential_id' => ['required', 'integer'],
+        ]);
+
+        $credential = $this->ownedActiveCredential($request);
 
         $credential->update(['password_pending' => null]);
 
@@ -78,22 +88,22 @@ class ServerHostingController extends Controller
      */
     public function resetPassword(Request $request)
     {
-        $user = $request->user();
+        $request->validate([
+            'credential_id' => ['required', 'integer'],
+        ]);
 
-        $credential = SftpCredential::where('user_id', $user->id)
-            ->active()
-            ->latest()
-            ->firstOrFail();
+        $user = $request->user();
+        $credential = $this->ownedActiveCredential($request);
 
         $rateKey = 'sftp-reset:' . $user->id;
-        if (RateLimiter::tooManyAttempts($rateKey, 3)) {
+        if (RateLimiter::tooManyAttempts($rateKey, 6)) {
             $retry = RateLimiter::availableIn($rateKey);
             return back()->with(
                 'danger',
                 "Too many reset attempts. Try again in {$retry} seconds."
             );
         }
-        RateLimiter::hit($rateKey, 3600); // 3 per hour
+        RateLimiter::hit($rateKey, 3600); // 6 per hour, shared across credentials
 
         try {
             $response = app(StorageVpsProvisioner::class)
@@ -143,7 +153,7 @@ class ServerHostingController extends Controller
             return back()->withErrors([
                 'message' => match ($existing->status) {
                     'pending'  => 'You already have an application pending review.',
-                    'approved' => 'You already have an approved application. Use your existing credentials.',
+                    'approved' => 'You already have an approved application. Use your existing credentials, or add another VPS credential from this page.',
                     default    => 'Application already exists.',
                 },
             ]);
@@ -160,8 +170,8 @@ class ServerHostingController extends Controller
     }
 
     /**
-     * Append a new server entry to an already-approved user's credential.
-     * Does NOT touch SFTP provisioning — the user reuses their existing
+     * Append a new server entry to one of an approved user's credentials.
+     * Does NOT touch SFTP provisioning — the user reuses that credential's
      * account on the storage VPS. Only the per-server metadata
      * (gametype/ip/port/rcon/location) grows. rs_code is left null and
      * admins fill it in from Filament after light review.
@@ -169,23 +179,16 @@ class ServerHostingController extends Controller
     public function addServer(Request $request)
     {
         $request->validate([
-            'gametype' => ['required', 'string', 'in:mixed,cpm,vq3,teamruns,fastcaps,freestyle'],
-            'ip'       => ['required', 'string', 'max:255'],
-            'port'     => ['required', 'integer', 'between:1,65535'],
-            'rcon'     => ['required', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'size:2', 'alpha', \Illuminate\Validation\Rule::in(\App\Support\Countries::CODES)],
+            'credential_id' => ['required', 'integer'],
+            'gametype'      => ['required', 'string', 'in:mixed,cpm,vq3,teamruns,fastcaps,freestyle'],
+            'ip'            => ['required', 'string', 'max:255'],
+            'port'          => ['required', 'integer', 'between:1,65535'],
+            'rcon'          => ['required', 'string', 'max:255'],
+            'location'      => ['nullable', 'string', 'size:2', 'alpha', \Illuminate\Validation\Rule::in(\App\Support\Countries::CODES)],
         ]);
 
         $user = $request->user();
-
-        $credential = SftpCredential::where('user_id', $user->id)
-            ->active()
-            ->latest()
-            ->first();
-
-        if (!$credential) {
-            return back()->with('danger', 'No active credential — you must be an approved server owner to add servers.');
-        }
+        $credential = $this->ownedActiveCredential($request);
 
         $rateKey = 'sftp-add-server:' . $user->id;
         if (RateLimiter::tooManyAttempts($rateKey, 10)) {
@@ -194,19 +197,23 @@ class ServerHostingController extends Controller
         }
         RateLimiter::hit($rateKey, 3600);
 
-        $servers = $credential->servers ?? [];
-
         $ip   = trim($request->input('ip'));
         $port = (int) $request->input('port');
 
-        foreach ($servers as $existing) {
-            if (($existing['ip'] ?? null) === $ip && (int) ($existing['port'] ?? 0) === $port) {
-                return back()->withErrors([
-                    'ip' => "You already have a server registered at {$ip}:{$port}.",
-                ]);
+        // A server can only ship demos through one credential — dedupe
+        // across ALL of the user's active credentials, not just this one.
+        $siblings = SftpCredential::where('user_id', $user->id)->active()->get();
+        foreach ($siblings as $sibling) {
+            foreach ($sibling->servers ?? [] as $existing) {
+                if (($existing['ip'] ?? null) === $ip && (int) ($existing['port'] ?? 0) === $port) {
+                    return back()->withErrors([
+                        'ip' => "You already have a server registered at {$ip}:{$port}.",
+                    ]);
+                }
             }
         }
 
+        $servers   = $credential->servers ?? [];
         $servers[] = [
             'gametype' => $request->input('gametype'),
             'ip'       => $ip,
@@ -219,5 +226,119 @@ class ServerHostingController extends Controller
         $credential->update(['servers' => $servers]);
 
         return back()->with('success', 'Server added. Admin will assign an RS code shortly.');
+    }
+
+    /**
+     * Self-service provisioning of an ADDITIONAL credential for an already
+     * approved server owner — one per VPS, so each box gets its own SFTP
+     * login and a compromise/rotation on one doesn't touch the others.
+     * The first credential still comes from admin approval; this only
+     * works when at least one active credential already exists.
+     */
+    public function requestCredential(Request $request)
+    {
+        $request->validate([
+            'label' => ['required', 'string', 'min:2', 'max:40'],
+        ]);
+
+        $user = $request->user();
+
+        $active = SftpCredential::where('user_id', $user->id)->active()->get();
+
+        if ($active->isEmpty()) {
+            return back()->with('danger', 'No active credential — you must be an approved server owner before adding more.');
+        }
+
+        if ($active->count() >= self::MAX_CREDENTIALS) {
+            return back()->with('danger', 'Credential limit reached (' . self::MAX_CREDENTIALS . '). Ask an admin if you really need more.');
+        }
+
+        $rateKey = 'sftp-new-credential:' . $user->id;
+        if (RateLimiter::tooManyAttempts($rateKey, 3)) {
+            $retry = RateLimiter::availableIn($rateKey);
+            return back()->with('danger', "Too many new credentials. Try again in {$retry} seconds.");
+        }
+        RateLimiter::hit($rateKey, 3600); // 3 per hour
+
+        $label    = trim($request->input('label'));
+        $username = $this->uniqueUsername($user, $label);
+
+        try {
+            $response = app(StorageVpsProvisioner::class)->create($username);
+
+            SftpCredential::create([
+                'user_id'          => $user->id,
+                'application_id'   => ServerOwnerApplication::where('user_id', $user->id)
+                    ->where('status', 'approved')->latest()->value('id'),
+                'label'            => $label,
+                'sftp_username'    => $response['username'],
+                'host'             => $response['host'],
+                'port'             => $response['port'],
+                'remote_path'      => $response['remote_path'],
+                'password_pending' => $response['password'],
+                'servers'          => [],
+                'status'           => 'active',
+                'provisioned_at'   => now(),
+                'provisioned_by'   => null, // self-service, not admin-issued
+            ]);
+
+            return back()->with('success', "New SFTP account \"{$label}\" provisioned. Copy its password now — it is shown only once.");
+        } catch (RuntimeException $e) {
+            Log::error('Self-service SFTP credential provisioning failed', [
+                'user_id' => $user->id,
+                'label'   => $label,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return back()->with(
+                'danger',
+                'Provisioning failed on the storage VPS. Please ask an admin to investigate.'
+            );
+        }
+    }
+
+    /**
+     * Resolve the credential_id from the request to a credential that is
+     * active AND owned by the requesting user — 404s otherwise so users
+     * can never act on someone else's credential.
+     */
+    private function ownedActiveCredential(Request $request): SftpCredential
+    {
+        return SftpCredential::where('user_id', $request->user()->id)
+            ->active()
+            ->where('id', (int) $request->input('credential_id'))
+            ->firstOrFail();
+    }
+
+    /**
+     * Derive a unique SFTP username from the user's name plus the
+     * credential label, e.g. "neyo-usa". Falls back to numeric suffixes
+     * on collision. Result always satisfies the provisioner's
+     * ^[a-z][a-z0-9_-]{2,31}$ contract.
+     */
+    private function uniqueUsername($user, string $label): string
+    {
+        $base = StorageVpsProvisioner::suggestUsername(
+            $user->username ?? $user->name ?? 'user' . $user->id
+        );
+
+        $slug = substr(trim(preg_replace('/[^a-z0-9-]+/', '-', strtolower($label)), '-'), 0, 12);
+        $slug = trim($slug, '-');
+
+        $candidate = $slug !== '' ? "{$base}-{$slug}" : $base;
+        $candidate = rtrim(substr($candidate, 0, 32), '-_');
+
+        if (!preg_match('/^[a-z][a-z0-9_-]{2,31}$/', $candidate)) {
+            $candidate = $base;
+        }
+
+        $username = $candidate;
+        $suffix   = 2;
+        while (SftpCredential::where('sftp_username', $username)->exists()) {
+            $tail     = '-' . $suffix++;
+            $username = rtrim(substr($candidate, 0, 32 - strlen($tail)), '-_') . $tail;
+        }
+
+        return $username;
     }
 }
