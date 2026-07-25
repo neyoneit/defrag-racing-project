@@ -266,7 +266,7 @@ class ServerHostingController extends Controller
         try {
             $response = app(StorageVpsProvisioner::class)->create($username);
 
-            SftpCredential::create([
+            $credential = SftpCredential::create([
                 'user_id'          => $user->id,
                 'application_id'   => ServerOwnerApplication::where('user_id', $user->id)
                     ->where('status', 'approved')->latest()->value('id'),
@@ -281,6 +281,12 @@ class ServerHostingController extends Controller
                 'provisioned_at'   => now(),
                 'provisioned_by'   => null, // self-service, not admin-issued
             ]);
+
+            // Verify the account end-to-end right away. Never throws;
+            // a failure lands as check_status='failed' on the row (red
+            // badge in Filament) plus a warning in the log - the user
+            // still gets their password either way.
+            app(\App\Services\SftpCredentialChecker::class)->check($credential);
 
             return back()->with('success', "New SFTP account \"{$label}\" provisioned. Copy its password now — it is shown only once.");
         } catch (RuntimeException $e) {

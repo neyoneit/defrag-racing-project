@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SftpCredentialResource\Pages;
 use App\Models\SftpCredential;
+use App\Services\SftpCredentialChecker;
 use App\Services\StorageVpsProvisioner;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -90,6 +91,50 @@ class SftpCredentialResource extends Resource
 
                         return $missing ? 'Missing location: '.implode(', ', $missing) : 'All servers located';
                     }),
+                Tables\Columns\TextColumn::make('last_upload_at')
+                    ->label('Last demo')
+                    ->badge()
+                    ->sortable()
+                    ->getStateUsing(fn ($record) => $record->last_upload_at
+                        ? $record->last_upload_at->diffForHumans()
+                        : 'never')
+                    ->color(function ($record): string {
+                        if (! $record->last_upload_at) {
+                            return 'danger';
+                        }
+                        if ($record->last_upload_at->gt(now()->subDay())) {
+                            return 'success';
+                        }
+                        if ($record->last_upload_at->gt(now()->subWeek())) {
+                            return 'warning';
+                        }
+
+                        return 'danger';
+                    })
+                    ->tooltip(fn ($record) => sprintf(
+                        '%s demo(s) ingested%s - synced hourly from the storage VPS',
+                        number_format((int) ($record->demo_count ?? 0)),
+                        $record->last_upload_at
+                            ? ', newest ' . $record->last_upload_at->toDateTimeString() . ' UTC'
+                            : ''
+                    )),
+                Tables\Columns\TextColumn::make('check_status')
+                    ->label('Check')
+                    ->badge()
+                    ->placeholder('not checked')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'ok'     => 'success',
+                        'failed' => 'danger',
+                        'error'  => 'warning',
+                        default  => 'gray',
+                    })
+                    ->tooltip(fn ($record) => $record->last_checked_at
+                        ? trim(
+                            'Checked ' . $record->last_checked_at->diffForHumans()
+                            . ($record->check_message ? "\n" . $record->check_message : '')
+                        )
+                        : 'Never checked')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('provisioned_at')
                     ->dateTime()
                     ->sortable(),
@@ -210,6 +255,29 @@ class SftpCredentialResource extends Resource
                             ->success()
                             ->title('Servers updated')
                             ->send();
+                    }),
+                Tables\Actions\Action::make('checkSftp')
+                    ->label('Check SFTP')
+                    ->icon('heroicon-o-shield-check')
+                    ->color('gray')
+                    ->visible(fn ($record) => $record->status === 'active')
+                    ->action(function ($record) {
+                        $result = app(SftpCredentialChecker::class)->check($record);
+
+                        if ($result['ok']) {
+                            Notification::make()
+                                ->success()
+                                ->title('SFTP account healthy')
+                                ->body("Account '{$record->sftp_username}' passed all checks (group, shell, chroot, test write, ingest).")
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->danger()
+                                ->title("SFTP check failed for '{$record->sftp_username}'")
+                                ->body(implode("\n", $result['problems']))
+                                ->persistent()
+                                ->send();
+                        }
                     }),
                 Tables\Actions\Action::make('resetPassword')
                     ->icon('heroicon-o-arrow-path')

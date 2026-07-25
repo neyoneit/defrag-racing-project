@@ -12,8 +12,8 @@ use Symfony\Component\Process\Process;
  * The remote side is restricted by `command=` in authorized_keys to a
  * single binary (`df-sftp-provision-wrap`), so the only attack surface
  * here is whatever the wrapper itself accepts. The wrapper rejects any
- * subcommand outside `create|reset-password|revoke|info|list` and any
- * argument that isn't `[a-zA-Z0-9_-]+`, but we still validate
+ * subcommand outside `create|reset-password|revoke|info|list|stats|check`
+ * and any argument that isn't `[a-zA-Z0-9_-]+`, but we still validate
  * client-side — defense in depth.
  *
  * All methods return the decoded JSON array from the remote command.
@@ -51,6 +51,27 @@ class StorageVpsProvisioner
     public function list(): array
     {
         return $this->call('list', []);
+    }
+
+    /**
+     * Passive per-user upload stats read from the ingest tree.
+     *
+     * @return array<int, array{username: string, demo_count: int, last_upload: int|null}>
+     */
+    public function stats(): array
+    {
+        return $this->call('stats', []);
+    }
+
+    /**
+     * End-to-end account health check (group, shell, chroot perms, test
+     * write as the user, ingest dir, ingest daemon).
+     *
+     * @return array{username: string, ok: bool, problems: array<int, string>, demo_count: int, last_upload: int|null}
+     */
+    public function check(string $username): array
+    {
+        return $this->call('check', [$username]);
     }
 
     /**

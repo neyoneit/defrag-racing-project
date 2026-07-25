@@ -177,6 +177,21 @@ class ServerOwnerApplicationResource extends Resource
                                 ))
                                 ->persistent()
                                 ->send();
+
+                            // Immediately verify the freshly provisioned
+                            // account actually works (chroot, perms, test
+                            // write). Never throws; quiet on success -
+                            // the admin only hears about problems.
+                            $check = app(\App\Services\SftpCredentialChecker::class)
+                                ->check($result['credential']);
+                            if (! $check['ok']) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Account provisioned but health check FAILED')
+                                    ->body(implode("\n", $check['problems']))
+                                    ->persistent()
+                                    ->send();
+                            }
                         } catch (RuntimeException $e) {
                             Log::error('Approve failed', [
                                 'application_id' => $record->id,
