@@ -57,5 +57,13 @@
         @if ($record->reviewed_at)
             <div>Reviewed: {{ $record->reviewed_at?->format('Y-m-d H:i') }}</div>
         @endif
+        <div>
+            Rules accepted:
+            @if ($record->rules_accepted_at)
+                <span class="text-green-600 dark:text-green-400">{{ $record->rules_accepted_at->format('Y-m-d H:i') }}</span>
+            @else
+                <span class="italic">not recorded (application predates the rules)</span>
+            @endif
+        </div>
     </div>
 </div>

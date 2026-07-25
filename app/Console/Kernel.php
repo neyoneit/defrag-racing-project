@@ -97,6 +97,11 @@ class Kernel extends ConsoleKernel
         // overwrites existing coordinates.
         $schedule->command('servers:geolocate')->withoutOverlapping()->daily();
 
+        // Serverdemos upload monitoring: pulls per-SFTP-account demo counts
+        // and newest-upload timestamps from the storage VPS ingest tree into
+        // sftp_credentials, driving the health badge in Filament.
+        $schedule->command('serverdemos:sync-stats')->withoutOverlapping()->hourly();
+
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
 

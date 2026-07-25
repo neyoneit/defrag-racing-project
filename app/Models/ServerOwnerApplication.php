@@ -10,6 +10,7 @@ class ServerOwnerApplication extends Model
         'user_id',
         'message',
         'server_info',
+        'rules_accepted_at',
         'status',
         'reviewed_by',
         'reviewed_at',
@@ -17,7 +18,8 @@ class ServerOwnerApplication extends Model
     ];
 
     protected $casts = [
-        'reviewed_at' => 'datetime',
+        'reviewed_at'       => 'datetime',
+        'rules_accepted_at' => 'datetime',
         // server_info stores a structured list of the applicant's defrag
         // servers — see ServerHostingController::apply() for the shape.
         'server_info' => 'array',

@@ -20,11 +20,18 @@ class SftpCredential extends Model
         'provisioned_at',
         'revoked_at',
         'provisioned_by',
+        'last_upload_at',
+        'demo_count',
+        'last_checked_at',
+        'check_status',
+        'check_message',
     ];
 
     protected $casts = [
         'provisioned_at'   => 'datetime',
         'revoked_at'       => 'datetime',
+        'last_upload_at'   => 'datetime',
+        'last_checked_at'  => 'datetime',
         // Encrypted-at-rest; written by Approve / Reset, nulled by the
         // user's "I've copied it" acknowledgement.
         'password_pending' => 'encrypted',
