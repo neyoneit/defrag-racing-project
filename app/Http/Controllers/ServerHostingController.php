@@ -138,6 +138,9 @@ class ServerHostingController extends Controller
             'servers.*.port'          => ['required', 'integer', 'between:1,65535'],
             'servers.*.rcon'          => ['required', 'string', 'max:255'],
             'servers.*.location'      => ['nullable', 'string', 'size:2', 'alpha', \Illuminate\Validation\Rule::in(\App\Support\Countries::CODES)],
+            // Consent to the server hosting rules shown on the page is
+            // a hard requirement - the timestamp is stored on the row.
+            'rules_accepted'          => ['required', 'accepted'],
         ]);
 
         $user = $request->user();
@@ -160,10 +163,11 @@ class ServerHostingController extends Controller
         }
 
         ServerOwnerApplication::create([
-            'user_id'     => $user->id,
-            'message'     => $request->input('message'),
-            'server_info' => $request->input('servers'),
-            'status'      => 'pending',
+            'user_id'           => $user->id,
+            'message'           => $request->input('message'),
+            'server_info'       => $request->input('servers'),
+            'rules_accepted_at' => now(),
+            'status'            => 'pending',
         ]);
 
         return back()->with('success', 'Application submitted. Admins will review it shortly.');

@@ -137,6 +137,7 @@ const blankServer = () => ({
 const form = useForm({
     message: '',
     servers: [blankServer()],
+    rules_accepted: false,
 });
 
 const addServer = () => form.servers.push(blankServer());
@@ -249,6 +250,71 @@ const submitNewCred = () => {
             <code>sv.conf</code> — we'll give them to you after approval. Running servers on
             several machines? Add one credential per VPS so each box has its own login.
         </p>
+
+        <!-- SERVER HOSTING RULES - open for applicants, collapsed for active owners -->
+        <details :open="state !== 'active'"
+                 class="mb-8 rounded-xl border border-blue-500/30 bg-black/40 backdrop-blur-sm shadow-2xl group">
+            <summary class="cursor-pointer select-none px-6 py-4 text-base font-semibold text-blue-300 hover:text-blue-200 transition">
+                Server hosting rules
+                <span class="text-xs font-normal text-gray-500 ml-2">- required reading for every server admin</span>
+            </summary>
+            <div class="px-6 pb-6 space-y-4 text-sm text-gray-300">
+                <ol class="space-y-4 list-none">
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">1. Registration and activation</div>
+                        <p class="text-gray-400">Every server must be registered through defrag.racing server hosting
+                        before going public. Servers are activated only after they meet all the requirements below.
+                        Unregistered or non-compliant servers will not be listed on defrag.racing.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">2. Server demos are mandatory</div>
+                        <p class="text-gray-400">All servers must run with server-side demo recording enabled
+                        (serverdemos). Demos are <strong class="text-gray-200">not public and never will be</strong> -
+                        they are stored privately on defrag.racing infrastructure and are only reviewed by staff if a
+                        player report is filed and its validity is confirmed. They exist purely as an integrity/review
+                        mechanism.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">3. SFTP demo upload connection is mandatory</div>
+                        <p class="text-gray-400">Every server must be connected to the defrag.racing storage via the
+                        provided SFTP account (automatic demo upload in the server bundle:
+                        <code>DEMO_SFTP_ENABLED=1</code> + the credentials you receive from neyo during registration).
+                        Servers that are not connected, or whose upload stops working for an extended period, will not
+                        be activated - and already active servers will be deactivated until the connection is
+                        restored.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">4. Keep your server up to date</div>
+                        <p class="text-gray-400">Run the current defrag.racing server bundle (or keep your engine/mod
+                        updated to the latest supported release). Outdated servers may misbehave in the server browser
+                        and record system and may be delisted until updated.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">5. Stability and fair play</div>
+                        <p class="text-gray-400">Keep your server reasonably stable and reachable. Do not tamper with
+                        recorded demos, timers, or record submission in any way. Any manipulation leads to immediate
+                        deactivation.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">6. Naming and conduct</div>
+                        <p class="text-gray-400">Server names must not impersonate other servers/communities and must
+                        not contain offensive content. Admins are expected to act respectfully towards players.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">7. Support</div>
+                        <p class="text-gray-400">If you have trouble setting up the bundle or the SFTP connection,
+                        contact <a href="/profile/8"
+                                   class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">neyo</a>
+                        - via his defrag.racing profile or on Discord in the server-hosting section. We would rather
+                        help you get compliant than delist you.</p>
+                    </li>
+                </ol>
+                <p class="text-xs text-gray-500 pt-2 border-t border-white/5">
+                    These rules exist to keep the record system verifiable. Demos stay private and untouched unless a
+                    confirmed report requires a review. Thanks for hosting!
+                </p>
+            </div>
+        </details>
 
         <div v-if="successMsg"
              class="mb-6 rounded-xl border border-green-500/30 bg-black/40 backdrop-blur-sm px-4 py-3 text-sm text-green-300 shadow-2xl">
@@ -675,13 +741,29 @@ DEMO_SFTP_REMOTEDIR={{ cred.remote_path }}</code></pre>
                     <p v-if="form.errors.servers" class="text-xs text-red-400 mt-2">{{ form.errors.servers }}</p>
                 </div>
 
-                <!-- Submit -->
-                <div class="flex justify-end pt-2 border-t border-white/5">
-                    <button type="submit"
-                            :disabled="form.processing || form.message.length < 20"
-                            class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium transition">
-                        {{ form.processing ? 'Submitting…' : 'Submit application' }}
-                    </button>
+                <!-- Rules consent + submit -->
+                <div class="pt-2 border-t border-white/5 space-y-3">
+                    <label class="flex items-start gap-3 cursor-pointer select-none">
+                        <input v-model="form.rules_accepted"
+                               type="checkbox"
+                               class="mt-0.5 h-4 w-4 rounded border-white/20 bg-black/50 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 cursor-pointer" />
+                        <span class="text-sm text-gray-300">
+                            I have read and agree to the
+                            <span class="text-blue-300 font-medium">server hosting rules</span> above -
+                            including mandatory serverdemos recording and the SFTP demo upload connection.
+                            <span class="text-red-400">*</span>
+                        </span>
+                    </label>
+                    <p v-if="form.errors.rules_accepted" class="text-xs text-red-400">{{ form.errors.rules_accepted }}</p>
+
+                    <div class="flex justify-end">
+                        <button type="submit"
+                                :disabled="form.processing || form.message.length < 20 || !form.rules_accepted"
+                                class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-sm font-medium transition"
+                                :title="!form.rules_accepted ? 'You must agree to the server hosting rules first' : null">
+                            {{ form.processing ? 'Submitting…' : 'Submit application' }}
+                        </button>
+                    </div>
                 </div>
             </form>
         </section>
