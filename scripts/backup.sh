@@ -77,4 +77,33 @@ else
   echo "[$(date)] Média přeskočena (B2_MEDIA_* není v .env)"
 fi
 
+# ===== 3) Serverdemos mirror (storage VPS -> defrag-serverdemos) =====
+# Archiv, ne sync: rclone copy jen přidává - smazání na storage nikdy
+# nesmaže nic v B2. Čte se přes dlbrowser SFTP účet (read ACL na
+# /var/lib/serverdemos), takže na storage VPS nic neinstalujeme.
+B2_SERVERDEMOS_KEY_ID="$(read_env B2_SERVERDEMOS_KEY_ID)"
+B2_SERVERDEMOS_APP_KEY="$(read_env B2_SERVERDEMOS_APP_KEY)"
+B2_SERVERDEMOS_BUCKET="$(read_env B2_SERVERDEMOS_BUCKET)"; B2_SERVERDEMOS_BUCKET="${B2_SERVERDEMOS_BUCKET:-defrag-serverdemos}"
+SD_HOST="$(read_env STORAGE_VPS_DL_HOST)"
+SD_PORT="$(read_env STORAGE_VPS_DL_PORT)"; SD_PORT="${SD_PORT:-2258}"
+SD_USER="$(read_env STORAGE_VPS_DL_USER)"; SD_USER="${SD_USER:-dlbrowser}"
+SD_KEY_PATH="$(read_env STORAGE_VPS_DL_KEY_PATH)"
+
+if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "$SD_HOST" ] && [ -n "$SD_KEY_PATH" ]; then
+  export RCLONE_CONFIG_SDSFTP_TYPE=sftp
+  export RCLONE_CONFIG_SDSFTP_HOST="$SD_HOST"
+  export RCLONE_CONFIG_SDSFTP_PORT="$SD_PORT"
+  export RCLONE_CONFIG_SDSFTP_USER="$SD_USER"
+  export RCLONE_CONFIG_SDSFTP_KEY_FILE="$SD_KEY_PATH"
+  export RCLONE_CONFIG_SDB2_TYPE=b2
+  export RCLONE_CONFIG_SDB2_ACCOUNT="$B2_SERVERDEMOS_KEY_ID"
+  export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
+
+  rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
+    --transfers 4 --sftp-concurrency 8
+  echo "[$(date)] Serverdemos mirror na B2 OK"
+else
+  echo "[$(date)] Serverdemos přeskočeny (B2_SERVERDEMOS_* / STORAGE_VPS_DL_* není v .env)"
+fi
+
 echo "[$(date)] === Záloha $STAMP DOKONČENA ==="
