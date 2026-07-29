@@ -194,8 +194,11 @@ class ServerHostingController extends Controller
         $user = $request->user();
         $credential = $this->ownedActiveCredential($request);
 
+        // 10/hour turned out to be too tight: a single box can legitimately
+        // host ~20 servers (the EU 10gbit box runs 17), and declaring them all
+        // right after provisioning is the normal first-time flow.
         $rateKey = 'sftp-add-server:' . $user->id;
-        if (RateLimiter::tooManyAttempts($rateKey, 10)) {
+        if (RateLimiter::tooManyAttempts($rateKey, 40)) {
             $retry = RateLimiter::availableIn($rateKey);
             return back()->with('danger', "Too many additions. Try again in {$retry} seconds.");
         }
