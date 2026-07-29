@@ -306,17 +306,55 @@ class BuildServerBundle extends Command
         }
     }
 
+    /**
+     * Extract a zip entry by entry instead of extractTo(), because
+     * PowerShell 5.1's Compress-Archive stores nested entries with
+     * BACKSLASH separators ("defrag\modules\admin.dll"). extractTo() would
+     * take that as one literal filename and flatten the tree.
+     */
     private function extractZip(string $zipPath, string $dest): void
     {
         $zip = new \ZipArchive();
         if ($zip->open($zipPath) !== true) {
             throw new \RuntimeException("could not open zip {$zipPath}");
         }
-        if (! $zip->extractTo($dest)) {
+
+        try {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = (string) $zip->getNameIndex($i);
+                if ($name === '') {
+                    continue;
+                }
+
+                $relative = ltrim(str_replace('\\', '/', $name), '/');
+                if ($relative === '' || str_ends_with($relative, '/')) {
+                    continue; // directory entry - created with the files below
+                }
+                if (preg_match('#(^|/)\.\.(/|$)#', $relative)) {
+                    throw new \RuntimeException("refusing traversal entry '{$name}' in {$zipPath}");
+                }
+
+                $target = $dest . '/' . $relative;
+                if (! is_dir(dirname($target)) && ! mkdir(dirname($target), 0775, true) && ! is_dir(dirname($target))) {
+                    throw new \RuntimeException('could not create ' . dirname($target));
+                }
+
+                $in = $zip->getStream($name);
+                if ($in === false) {
+                    throw new \RuntimeException("could not read '{$name}' from {$zipPath}");
+                }
+                $out = fopen($target, 'wb');
+                if ($out === false) {
+                    fclose($in);
+                    throw new \RuntimeException("could not write {$target}");
+                }
+                stream_copy_to_stream($in, $out);
+                fclose($in);
+                fclose($out);
+            }
+        } finally {
             $zip->close();
-            throw new \RuntimeException("could not extract {$zipPath} into {$dest}");
         }
-        $zip->close();
     }
 
     /** Zip the whole staging tree with paths relative to its root. */

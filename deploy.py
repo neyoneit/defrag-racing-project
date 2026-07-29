@@ -110,13 +110,14 @@ def pipeline_cmds(name):
         'echo "  - https://defrag.racing$url"; '
         'curl -s -o /dev/null --max-time 30 -w "    HTTP %{http_code}  in %{time_total}s\\n" "https://defrag.racing$url" || echo "    (failed, continuing)"; '
         'done',
-        # Republish dfsv-core.tar from the freshly deployed builder code.
-        # --force skips the engine/mod-unchanged no-op, so a deploy that only
-        # changed the builder itself still refreshes the tar (the nightly
-        # schedule keeps picking up engine/mod updates between deploys). A
-        # failure (GitHub or q3defrag.org down) only flags the deploy log -
-        # rerun `php artisan bundle:build-server --force` by hand then.
-        'echo "==> Rebuilding dfsv-core.tar..."',
+        # Republish the core bundles (dfsv-core.tar for linux, dfsv-core-win.zip
+        # for windows) from the freshly deployed builder code. --force skips the
+        # engine/mod-unchanged no-op, so a deploy that only changed the builder
+        # itself still refreshes them (the nightly schedule keeps picking up
+        # engine/mod updates between deploys). A failure (GitHub or q3defrag.org
+        # down) only flags the deploy log - rerun
+        # `php artisan bundle:build-server --force` by hand then.
+        'echo "==> Rebuilding core server bundles..."',
         "php artisan bundle:build-server --force",
     ]
 
