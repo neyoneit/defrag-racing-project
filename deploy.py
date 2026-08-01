@@ -1,10 +1,16 @@
 import os
+import shutil
 import sys
 import subprocess
 
 PROJECT_PATH = "/var/www/defrag-racing-project/production"
 REPOSITORY_URL = "https://github.com/Defrag-racing/defrag-racing-project.git"
 PROJECT_NAME = "defrag-racing-project"
+
+# How many releases survive a deploy. Enough to roll back a few deploys, few
+# enough that the pile stays small - each release carries its own vendor/ and
+# node_modules/, so they run about 1.2 GB apiece.
+KEEP_RELEASES = 5
 
 def get_deployed_sha():
     """Commit SHA of the release the `current` symlink points at, i.e. what is
@@ -123,6 +129,47 @@ def pipeline_cmds(name):
 
     return cmds
 
+def prune_releases():
+    """Delete every release but the KEEP_RELEASES newest.
+
+    Nothing ever removed them, so they had piled up to 29 releases / 36 GB
+    before this was written. The live release is resolved through the
+    `current` symlink instead of assumed to be the highest id, so a rollback
+    (which repoints `current` at an older release) can never delete the code
+    that is actually running. rmtree unlinks symlinks rather than following
+    them, so the .env / storage / baseq3 links inside a release are removed
+    without touching what they point at in production/deploy/.
+    """
+    releases_dir = f"{PROJECT_PATH}/releases"
+    live = os.path.realpath(f"{PROJECT_PATH}/current")
+
+    releases = []
+    for name in os.listdir(releases_dir):
+        if not name.startswith(PROJECT_NAME + "-"):
+            continue
+        try:
+            releases.append((int(name.split("-")[-1]), name))
+        except ValueError:
+            continue
+    releases.sort()
+
+    doomed = [name for _, name in releases[:-KEEP_RELEASES]]
+    if not doomed:
+        print(f"    {len(releases)} release(s), nothing to prune.", flush=True)
+        return
+
+    for name in doomed:
+        path = f"{releases_dir}/{name}"
+        if os.path.realpath(path) == live:
+            print(f"    keeping {name}: it is the live release", flush=True)
+            continue
+        print(f"    removing {name}", flush=True)
+        try:
+            shutil.rmtree(path)
+        except OSError as e:
+            # Never fail the deploy over housekeeping - the site is already up.
+            print(f"!!! could not remove {name}: {e}", flush=True)
+
 def deploy(force=False):
     # Skip the whole deploy if the live release is already on the remote
     # master tip - cloning + rebuilding + restarting octane for an identical
@@ -173,6 +220,10 @@ def deploy(force=False):
         result = subprocess.run(cmd, shell=True, cwd=f"{PROJECT_PATH}/releases/{name}")
         if result.returncode != 0:
             print(f"!!! exit {result.returncode} from: {cmd}", flush=True)
+
+    # Last, so a failure here cannot stop the site from going live.
+    print(f"\n==> Pruning old releases (keeping {KEEP_RELEASES})...", flush=True)
+    prune_releases()
 
 if __name__ == "__main__":
     deploy(force="--force" in sys.argv)
