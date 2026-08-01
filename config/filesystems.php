@@ -121,6 +121,26 @@ return [
                 'throw'      => true,
             ],
 
+        // The B2 mirror of the same demos, written by scripts/backup.sh and
+        // serverdemos-mirror.sh through rclone. Read-only as far as the app
+        // is concerned: it is the copy that outlives the storage VPS, and it
+        // is what the admin browser falls back to for a demo that is no
+        // longer on that disk.
+        //
+        // Same bucket-scoped key the mirror already uses, so no new
+        // credential. Private bucket - links come from temporaryUrl(), never
+        // a public URL, hence no 'url' key.
+        'serverdemos_b2' => [
+            'driver'   => 's3',
+            'key'      => env('B2_SERVERDEMOS_KEY_ID'),
+            'secret'   => env('B2_SERVERDEMOS_APP_KEY'),
+            'region'   => env('B2_SERVERDEMOS_REGION', 'eu-central-003'),
+            'bucket'   => env('B2_SERVERDEMOS_BUCKET', 'defrag-serverdemos'),
+            'endpoint' => env('B2_SERVERDEMOS_ENDPOINT', 'https://s3.eu-central-003.backblazeb2.com'),
+            'use_path_style_endpoint' => false,
+            'throw'    => true,
+        ],
+
     ],
 
     /*
