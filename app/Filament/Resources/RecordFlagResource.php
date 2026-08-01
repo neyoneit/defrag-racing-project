@@ -204,6 +204,32 @@ class RecordFlagResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
 
+                // People flag a record without knowing what evidence exists
+                // behind it. This is where that gets answered: the serverdemo
+                // of the exact run if it happened on one of our servers, any
+                // uploaded demos, and the player's other runs on that map.
+                Tables\Actions\Action::make('evidence')
+                    ->label('Demos')
+                    ->icon('heroicon-o-film')
+                    ->color('info')
+                    ->visible(fn (RecordFlag $record) => $record->record_id !== null)
+                    ->modalHeading('Evidence for this record')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->modalWidth('3xl')
+                    ->modalContent(function (RecordFlag $record) {
+                        $target = $record->record;
+
+                        if (! $target) {
+                            return view('filament.record-flag-evidence-missing');
+                        }
+
+                        return view('filament.record-flag-evidence', [
+                            'record' => $target,
+                            ...\App\Services\RecordEvidence::for($target, $record->demo),
+                        ]);
+                    }),
+
                 Tables\Actions\Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')

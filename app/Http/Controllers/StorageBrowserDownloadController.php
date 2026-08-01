@@ -30,10 +30,21 @@ use Illuminate\Support\Facades\Storage;
  */
 class StorageBrowserDownloadController extends Controller
 {
-    /** disk name => moderator permission required to pull from it */
+    /**
+     * disk name => moderator permissions that may pull from it, any one of
+     * which is enough.
+     *
+     * record_flags is on the serverdemo list because the evidence panel on a
+     * flagged record hands out links to individual demos, and someone
+     * resolving reports needs to open them without being given the run of the
+     * whole archive. That is not a hole: these urls are signed server-side,
+     * so holding the permission lets you follow a link you were given, not
+     * mint one for a path of your choosing. Browsing still needs
+     * serverdemos_browser, which gates the page itself.
+     */
     private const DISKS = [
-        'serverdemos' => 'serverdemos_browser',
-        'dl_storage' => 'storage_browser',
+        'serverdemos' => ['serverdemos_browser', 'record_flags'],
+        'dl_storage' => ['storage_browser'],
     ];
 
     /** rclone mirrors /var/lib/serverdemos into this prefix of the bucket. */
@@ -70,9 +81,13 @@ class StorageBrowserDownloadController extends Controller
     public function __invoke(Request $request)
     {
         $diskName = (string) $request->query('disk');
-        $permission = self::DISKS[$diskName] ?? null;
-        abort_if($permission === null, 404);
-        abort_unless($request->user()?->hasModeratorPermission($permission) ?? false, 403);
+        $permissions = self::DISKS[$diskName] ?? null;
+        abort_if($permissions === null, 404);
+
+        $user = $request->user();
+        $allowed = $user !== null && collect($permissions)
+            ->contains(fn (string $permission) => $user->hasModeratorPermission($permission));
+        abort_unless($allowed, 403);
 
         $path = trim((string) $request->query('path'), '/');
         abort_if($path === '', 404);

@@ -147,6 +147,12 @@
         return isLoggedIn.value && page.props.canReportDemos;
     });
 
+    // Reporting a demo says "this upload is wrong", which needs someone with
+    // enough of a history here to be worth listening to. Flagging a record is
+    // a different thing - it only says "this time looks off", staff decide
+    // the rest - so it asks for nothing but an account.
+    const canFlagRecord = computed(() => isLoggedIn.value);
+
     const isAdmin = computed(() => {
         return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
     });
@@ -833,8 +839,11 @@
                     </svg>
                 </div>
                 <div v-if="actionsExpanded" class="flex items-center gap-0.5">
+                    <!-- Flagging a record needs no demo and no record count:
+                         anybody can see a time that looks wrong, and whether
+                         there is evidence behind it is for staff to find out. -->
                     <button
-                        v-if="canReportDemo && !record.oldtop"
+                        v-if="canFlagRecord && !record.oldtop"
                         @click.stop="showFlagModal = true"
                         class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
                         title="Flag validity issue"

@@ -192,8 +192,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Demo reporting routes
     Route::post('/demos/{demo}/report', [DemoReportController::class, 'store'])->name('demos.report');
 
-    // Record/demo flag routes
-    Route::post('/flags', [\App\Http\Controllers\RecordFlagController::class, 'store'])->name('flags.store');
+    // Record/demo flag routes. Throttled because flagging a record no longer
+    // requires a record count of your own - the controller still refuses a
+    // duplicate flag of the same type on the same target, but nothing else
+    // caps how many different records one account could work through.
+    Route::post('/flags', [\App\Http\Controllers\RecordFlagController::class, 'store'])
+        ->middleware('throttle:20,60')
+        ->name('flags.store');
 });
 
 // Frontend error logging (works for both authenticated and anonymous users)
