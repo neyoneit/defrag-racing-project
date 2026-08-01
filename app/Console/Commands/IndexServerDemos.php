@@ -99,6 +99,7 @@ class IndexServerDemos extends Command
                         'rs_server_id'       => $parsed['rs_server_id'],
                         'map_name'           => $parsed['map_name'],
                         'physics'            => $parsed['physics'],
+                        'mode'               => $parsed['mode'],
                         'time_ms'            => $parsed['time_ms'],
                         'mdd_id'             => $parsed['mdd_id'],
                         'on_contabo'         => true,
@@ -179,7 +180,7 @@ class IndexServerDemos extends Command
             ['path'],
             [
                 'owner_dir', 'sftp_credential_id', 'filename', 'size', 'recorded_at',
-                'rs_server_id', 'map_name', 'physics', 'time_ms', 'mdd_id',
+                'rs_server_id', 'map_name', 'physics', 'mode', 'time_ms', 'mdd_id',
                 'on_contabo', 'indexed_at', 'updated_at',
             ]
         );
