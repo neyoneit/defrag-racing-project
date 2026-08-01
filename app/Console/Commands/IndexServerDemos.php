@@ -29,6 +29,7 @@ class IndexServerDemos extends Command
 {
     protected $signature = 'serverdemos:index
         {--dir=* : Only these credential directories}
+        {--sweep : Also flag demos that are no longer on the local disk}
         {--dry-run : Report what would be indexed without writing}';
 
     protected $description = 'Index the serverdemos on the storage VPS into the server_demos table';
@@ -62,14 +63,22 @@ class IndexServerDemos extends Command
         }
 
         $credentials = SftpCredential::pluck('id', 'sftp_username');
+        $sweep = (bool) $this->option('sweep');
 
-        $totals = ['seen' => 0, 'unparsed' => 0, 'gone' => 0, 'failed' => 0];
+        $totals = ['seen' => 0, 'written' => 0, 'unparsed' => 0, 'gone' => 0, 'failed' => 0];
 
         foreach ($roots as $root) {
             $this->line("Indexing {$root}/ ...");
 
+            // What the index already holds for this directory, so an
+            // unchanged demo costs nothing. The traversal itself is ~14 s for
+            // the whole store, cheap enough to run every few minutes - but
+            // rewriting all 116k rows each time would not be.
+            $known = $sweep ? [] : $this->knownRows($root);
+
             $batch = [];
             $seen = 0;
+            $written = 0;
             $unparsed = 0;
 
             try {
@@ -87,15 +96,25 @@ class IndexServerDemos extends Command
                         continue;
                     }
 
+                    $seen++;
+
+                    $size = (int) ($item->fileSize() ?? 0);
+                    $mtime = $item->lastModified() ? (int) $item->lastModified() : null;
+
+                    // Already indexed and untouched since. Skipping keeps a
+                    // frequent run to only the demos that actually arrived.
+                    $before = $known[$item->path()] ?? null;
+                    if ($before !== null && $before['size'] === $size && $before['mtime'] === $mtime) {
+                        continue;
+                    }
+
                     $batch[] = [
                         'owner_dir'          => $parsed['owner_dir'],
                         'sftp_credential_id' => $credentials[$parsed['owner_dir']] ?? null,
                         'path'               => $item->path(),
                         'filename'           => $parsed['filename'],
-                        'size'               => (int) ($item->fileSize() ?? 0),
-                        'recorded_at'        => $item->lastModified()
-                            ? Carbon::createFromTimestamp($item->lastModified())
-                            : null,
+                        'size'               => $size,
+                        'recorded_at'        => $mtime ? Carbon::createFromTimestamp($mtime) : null,
                         'rs_server_id'       => $parsed['rs_server_id'],
                         'map_name'           => $parsed['map_name'],
                         'physics'            => $parsed['physics'],
@@ -108,7 +127,7 @@ class IndexServerDemos extends Command
                         'updated_at'         => $startedAt,
                     ];
 
-                    $seen++;
+                    $written++;
 
                     if (count($batch) >= self::BATCH) {
                         $this->flush($batch, $dry);
@@ -128,10 +147,11 @@ class IndexServerDemos extends Command
 
             $this->flush($batch, $dry);
 
-            // Anything in this directory the walk did not touch is no longer
-            // on the local disk.
+            // Only a sweeping run may conclude that a demo is gone. A normal
+            // run skips unchanged rows, so their indexed_at stays old and
+            // every one of them would look missing.
             $gone = 0;
-            if (! $dry) {
+            if ($sweep && ! $dry) {
                 $gone = ServerDemo::where('owner_dir', $root)
                     ->where('on_contabo', true)
                     ->where(fn ($q) => $q->whereNull('indexed_at')->orWhere('indexed_at', '<', $startedAt))
@@ -139,24 +159,27 @@ class IndexServerDemos extends Command
             }
 
             $this->line(sprintf(
-                '  %d demo(s)%s%s',
+                '  %d demo(s), %d written%s%s',
                 $seen,
+                $written,
                 $unparsed ? ", {$unparsed} non-demo file(s) ignored" : '',
                 $gone ? ", {$gone} no longer on the local disk" : ''
             ));
 
             $totals['seen'] += $seen;
+            $totals['written'] += $written;
             $totals['unparsed'] += $unparsed;
             $totals['gone'] += $gone;
         }
 
         $this->newLine();
         $this->info(sprintf(
-            '%s %d demo(s) across %d director%s.%s%s',
+            '%s %d demo(s) across %d director%s, %d new or changed.%s%s',
             $dry ? 'Would index' : 'Indexed',
             $totals['seen'],
             count($roots),
             count($roots) === 1 ? 'y' : 'ies',
+            $totals['written'],
             $totals['gone'] ? " {$totals['gone']} marked as gone from the local disk." : '',
             $totals['unparsed'] ? " {$totals['unparsed']} file(s) were not demos." : ''
         ));
@@ -167,6 +190,31 @@ class IndexServerDemos extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * path => size + mtime for one directory, so the walk can tell an
+     * unchanged demo from a new one without writing anything. One select of
+     * three narrow columns; even the largest credential is a few MB.
+     */
+    private function knownRows(string $root): array
+    {
+        $known = [];
+
+        ServerDemo::where('owner_dir', $root)
+            ->select('path', 'size', 'recorded_at')
+            ->toBase()
+            ->orderBy('id')
+            ->chunk(20000, function ($rows) use (&$known) {
+                foreach ($rows as $row) {
+                    $known[$row->path] = [
+                        'size' => (int) $row->size,
+                        'mtime' => $row->recorded_at ? Carbon::parse($row->recorded_at)->getTimestamp() : null,
+                    ];
+                }
+            });
+
+        return $known;
     }
 
     private function flush(array $batch, bool $dry): void

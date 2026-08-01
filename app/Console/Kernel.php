@@ -103,10 +103,16 @@ class Kernel extends ConsoleKernel
         $schedule->command('serverdemos:sync-stats')->withoutOverlapping()->hourly();
 
         // Keeps the server_demos index in step with the store on the storage
-        // VPS. The admin browser reads the table rather than listing SFTP, so
-        // a demo uploaded since the last run is not visible until this runs.
-        // Nightly at 05:00, after the 04:00 backup has finished with the disk.
-        $schedule->command('serverdemos:index')->withoutOverlapping()->dailyAt('05:00');
+        // VPS - the admin browser reads the table, not SFTP, so a demo is
+        // invisible until this has run. Walking all 116k files takes ~14 s
+        // and unchanged rows are skipped, so every 15 minutes is affordable.
+        $schedule->command('serverdemos:index')->withoutOverlapping()->everyFifteenMinutes();
+
+        // Once a night the same walk runs with --sweep, which is what flags
+        // demos that are no longer on the local disk. The frequent runs skip
+        // unchanged rows, so they cannot tell "unchanged" from "missing" and
+        // must not draw that conclusion.
+        $schedule->command('serverdemos:index --sweep')->withoutOverlapping()->dailyAt('05:00');
 
         // Auto-populate demome render queue when idle (tiered rotation, tops up to 5)
         $schedule->command('demome:populate-queue')->withoutOverlapping()->everyTenMinutes();
