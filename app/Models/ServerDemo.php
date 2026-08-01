@@ -27,6 +27,7 @@ class ServerDemo extends Model
         'rs_server_id',
         'map_name',
         'physics',
+        'mode',
         'time_ms',
         'mdd_id',
         'record_id',
@@ -62,6 +63,10 @@ class ServerDemo extends Model
      * The demo of exactly this record's run, if the record was set on one of
      * our servers. A record set elsewhere simply has none - that is an
      * answer, not a failure.
+     *
+     * Mode has to be part of the key, not just physics: the same player can
+     * hold a time on the same map in several ctf modes, and those are
+     * different records.
      */
     public function scopeForRecord($query, Record $record)
     {
@@ -69,6 +74,7 @@ class ServerDemo extends Model
             ->where('map_name', $record->mapname)
             ->where('mdd_id', $record->mdd_id)
             ->where('time_ms', $record->time)
-            ->when($record->physics, fn ($q, $physics) => $q->where('physics', strtolower($physics)));
+            ->when($record->physics, fn ($q, $physics) => $q->where('physics', strtolower($physics)))
+            ->when($record->mode, fn ($q, $mode) => $q->where('mode', strtolower($mode)));
     }
 }

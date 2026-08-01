@@ -9,6 +9,10 @@ namespace App\Services;
  *
  *   <credential>/serverdemos/server_<rs id>/<physics>/<map>[<time ms>][<mdd id>].dm_68
  *
+ * The physics directory is `cpm` or `vq3` for ordinary runs, and
+ * `ctf_<physics>_<n>` on fastcaps servers, where n is the ctf mode - so it
+ * carries the mode too, which `records` keeps as `run` or `ctf1`..`ctf7`.
+ *
  * - map, time in ms and the player's MDD id come from the filename
  * - physics from the directory holding the file
  * - the rs server id from the `server_<id>` segment
@@ -24,14 +28,20 @@ namespace App\Services;
  */
 class ServerDemoPath
 {
-    /** Directories the recordsystem uses for physics. Anything else -> null. */
+    /** Plain run directories: the name is the physics and the mode is `run`. */
     private const PHYSICS = ['cpm', 'vq3'];
+
+    /**
+     * Fastcaps directories carry the mode as well: `ctf_cpm_4` is cpm physics
+     * in ctf mode 4, matching the `ctf1`..`ctf7` values in `records.mode`.
+     */
+    private const FASTCAPS = '/^ctf_(cpm|vq3)_([1-7])$/i';
 
     /** Revoked accounts are parked here by the provisioner; not live data. */
     public const SKIP_DIRS = ['_revoked'];
 
     /**
-     * @return array{owner_dir:string,filename:string,rs_server_id:?int,physics:?string,map_name:string,time_ms:?int,mdd_id:?int}|null
+     * @return array{owner_dir:string,filename:string,rs_server_id:?int,physics:?string,mode:?string,map_name:string,time_ms:?int,mdd_id:?int}|null
      *         null when the path is not a demo file at all
      */
     public static function parse(string $path): ?array
@@ -61,13 +71,22 @@ class ServerDemoPath
             }
         }
 
-        // Physics is the directory the file sits in, and only when it really
-        // is one - a demo dropped straight into server_<id>/ must not turn its
-        // parent directory name into a physics value.
+        // Physics and mode both come from the directory the file sits in, and
+        // only when it really is one of the recordsystem's - a demo dropped
+        // straight into server_<id>/ must not turn its parent directory name
+        // into a physics value.
         $physics = null;
+        $mode = null;
         $parent = end($segments);
-        if ($parent !== false && in_array(strtolower($parent), self::PHYSICS, true)) {
-            $physics = strtolower($parent);
+
+        if ($parent !== false) {
+            if (in_array(strtolower($parent), self::PHYSICS, true)) {
+                $physics = strtolower($parent);
+                $mode = 'run';
+            } elseif (preg_match(self::FASTCAPS, $parent, $m)) {
+                $physics = strtolower($m[1]);
+                $mode = 'ctf' . $m[2];
+            }
         }
 
         $parsed = self::parseFilename($filename);
@@ -77,6 +96,7 @@ class ServerDemoPath
             'filename'     => $filename,
             'rs_server_id' => $rsServerId,
             'physics'      => $physics,
+            'mode'         => $mode,
             'map_name'     => $parsed['map'],
             'time_ms'      => $parsed['time'],
             'mdd_id'       => $parsed['mdd_id'],
