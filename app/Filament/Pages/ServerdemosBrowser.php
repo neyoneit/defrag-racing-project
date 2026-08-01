@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\ServerDemo;
 use App\Models\SftpCredential;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Livewire\Attributes\Locked;
@@ -20,6 +21,8 @@ class ServerdemosBrowser extends Page
 
     protected const DISK = 'serverdemos';
 
+    private const STATS_CACHE_KEY = 'serverdemos:sidebar-stats';
+
     // User dir currently being browsed. Empty = root (user picker).
     // Locked: only selectUser() (which verifies the name against the known
     // SFTP credentials) may set it - Livewire v3 would otherwise let the
@@ -32,10 +35,10 @@ class ServerdemosBrowser extends Page
     public int $page = 1;
 
     /**
-     * The sidebar stats need a full SFTP traversal per credential, which over
-     * WAN takes seconds on a cold cache - too slow to block the initial page
-     * render on. The page paints immediately with placeholders and wire:init
-     * flips this to load the stats in a follow-up request.
+     * Set by wire:init in the view. It used to gate the sidebar stats, which
+     * cost an SFTP traversal per credential; they are a cached query now and
+     * no longer need deferring, so this only survives so the view's existing
+     * wire:init has something to call.
      */
     public bool $sidebarReady = false;
 
@@ -100,18 +103,15 @@ class ServerdemosBrowser extends Page
             ->where('status', 'active')
             ->get();
 
-        $stats = ServerDemo::selectRaw('owner_dir, count(*) as n, sum(size) as bytes, max(recorded_at) as last')
-            ->groupBy('owner_dir')
-            ->get()
-            ->keyBy('owner_dir');
+        $stats = $this->sidebarStats();
 
         return $creds->map(function ($c) use ($stats) {
             $user = $c->sftp_username;
-            $stat = $stats->get($user);
+            $stat = $stats[$user] ?? null;
 
-            $count = $stat ? (int) $stat->n : 0;
-            $bytes = $stat ? (int) $stat->bytes : 0;
-            $last = $stat && $stat->last ? Carbon::parse($stat->last)->getTimestamp() : null;
+            $count = (int) ($stat['n'] ?? 0);
+            $bytes = (int) ($stat['bytes'] ?? 0);
+            $last = isset($stat['last']) ? Carbon::parse($stat['last'])->getTimestamp() : null;
 
             return [
                 'sftp_username' => $user,
@@ -124,10 +124,28 @@ class ServerdemosBrowser extends Page
         })->sortByDesc('last')->values()->all();
     }
 
+    /**
+     * Per-credential totals, cached because Livewire re-renders the whole
+     * page on every keystroke in the search box, every sort and every page
+     * turn - and this aggregate costs ~600 ms over the full index while its
+     * result only moves when serverdemos:index runs. Cleared by the refresh
+     * button.
+     */
+    private function sidebarStats(): array
+    {
+        return Cache::remember(self::STATS_CACHE_KEY, 300, fn () => ServerDemo::selectRaw(
+            'owner_dir, count(*) as n, sum(size) as bytes, max(recorded_at) as last'
+        )->groupBy('owner_dir')->get()->keyBy('owner_dir')->map(fn ($r) => [
+            'n' => (int) $r->n,
+            'bytes' => (int) $r->bytes,
+            'last' => $r->last,
+        ])->all());
+    }
+
     // Main pane: the current page of files for the selected user, with the
-    // demo's mdd id (second bracket of the filename) resolved to a player -
-    // the scraped mDd nick, and a defrag.racing profile link when an account
-    // is paired to that mdd id. Resolved per page (50 rows), so it's cheap.
+    // demo's mdd id resolved to a player - the scraped mDd nick, and a
+    // defrag.racing profile link when an account is paired to that mdd id.
+    // Resolved per page (50 rows), so it's cheap.
     public function getFilesProperty(): array
     {
         if ($this->selectedUser === '') {
@@ -233,11 +251,13 @@ class ServerdemosBrowser extends Page
         $this->page = 1;
     }
 
-    // There is no cache left to clear - the numbers come from the index. What
-    // is worth knowing instead is how fresh that index is, since a demo
-    // uploaded since the last run will not be listed yet.
+    // Drops the cached sidebar totals and says how fresh the index behind
+    // them is - a demo uploaded since the last index run is not listed yet,
+    // and no amount of refreshing here will change that.
     public function refreshStats(): void
     {
+        Cache::forget(self::STATS_CACHE_KEY);
+
         $last = ServerDemo::max('indexed_at');
 
         Notification::make()
