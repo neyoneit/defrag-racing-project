@@ -1026,9 +1026,17 @@
         }
     };
 
+    // Flagging a record asks for nothing but an account; flagging a demo
+    // still needs the record count, so the demo is only attached for users
+    // who may actually flag one - otherwise the button would offer something
+    // the server refuses.
+    const canFlagRecord = computed(() => !!page.props.auth?.user);
+
     const openFlagModal = (record) => {
         flagRecordId.value = record.id;
-        flagDemoId.value = record.uploaded_demos?.[0]?.id || null;
+        flagDemoId.value = page.props.canReportDemos
+            ? (record.uploaded_demos?.[0]?.id || null)
+            : null;
         showFlagModal.value = true;
     };
 
@@ -2556,7 +2564,7 @@
                                         </div>
 
                                         <!-- Flag button -->
-                                        <div v-if="page.props.canReportDemos" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
+                                        <div v-if="canFlagRecord" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
                                             <button @click="openFlagModal(record)" class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10" title="Flag record">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
                                             </button>
@@ -2685,7 +2693,7 @@
                                         </div>
 
                                         <!-- Flag button -->
-                                        <div v-if="page.props.canReportDemos" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
+                                        <div v-if="canFlagRecord" class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop.prevent>
                                             <button @click="openFlagModal(record)" class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-red-400 hover:bg-red-500/10" title="Flag record">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
                                             </button>
