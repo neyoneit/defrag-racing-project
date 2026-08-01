@@ -90,3 +90,7 @@ VPS_ACCESS.md
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Working notes about the serverdemo store. Stays out of git: it names live
+# SFTP accounts, rs server ids and player mdd ids, and this repo is public.
+/SERVERDEMOS_VERIFICATION_PLAN.md

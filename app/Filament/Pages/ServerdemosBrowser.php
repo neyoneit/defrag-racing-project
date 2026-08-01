@@ -2,12 +2,11 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\ServerDemo;
 use App\Models\SftpCredential;
+use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Locked;
 
 class ServerdemosBrowser extends Page
@@ -52,45 +51,38 @@ class ServerdemosBrowser extends Page
         $this->selectedUser = '';
     }
 
-    protected function disk(): Filesystem
-    {
-        return Storage::disk(self::DISK);
-    }
+    /** Sort keys the view offers, mapped to their column in the index. */
+    private const SORT_COLUMNS = [
+        'mtime'  => 'recorded_at',
+        'name'   => 'filename',
+        'size'   => 'size',
+        'map'    => 'map_name',
+        'time'   => 'time_ms',
+        'player' => 'mdd_id',
+    ];
 
     /**
-     * One cached recursive listing per user dir. The old code called size()
-     * and lastModified() per file - one SFTP round trip EACH, so a server
-     * with hundreds of demos took ages to open. Flysystem's listContents()
-     * already carries size + mtime in the directory listing itself, so this
-     * is a single traversal; 60s cache makes search/sort/paging instant.
+     * The selected credential's demos, straight out of the `server_demos`
+     * index.
+     *
+     * This page used to do a recursive SFTP listing on every render, cached
+     * for five minutes. That worked while every demo sat on the storage VPS,
+     * but it had two limits worth naming: it broke the moment a file was no
+     * longer local, and searching or sorting meant pulling a whole
+     * credential's listing - tens of thousands of entries - into memory
+     * first. `serverdemos:index` keeps the table current, so filtering,
+     * sorting and paging are the database's job now.
      */
-    private function listing(string $user): array
+    private function query()
     {
-        return Cache::remember("serverdemos:list:{$user}", 300, function () use ($user) {
-            $rows = [];
-            // listContents() is lazy - connection/listing errors surface during
-            // iteration, so the whole loop sits inside the try.
-            try {
-                foreach ($this->disk()->getDriver()->listContents($user, true) as $item) {
-                    if (! $item->isFile()) continue;
-                    $name = basename($item->path());
-                    if (!str_ends_with(strtolower($name), '.dm_68')) continue;
-                    $parsed = $this->parseDemoFilename($name);
-                    $rows[] = [
-                        'path'  => $item->path(),
-                        'name'  => $name,
-                        'size'  => $item->fileSize(),
-                        'mtime' => $item->lastModified(),
-                        'map'   => $parsed['map'],
-                        'time'  => $parsed['time'],
-                        'player'=> $parsed['player'],
-                    ];
-                }
-            } catch (\Throwable) {
-                return [];
-            }
-            return $rows;
-        });
+        $query = ServerDemo::query()->where('owner_dir', $this->selectedUser);
+
+        $needle = trim($this->search);
+        if ($needle !== '') {
+            $query->where('filename', 'like', '%' . $needle . '%');
+        }
+
+        return $query;
     }
 
     public function initSidebar(): void
@@ -98,30 +90,28 @@ class ServerdemosBrowser extends Page
         $this->sidebarReady = true;
     }
 
-    // Sidebar: every active SFTP credential + live stats, derived from the
-    // same cached listing the file pane uses (no separate traversal). Until
-    // wire:init flips $sidebarReady, only the credential names render (stats
-    // null -> placeholders) so the initial page load never touches SFTP.
+    // Sidebar: every active SFTP credential plus its totals. One grouped
+    // query over the index replaces what used to be a full SFTP traversal per
+    // credential, so this no longer has to be deferred behind wire:init - the
+    // flag stays only because the view still sets it.
     public function getCredentialsProperty(): array
     {
         $creds = SftpCredential::with('user:id,name,plain_name,mdd_id')
             ->where('status', 'active')
             ->get();
 
-        return $creds->map(function ($c) {
+        $stats = ServerDemo::selectRaw('owner_dir, count(*) as n, sum(size) as bytes, max(recorded_at) as last')
+            ->groupBy('owner_dir')
+            ->get()
+            ->keyBy('owner_dir');
+
+        return $creds->map(function ($c) use ($stats) {
             $user = $c->sftp_username;
-            $last = null;
-            $bytes = null;
-            $count = null;
-            if ($this->sidebarReady) {
-                $files = $this->listing($user);
-                $count = count($files);
-                $bytes = 0;
-                foreach ($files as $f) {
-                    $bytes += (int) ($f['size'] ?? 0);
-                    if ($f['mtime'] && (!$last || $f['mtime'] > $last)) $last = $f['mtime'];
-                }
-            }
+            $stat = $stats->get($user);
+
+            $count = $stat ? (int) $stat->n : 0;
+            $bytes = $stat ? (int) $stat->bytes : 0;
+            $last = $stat && $stat->last ? Carbon::parse($stat->last)->getTimestamp() : null;
 
             return [
                 'sftp_username' => $user,
@@ -140,11 +130,26 @@ class ServerdemosBrowser extends Page
     // is paired to that mdd id. Resolved per page (50 rows), so it's cheap.
     public function getFilesProperty(): array
     {
-        $rows = array_slice(
-            $this->filteredRows(),
-            ($this->page - 1) * self::PER_PAGE,
-            self::PER_PAGE
-        );
+        if ($this->selectedUser === '') {
+            return [];
+        }
+
+        $column = self::SORT_COLUMNS[$this->sortBy] ?? 'recorded_at';
+
+        $rows = $this->query()
+            ->orderBy($column, $this->sortDir === 'asc' ? 'asc' : 'desc')
+            ->forPage($this->page, self::PER_PAGE)
+            ->get()
+            ->map(fn (ServerDemo $demo) => [
+                'path'   => $demo->path,
+                'name'   => $demo->filename,
+                'size'   => $demo->size,
+                'mtime'  => $demo->recorded_at?->getTimestamp(),
+                'map'    => $demo->map_name,
+                'time'   => $demo->time_ms,
+                'player' => $demo->mdd_id,
+            ])
+            ->all();
 
         $mddIds = array_values(array_unique(array_filter(array_column($rows, 'player'))));
         if ($mddIds) {
@@ -171,37 +176,12 @@ class ServerdemosBrowser extends Page
 
     public function getTotalFilesProperty(): int
     {
-        return count($this->filteredRows());
+        return $this->selectedUser === '' ? 0 : $this->query()->count();
     }
 
     public function getTotalPagesProperty(): int
     {
         return max(1, (int) ceil($this->totalFiles / self::PER_PAGE));
-    }
-
-    private function filteredRows(): array
-    {
-        if ($this->selectedUser === '') return [];
-
-        $rows = $this->listing($this->selectedUser);
-
-        $needle = strtolower(trim($this->search));
-        if ($needle !== '') {
-            $rows = array_values(array_filter(
-                $rows,
-                fn ($r) => str_contains(strtolower($r['name']), $needle)
-            ));
-        }
-
-        $dir = $this->sortDir === 'asc' ? 1 : -1;
-        usort($rows, function ($a, $b) use ($dir) {
-            $av = $a[$this->sortBy] ?? null;
-            $bv = $b[$this->sortBy] ?? null;
-            if ($av === $bv) return 0;
-            return ($av < $bv ? -1 : 1) * $dir;
-        });
-
-        return $rows;
     }
 
     public function nextPage(): void
@@ -219,21 +199,7 @@ class ServerdemosBrowser extends Page
         $this->page = 1;
     }
 
-    // defrag-server-bundle filename pattern: <map>[<time>][<mddId>].dm_68
-    // e.g. "bardok-w3sp[14736][2963].dm_68"  → map=bardok-w3sp, time=14736ms, mddId=2963
-    // Older pattern used underscores: tatmt-s5_14736_2963.dm_68
-    private function parseDemoFilename(string $name): array
-    {
-        $base = preg_replace('/\.dm_68$/i', '', $name);
-
-        if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\]$/', $base, $m)) {
-            return ['map' => $m[1], 'time' => (int) $m[2], 'player' => (int) $m[3]];
-        }
-        if (preg_match('/^(.+?)_(\d+)_(\d+)$/', $base, $m)) {
-            return ['map' => $m[1], 'time' => (int) $m[2], 'player' => (int) $m[3]];
-        }
-        return ['map' => $base, 'time' => null, 'player' => null];
-    }
+    // Filenames are parsed once, by the indexer - App\Services\ServerDemoPath.
 
     public function selectUser(string $user): void
     {
@@ -267,13 +233,20 @@ class ServerdemosBrowser extends Page
         $this->page = 1;
     }
 
+    // There is no cache left to clear - the numbers come from the index. What
+    // is worth knowing instead is how fresh that index is, since a demo
+    // uploaded since the last run will not be listed yet.
     public function refreshStats(): void
     {
-        foreach (SftpCredential::where('status', 'active')->pluck('sftp_username') as $u) {
-            Cache::forget("serverdemos:stats:{$u}");
-            Cache::forget("serverdemos:list:{$u}");
-        }
-        Notification::make()->title('Stats refreshed')->success()->send();
+        $last = ServerDemo::max('indexed_at');
+
+        Notification::make()
+            ->title('Listing comes from the demo index')
+            ->body($last
+                ? 'Last indexed ' . Carbon::parse($last)->diffForHumans() . '. Runs nightly, or `php artisan serverdemos:index`.'
+                : 'The index is empty - run `php artisan serverdemos:index`.')
+            ->success()
+            ->send();
     }
 
     // Livewire can't reliably carry a streamed download itself (a hand-built
