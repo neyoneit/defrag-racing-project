@@ -49,6 +49,12 @@ echo "[$(date)] === Start zálohy $STAMP ==="
 
 # ===== 1) DB + .env -> defrag-backups (datované) =====
 sekce_db() {
+# Dump se uklidí i když sekce spadne. Dřív shodilo selhání celý skript a
+# nedodělaný dump si někdo všiml; teď sekce padá samostatně, takže by se
+# tady každou noc tiše hromadil další. Trap patří podprocesu, ve kterém
+# sekce běží, takže sáhne i na pád přes errexit.
+trap 'rm -f "$DB_FILE" "$FILES_FILE"' EXIT
+
 mysqldump --single-transaction --quick --routines --triggers --no-tablespaces \
   -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" | gzip > "$DB_FILE"
 tar czhf "$FILES_FILE" -C "$APP_DIR" .env      # -h dereferencuje symlink .env
@@ -62,7 +68,8 @@ rclone copy "$DB_FILE"    b2backup:"$B2_BACKUP_BUCKET"/ --no-check-dest
 rclone copy "$FILES_FILE" b2backup:"$B2_BACKUP_BUCKET"/ --no-check-dest
 echo "[$(date)] DB+env upload na B2 OK"
 
-# Po úspěšném uploadu lokální dump nedržíme - vše je na B2.
+# Po úspěšném uploadu lokální dump nedržíme - vše je na B2. (Trap výše by to
+# udělal stejně, tohle jen nedrží soubory po dobu zbytku sekce.)
 rm -f "$DB_FILE" "$FILES_FILE"
 }
 
@@ -107,11 +114,11 @@ if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "
   export RCLONE_CONFIG_SDSFTP_PORT="$SD_PORT"
   export RCLONE_CONFIG_SDSFTP_USER="$SD_USER"
   export RCLONE_CONFIG_SDSFTP_KEY_FILE="$SD_KEY_PATH"
-# Bez tohohle si rclone klíč hostitele vůbec neověřuje a jen na to upozorní v
-# logu - spojení by tak šlo podvrhnout a dema poslat jinam. Soubor se plní
-# ručně z ověřeného otisku, takže neexistující nebo prázdný known_hosts je
-# důvod k selhání, ne k tichému pokračování.
-export RCLONE_CONFIG_SDSFTP_KNOWN_HOSTS_FILE="${HOME:-/root}/.ssh/known_hosts"
+  # Bez tohohle si rclone klíč hostitele vůbec neověřuje a jen na to upozorní
+  # v logu - spojení by tak šlo podvrhnout a dema poslat jinam. Soubor se plní
+  # ručně z ověřeného otisku, takže neexistující nebo prázdný known_hosts je
+  # důvod k selhání, ne k tichému pokračování.
+  export RCLONE_CONFIG_SDSFTP_KNOWN_HOSTS_FILE="${HOME:-/root}/.ssh/known_hosts"
   export RCLONE_CONFIG_SDB2_TYPE=b2
   export RCLONE_CONFIG_SDB2_ACCOUNT="$B2_SERVERDEMOS_KEY_ID"
   export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
