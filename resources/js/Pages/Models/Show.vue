@@ -2322,7 +2322,10 @@ const confirmNsfw = () => {
                 leave-active-class="transform transition ease-in duration-200"
                 leave-from-class="translate-y-0 opacity-100"
                 leave-to-class="translate-y-2 opacity-0">
-                <div v-if="showNotification" class="fixed top-8 right-8 z-50 max-w-md">
+                <!-- Nad hlavičkou: ta je sticky se z-[200], takže hláška se
+                     zespodu schovávala za ni a z "GIF vygenerován" byl vidět
+                     jen pruh. Toast musí přebít všechno, je jen na chvíli. -->
+                <div v-if="showNotification" class="fixed top-8 right-8 z-[300] max-w-md">
                     <div :class="[
                         'rounded-2xl border shadow-2xl p-6',
                         notificationType === 'success'

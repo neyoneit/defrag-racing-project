@@ -72,7 +72,11 @@ export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
 
 # --stats-one-line drží log čitelný: jeden řádek za běh místo průběžného
 # překreslování, které v souboru vypadá jako smetí.
+# --exclude *.part: ingest balí demo do dočasného .7z.part a teprve hotový
+# archiv přejmenuje. Nahrát rozdělaný kus by znamenalo mít ho v B2 navždy,
+# protože copy nikdy nic nemaže.
 rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
+  --exclude "*.part" \
   --max-age "$MAX_AGE" \
   --no-traverse \
   --transfers 4 \

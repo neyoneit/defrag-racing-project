@@ -41,6 +41,16 @@ class ServerDemoPath
     public const SKIP_DIRS = ['_revoked'];
 
     /**
+     * `.dm_68`, optionally packed as `.dm_68.7z`.
+     *
+     * Demos land raw and the ingest daemon packs them, which is worth doing:
+     * a raw serverdemo averages 1.14 MB against 310 kB for the public ones,
+     * which are packed at upload. Both forms sit in the tree side by side -
+     * the ones already here stay raw - so nothing may assume either.
+     */
+    private const DEMO_SUFFIX = '/\.dm_\d+(\.7z)?$/i';
+
+    /**
      * @return array{owner_dir:string,filename:string,rs_server_id:?int,physics:?string,mode:?string,map_name:string,time_ms:?int,mdd_id:?int}|null
      *         null when the path is not a demo file at all
      */
@@ -54,7 +64,7 @@ class ServerDemoPath
             return null;
         }
 
-        if (! preg_match('/\.dm_\d+$/i', $filename)) {
+        if (! preg_match(self::DEMO_SUFFIX, $filename)) {
             return null;
         }
 
@@ -108,11 +118,15 @@ class ServerDemoPath
      * demos use. A name that matches neither still yields a map, because the
      * file is real and belongs in the index either way.
      *
+     * Packing keeps the whole name and only appends `.7z`, so map, time and
+     * MDD id read the same out of a packed demo as out of a raw one and the
+     * index does not care which it got.
+     *
      * @return array{map:string,time:?int,mdd_id:?int}
      */
     public static function parseFilename(string $filename): array
     {
-        $base = preg_replace('/\.dm_\d+$/i', '', $filename);
+        $base = preg_replace(self::DEMO_SUFFIX, '', $filename);
 
         if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\]$/', $base, $m)) {
             return ['map' => $m[1], 'time' => (int) $m[2], 'mdd_id' => (int) $m[3]];

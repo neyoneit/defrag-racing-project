@@ -1031,7 +1031,9 @@ const executeDryRun = async () => {
         <Head title="Models Audit" />
 
         <!-- Toast notifications -->
-        <div class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Nad hlavičkou, viz stejná oprava v Models/Show.vue: nav je sticky
+             se z-[200] a toast se za ni schovával. -->
+        <div class="fixed top-4 right-4 z-[300] space-y-2">
             <transition-group name="toast">
                 <div
                     v-for="toast in toasts"
