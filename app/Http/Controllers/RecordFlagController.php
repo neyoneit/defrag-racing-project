@@ -29,7 +29,12 @@ class RecordFlagController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->canReportDemos()) {
+        // Flagging a DEMO keeps the 30-record bar: it is a claim about
+        // somebody's upload and carries weight. Flagging a RECORD does not -
+        // it only says a time looks wrong, and what evidence exists behind it
+        // is something only staff can see anyway. Anyone with an account may
+        // raise one.
+        if ($request->demo_id && !$user->canReportDemos()) {
             return back()->with('danger', 'You need at least 30 records to flag demos.');
         }
 
