@@ -105,7 +105,7 @@ class ServerdemosBrowser extends Page
 
         $stats = $this->sidebarStats();
 
-        return $creds->map(function ($c) use ($stats) {
+        $rows = $creds->map(function ($c) use ($stats) {
             $user = $c->sftp_username;
             $stat = $stats[$user] ?? null;
 
@@ -120,8 +120,34 @@ class ServerdemosBrowser extends Page
                 'count'         => $count,
                 'last'          => $last,
                 'bytes'         => $bytes,
+                'orphan'        => false,
             ];
-        })->sortByDesc('last')->values()->all();
+        });
+
+        // Directories that hold demos but have no credential on the web -
+        // accounts provisioned straight from the CLI on the storage box.
+        // Without this they are invisible here while their demos keep piling
+        // up, which is how 78 of them went unnoticed for the better part of a
+        // year.
+        $accounted = $rows->pluck('sftp_username')->all();
+
+        foreach ($stats as $dir => $stat) {
+            if (in_array($dir, $accounted, true)) {
+                continue;
+            }
+
+            $rows->push([
+                'sftp_username' => $dir,
+                'owner_name'    => 'no web credential',
+                'owner_id'      => null,
+                'count'         => (int) $stat['n'],
+                'last'          => isset($stat['last']) ? Carbon::parse($stat['last'])->getTimestamp() : null,
+                'bytes'         => (int) $stat['bytes'],
+                'orphan'        => true,
+            ]);
+        }
+
+        return $rows->sortByDesc('last')->values()->all();
     }
 
     /**
@@ -221,8 +247,13 @@ class ServerdemosBrowser extends Page
 
     public function selectUser(string $user): void
     {
-        // Normalize + guard: refuse anything that isn't a known SFTP credential.
-        $known = SftpCredential::where('sftp_username', $user)->exists();
+        // Guard: refuse anything that is neither a known credential nor a
+        // directory the index has actually seen. Both are needed - a
+        // CLI-provisioned account has demos here with no credential to match,
+        // and it is listed above, so it has to be selectable.
+        $known = SftpCredential::where('sftp_username', $user)->exists()
+            || ServerDemo::where('owner_dir', $user)->exists();
+
         if (!$known) {
             Notification::make()->title('Unknown user')->danger()->send();
             return;

@@ -61,6 +61,11 @@ export RCLONE_CONFIG_SDSFTP_HOST="$SD_HOST"
 export RCLONE_CONFIG_SDSFTP_PORT="$SD_PORT"
 export RCLONE_CONFIG_SDSFTP_USER="$SD_USER"
 export RCLONE_CONFIG_SDSFTP_KEY_FILE="$SD_KEY_PATH"
+# Bez tohohle si rclone klíč hostitele vůbec neověřuje a jen na to upozorní v
+# logu - spojení by tak šlo podvrhnout a dema poslat jinam. Soubor se plní
+# ručně z ověřeného otisku, takže neexistující nebo prázdný known_hosts je
+# důvod k selhání, ne k tichému pokračování.
+export RCLONE_CONFIG_SDSFTP_KNOWN_HOSTS_FILE="${HOME:-/root}/.ssh/known_hosts"
 export RCLONE_CONFIG_SDB2_TYPE=b2
 export RCLONE_CONFIG_SDB2_ACCOUNT="$B2_SERVERDEMOS_KEY_ID"
 export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"

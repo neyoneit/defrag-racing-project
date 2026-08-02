@@ -30,7 +30,10 @@
         };
     @endphp
 
-    <div wire:init="initSidebar" style="display:grid;grid-template-columns:320px 1fr;gap:14px;align-items:start;">
+    {{-- Credentials across the top, the listing below at full width. Side by
+     side, the table lost 320px to a list of ten short names and the demo
+     filenames - which are the whole point of the page - had to wrap. --}}
+<div wire:init="initSidebar" style="display:flex;flex-direction:column;gap:14px;">
 
         {{-- Sidebar: SFTP credentials --}}
         <div style="background:#0f0f17;border:1px solid #27272a;border-radius:12px;overflow:hidden;">
@@ -46,18 +49,18 @@
                 </button>
             </div>
 
-            <div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:10px;">
                 @foreach ($creds as $c)
                     @php $active = $c['sftp_username'] === $selected; @endphp
                     <button type="button" wire:click="selectUser(@js($c['sftp_username']))"
-                        style="display:block;width:100%;text-align:left;background:{{ $active ? 'rgba(234,88,12,0.10)' : 'transparent' }};border:none;border-bottom:1px solid #1f1f23;cursor:pointer;padding:10px 12px;transition:background 120ms;"
+                        style="text-align:left;background:{{ $active ? 'rgba(234,88,12,0.10)' : 'transparent' }};border:1px solid {{ $active ? '#ea580c' : '#27272a' }};border-radius:8px;cursor:pointer;padding:10px 12px;transition:background 120ms;"
                         onmouseover="this.style.background='rgba(234,88,12,0.06)'"
                         onmouseout="this.style.background='{{ $active ? 'rgba(234,88,12,0.10)' : 'transparent' }}'">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
                             <span style="font-weight:600;color:#fafafa;font-size:13px;">{{ $c['sftp_username'] }}</span>
                             <span style="font-size:11px;color:#fb923c;font-weight:700;">{{ $c['count'] ?? '…' }}</span>
                         </div>
-                        <div style="font-size:11px;color:#71717a;margin-top:2px;">
+                        <div style="font-size:11px;color:{{ ($c['orphan'] ?? false) ? '#a16207' : '#71717a' }};margin-top:2px;">
                             {{ $c['owner_name'] }}
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:11px;color:#52525b;margin-top:4px;">
@@ -72,7 +75,7 @@
                 @endforeach
 
                 @if (empty($creds))
-                    <div style="padding:14px;color:#71717a;font-size:12px;text-align:center;">
+                    <div style="grid-column:1/-1;padding:14px;color:#71717a;font-size:12px;text-align:center;">
                         No active SFTP credentials.
                     </div>
                 @endif
@@ -86,7 +89,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;margin:0 auto 12px;color:#3f3f46;">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5m7.5 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5m7.5 0c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125" />
                     </svg>
-                    Select a credential from the sidebar to browse demos.
+                    Pick a credential above to browse its demos.
                 </div>
             @else
                 {{-- Header --}}
