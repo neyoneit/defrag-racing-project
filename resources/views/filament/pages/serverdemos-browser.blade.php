@@ -60,7 +60,7 @@
                             <span style="font-weight:600;color:#fafafa;font-size:13px;">{{ $c['sftp_username'] }}</span>
                             <span style="font-size:11px;color:#fb923c;font-weight:700;">{{ $c['count'] ?? '…' }}</span>
                         </div>
-                        <div style="font-size:11px;color:#71717a;margin-top:2px;">
+                        <div style="font-size:11px;color:{{ ($c['orphan'] ?? false) ? '#a16207' : '#71717a' }};margin-top:2px;">
                             {{ $c['owner_name'] }}
                         </div>
                         <div style="display:flex;justify-content:space-between;font-size:11px;color:#52525b;margin-top:4px;">
