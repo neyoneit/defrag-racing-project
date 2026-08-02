@@ -3,9 +3,16 @@
 # Záloha defrag.racing
 #   1) DB dump + .env  -> B2 "defrag-backups"  (datované, rotované, write-only klíč)
 #   2) Média (mirror)  -> B2 "defrag-media"    (inkrementálně, read+write klíč)
+#   3) Serverdemos     -> B2 "defrag-serverdemos" (plná kontrola; průběžně to
+#                         dělá serverdemos-mirror.sh každých 15 minut)
 #
 # Spouštěno cronem z current/scripts/backup.sh.
 # Žádná tajemství zde nejsou - creds se čtou z .env za běhu.
+#
+# Každá sekce běží samostatně: pod `set -e` stačilo, aby selhal dump databáze,
+# a na média ani na dema už vůbec nedošlo - tichý výpadek přesně té zálohy,
+# kterou nikdo nekontroluje. Teď se selhání zaznamená, ostatní sekce doběhnou
+# a skript skončí nenulově, takže je to poznat i z cronu.
 
 set -euo pipefail
 
@@ -41,6 +48,7 @@ FILES_FILE="$BACKUP_DIR/files-$STAMP.tar.gz"
 echo "[$(date)] === Start zálohy $STAMP ==="
 
 # ===== 1) DB + .env -> defrag-backups (datované) =====
+sekce_db() {
 mysqldump --single-transaction --quick --routines --triggers --no-tablespaces \
   -u "$DB_USERNAME" -p"$DB_PASSWORD" "$DB_DATABASE" | gzip > "$DB_FILE"
 tar czhf "$FILES_FILE" -C "$APP_DIR" .env      # -h dereferencuje symlink .env
@@ -56,8 +64,10 @@ echo "[$(date)] DB+env upload na B2 OK"
 
 # Po úspěšném uploadu lokální dump nedržíme - vše je na B2.
 rm -f "$DB_FILE" "$FILES_FILE"
+}
 
 # ===== 2) Média mirror -> defrag-media (inkrementálně, jen přidává/přepisuje) =====
+sekce_media() {
 if [ -n "$B2_MEDIA_KEY_ID" ] && [ -n "$B2_MEDIA_APP_KEY" ]; then
   export RCLONE_CONFIG_B2MEDIA_TYPE=b2
   export RCLONE_CONFIG_B2MEDIA_ACCOUNT="$B2_MEDIA_KEY_ID"
@@ -76,8 +86,10 @@ if [ -n "$B2_MEDIA_KEY_ID" ] && [ -n "$B2_MEDIA_APP_KEY" ]; then
 else
   echo "[$(date)] Média přeskočena (B2_MEDIA_* není v .env)"
 fi
+}
 
 # ===== 3) Serverdemos mirror (storage VPS -> defrag-serverdemos) =====
+sekce_serverdemos() {
 # Archiv, ne sync: rclone copy jen přidává - smazání na storage nikdy
 # nesmaže nic v B2. Čte se přes dlbrowser SFTP účet (read ACL na
 # /var/lib/serverdemos), takže na storage VPS nic neinstalujeme.
@@ -104,6 +116,37 @@ if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "
   echo "[$(date)] Serverdemos mirror na B2 OK"
 else
   echo "[$(date)] Serverdemos přeskočeny (B2_SERVERDEMOS_* / STORAGE_VPS_DL_* není v .env)"
+fi
+}
+
+# ---- Spuštění ----
+SELHALO=()
+
+# Sekce běží v podprocesu, který si errexit zapíná sám, a volá se MIMO `if` a
+# mimo AND-OR seznam. Kdyby se volala uvnitř podmínky, bash by errexit v celé
+# funkci potlačil a sekce by po selhaném dumpu vesele pokračovala balením a
+# uploadem prázdna. Takhle první chyba ukončí jen tu jednu sekci.
+spust() {
+  local nazev="$1" funkce="$2" navrat=0
+
+  set +e
+  ( set -e; "$funkce" )
+  navrat=$?
+  set -e
+
+  if [ "$navrat" -ne 0 ]; then
+    echo "[$(date)] !!! sekce '$nazev' SELHALA (kód $navrat), pokračuji dál" >&2
+    SELHALO+=("$nazev")
+  fi
+}
+
+spust "DB + .env" sekce_db
+spust "média" sekce_media
+spust "serverdemos" sekce_serverdemos
+
+if [ ${#SELHALO[@]} -gt 0 ]; then
+  echo "[$(date)] === Záloha $STAMP DOKONČENA S CHYBAMI: ${SELHALO[*]} ==="
+  exit 1
 fi
 
 echo "[$(date)] === Záloha $STAMP DOKONČENA ==="
