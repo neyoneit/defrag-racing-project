@@ -123,7 +123,10 @@ if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "
   export RCLONE_CONFIG_SDB2_ACCOUNT="$B2_SERVERDEMOS_KEY_ID"
   export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
 
+  # --exclude *.part viz serverdemos-mirror.sh: rozdělaný archiv z ingestu
+  # se do B2 nesmí dostat, protože odtud už se nikdy nesmaže.
   rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
+    --exclude "*.part" \
     --transfers 4 --sftp-concurrency 8
   echo "[$(date)] Serverdemos mirror na B2 OK"
 else
