@@ -165,7 +165,7 @@ const top200Share = computed(() => topNWeightShare(200));
                 <p class="text-white/90 text-sm sm:text-base font-semibold">The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.</p>
             </div>
 
-            <h1 class="text-4xl md:text-5xl font-black text-gray-200 mb-2">How Rankings Work</h1>
+            <h1 class="text-2xl md:text-3xl font-black text-gray-200 mb-2">How Rankings Work</h1>
             <p class="text-gray-500 text-sm mb-10">A complete breakdown of the ranking algorithm, step by step.</p>
 
             <!-- Table of contents -->

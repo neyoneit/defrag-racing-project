@@ -154,7 +154,7 @@
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
             <div class="mb-8">
                 <div class="flex items-center justify-between gap-4 mb-2">
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Defragger Leaderboard</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Defragger Leaderboard</h1>
                     <div class="flex-shrink-0 flex flex-wrap justify-end gap-2 bg-black/40 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div v-for="tier in tiers" :key="tier.key"
                             class="flex items-center gap-1 px-2 py-1 rounded-lg border text-xs"

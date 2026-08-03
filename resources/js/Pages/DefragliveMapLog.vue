@@ -92,7 +92,7 @@ const byDay = computed(() => {
         <!-- Header -->
         <div class="rounded-2xl border border-purple-500/20 bg-black/40 backdrop-blur-sm p-6 md:p-8 mb-6 shadow-2xl">
             <div class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold mb-1">DefragLive</div>
-            <h1 class="text-3xl md:text-4xl font-black text-white">Map log</h1>
+            <h1 class="text-2xl md:text-3xl font-black text-white">Map log</h1>
             <p class="text-gray-400 mt-2 text-sm leading-relaxed max-w-2xl">
                 What the bot has been streaming, map by map - which map ran from when to when,
                 and the players it spectated along the way. Each block is one continuous stretch on a map.

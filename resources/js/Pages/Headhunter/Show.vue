@@ -371,7 +371,7 @@ const getParticipantStatusLabel = (status) => {
                 <div class="flex items-start justify-between gap-4 mb-6">
                     <div class="flex-1">
                         <div class="flex items-center gap-3 mb-3">
-                            <h1 class="text-3xl font-black text-white">{{ challenge.title }}</h1>
+                            <h1 class="text-2xl md:text-3xl font-black text-white">{{ challenge.title }}</h1>
                             <span :class="`px-3 py-1 text-sm font-semibold rounded-full border ${getStatusColor(challenge.status)}`">
                                 {{ challenge.status }}
                             </span>

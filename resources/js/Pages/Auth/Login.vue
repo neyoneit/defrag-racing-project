@@ -30,7 +30,7 @@ const submit = () => {
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-md mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h1 class="text-4xl font-black text-white mb-2">Welcome Back</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Welcome Back</h1>
                     <p class="text-gray-400">Sign in to your account to continue</p>
                 </div>
             </div>

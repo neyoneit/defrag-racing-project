@@ -86,7 +86,7 @@
                 <!-- Header -->
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
                 <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Tournaments</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Tournaments</h1>
                     <p class="text-gray-400">Compete in defrag tournaments and climb the rankings</p>
                 </div>
 

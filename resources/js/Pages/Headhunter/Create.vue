@@ -150,7 +150,7 @@ const submit = () => {
 
                 <!-- Form -->
                 <div class="bg-gradient-to-br from-gray-900/85 to-gray-950/90 border border-white/10 rounded-2xl p-8">
-                    <h1 class="text-3xl font-black text-white mb-6">Create New Challenge</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-white mb-6">Create New Challenge</h1>
 
                     <form @submit.prevent="submit" class="space-y-6">
                         <!-- Title -->

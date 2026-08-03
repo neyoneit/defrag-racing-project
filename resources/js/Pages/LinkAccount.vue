@@ -105,7 +105,7 @@
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-white mb-3">Link Your Q3DF Profile</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Link Your Q3DF Profile</h1>
                 <p class="text-lg text-gray-400 max-w-2xl mx-auto">
                     defrag.racing is built on top of the MDD/Q3DF database. Link your profile to unlock the full experience.
                 </p>

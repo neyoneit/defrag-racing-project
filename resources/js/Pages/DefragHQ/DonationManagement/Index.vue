@@ -150,7 +150,7 @@ const totalSelfRaised = computed(() => {
 
     <MainLayout>
         <div class="max-w-7xl mx-auto py-8 px-4">
-            <h1 class="text-3xl font-bold text-white mb-8">Donation Management</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-8">Donation Management</h1>
 
             <!-- Donation Goal Section -->
             <div class="bg-gray-800/50 border border-white/10 rounded-xl p-6 mb-8">

@@ -38,7 +38,7 @@ const submit = () => {
                     <span>/</span>
                     <span class="text-gray-400">New Page</span>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">Create Wiki Page</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Create Wiki Page</h1>
             </div>
         </div>
 

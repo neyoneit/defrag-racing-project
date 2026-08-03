@@ -116,7 +116,7 @@ const accents = {
             <!-- Prose stays capped even though the page is not: a line of body
                  text running the full width of a monitor is unreadable. -->
             <div class="mb-8">
-                <h1 class="text-3xl md:text-4xl font-black text-white mb-3">Rules</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Rules</h1>
                 <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
                     These apply to every player and every record on defrag.racing. They exist so that
                     a time on this site means the same thing whoever set it.

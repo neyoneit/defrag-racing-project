@@ -80,7 +80,7 @@ const submit = () => {
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider mb-4">
                     Step one of two
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-white mb-3">Serverdemo validators</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Serverdemo validators</h1>
                 <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
                     When a player reports a record, someone has to watch the serverdemo of that run and
                     decide what actually happened. This form is the first step to being one of those people.

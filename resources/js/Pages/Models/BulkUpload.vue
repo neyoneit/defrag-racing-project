@@ -66,7 +66,7 @@ const handleSubmit = (e) => {
                 <Link :href="route('models.index')" class="text-blue-400 hover:text-blue-300 mb-4 inline-block">
                     ← Back to Models
                 </Link>
-                <h1 class="text-4xl font-black text-white mb-2">Bulk Upload Models</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Bulk Upload Models</h1>
                 <p class="text-gray-400">Upload multiple PK3 files at once. Metadata will be extracted automatically.</p>
             </div>
 

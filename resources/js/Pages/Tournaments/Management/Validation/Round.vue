@@ -15,7 +15,7 @@
 
 <template>
     <Tournament :tournament="tournament" tab="ManageTournament">
-        <h1 class="font-black text-3xl dark:text-white mb-3">Demo Validation for {{ round.name }}</h1>
+        <h1 class="font-black text-2xl md:text-3xl dark:text-white mb-3">Demo Validation for {{ round.name }}</h1>
 
         <div class="tech-line-overview my-4"></div>
 

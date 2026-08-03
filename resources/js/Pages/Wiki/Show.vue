@@ -77,7 +77,7 @@ const searchOpen = ref(false);
                             </template>
                             <span class="text-gray-400">{{ page.title }}</span>
                         </div>
-                        <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">{{ page.title }}</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ page.title }}</h1>
                     </div>
                     <div class="flex items-center gap-2">
                         <button

@@ -1017,7 +1017,7 @@ function stopThumbGeneration() {
 
     <div class="min-h-screen bg-gray-900 text-white p-8">
         <div class="max-w-4xl mx-auto">
-            <h1 class="text-2xl font-bold mb-6">Batch Generate GIF Thumbnails</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-6">Batch Generate GIF Thumbnails</h1>
 
             <!-- Tabs -->
             <div class="flex gap-2 mb-6">

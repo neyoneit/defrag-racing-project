@@ -186,7 +186,7 @@ const statusColor = (s) => ({
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
                         twitch.tv/{{ TWITCH_CHANNEL }}
                     </a>
-                    <h1 class="text-3xl md:text-4xl font-black text-white">Get watched, get rewarded</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-white">Get watched, get rewarded</h1>
                     <div class="text-gray-400 mt-3 text-sm space-y-2 leading-relaxed">
                         <p>
                             <span class="text-gray-200 font-semibold">DefragLive</span> streams live defrag runs to Twitch around the clock,

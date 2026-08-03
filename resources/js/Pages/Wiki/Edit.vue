@@ -60,7 +60,7 @@ const submit = () => {
                     <span class="text-gray-400">Edit</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">Edit: {{ page.title }}</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Edit: {{ page.title }}</h1>
                     <div class="flex items-center gap-2">
                         <Link :href="route('wiki.show', page.slug)" class="px-4 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition">Cancel</Link>
                         <span v-show="noChangesMessage" class="text-sm text-yellow-400">No changes to save.</span>

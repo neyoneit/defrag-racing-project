@@ -1053,7 +1053,7 @@ const executeDryRun = async () => {
         <div class="max-w-7xl mx-auto px-4 py-8">
             <!-- Header -->
             <div class="mb-8">
-                <h1 class="text-3xl font-black mb-2">Models Audit Report</h1>
+                <h1 class="text-2xl md:text-3xl font-black mb-2">Models Audit Report</h1>
                 <p class="text-gray-400 text-sm">Generated: {{ generatedAt }}</p>
             </div>
 

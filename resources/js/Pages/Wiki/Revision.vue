@@ -92,7 +92,7 @@ const formatDate = (date) => {
                     <span class="text-gray-400">Revision #{{ revision.id }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                    <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">{{ revision.title }}</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ revision.title }}</h1>
                     <div class="flex items-center gap-2">
                         <!-- Diff toggle -->
                         <button

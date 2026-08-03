@@ -516,7 +516,7 @@ const closeServerDropdown = () => {
                                             <div :class="'name-effect-' + (maplist.user?.name_effect || 'none')" :style="`--effect-color: ${maplist.user?.color || '#ffffff'}`" class="font-bold text-white text-sm group-hover:text-purple-300 transition truncate" v-html="q3tohtml(maplist.user?.name || 'Unknown')"></div>
                                         </div>
                                     </Link>
-                                    <h1 :class="isPlayLater ? 'text-3xl md:text-4xl' : 'text-5xl md:text-6xl'" class="font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
+                                    <h1 class="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-purple-200 break-words">
                                         {{ maplist.name }}
                                     </h1>
                                     <span v-if="isPlayLater" class="text-sm font-semibold text-gray-500 align-middle">{{ maplist.maps?.length || 0 }} maps</span>

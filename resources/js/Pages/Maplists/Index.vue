@@ -409,7 +409,7 @@ const createMaplist = async () => {
 
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">
                             <template v-if="currentView === 'mine'">My Maplists</template>
                             <template v-else-if="currentView === 'favorites'">My Favourites</template>
                             <template v-else-if="currentView === 'likes'">My Likes</template>
