@@ -204,6 +204,36 @@ class RecordFlagResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
 
+                // The gate in front of the validators. Nothing reaches them on
+                // its own: without this, one person with a grudge could push
+                // demos in front of moderators just by reporting a lot of
+                // runs. Cleared reports join the open case for that player -
+                // see App\Services\ServerdemoValidationService.
+                Tables\Actions\Action::make('clearForValidation')
+                    ->label('Clear for validation')
+                    ->icon('heroicon-o-lock-open')
+                    ->color('success')
+                    ->visible(fn ($record) => (auth()->user()?->isAdmin() ?? false) && $record->admin_cleared_at === null)
+                    ->requiresConfirmation()
+                    ->modalDescription(fn ($record) => $record->hasEnoughReports()
+                        ? 'Releases this report to the validators. Only do this if it is not a false report.'
+                        : 'Not enough independent reports yet - it will wait until there are, then join the case on its own.')
+                    ->form([
+                        \Filament\Forms\Components\Textarea::make('note')
+                            ->label('Note for the validators (optional)')
+                            ->rows(2),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $case = app(\App\Services\ServerdemoValidationService::class)
+                            ->clear($record, auth()->user(), $data['note'] ?? null);
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title($case ? 'Cleared and added to a case' : 'Cleared - waiting for more reports')
+                            ->body($case ? 'Case against ' . $case->subjectLabel() : null)
+                            ->send();
+                    }),
+
                 // People flag a record without knowing what evidence exists
                 // behind it. This is where that gets answered: the serverdemo
                 // of the exact run if it happened on one of our servers, any

@@ -10,6 +10,7 @@
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
     import CopyButton from '@/Components/Basic/CopyButton.vue';
+    import InstantPlayConfirm from '@/Components/InstantPlayConfirm.vue';
     import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
     import { useClipboard } from '@/Composables/useClipboard';
     import axios from 'axios';
@@ -221,6 +222,12 @@
         my_vq3_record: Object,
         gametypeStats: Object,
         servers: Array,
+        // Every online server, not just the ones already running this map -
+        // that is what the instant-play picker needs.
+        onlineServers: {
+            type: Array,
+            default: () => []
+        },
         publicMaplists: {
             type: Array,
             default: () => []
@@ -253,6 +260,81 @@
 
     const page = usePage();
     localIsNsfw.value = props.map.is_nsfw;
+
+    // --- Instant play -----------------------------------------------------
+    // Pick a server, confirm, and the callvote for this map is on the
+    // clipboard by the time the game window is up. Same idea as the Play
+    // Later list, with a confirmation step because here it is a single map
+    // and one wrong click drops you onto someone else's server.
+    const instantPlayOpen = ref(false);
+    const instantPlayShowAll = ref(false);
+    const instantPlayServer = ref(null);
+    const instantPlayConfirm = ref(false);
+
+    // The dropdown is teleported to body and positioned by hand. Left in the
+    // page it rendered UNDER the records panel below it: z-index only orders
+    // siblings within a stacking context, and the button sits in one that the
+    // records section outranks, so no value of z would have lifted it out.
+    const instantPlayAnchor = ref(null);
+    const instantPlayStyle = ref({});
+
+    const positionInstantPlay = () => {
+        const el = instantPlayAnchor.value;
+        if (!el) return;
+
+        const rect = el.getBoundingClientRect();
+        const width = Math.min(320, window.innerWidth - 16);
+        // Keep it on screen when the button sits near the right edge.
+        const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+
+        instantPlayStyle.value = {
+            position: 'fixed',
+            top: `${rect.bottom + 8}px`,
+            left: `${left}px`,
+            width: `${width}px`,
+        };
+    };
+
+    const toggleInstantPlay = () => {
+        instantPlayOpen.value = !instantPlayOpen.value;
+        if (instantPlayOpen.value) {
+            positionInstantPlay();
+        }
+    };
+
+    // Fixed coordinates are a snapshot, so they have to be retaken while the
+    // list is open or it would hang in mid-air once the page moves.
+    const repositionInstantPlay = () => {
+        if (instantPlayOpen.value) {
+            positionInstantPlay();
+        }
+    };
+
+    onMounted(() => {
+        window.addEventListener('scroll', repositionInstantPlay, true);
+        window.addEventListener('resize', repositionInstantPlay);
+    });
+
+    onUnmounted(() => {
+        window.removeEventListener('scroll', repositionInstantPlay, true);
+        window.removeEventListener('resize', repositionInstantPlay);
+    });
+
+    const instantPlayEmptyServers = computed(() =>
+        (props.onlineServers || [])
+            .filter(s => !s.online_players || s.online_players.length === 0)
+            .sort((a, b) => (a.plain_name || '').localeCompare(b.plain_name || ''))
+    );
+
+    const instantPlayList = computed(() =>
+        instantPlayShowAll.value ? (props.onlineServers || []) : instantPlayEmptyServers.value
+    );
+
+    const pickInstantPlayServer = (server) => {
+        instantPlayServer.value = server;
+        instantPlayOpen.value = false;
+        instantPlayConfirm.value = true;
+    };
 
     const dateColWidth = computed(() => {
         const fmt = page.props.dateFormat;
@@ -1296,6 +1378,62 @@
                                 <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ server.online_players.length }} playing</span>
                             </a>
                         </div>
+
+                        <!-- Instant Play: pick a server, load this map there -->
+                        <div v-if="onlineServers && onlineServers.length > 0" ref="instantPlayAnchor">
+                            <button
+                                @click="toggleInstantPlay"
+                                class="flex items-center gap-1.5 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
+                                title="Pick a server and load this map there"
+                            >
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                                </svg>
+                                <span class="whitespace-nowrap">Instant Play</span>
+                                <svg class="w-3 h-3 transition-transform" :class="{ 'rotate-180': instantPlayOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            <Teleport to="body">
+                                <!-- Catches the click that closes the list -->
+                                <div v-if="instantPlayOpen" class="fixed inset-0 z-[190]" @click="instantPlayOpen = false"></div>
+
+                                <div v-if="instantPlayOpen" :style="instantPlayStyle" class="z-[200] bg-gray-900 border border-white/15 rounded-lg overflow-hidden shadow-2xl shadow-black/60">
+                                    <div class="px-4 py-2.5 border-b border-white/10 flex items-center justify-between bg-gray-800/80">
+                                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">
+                                            {{ instantPlayShowAll ? 'All servers' : 'Empty servers' }}
+                                        </span>
+                                        <button @click.stop="instantPlayShowAll = !instantPlayShowAll" class="text-xs text-blue-400 hover:text-blue-300 font-medium">
+                                            {{ instantPlayShowAll ? 'Empty only' : 'Show all servers' }}
+                                        </button>
+                                    </div>
+                                    <div class="max-h-64 overflow-y-auto">
+                                        <div
+                                            v-for="server in instantPlayList"
+                                            :key="server.id"
+                                            @click="pickInstantPlayServer(server)"
+                                            class="px-4 py-3 hover:bg-blue-500/15 cursor-pointer transition border-b border-white/5 last:border-0"
+                                        >
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0">
+                                                    <span v-html="q3tohtml(server.name)" class="font-semibold truncate block text-sm"></span>
+                                                    <div class="text-xs text-gray-500 mt-0.5">
+                                                        {{ server.ip }}:{{ server.port }}
+                                                        <span v-if="server.location"> - {{ server.location }}</span>
+                                                    </div>
+                                                </div>
+                                                <span v-if="server.online_players && server.online_players.length > 0" class="text-yellow-400 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-yellow-500/15 rounded">{{ server.online_players.length }} playing</span>
+                                                <span v-else class="text-gray-500 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-white/5 rounded">EMPTY</span>
+                                            </div>
+                                        </div>
+                                        <div v-if="instantPlayList.length === 0" class="px-4 py-6 text-center text-gray-500 text-sm">
+                                            No empty servers available right now
+                                        </div>
+                                    </div>
+                                </div>
+                            </Teleport>
+                        </div>
                     </div>
 
                     <!-- Tags Section -->
@@ -2120,6 +2258,13 @@
                 <div class="border-t border-white/10 mt-1 pt-1">Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
             </div>
         </Teleport>
+
+        <InstantPlayConfirm
+            :show="instantPlayConfirm"
+            :server="instantPlayServer"
+            :map-name="map.name"
+            @close="instantPlayConfirm = false"
+        />
     </div>
 </template>
 

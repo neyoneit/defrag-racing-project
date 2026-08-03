@@ -116,6 +116,17 @@ class DefragServer
         return $result;
     }    
 
+    /**
+     * Plain Quake3 getstatus. NOT USED by the scraper any more - see the
+     * commented-out branch in ScrapeServers::getServerData().
+     *
+     * It returns score, ping and name per player, of which only the name is
+     * kept: no uid, no country, no model, no spectating. Every engine in the
+     * list answers getdfstatus or rcon, so this was measured to be dead code
+     * on 2026-08-03. Left here rather than deleted because it is the only
+     * implementation of the vanilla protocol we have, and an engine that
+     * speaks nothing else may still turn up one day.
+     */
     public function getData() {
         socket_sendto($this->socket, "\xff\xff\xff\xffgetstatus\x00", strlen("\xff\xff\xff\xffgetstatus\x00"), 0, $this->ip, $this->port);
         $data = socket_read($this->socket, 4096);

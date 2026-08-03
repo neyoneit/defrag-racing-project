@@ -95,6 +95,8 @@ class UserResource extends Resource
                                 'server_owner_applications' => 'Server Owner Applications',
                                 'storage_browser' => 'Storage Browser (dl.defrag.racing)',
                                 'serverdemos_browser' => 'Serverdemos Browser',
+                                'serverdemo_validation' => 'Serverdemo Validation (reported records only)',
+                                'serverdemo_validator_applications' => 'Serverdemo Validator Applications',
                             ])
                             ->visible(fn (Forms\Get $get) => $get('is_moderator'))
                             ->columns(2),

@@ -123,10 +123,18 @@ class ScrapeServers extends Command
                 }
             }
 
-            // If both failed, fall back to basic getstatus
-            if ($result === null) {
-                $result = $connection->getData();
-            }
+            // getstatus is gone. It only ever returned player NAMES - no uid,
+            // country, model or spectating - and it was unreachable in
+            // practice: measured 2026-08-03 across every online server, four
+            // did not answer getdfstatus and rcon works on all four, so the
+            // branch below never ran.
+            // Nothing is left uncovered either: a null result drops the
+            // server into handle_failed_servers(), which still tries q3df.org
+            // before marking it offline.
+            //
+            // if ($result === null) {
+            //     $result = $connection->getData();
+            // }
 
         } catch (\Exception $e) {
             return null;

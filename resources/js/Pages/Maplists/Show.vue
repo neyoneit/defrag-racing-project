@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import MapCard from '@/Components/MapCard.vue';
 import DialogModal from '@/Components/Laravel/DialogModal.vue';
@@ -45,8 +45,49 @@ const editForm = ref({
 });
 const saving = ref(false);
 const showPublicConfirmation = ref(false);
-const copiedMapId = ref(null);
 const showServerDropdown = ref(false);
+const copiedMapId = ref(null);
+
+/**
+ * Copy the callvote, then open the game. No confirmation step: the server was
+ * already chosen deliberately in step one, so there is nothing here to click
+ * by mistake - unlike the map page, where the server is picked by the same
+ * click that connects you.
+ *
+ * Copy first, connect second. The clipboard write is asynchronous and
+ * navigating away can cancel it, which would drop you onto the server with
+ * nothing to paste.
+ */
+const copyAndConnect = async (map) => {
+    const server = selectedServer.value;
+    if (!server) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(`/cv map ${map.name}`);
+        copiedMapId.value = map.id;
+    } catch (error) {
+        console.error('Failed to copy the callvote command:', error);
+    }
+
+    window.location.href = `defrag://${server.ip}:${server.port}`;
+
+    setTimeout(() => {
+        copiedMapId.value = null;
+    }, 2000);
+};
+
+// The grid renders `maps`, a local copy that drag-and-drop reordering needs to
+// mutate freely. Without this, a `router.reload()` after removing a map brings
+// fresh props in and the copy keeps showing the map that is already gone -
+// removal looked like it had done nothing until the page was loaded again.
+// Skipped mid-reorder, where the local order is the one being edited.
+watch(() => props.maplist.maps, (fresh) => {
+    if (!isReordering.value) {
+        maps.value = [...(fresh || [])];
+    }
+});
 
 const isPlayLater = computed(() => props.maplist.is_play_later);
 
@@ -152,22 +193,6 @@ const removeMap = async (mapId) => {
         console.error('Error removing map:', error);
         alert('Failed to remove map');
     }
-};
-
-const connectToServer = (map) => {
-    if (!selectedServer.value) {
-        alert('Please select a server first');
-        return;
-    }
-
-    const server = selectedServer.value;
-    const callvoteCommand = `callvote map ${map.name}`;
-
-    // Copy callvote command to clipboard
-    navigator.clipboard.writeText(callvoteCommand).then(() => {
-        // Trigger defrag:// protocol to connect
-        window.location.href = `defrag://${server.address}:${server.port}`;
-    });
 };
 
 const toggleReordering = () => {
@@ -352,18 +377,6 @@ const saveEdits = async () => {
         }
     } finally {
         saving.value = false;
-    }
-};
-
-const copyMapCommand = async (mapId, mapName) => {
-    try {
-        await navigator.clipboard.writeText(`/cv map ${mapName}`);
-        copiedMapId.value = mapId;
-        setTimeout(() => {
-            copiedMapId.value = null;
-        }, 2000);
-    } catch (error) {
-        console.error('Failed to copy to clipboard:', error);
     }
 };
 
@@ -712,6 +725,23 @@ const closeServerDropdown = () => {
                         </div>
                         <!-- Play Wizard (for Play Later only) -->
                         <div v-if="isPlayLater && servers && servers.length > 0" class="mt-5 pt-5 border-t border-white/10 relative z-30" @click.stop>
+                            <!-- Summary: what is queued and where it can go -->
+                            <div class="flex flex-wrap items-center gap-2 mb-4">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-300 text-xs font-bold">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    </svg>
+                                    {{ maps.length }} {{ maps.length === 1 ? 'map queued' : 'maps queued' }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+                                    :class="emptyServers.length > 0
+                                        ? 'bg-green-500/15 border border-green-400/30 text-green-300'
+                                        : 'bg-white/5 border border-white/15 text-gray-400'">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="emptyServers.length > 0 ? 'bg-green-400' : 'bg-gray-500'"></span>
+                                    {{ emptyServers.length }} empty {{ emptyServers.length === 1 ? 'server' : 'servers' }}
+                                </span>
+                            </div>
+
                             <!-- Step indicators -->
                             <div class="flex items-center gap-3 mb-4">
                                 <div class="flex items-center gap-2">
@@ -728,14 +758,14 @@ const closeServerDropdown = () => {
                                         :class="selectedServer ? 'bg-blue-500 text-white ring-2 ring-blue-500/30' : 'bg-white/10 text-gray-500'">
                                         2
                                     </div>
-                                    <span class="text-sm" :class="selectedServer ? 'text-white font-semibold' : 'text-gray-500'">Click Connect on a map</span>
+                                    <span class="text-sm" :class="selectedServer ? 'text-white font-semibold' : 'text-gray-500'">Click Copy and connect on a map</span>
                                 </div>
                                 <div class="h-px flex-1 bg-white/10"></div>
                                 <div class="flex items-center gap-2">
                                     <div class="flex items-center justify-center w-7 h-7 rounded-full text-xs font-black flex-shrink-0 bg-green-500/20 text-green-400 border border-green-500/40">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
                                     </div>
-                                    <span class="text-sm text-green-400/80 font-medium">Callvote auto-copied upon clicking Connect</span>
+                                    <span class="text-sm text-green-400/80 font-medium">Callvote lands on your clipboard, paste it in the console</span>
                                 </div>
                             </div>
 
@@ -823,24 +853,33 @@ const closeServerDropdown = () => {
                     <MapCard :map="map" />
 
                     <!-- Play Button (for Play Later with server selected) -->
-                    <a
+                    <button
                         v-if="isPlayLater && selectedServer"
-                        :href="`defrag://${selectedServer.ip}:${selectedServer.port}`"
-                        @click="copyMapCommand(map.id, map.name)"
+                        @click="copyAndConnect(map)"
                         :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'connect-button-cpm' : 'connect-button-vq3'"
-                        class="connect-button absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between px-3 py-2 rounded-b-lg text-white font-bold text-xs transition-all"
-                        :title="`Connect to ${selectedServer.ip}:${selectedServer.port} (/cv map ${map.name} copied to clipboard)`">
+                        class="connect-button w-full mt-2 flex items-center justify-between px-3 py-2 rounded-lg text-white font-bold text-xs transition-all"
+                        :title="`Connect to ${selectedServer.ip}:${selectedServer.port} and load ${map.name}`">
                         <div class="flex items-center gap-1.5">
                             <svg v-if="copiedMapId !== map.id" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
                             </svg>
-                            <svg v-else class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                            {{ copiedMapId === map.id ? 'Copied!' : 'Connect' }}
+                            <svg v-else class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                            {{ copiedMapId === map.id ? 'Copied - connecting...' : 'Copy and connect' }}
                         </div>
                         <span :class="selectedServer.defrag?.toLowerCase().includes('cpm') ? 'bg-purple-500/30 border-purple-400/50 text-purple-300' : 'bg-blue-500/30 border-blue-400/50 text-blue-300'" class="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border">
                             {{ selectedServer.defrag?.toLowerCase().includes('cpm') ? 'CPM' : 'VQ3' }}
                         </span>
-                    </a>
+                    </button>
+
+                    <!-- Queue position. Play Later is an ordered list you can
+                         drag around, so the order is worth showing. -->
+                    <div
+                        v-if="isPlayLater"
+                        class="absolute top-2 right-2 z-10 min-w-[1.5rem] h-6 px-1.5 flex items-center justify-center rounded-md bg-black/70 border border-white/15 text-white text-xs font-black backdrop-blur-sm">
+                        {{ index + 1 }}
+                    </div>
 
                     <!-- Remove Button (for owner) -->
                     <button
@@ -859,9 +898,15 @@ const closeServerDropdown = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mb-4 opacity-40">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                 </svg>
-                <p class="font-semibold text-lg mb-2">No maps in this maplist yet</p>
-                <p class="text-sm mb-4" v-if="is_owner">Start adding maps to build your collection!</p>
-                <Link v-if="is_owner" :href="'/maps'" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
+                <template v-if="isPlayLater">
+                    <p class="font-semibold text-lg mb-2">Nothing queued yet</p>
+                    <p class="text-sm mb-4">Add maps from any map page and they land here, ready to load onto a server.</p>
+                </template>
+                <template v-else>
+                    <p class="font-semibold text-lg mb-2">No maps in this maplist yet</p>
+                    <p class="text-sm mb-4" v-if="is_owner">Start adding maps to build your collection!</p>
+                </template>
+                <Link v-if="is_owner || isPlayLater" :href="'/maps'" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
                     Browse Maps
                 </Link>
             </div>
@@ -956,6 +1001,7 @@ const closeServerDropdown = () => {
                 </button>
             </template>
         </DialogModal>
+
     </div>
 </template>
 
