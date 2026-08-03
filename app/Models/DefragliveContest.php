@@ -8,11 +8,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * A DefragLive watch-time contest window. Winner is drawn by a watch-time-
  * weighted raffle over the watch sessions in [starts_at, ends_at]
- * (DefragliveWatchService::draw). Default $5 / 2 weeks, but per-row.
+ * (DefragliveWatchService::draw). Default 5 EUR / 2 weeks, but per-row.
  */
 class DefragliveContest extends Model
 {
     protected $table = 'defraglive_contests';
+
+    /**
+     * Currencies a prize may be set in, and how they are written. The prize is
+     * paid out of one person's pocket, so this is a short list on purpose - a
+     * free-text field invites "eur", "Euro" and "EU" into the same column, and
+     * every one of those would then print without a symbol.
+     */
+    public const CURRENCIES = [
+        'EUR' => '€',
+        'USD' => '$',
+    ];
+
+    public const DEFAULT_CURRENCY = 'EUR';
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_ACTIVE = 'active';
@@ -49,6 +62,10 @@ class DefragliveContest extends Model
         'notes',
     ];
 
+    protected $attributes = [
+        'prize_currency' => self::DEFAULT_CURRENCY,
+    ];
+
     protected $casts = [
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
@@ -64,6 +81,21 @@ class DefragliveContest extends Model
     public function winner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'winner_user_id');
+    }
+
+    /**
+     * A prize written for humans. An unknown currency keeps its code rather
+     * than losing the unit, so a bad row reads oddly instead of claiming the
+     * prize is in whatever the reader assumes.
+     */
+    public static function formatPrize($amount, ?string $currency): string
+    {
+        $value = number_format((float) $amount, 2);
+        $symbol = self::CURRENCIES[$currency] ?? null;
+
+        return $symbol === null
+            ? trim($value . ' ' . $currency)
+            : $symbol . $value;
     }
 
     public function isOpenForWatching(): bool

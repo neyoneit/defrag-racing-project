@@ -1,6 +1,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { formatPrize } from '@/utils/currency';
 
 // Sitewide nudge toward the contest while one is live, fed by the
 // `defragliveContest` shared Inertia prop (cached). Three layouts:
@@ -51,7 +52,7 @@ const timeLeft = computed(() => {
 const prize = computed(() => {
     if (!contest.value) return '';
     const c = contest.value;
-    return (c.prize_currency === 'USD' ? '$' : '') + c.prize_amount + (c.prize_currency !== 'USD' ? ' ' + c.prize_currency : '');
+    return formatPrize(c.prize_amount, c.prize_currency);
 });
 
 // Segmented countdown for the hero variant's ticker boxes.

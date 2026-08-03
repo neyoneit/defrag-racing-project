@@ -51,9 +51,16 @@ class DefragliveContestResource extends Resource
                     ->numeric()
                     ->default(5)
                     ->required(),
-                Forms\Components\TextInput::make('prize_currency')
-                    ->default('USD')
-                    ->maxLength(8)
+                Forms\Components\Select::make('prize_currency')
+                    ->options(array_combine(
+                        array_keys(DefragliveContest::CURRENCIES),
+                        array_map(
+                            fn ($symbol, $code) => "{$code}  {$symbol}",
+                            DefragliveContest::CURRENCIES,
+                            array_keys(DefragliveContest::CURRENCIES)
+                        )
+                    ))
+                    ->default(DefragliveContest::DEFAULT_CURRENCY)
                     ->required(),
                 Forms\Components\Select::make('status')
                     ->options([
@@ -95,7 +102,7 @@ class DefragliveContestResource extends Resource
                 Tables\Columns\TextColumn::make('starts_at')->dateTime('M j, H:i')->sortable(),
                 Tables\Columns\TextColumn::make('ends_at')->dateTime('M j, H:i')->sortable(),
                 Tables\Columns\TextColumn::make('prize_amount')
-                    ->formatStateUsing(fn ($state, DefragliveContest $r) => ($r->prize_currency === 'USD' ? '$' : '') . $state . ($r->prize_currency !== 'USD' ? ' ' . $r->prize_currency : '')),
+                    ->formatStateUsing(fn ($state, DefragliveContest $r) => DefragliveContest::formatPrize($state, $r->prize_currency)),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
