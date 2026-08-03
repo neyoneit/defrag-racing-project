@@ -56,6 +56,12 @@
         localStorage.setItem('gettingStarted_launcher', launcherChecked.value ? '1' : '0');
     };
 
+    const rulesChecked = ref(localStorage.getItem('gettingStarted_rules') === '1');
+    const toggleRules = () => {
+        rulesChecked.value = !rulesChecked.value;
+        localStorage.setItem('gettingStarted_rules', rulesChecked.value ? '1' : '0');
+    };
+
     const formatTime = (ms) => {
         if (!ms) return '-';
         const totalSec = ms / 1000;
@@ -524,6 +530,25 @@
                             </div>
                         </a>
                         <button v-if="isAuthenticated" @click="toggleDiscord" :class="['shrink-0 w-10 rounded-lg border-2 flex items-center justify-center transition-all', discordChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                        </button>
+                    </div>
+
+                    <!-- Rules. Amber rather than blue: it is the one step here
+                         that costs somebody their records if they skip it. -->
+                    <div class="flex gap-2 items-stretch">
+                        <Link :href="route('rules')" :class="['flex-1 backdrop-blur-sm rounded-xl border p-5 transition-all group', rulesChecked ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/10 hover:border-amber-500/50']">
+                            <div class="flex items-center gap-4">
+                                <div :class="['p-3 rounded-lg shrink-0', rulesChecked ? 'bg-green-500/20' : 'bg-amber-500/20']">
+                                    <svg :class="['w-6 h-6', rulesChecked ? 'text-green-400' : 'text-amber-400']" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" /></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 :class="['text-base font-bold transition-colors', rulesChecked ? 'text-green-400' : 'text-white group-hover:text-amber-400']">Read the Rules</h3>
+                                    <p class="text-xs text-gray-400 mt-0.5">What counts as a clean run, and what does not</p>
+                                </div>
+                            </div>
+                        </Link>
+                        <button v-if="isAuthenticated" @click="toggleRules" :class="['shrink-0 w-10 rounded-lg border-2 flex items-center justify-center transition-all', rulesChecked ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-white/20 hover:border-white/40 text-transparent hover:text-white/20']">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                         </button>
                     </div>
