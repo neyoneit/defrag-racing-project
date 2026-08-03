@@ -51,8 +51,10 @@ class ServerdemoValidationDownloadController extends Controller
         $demo = $flag->serverDemo();
         abort_if($demo === null, 404);
 
-        $stream = $this->open($demo);
-        abort_unless(is_resource($stream), 404);
+        $opened = $this->open($demo);
+        abort_if($opened === null, 404);
+
+        [$stream, $filename] = $opened;
 
         // Chunked and flushed: Octane/Swoole caps a single buffered body and
         // answers 502 when a Content-Length accompanies chunked writes.
@@ -66,7 +68,7 @@ class ServerdemoValidationDownloadController extends Controller
                 flush();
             }
             fclose($stream);
-        }, basename($demo->path), [
+        }, $filename, [
             'Content-Type' => 'application/octet-stream',
             'X-Accel-Buffering' => 'no',
         ]);
@@ -76,22 +78,42 @@ class ServerdemoValidationDownloadController extends Controller
      * A serverdemo has two homes - the storage VPS and the B2 mirror - and
      * `on_contabo` is a scheduled guess, so both are tried in the order it
      * suggests rather than switched between.
+     *
+     * The mirror only ships files younger than a few hours, so the ~116k demos
+     * that were repacked in bulk on 2026-08-03 are in B2 under their original
+     * `.dm_68` name while the index knows them as `.dm_68.7z`. Both names are
+     * therefore tried on each disk: the same demo, and B2 legitimately holds
+     * either form depending on whether it arrived before or after packing.
+     *
+     * Returns [stream, download name] so the name matches what was actually
+     * opened - handing a raw demo out under a .7z name gives the moderator a
+     * file nothing will open.
      */
-    private function open(ServerDemo $demo)
+    private function open(ServerDemo $demo): ?array
     {
-        $candidates = $demo->on_contabo
-            ? [['serverdemos', $demo->path], ['serverdemos_b2', self::B2_PREFIX . $demo->path]]
-            : [['serverdemos_b2', self::B2_PREFIX . $demo->path], ['serverdemos', $demo->path]];
+        $paths = [$demo->path];
 
-        foreach ($candidates as [$disk, $path]) {
-            try {
-                $stream = Storage::disk($disk)->readStream($path);
-            } catch (\Throwable) {
-                $stream = null;
-            }
+        if (str_ends_with($demo->path, '.7z')) {
+            $paths[] = substr($demo->path, 0, -3);
+        }
 
-            if (is_resource($stream)) {
-                return $stream;
+        $disks = $demo->on_contabo
+            ? ['serverdemos', 'serverdemos_b2']
+            : ['serverdemos_b2', 'serverdemos'];
+
+        foreach ($disks as $disk) {
+            foreach ($paths as $path) {
+                $full = $disk === 'serverdemos_b2' ? self::B2_PREFIX . $path : $path;
+
+                try {
+                    $stream = Storage::disk($disk)->readStream($full);
+                } catch (\Throwable) {
+                    $stream = null;
+                }
+
+                if (is_resource($stream)) {
+                    return [$stream, basename($path)];
+                }
             }
         }
 

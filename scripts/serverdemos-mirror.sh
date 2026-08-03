@@ -31,6 +31,25 @@ LOCK_FILE="/run/serverdemos-mirror.lock"
 # nebo pomalý běh nenechal díru.
 MAX_AGE="${MAX_AGE:-6h}"
 
+# CATCH_UP=1 jednorázově vypne obě zrychlení pravidelného běhu.
+#
+# --max-age filtruje podle času souboru, jenže ingest i přebalovací skript
+# archivu schválně nastaví čas původního dema. Archiv tedy vznikne dnes, ale
+# tváří se jako soubor starý týdny a do okna nikdy nespadne. Přesně proto
+# 116 tisíc dem přebalených 3.8.2026 v B2 chybí, zatímco jejich syrové
+# předlohy tam pořád leží - a bez tohohle režimu by se tam nedostala nikdy.
+#
+# --no-traverse se vyplácí, dokud je čerstvých souborů pár: zeptá se cíle na
+# každý zvlášť místo aby ho vypisoval celý. Při dohánění stovek tisíc
+# souborů je to obráceně, tam je jeden výpis mnohem levnější.
+if [ "${CATCH_UP:-0}" = "1" ]; then
+  SELECT_ARGS=()
+  MODE_NOTE="catch-up, bez omezení stáří"
+else
+  SELECT_ARGS=(--max-age "$MAX_AGE" --no-traverse)
+  MODE_NOTE="max-age $MAX_AGE"
+fi
+
 # Druhý běh nemá co dělat, když ten první ještě jede - jen by si sedly
 # na stejné soubory. -n = raději hned skončit než čekat.
 exec 9>"$LOCK_FILE"
@@ -77,11 +96,10 @@ export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
 # protože copy nikdy nic nemaže.
 rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
   --exclude "*.part" \
-  --max-age "$MAX_AGE" \
-  --no-traverse \
+  ${SELECT_ARGS[@]+"${SELECT_ARGS[@]}"} \
   --transfers 4 \
   --sftp-concurrency 8 \
   --stats-one-line \
   --stats 0
 
-echo "[$(date)] Serverdemos mirror (max-age $MAX_AGE) OK"
+echo "[$(date)] Serverdemos mirror ($MODE_NOTE) OK"
