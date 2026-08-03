@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, getCurrentInstance, watch } from 'vue';
+import { formatPrize } from '@/utils/currency';
 
 const props = defineProps({
     contest: Object,
@@ -286,13 +287,13 @@ const statusColor = (s) => ({
                 <div class="flex items-center gap-6 shrink-0">
                     <div class="text-right">
                         <div class="text-3xl md:text-4xl font-black text-emerald-400">
-                            {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.prize_amount }}{{ contest.prize_currency !== 'USD' ? ' ' + contest.prize_currency : '' }}
+                            {{ formatPrize(contest.prize_amount, contest.prize_currency) }}
                         </div>
                         <div class="text-sm font-bold uppercase tracking-widest text-gray-300">prize</div>
                         <!-- Pool transparency: base prize vs what previous winners forwarded in -->
                         <div v-if="contest.carried_over_amount > 0" class="text-[11px] text-purple-200/90 mt-1 leading-snug">
-                            {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ (contest.prize_amount - contest.carried_over_amount).toFixed(2) }} base
-                            + {{ contest.prize_currency === 'USD' ? '$' : '' }}{{ contest.carried_over_amount.toFixed(2) }}
+                            {{ formatPrize(contest.prize_amount - contest.carried_over_amount, contest.prize_currency) }} base
+                            + {{ formatPrize(contest.carried_over_amount, contest.prize_currency) }}
                             carried over from previous winners
                         </div>
                     </div>
@@ -427,9 +428,9 @@ const statusColor = (s) => ({
                             </div>
                         </div>
                         <div class="text-right shrink-0">
-                            <div class="font-bold text-emerald-400">{{ w.prize_currency === 'USD' ? '$' : '' }}{{ w.prize_amount }}</div>
+                            <div class="font-bold text-emerald-400">{{ formatPrize(w.prize_amount, w.prize_currency) }}</div>
                             <div v-if="w.carried_over_amount > 0" class="text-[10px] text-purple-300/80 leading-tight">
-                                incl. {{ w.prize_currency === 'USD' ? '$' : '' }}{{ w.carried_over_amount.toFixed(2) }} carried over
+                                incl. {{ formatPrize(w.carried_over_amount, w.prize_currency) }} carried over
                             </div>
                             <div class="text-[11px] uppercase" :class="statusColor(w.status)">{{ statusLabel(w.status) }}</div>
                         </div>
@@ -454,7 +455,7 @@ const statusColor = (s) => ({
                     </component>
                     <div class="text-right shrink-0">
                         <div class="font-bold text-white">{{ h.wins }} {{ h.wins === 1 ? 'win' : 'wins' }}</div>
-                        <div class="text-xs text-emerald-400">{{ h.currency === 'USD' ? '$' : '' }}{{ h.total.toFixed(2) }}{{ h.currency !== 'USD' ? ' ' + h.currency : '' }} won</div>
+                        <div class="text-xs text-emerald-400">{{ formatPrize(h.total, h.currency) }} won</div>
                         <div v-if="h.seconds" class="text-[11px] text-purple-300/80">{{ fmtWatch(h.seconds) }} watched</div>
                     </div>
                 </div>

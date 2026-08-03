@@ -127,7 +127,7 @@
             const card = document.getElementById('card');
             if (!d.contest || !d.top.length) { card.style.display = 'none'; return; }
             document.getElementById('prize').textContent =
-                d.contest.prize_amount ? (d.contest.prize_amount + ' ' + d.contest.prize_currency + ' prize') : '';
+                d.contest.prize_amount ? (d.contest.prize_label + ' prize') : '';
             document.getElementById('rows').innerHTML = d.top.map((e, i) =>
                 '<div class="row">'
                 + '<div class="rank r' + (i + 1) + '">' + (i + 1) + '</div>'

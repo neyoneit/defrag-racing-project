@@ -160,6 +160,10 @@ class DefragliveContestController extends Controller
                     'ends_at' => $contest->ends_at?->toIso8601String(),
                     'prize_amount' => (float) $contest->prize_amount,
                     'prize_currency' => $contest->prize_currency,
+                    // Formatted here rather than in the overlay: that page is
+                    // standalone for OBS and loads no bundle, so it cannot
+                    // reach the shared formatter the rest of the site uses.
+                    'prize_label' => DefragliveContest::formatPrize($contest->prize_amount, $contest->prize_currency),
                 ],
                 'top' => array_map(fn ($e) => [
                     'name' => $e['name'],
