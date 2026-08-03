@@ -702,6 +702,15 @@ class MapsController extends Controller
             ->with('onlinePlayers')
             ->get();
 
+        // Every online server, for the instant-play picker. Deliberately a
+        // second list: the one above is servers ALREADY running this map,
+        // which is the opposite of what you want when looking for somewhere
+        // to load it. Same query the Play Later list uses.
+        $onlineServers = \App\Models\Server::where('online', true)
+            ->where('visible', true)
+            ->with('onlinePlayers')
+            ->get();
+
         // Get public maplists that include this map
         $publicMaplists = \App\Models\Maplist::whereHas('maps', function($query) use ($map) {
                 $query->where('map_id', $map->id);
@@ -742,6 +751,7 @@ class MapsController extends Controller
             ->with('showOldtop', ($showOldtop === 'true'))
             ->with('showOffline', ($showOffline === 'true'))
             ->with('servers', $servers)
+            ->with('onlineServers', $onlineServers)
             ->with('publicMaplists', $publicMaplists)
             ->with('clusterMetaVq3', $clusterMetaVq3)
             ->with('clusterMetaCpm', $clusterMetaCpm)
