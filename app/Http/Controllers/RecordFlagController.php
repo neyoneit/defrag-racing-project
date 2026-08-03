@@ -87,6 +87,13 @@ class RecordFlagController extends Controller
                 'note' => $notes,
             ]);
 
+            // A report the admin already cleared but that was short of the
+            // reporter threshold joins its case the moment it reaches it -
+            // the two conditions can be met in either order.
+            if ($existing->isReadyForValidators() && $existing->validation_case_id === null) {
+                app(\App\Services\ServerdemoValidationService::class)->attachToCase($existing);
+            }
+
             return back()->with('success', 'Flag added. ' . count($users) . ' users have flagged this.');
         }
 

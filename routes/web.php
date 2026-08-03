@@ -75,6 +75,16 @@ Route::post('/maps/{id}/unflag-nsfw', [MapsController::class, 'unflagNsfw'])->wh
 Route::post('/maps/{id}/rate-difficulty', [MapsController::class, 'rateDifficulty'])->where('id', '[0-9]+')->middleware('auth')->name('maps.rate-difficulty');
 Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 
+// Serverdemo validators. The page is public - it explains how reported runs
+// are reviewed - while applying needs a verified account.
+Route::get('/serverdemo-validators', [\App\Http\Controllers\ServerdemoValidatorController::class, 'index'])->name('serverdemo-validators.index');
+Route::post('/serverdemo-validators/apply', [\App\Http\Controllers\ServerdemoValidatorController::class, 'apply'])
+    ->middleware(['auth', 'verified', 'throttle:5,60'])
+    ->name('serverdemo-validators.apply');
+Route::post('/serverdemo-validators/vote/{application}', [\App\Http\Controllers\ServerdemoValidatorController::class, 'vote'])
+    ->middleware(['auth', 'verified', 'throttle:60,60'])
+    ->name('serverdemo-validators.vote');
+
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 
@@ -85,6 +95,12 @@ Route::get('/community', [CommunityLeaderboardController::class, 'index'])->name
 Route::get('/defraghq/storage-download', \App\Http\Controllers\StorageBrowserDownloadController::class)
     ->middleware(['auth', 'signed'])
     ->name('defraghq.storage-download');
+
+// The demo of ONE reported run, for the validator holding that report. No
+// path parameter: the file is looked up from the report itself.
+Route::get('/defraghq/validation-demo/{flag}', \App\Http\Controllers\ServerdemoValidationDownloadController::class)
+    ->middleware(['auth', 'signed'])
+    ->name('defraghq.validation-demo');
 
 // DefragLive most-watched-player contest (public leaderboard + raffle odds).
 Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');
