@@ -99,6 +99,28 @@ const sections = [
     },
 ];
 
+// The rules above are the rules. These are the questions people actually ask,
+// answered by name - "no scripts" tells nobody whether their own bind is one.
+const examples = {
+    forbidden: [
+        'A bind that fires a rocket and jumps from one keypress.',
+        'A bind that plays back several actions in order, however short.',
+        'Macro keys on a keyboard or mouse that replay a recorded sequence.',
+        'Any external program that presses keys for you or times them.',
+        '+left, +right, or anything else that turns your view without the mouse.',
+        'Jump or crouch bound to the mouse wheel.',
+        'A modified or unofficial client build.',
+        'Network settings chosen to lag triggers rather than to play well.',
+    ],
+    allowed: [
+        'Binds that do one thing per press: fire, jump, switch weapon, say a message.',
+        'Toggling a setting with a key, as long as it does not move you.',
+        'Config tweaks: sensitivity, fov, colours, sounds, picmip, huds.',
+        'Doing the whole trick yourself, however many keys it takes.',
+        'Practising a run as many times as you like. Precision by repetition is the game.',
+    ],
+};
+
 const accents = {
     red: 'border-red-500/30 text-red-300 bg-red-500/15',
     blue: 'border-blue-400/30 text-blue-300 bg-blue-500/15',
@@ -146,6 +168,44 @@ const accents = {
                         </li>
                     </ul>
                 </section>
+            </div>
+
+            <!-- The rules are the rules; this is the same thing named out
+                 loud. "No scripts" tells nobody whether their own bind counts
+                 as one, and that is the question that actually gets asked. -->
+            <div class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-6 shadow-2xl">
+                <h2 class="text-xl font-bold text-white mb-2">In practice</h2>
+                <p class="text-gray-400 text-sm mb-5 max-w-3xl">
+                    One line decides nearly every case: <span class="text-white font-semibold">a key may do one thing when you
+                    press it, and the timing has to be yours.</span> Doing the whole trick yourself is a technique, no matter
+                    how hard it is. Having software do part of it for you is not.
+                </p>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-red-300 mb-3">Not allowed</h3>
+                        <ul class="space-y-2">
+                            <li v-for="item in examples.forbidden" :key="item" class="flex gap-2.5 text-sm text-gray-300">
+                                <span class="shrink-0 text-red-400 font-bold">&times;</span>
+                                <span>{{ item }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-green-300 mb-3">Allowed</h3>
+                        <ul class="space-y-2">
+                            <li v-for="item in examples.allowed" :key="item" class="flex gap-2.5 text-sm text-gray-300">
+                                <span class="shrink-0 text-green-400 font-bold">&check;</span>
+                                <span>{{ item }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="text-gray-500 text-xs mt-5">
+                    Not sure whether something of yours counts? Ask before you use it in a record. Asking has never cost
+                    anybody a time; assuming has.
+                </p>
             </div>
 
             <p class="text-gray-500 text-sm mt-8 max-w-3xl">
