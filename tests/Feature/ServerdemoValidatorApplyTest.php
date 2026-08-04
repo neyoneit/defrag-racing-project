@@ -123,6 +123,40 @@ class ServerdemoValidatorApplyTest extends TestCase
             ->assertSessionHasErrors('throttle');
     }
 
+    /**
+     * The limit is keyed on the user, not the address. One person exhausting
+     * theirs must not touch anybody else - the announcement means a lot of
+     * people arriving at once, several of them behind the same NAT.
+     */
+    public function test_one_person_hitting_the_limit_does_not_block_anyone_else(): void
+    {
+        $blocked = $this->applicant();
+
+        foreach (range(1, 20) as $ignored) {
+            $this->actingAs($blocked)->post(route('serverdemo-validators.apply'), $this->payload('too short'));
+        }
+
+        $this->actingAs($blocked)
+            ->post(route('serverdemo-validators.apply'), $this->payload())
+            ->assertStatus(429);
+
+        // Nineteen other applicants, each fumbling the form twice first.
+        foreach (range(1, 19) as $ignored) {
+            $other = $this->applicant();
+
+            $this->actingAs($other)->post(route('serverdemo-validators.apply'), $this->payload('too short'));
+            $this->actingAs($other)->post(route('serverdemo-validators.apply'), $this->payload('still too short'));
+
+            $this->actingAs($other)
+                ->post(route('serverdemo-validators.apply'), $this->payload())
+                ->assertSessionHasNoErrors();
+
+            $this->assertDatabaseHas('serverdemo_validator_applications', ['user_id' => $other->id]);
+        }
+
+        $this->assertSame(19, ServerdemoValidatorApplication::count());
+    }
+
     protected function tearDown(): void
     {
         RateLimiter::clear('serverdemo-validators.apply');
