@@ -34,7 +34,11 @@ class DemosTopService
         $offline = OfflineRecord::where('map_name', $mapName)
             ->where('physics', 'LIKE', $physicsPattern)
             ->with([
-                'demo:id,q3df_login_name,q3df_login_name_colored,file_hash,country,user_id,suggested_user_id',
+                // Whole row, not a column list: the record chips hand this demo
+                // to the details panel, which needs physics, gametype, time,
+                // size and validity as well. A trimmed select made those fields
+                // silently null and the panel came up empty.
+                'demo',
                 'demo.suggestedUser',
                 'user',
                 'renderedVideos' => fn ($q) => $q->visible()->latest(),

@@ -102,7 +102,9 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    // RememberIntendedUrl notes where somebody came from when they open the
+    // login page, so logging in puts them back rather than on the front page.
+    'middleware' => ['web', \App\Http\Middleware\RememberIntendedUrl::class],
 
     /*
     |--------------------------------------------------------------------------

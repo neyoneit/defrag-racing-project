@@ -26,6 +26,12 @@ const sort = ref(props.filters.sort ?? 'newest');
 // Ancestors of the selected category, so its branch renders already expanded.
 const openIds = computed(() => (props.current?.breadcrumb ?? []).map((c) => c.id));
 
+// The locked categories are the ones people actually come here for - the mod,
+// the server bundle - and by position they sat at the bottom, under thirty
+// folders of maps and sounds. They go on top, in their own group.
+const pinned = computed(() => props.tree.filter((n) => n.is_locked || n.auto_source));
+const browsable = computed(() => props.tree.filter((n) => ! n.is_locked && ! n.auto_source));
+
 const baseUrl = computed(() =>
     props.current ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
 );
@@ -138,9 +144,40 @@ const isNew = (d) => {
                             </span>
                         </Link>
 
-                        <div class="border-t border-white/5 max-h-[70vh] overflow-y-auto py-1">
+                        <!-- The things you came for: the mod, the bundle, the
+                             launcher. Kept apart from the browsable folders. -->
+                        <div class="border-t border-white/5 py-1 bg-amber-500/[0.03]">
                             <DownloadCategoryNode
-                                v-for="node in tree"
+                                v-for="node in pinned"
+                                :key="node.id"
+                                :node="node"
+                                :current-id="current?.id"
+                                :open-ids="openIds" />
+
+                            <!-- The launcher is not a category - it has its own
+                                 page - but this is where people look for it. -->
+                            <a
+                                href="/launcher"
+                                class="group flex items-center border-l-2 border-transparent hover:bg-cyan-500/5 hover:border-cyan-500/20 transition-all">
+                                <span class="flex-shrink-0 w-5"></span>
+                                <span class="flex-1 flex items-center justify-between min-w-0 py-2 pr-3">
+                                    <span class="flex items-center gap-1.5 min-w-0">
+                                        <svg class="w-3 h-3 flex-shrink-0 text-cyan-400/70"
+                                             fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                        </svg>
+                                        <span class="text-sm truncate text-gray-400 group-hover:text-white transition-colors">
+                                            Defrag Launcher
+                                        </span>
+                                    </span>
+                                </span>
+                            </a>
+                        </div>
+
+                        <div class="border-t border-white/10 max-h-[70vh] overflow-y-auto py-1">
+                            <DownloadCategoryNode
+                                v-for="node in browsable"
                                 :key="node.id"
                                 :node="node"
                                 :current-id="current?.id"
