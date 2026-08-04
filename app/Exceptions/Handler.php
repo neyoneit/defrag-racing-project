@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Inertia\Inertia;
@@ -47,6 +48,23 @@ class Handler extends ExceptionHandler
     {
         $this->reportable(function (Throwable $e) {
             //
+        });
+
+        // A rate-limited form submission is not a broken page. Replacing the
+        // whole app with a 429 screen loses whatever the person had typed and
+        // reads like the site fell over, so send them back to the form with a
+        // sentence saying when they can try again.
+        $this->renderable(function (ThrottleRequestsException $e, $request) {
+            if (! $request->header('X-Inertia')) {
+                return null;
+            }
+
+            $seconds = (int) ($e->getHeaders()['Retry-After'] ?? 60);
+            $minutes = max(1, (int) ceil($seconds / 60));
+
+            return back()->withErrors([
+                'throttle' => "Too many attempts. Try again in {$minutes} minute" . ($minutes === 1 ? '' : 's') . '.',
+            ]);
         });
 
         // Handle HTTP errors (403, 404, 500, etc.) with Inertia error page

@@ -84,7 +84,10 @@ Route::get('/maps/{mapname}', [MapsController::class, 'map'])->name('maps.map');
 // are reviewed - while applying needs a verified account.
 Route::get('/serverdemo-validators', [\App\Http\Controllers\ServerdemoValidatorController::class, 'index'])->name('serverdemo-validators.index');
 Route::post('/serverdemo-validators/apply', [\App\Http\Controllers\ServerdemoValidatorController::class, 'apply'])
-    ->middleware(['auth', 'verified', 'throttle:5,60'])
+    // The throttle counts every POST, including the ones the form itself
+    // rejects, so it has to leave room for somebody fumbling the form rather
+    // than only for somebody abusing it. Five was not that room.
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
     ->name('serverdemo-validators.apply');
 Route::post('/serverdemo-validators/vote/{application}', [\App\Http\Controllers\ServerdemoValidatorController::class, 'vote'])
     ->middleware(['auth', 'verified', 'throttle:60,60'])
