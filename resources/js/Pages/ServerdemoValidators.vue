@@ -8,7 +8,7 @@ export default {
 
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     application: { type: Object, default: null },
@@ -67,14 +67,31 @@ const MOTIVATION_MIN = 60;
 
 const motivationLength = computed(() => form.motivation.trim().length);
 const motivationTooShort = computed(() => motivationLength.value < MOTIVATION_MIN);
+const motivationMissing = computed(() => Math.max(0, MOTIVATION_MIN - motivationLength.value));
+
+// The button is deliberately NOT disabled. A dead button explains nothing: the
+// first person to hit this thought it was greyed out because of who he was -
+// an admin - rather than because of what he had typed. Clicking it now says
+// what is wrong and puts the cursor in the field that is wrong.
+const motivationField = ref(null);
+const blocked = ref(false);
 
 // Inertia keeps errors until the next response, so a "too short" message sat
 // under a long answer the applicant had since rewritten. It read like the
 // validation was broken. Typing clears it, and the counter takes over.
-watch(() => form.motivation, () => form.clearErrors('motivation', 'throttle'));
+watch(() => form.motivation, () => {
+    form.clearErrors('motivation', 'throttle');
+    blocked.value = false;
+});
 
 const submit = () => {
+    // Stopping the short answer here means it never becomes a request. The
+    // rate limit counts every POST, including the ones the server itself
+    // rejects, so a bounced attempt used to cost the applicant one for nothing.
     if (motivationTooShort.value) {
+        blocked.value = true;
+        motivationField.value?.focus();
+        motivationField.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 
@@ -312,16 +329,25 @@ const submit = () => {
                         <label class="block text-sm font-semibold text-gray-300 mb-2">
                             Why do you want to do this?
                             <span class="text-red-400">*</span>
+                            <span class="font-normal text-gray-500">- required, at least {{ MOTIVATION_MIN }} characters</span>
                         </label>
                         <textarea
+                            ref="motivationField"
                             v-model="form.motivation"
                             rows="5"
-                            placeholder="A few sentences is plenty."
-                            class="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="A couple of sentences is plenty. Why you, and what you would be looking at."
+                            class="w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :class="blocked ? 'border-amber-400/60' : 'border-white/10'"
                         ></textarea>
                         <p v-if="form.errors.motivation" class="text-red-400 text-sm mt-1">{{ form.errors.motivation }}</p>
-                        <p v-else-if="motivationTooShort" class="text-gray-500 text-sm mt-1">
-                            {{ MOTIVATION_MIN - motivationLength }} more character{{ MOTIVATION_MIN - motivationLength === 1 ? '' : 's' }} needed.
+                        <p v-else-if="motivationTooShort" class="text-sm mt-1" :class="blocked ? 'text-amber-300 font-semibold' : 'text-amber-400/70'">
+                            This one is the only answer that is required, and it is
+                            {{ motivationMissing }} character{{ motivationMissing === 1 ? '' : 's' }} short of the
+                            {{ MOTIVATION_MIN }} it needs
+                            <span class="text-gray-500 font-normal">({{ motivationLength }} so far)</span>.
+                        </p>
+                        <p v-else class="text-green-400/80 text-sm mt-1">
+                            Long enough - you can send the application.
                         </p>
                     </div>
 
@@ -364,13 +390,39 @@ const submit = () => {
 
                     <p v-if="form.errors.throttle" class="text-red-400 text-sm">{{ form.errors.throttle }}</p>
 
-                    <button
-                        type="submit"
-                        :disabled="form.processing || motivationTooShort"
-                        class="px-5 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
+                    <!-- Spelled out rather than implied by a greyed-out button.
+                         Whoever hits this needs to know it is about the text in
+                         the box and nothing else - not their account, not their
+                         role, not the site being broken. -->
+                    <div
+                        v-if="blocked"
+                        class="rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
                     >
-                        {{ form.processing ? 'Sending...' : 'Send application' }}
-                    </button>
+                        <span class="font-bold">Nothing was sent yet.</span>
+                        The first question - <span class="font-semibold">Why do you want to do this?</span> - still needs
+                        {{ motivationMissing }} more character{{ motivationMissing === 1 ? '' : 's' }}.
+                        That is the only thing stopping this form: your account is fine, and the other three
+                        answers are optional. Write a sentence or two about why you want to watch these demos
+                        and the button will go through.
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            :disabled="form.processing"
+                            class="px-5 py-3 font-semibold rounded-xl transition-colors disabled:cursor-wait"
+                            :class="motivationTooShort
+                                ? 'bg-white/10 hover:bg-white/15 text-gray-300 border border-white/20'
+                                : 'bg-blue-600 hover:bg-blue-500 text-white'"
+                        >
+                            {{ form.processing ? 'Sending...' : 'Send application' }}
+                        </button>
+
+                        <p v-if="motivationTooShort && ! blocked" class="text-gray-400 text-sm">
+                            Waiting on {{ motivationMissing }} more character{{ motivationMissing === 1 ? '' : 's' }}
+                            in the first answer.
+                        </p>
+                    </div>
                 </form>
             </div>
 
