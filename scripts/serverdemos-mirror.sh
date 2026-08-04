@@ -94,12 +94,75 @@ export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
 # --exclude *.part: ingest balí demo do dočasného .7z.part a teprve hotový
 # archiv přejmenuje. Nahrát rozdělaný kus by znamenalo mít ho v B2 navždy,
 # protože copy nikdy nic nemaže.
+RUN_LOG="$(mktemp)"
+trap 'rm -f "$RUN_LOG"' EXIT
+
+# --immutable je tu kvůli tomu, že jméno dema není unikátní. Recordsystem
+# pojmenovává soubor mapa[čas][mdd], takže dvě různé jízdy jednoho hráče se
+# stejným časem na stejné mapě dostanou totožné jméno. Bez tohohle přepínače
+# by rclone objekt v B2 tiše přepsal a starší jízda by zmizela - přesně to se
+# stalo u czsk2009-zerg[24672][12212], kde se syrový upload a uložený archiv
+# lišily obsahem. Teď se takový soubor nenahraje a vypíše se jako ERROR;
+# všechny ostatní projdou normálně a nic se nikde nemaže, copy jen zapisuje.
+#
+# Návratový kód na to nestačí, rclone jím kolizi neodliší od výpadku sítě,
+# proto se rozhoduje podle konkrétní hlášky níž.
+set +e
 rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
   --exclude "*.part" \
+  --immutable \
   ${SELECT_ARGS[@]+"${SELECT_ARGS[@]}"} \
   --transfers 4 \
   --sftp-concurrency 8 \
   --stats-one-line \
-  --stats 0
+  --stats 0 2>&1 | tee "$RUN_LOG"
+rc=${PIPESTATUS[0]}
+set -e
 
-echo "[$(date)] Serverdemos mirror ($MODE_NOTE) OK"
+mapfile -t KOLIZE < <(
+  grep -oP '^ERROR : \K.*(?=: Source and destination exist but do not match: immutable file modified$)' \
+    "$RUN_LOG" | sort -u
+)
+
+# Přejmenovává se na storage, ne až v B2. Odtud si to zbytek řetězu vezme
+# sám: serverdemos:index běží po čtvrthodinách, uvidí nové jméno a založí
+# druhý řádek v server_demos, protože parser čte [2] jako tutéž mapu, čas i
+# hráče. Příští běh zrcadlení pak archiv nahraje bez kolize. Žádný ruční
+# zápis do databáze a žádná zvláštní větev nikde jinde.
+for rel in ${KOLIZE[@]+"${KOLIZE[@]}"}; do
+  if [[ ! "$rel" =~ ^(.*)(\.dm_[0-9]+(\.7z)?)$ ]]; then
+    echo "[$(date)] KOLIZE: neznámý tvar jména, přeskakuji: $rel" >&2
+    continue
+  fi
+  stem="${BASH_REMATCH[1]}"
+  ext="${BASH_REMATCH[2]}"
+
+  # Volné pořadí se hledá na obou stranách. B2 proto, že archivy ze storage
+  # jednou zmizí a trvalou pravdou o tom, co už existuje, zůstane bucket.
+  n=2
+  while [ "$n" -le 20 ] \
+    && { rclone lsf "sdsftp:/var/lib/serverdemos/${stem}[${n}]${ext}" >/dev/null 2>&1 \
+      || rclone lsf "sdb2:$B2_SERVERDEMOS_BUCKET/serverdemos/${stem}[${n}]${ext}" >/dev/null 2>&1; }; do
+    n=$((n + 1))
+  done
+
+  if [ "$n" -gt 20 ]; then
+    echo "[$(date)] KOLIZE: víc než 20 kopií, nechávám být: $rel" >&2
+    continue
+  fi
+
+  if rclone moveto "sdsftp:/var/lib/serverdemos/$rel" \
+                   "sdsftp:/var/lib/serverdemos/${stem}[${n}]${ext}"; then
+    echo "[$(date)] KOLIZE: $rel -> ${stem}[${n}]${ext}"
+  else
+    echo "[$(date)] KOLIZE: přejmenování selhalo, demo zůstává v jedné kopii: $rel" >&2
+  fi
+done
+
+# Nenulový kód bez jediné kolize je skutečná chyba a musí být vidět.
+if [ "$rc" -ne 0 ] && [ "${#KOLIZE[@]}" -eq 0 ]; then
+  echo "[$(date)] Serverdemos mirror ($MODE_NOTE) SELHAL, rclone rc=$rc" >&2
+  exit "$rc"
+fi
+
+echo "[$(date)] Serverdemos mirror ($MODE_NOTE) OK, kolizí: ${#KOLIZE[@]}"

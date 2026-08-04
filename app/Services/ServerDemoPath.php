@@ -128,7 +128,14 @@ class ServerDemoPath
     {
         $base = preg_replace(self::DEMO_SUFFIX, '', $filename);
 
-        if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\]$/', $base, $m)) {
+        // The third bracket is a copy number, and it exists because the
+        // recordsystem's name is not unique: one player hitting the same time
+        // twice on the same map writes map[time][mdd] both times. Found on
+        // 2026-08-04, when czsk2009-zerg[24672][12212] turned out to be two
+        // genuinely different runs - one had already overwritten the other.
+        // Both have to survive, so the second is stored as [2], the third as
+        // [3], and they still read as the same map, time and player.
+        if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\](?:\[(\d+)\])?$/', $base, $m)) {
             return ['map' => $m[1], 'time' => (int) $m[2], 'mdd_id' => (int) $m[3]];
         }
 
