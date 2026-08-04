@@ -366,10 +366,20 @@ class DefragServer
         $keys = [];
         $values = [];
         while (strpos($body, '\\') === 0) {
-            if (strpos($body, '\\', 1) !== false) {
-                $elementEnd = strpos($body, '\\', 1);
-            } elseif (strpos($body, '\n', 1) !== false) {
-                $elementEnd = strpos($body, '\n', 1);
+            $nextKey = strpos($body, '\\', 1);
+            $lineEnd = strpos($body, "\n", 1);
+
+            // The last value of the infostring has no backslash after it - it
+            // ends at the newline the player lines start on. This looked for
+            // '\n' in single quotes, which is a literal backslash followed by
+            // n and never matches a real newline, so the loop stopped one
+            // element early and the final key/value pair of every reply was
+            // thrown away. Whichever delimiter comes first wins, so a stray
+            // backslash further down cannot swallow the player lines either.
+            if ($nextKey !== false && ($lineEnd === false || $nextKey < $lineEnd)) {
+                $elementEnd = $nextKey;
+            } elseif ($lineEnd !== false) {
+                $elementEnd = $lineEnd;
             } else {
                 break;
             }
