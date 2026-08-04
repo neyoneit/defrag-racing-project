@@ -12,6 +12,8 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import Pagination from '@/Components/Basic/Pagination.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
+import DemoDetails from '@/Components/DemoDetails.vue';
+import DemoPhysicsBadges from '@/Components/DemoPhysicsBadges.vue';
 
 const $page = usePage();
 
@@ -281,6 +283,17 @@ const updateTooltipPosition = (event) => {
         x: event.clientX,
         y: event.clientY
     };
+};
+
+// Which rows have their details panel open. A set rather than a single id so
+// two demos can be compared side by side, which is the point of looking.
+const expandedDemos = ref(new Set());
+
+const toggleDetails = (id) => {
+    const next = new Set(expandedDemos.value);
+
+    next.has(id) ? next.delete(id) : next.add(id);
+    expandedDemos.value = next;
 };
 
 // Manual assignment state
@@ -2214,7 +2227,8 @@ watch(selectedPhysics, () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-700/50">
-                                <tr v-for="demo in filteredDemos" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
+                                <template v-for="demo in filteredDemos" :key="demo.id">
+                                <tr class="hover:bg-gray-700/30 transition-colors duration-200">
                                     <td class="px-2 py-1.5 text-xs text-gray-500 font-mono">
                                         {{ demo.id }}
                                     </td>
@@ -2264,10 +2278,7 @@ watch(selectedPhysics, () => {
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
                                     <td class="px-1 py-1.5 text-xs text-gray-300">
-                                        <span v-if="demo.physics" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
-                                            {{ demo.physics }}
-                                        </span>
-                                        <span v-else class="text-gray-500">-</span>
+                                        <DemoPhysicsBadges :physics="demo.physics" />
                                     </td>
                                     <td class="px-2 py-1.5 text-xs text-gray-300 font-mono">
                                         {{ formatTime(demo.time_ms) }}
@@ -2325,6 +2336,16 @@ watch(selectedPhysics, () => {
                                     <td class="px-2 py-1.5 text-xs">
                                         <div class="flex flex-wrap gap-1">
                                             <button
+                                                @click.stop="toggleDetails(demo.id)"
+                                                class="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded transition-colors"
+                                                :class="expandedDemos.has(demo.id) ? 'bg-amber-600/30 text-amber-200' : 'bg-white/[0.06] text-gray-300 hover:bg-white/10'"
+                                                :title="expandedDemos.has(demo.id) ? 'Hide details' : 'What is in this demo'"
+                                            >
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                            </button>
+                                            <button
                                                 @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
                                                 title="Download"
@@ -2377,6 +2398,12 @@ watch(selectedPhysics, () => {
                                         </div>
                                     </td>
                                 </tr>
+                                <tr v-if="expandedDemos.has(demo.id)" class="bg-gray-900/40">
+                                    <td colspan="8" class="px-2 pb-3 pt-0">
+                                        <DemoDetails :demo="demo" />
+                                    </td>
+                                </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
@@ -2623,7 +2650,8 @@ watch(selectedPhysics, () => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-700/50">
-                                <tr v-for="demo in publicDemos.data" :key="demo.id" class="hover:bg-gray-700/30 transition-colors duration-200">
+                                <template v-for="demo in publicDemos.data" :key="demo.id">
+                                <tr class="hover:bg-gray-700/30 transition-colors duration-200">
                                     <td class="px-2 py-1.5 text-xs">
                                         <span class="text-gray-200 font-medium">{{ demo.processed_filename || demo.original_filename }}</span>
                                     </td>
@@ -2646,10 +2674,7 @@ watch(selectedPhysics, () => {
                                         <span v-else class="text-gray-500">-</span>
                                     </td>
                                     <td class="px-1 py-1.5 text-xs text-gray-300">
-                                        <span v-if="demo.physics" class="inline-flex items-center px-1 py-0.5 rounded text-[10px] font-medium" :class="demo.physics === 'VQ3' ? 'bg-blue-900/50 text-blue-200' : 'bg-purple-900/50 text-purple-200'">
-                                            {{ demo.physics }}
-                                        </span>
-                                        <span v-else class="text-gray-500">-</span>
+                                        <DemoPhysicsBadges :physics="demo.physics" />
                                     </td>
                                     <td class="px-2 py-1.5 text-xs text-gray-300 font-mono">
                                         {{ formatTime(demo.time_ms) }}
@@ -2690,6 +2715,16 @@ watch(selectedPhysics, () => {
                                     <td class="px-2 py-1.5 text-xs">
                                         <div class="flex items-center space-x-1">
                                             <button
+                                                @click.stop="toggleDetails(demo.id)"
+                                                class="inline-flex items-center px-2 py-1 text-[11px] font-medium rounded transition-colors"
+                                                :class="expandedDemos.has(demo.id) ? 'bg-amber-600/30 text-amber-200' : 'bg-white/[0.06] text-gray-300 hover:bg-white/10'"
+                                                :title="expandedDemos.has(demo.id) ? 'Hide details' : 'What is in this demo'"
+                                            >
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                            </button>
+                                            <button
                                                 @click.stop="downloadDemo(demo.id)"
                                                 class="inline-flex items-center px-2 py-1 bg-blue-600/20 text-blue-300 text-[11px] font-medium rounded hover:bg-blue-600/30 transition-colors"
                                                 title="Download"
@@ -2712,6 +2747,12 @@ watch(selectedPhysics, () => {
                                         </div>
                                     </td>
                                 </tr>
+                                <tr v-if="expandedDemos.has(demo.id)" class="bg-gray-900/40">
+                                    <td colspan="8" class="px-2 pb-3 pt-0">
+                                        <DemoDetails :demo="demo" />
+                                    </td>
+                                </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
