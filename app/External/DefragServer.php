@@ -105,9 +105,9 @@ class DefragServer
     }    
 
     /**
-     * One getdfstatus round trip, starting from the given player index.
+     * One getdfstatus round trip, starting from the given client slot.
      *
-     * The index goes in the second argument, so the challenge slot in front of
+     * The slot goes in the second argument, so the challenge slot in front of
      * it has to be filled with something - it is echoed straight back and
      * nothing here reads it. A server without paging ignores the extra
      * argument and answers from the start, which is why round zero sends the
@@ -178,7 +178,16 @@ class DefragServer
         $rounds = 0;
 
         while ($total > count($playerLines) && $rounds++ < 5) {
-            $more = $this->requestDfStatus(count($playerLines));
+            // Continue from one past the last client slot we were given, not
+            // from the number of players we hold. Slots hold still; counts do
+            // not, and somebody leaving between two requests would renumber
+            // everyone behind them and skip whoever landed on the boundary.
+            // Slot is the third field of a line - score, ping, then the slot.
+            if (! preg_match('/^-?\d+\s+\d+\s+(\d+)\s/', end($playerLines), $m)) {
+                break;
+            }
+
+            $more = $this->requestDfStatus((int) $m[1] + 1);
 
             if ($more === null || $more[1] === []) {
                 break;
