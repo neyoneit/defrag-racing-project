@@ -1063,7 +1063,7 @@
     <!-- What this demo is, before a download is spent on it -->
     <Teleport to="body" v-if="showDemoInfo && getDemoForReport">
         <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" @click.self="showDemoInfo = false">
-            <div class="bg-gray-900 border border-white/10 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+            <div class="bg-gray-900 border border-white/10 rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-y-auto">
                 <div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
                     <div class="min-w-0">
                         <h3 class="text-sm font-bold text-white truncate">

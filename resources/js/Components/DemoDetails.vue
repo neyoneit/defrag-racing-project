@@ -92,11 +92,11 @@
                 <h4 class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">The run</h4>
                 <dl class="space-y-1">
                     <div v-for="row in summary" :key="row.label" class="flex gap-2 text-xs">
-                        <dt class="text-gray-500 w-24 flex-shrink-0">{{ row.label }}</dt>
+                        <dt class="text-gray-500 w-20 flex-shrink-0">{{ row.label }}</dt>
                         <dd class="text-gray-200">{{ row.value }}</dd>
                     </div>
                     <div v-if="demo.player_name" class="flex gap-2 text-xs">
-                        <dt class="text-gray-500 w-24 flex-shrink-0">Player</dt>
+                        <dt class="text-gray-500 w-20 flex-shrink-0">Player</dt>
                         <dd class="text-gray-200" v-html="q3tohtml(demo.q3df_login_name_colored || demo.player_name)"></dd>
                     </div>
                 </dl>
@@ -106,7 +106,7 @@
                 <h4 class="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">The file</h4>
                 <dl class="space-y-1">
                     <div v-for="row in file" :key="row.label" class="flex gap-2 text-xs">
-                        <dt class="text-gray-500 w-24 flex-shrink-0">{{ row.label }}</dt>
+                        <dt class="text-gray-500 w-20 flex-shrink-0">{{ row.label }}</dt>
                         <dd class="text-gray-200">{{ row.value }}</dd>
                     </div>
                 </dl>
