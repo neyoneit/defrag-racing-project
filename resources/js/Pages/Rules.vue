@@ -20,7 +20,7 @@ const sections = [
             'You may not modify the Quake 3 or DeFRaG binaries in any way.',
             'You may not modify the memory DeFRaG uses with external programs while it runs.',
             'You may not drop or delay network packets on purpose.',
-            'Allowed clients are oDFe and iodfe. Records set on anything else are not accepted.',
+            'Allowed clients are oDFe and iDFe. Records set on anything else are not accepted.',
         ],
     },
     {
