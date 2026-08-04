@@ -2399,7 +2399,8 @@ watch(selectedPhysics, () => {
                                     </td>
                                 </tr>
                                 <tr v-if="expandedDemos.has(demo.id)" class="bg-gray-900/40">
-                                    <td colspan="8" class="px-2 pb-3 pt-0">
+                                    <!-- Nine columns here; the browse table below has eight. -->
+                                    <td colspan="9" class="px-2 pb-3 pt-0">
                                         <DemoDetails :demo="demo" />
                                     </td>
                                 </tr>
