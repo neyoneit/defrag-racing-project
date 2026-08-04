@@ -20,6 +20,7 @@ class Server extends Model
         'latitude' => 'float',
         'longitude' => 'float',
         'geo_checked_at' => 'datetime',
+        'cheats' => 'boolean',
     ];
 
     /**

@@ -318,6 +318,18 @@ class DefragServer
                 'players' => $scorePlayers,
             ],
             'rcon' => true,
+            // Three states on purpose, and the key is only present when cheats
+            // are actually on - it would otherwise cost twelve bytes of a
+            // packet that already runs out of room, on every reply, to say
+            // what is true of nearly every server.
+            //
+            // clientsFrom is what tells the two silences apart: an engine new
+            // enough to send sv_cheats at all always sends clientsFrom too, so
+            // its absence means the server never told us and null must not be
+            // rendered as "cheats are off".
+            'cheats' => isset($serverData['sv_cheats'])
+                ? ((int) $serverData['sv_cheats'] === 1)
+                : (isset($serverData['clientsFrom']) ? false : null),
             // Legacy GTK getdfstatus lacks uid/country/model - rcon dumpuser
             // still gives richer data there, so the scraper falls back to it.
             'legacy_format' => $legacyFormat,

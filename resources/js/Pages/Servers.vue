@@ -5,6 +5,7 @@ import { defineAsyncComponent, onMounted, onUnmounted, ref, computed, watch } fr
 import OnlinePlayer from '@/Components/OnlinePlayer.vue';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
 import LauncherBanner from '@/Components/LauncherBanner.vue';
+import CheatsBanner from '@/Components/CheatsBanner.vue';
 const AddToMaplistModal = defineAsyncComponent(() => import('@/Components/Maplists/AddToMaplistModal.vue'));
 
 const page = usePage();
@@ -539,7 +540,8 @@ const getFunctionName = (abbr) => {
 
             <!-- Large Card Layout -->
             <div v-else-if="layout === 'large'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div v-for="server in filteredAndSortedServers" :key="server.id" class="group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 overflow-hidden player-list-hover-group">
+                <div v-for="server in filteredAndSortedServers" :key="server.id" :class="['group relative cursor-default bg-black/40 backdrop-blur-sm rounded-2xl border transition-all duration-300 hover:shadow-2xl overflow-hidden player-list-hover-group', server.cheats ? 'border-red-500/60 hover:border-red-400/80 hover:shadow-red-500/20' : 'border-white/10 hover:border-white/20 hover:shadow-blue-500/20']">
+                    <CheatsBanner :cheats="server.cheats" />
                     <!-- Background Image - FIXED SIZE, never changes, keeps aspect ratio -->
                     <div class="absolute top-0 left-0 right-0 h-[450px] rounded-t-2xl pointer-events-none">
                         <div class="relative inline-block w-full">
@@ -741,7 +743,8 @@ const getFunctionName = (abbr) => {
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" class="group relative overflow-hidden rounded-xl border border-white/10 hover:border-blue-500/50 transition-all duration-300">
+                    <div v-for="server in filteredAndSortedServers.filter(s => !s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-blue-500/50']">
+                        <CheatsBanner :cheats="server.cheats" compact />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img
@@ -852,7 +855,8 @@ const getFunctionName = (abbr) => {
                         </div>
                     </div>
 
-                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" class="group relative overflow-hidden rounded-xl border border-white/10 hover:border-purple-500/50 transition-all duration-300">
+                    <div v-for="server in filteredAndSortedServers.filter(s => s.defrag.toLowerCase().includes('cpm'))" :key="server.id" :class="['group relative overflow-hidden rounded-xl border transition-all duration-300', server.cheats ? 'border-red-500/60 hover:border-red-400/80 pt-4' : 'border-white/10 hover:border-purple-500/50']">
+                        <CheatsBanner :cheats="server.cheats" compact />
                         <!-- Background Map Thumbnail -->
                         <div v-if="server.mapdata?.thumbnail" class="absolute inset-0 transition-all duration-500">
                             <img

@@ -155,6 +155,12 @@ class ScrapeServers extends Command
         $this->info('Updating ' . $server->ip . ':' . $server->port);
         $this->info('Found ' . count($data['players']) . ' players');
 
+        // Only getdfstatus carries this, and only from an engine new enough to
+        // send it - sv_cheats is systeminfo, so the rcon fallback cannot ask
+        // for it at all. A server that drops to rcon therefore goes back to
+        // "did not say" instead of keeping a stale answer.
+        $server->cheats = $data['cheats'] ?? null;
+
         $server->name = trim($data['hostname']);
 
         $pattern = '/\^\w/';
@@ -236,6 +242,10 @@ class ScrapeServers extends Command
 
     // there is presumtion that we got some data, therefore the server is considered online
     public function updateServer2($server, $data) {
+        // q3df.org's listing is the last resort and says nothing about cheats,
+        // so this path can only honestly clear it.
+        $server->cheats = null;
+
         $server->name = trim($data['hostname']);
 
         $pattern = '/\^\w/';
