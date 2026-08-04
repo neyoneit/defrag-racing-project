@@ -300,18 +300,69 @@ const submitNewCred = () => {
                         and record system and may be delisted until updated.</p>
                     </li>
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">5. Stability and fair play</div>
+                        <div class="font-semibold text-gray-100 mb-1">5. Your engine must answer with the whole player list</div>
+                        <p class="text-gray-400">A <code>getdfstatus</code> reply is one 1400 byte packet. The server
+                        info takes 550-700 of it and each player line another 57-74, so the reply fills up at around
+                        ten players and everyone after that is <strong class="text-gray-200">missing from it with
+                        nothing to say they exist</strong> - on servers configured for 32 slots. We would be listing
+                        your server with a third of its players and matching records against a scoreboard that is not
+                        the real one.</p>
+                        <p class="text-gray-400 mt-2">A bigger packet is not the answer - past the network's MTU it
+                        gets split in transit, and losing one piece loses the whole reply instead of just the end of
+                        a list. Neither is a shorter line. As it stands a line cannot go below 25 bytes with every
+                        text field empty (nine spaces, a newline, five pairs of quotes, and five numbers of at least
+                        one digit), and 32 of those on top of a 700 byte server info is already over the limit before
+                        the first character of the first nickname.</p>
+                        <p class="text-gray-400 mt-2">Even throwing the format away entirely does not get there.
+                        With <strong class="text-gray-200">nothing but a slot and a name</strong> - no ping, no
+                        score, no country, no MDD id, no model - 32 players leave about 15 bytes each for the name on
+                        a typical server. Measured against the nicknames online right now, a quarter of them are
+                        already too long for that, and colour codes count (<code>^8</code> is two bytes). So the
+                        reply gets asked for in parts instead.</p>
+                        <p class="text-gray-400 mt-2">So the reply has to be askable in parts. Run a current
+                        <a href="https://github.com/Defrag-racing/oDFe" target="_blank" rel="noopener"
+                           class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">oDFe</a> or the
+                        defrag.racing server bundle and you already have it. On any other engine it is these few lines
+                        in <code>SVC_Status_Defrag</code>, right after the <code>challenge</code> key is set:</p>
+                        <pre class="mt-2 p-3 rounded-lg bg-black/50 border border-white/10 text-xs text-gray-300 overflow-x-auto"><code>// "getdfstatus &lt;challenge&gt; &lt;first&gt;" - answer from that player on
+firstClient = atoi( Cmd_Argv( 2 ) );
+if ( firstClient &lt; 0 ) {
+    firstClient = 0;
+}
+
+for ( i = 0; i &lt; sv.maxclients; i++ ) {
+    if ( svs.clients[i].state &gt;= CS_CONNECTED ) {
+        totalClients++;
+    }
+}
+
+Info_SetValueForKey( infostring, "clients", va( "%i", totalClients ) );
+Info_SetValueForKey( infostring, "clientsFrom", va( "%i", firstClient ) );
+
+// ...and in the loop that writes the player lines, skip the ones
+// an earlier part already carried:
+if ( listedClients++ &lt; firstClient ) {
+    continue;
+}</code></pre>
+                        <p class="text-gray-400 mt-2">It breaks nothing. An engine without it ignores the extra
+                        argument and replies as it always did, and one request is still one reply, so the existing rate
+                        limit bounds it exactly as before. We can see which servers have it - the reply either carries
+                        <code>clients</code> or it does not - and a server that never sends it will be delisted once
+                        its player list starts getting cut off.</p>
+                    </li>
+                    <li>
+                        <div class="font-semibold text-gray-100 mb-1">6. Stability and fair play</div>
                         <p class="text-gray-400">Keep your server reasonably stable and reachable. Do not tamper with
                         recorded demos, timers, or record submission in any way. Any manipulation leads to immediate
                         deactivation.</p>
                     </li>
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">6. Naming and conduct</div>
+                        <div class="font-semibold text-gray-100 mb-1">7. Naming and conduct</div>
                         <p class="text-gray-400">Server names must not impersonate other servers/communities and must
                         not contain offensive content. Admins are expected to act respectfully towards players.</p>
                     </li>
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">7. Support</div>
+                        <div class="font-semibold text-gray-100 mb-1">8. Support</div>
                         <p class="text-gray-400">If you have trouble setting up the bundle or the SFTP connection,
                         contact <a href="/profile/8"
                                    class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">neyo</a>
