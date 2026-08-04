@@ -105,12 +105,26 @@ class DefragServer
     }    
 
     /**
-     * The scraper's primary source. One packet carries score, ping, uid,
-     * country, model and who a spectator is watching. Returns null when the
-     * server does not answer it, and ScrapeServers falls back to rcon.
+     * One getdfstatus round trip, starting from the given player index.
+     *
+     * The index goes in the second argument, so the challenge slot in front of
+     * it has to be filled with something - it is echoed straight back and
+     * nothing here reads it. A server without paging ignores the extra
+     * argument and answers from the start, which is why round zero sends the
+     * bare command exactly as before.
+     *
+     * @return array{0:array<string,string>,1:list<string>}|null
      */
-    public function getDfStatusData() {
-        socket_sendto($this->socket, "\xff\xff\xff\xffgetdfstatus\x00", strlen("\xff\xff\xff\xffgetdfstatus\x00"), 0, $this->ip, $this->port);
+    private function requestDfStatus(int $from): ?array {
+        $command = "\xff\xff\xff\xffgetdfstatus";
+
+        if ($from > 0) {
+            $command .= ' 0 ' . $from;
+        }
+
+        $command .= "\x00";
+
+        socket_sendto($this->socket, $command, strlen($command), 0, $this->ip, $this->port);
         $data = socket_read($this->socket, 8192);
 
         if (empty($data)) {
@@ -123,12 +137,54 @@ class DefragServer
             return null;
         }
 
-        list($serverData, $playerLines) = $this->parseResponseBody(substr($data, $headerEnd + 1));
+        list($serverData, $rawLines) = $this->parseResponseBody(substr($data, $headerEnd + 1));
+
+        $lines = array_values(array_filter($rawLines, fn ($line) => trim($line) !== ''));
+
+        return [$serverData, $lines];
+    }
+
+    /**
+     * The scraper's primary source. One packet carries score, ping, uid,
+     * country, model and who a spectator is watching. Returns null when the
+     * server does not answer it, and ScrapeServers falls back to rcon.
+     */
+    public function getDfStatusData() {
+        $reply = $this->requestDfStatus(0);
+
+        if ($reply === null) {
+            return null;
+        }
+
+        list($serverData, $playerLines) = $reply;
 
         // Reject responses that aren't real statusResponse packets (e.g. "print\nBad command")
         // so the caller can fall back to rcon instead of saving empty data.
         if (empty($serverData['mapname']) || empty($serverData['sv_hostname'])) {
             return null;
+        }
+
+        // The reply is capped at one 1400 byte datagram, and a busy server runs
+        // out of room somewhere around ten players with the rest simply absent.
+        // A server that can be asked for the rest says so by reporting how many
+        // players it has; we then ask again from where the last part ended.
+        //
+        // Absent on a server that has not been updated, in which case $total is
+        // 0, the loop never runs and this behaves exactly as it did before.
+        // The round cap is a backstop against a server that keeps claiming more
+        // players than it ever sends - 5 rounds is roughly 50 players, well
+        // past the 32 slots anyone runs.
+        $total = isset($serverData['clients']) ? (int) $serverData['clients'] : 0;
+        $rounds = 0;
+
+        while ($total > count($playerLines) && $rounds++ < 5) {
+            $more = $this->requestDfStatus(count($playerLines));
+
+            if ($more === null || $more[1] === []) {
+                break;
+            }
+
+            $playerLines = array_merge($playerLines, $more[1]);
         }
 
         // Parse player lines - three formats:
