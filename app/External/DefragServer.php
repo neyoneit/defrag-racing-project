@@ -117,51 +117,10 @@ class DefragServer
     }    
 
     /**
-     * Plain Quake3 getstatus. NOT USED by the scraper any more - see the
-     * commented-out branch in ScrapeServers::getServerData().
-     *
-     * It returns score, ping and name per player, of which only the name is
-     * kept: no uid, no country, no model, no spectating. Every engine in the
-     * list answers getdfstatus or rcon, so this was measured to be dead code
-     * on 2026-08-03. Left here rather than deleted because it is the only
-     * implementation of the vanilla protocol we have, and an engine that
-     * speaks nothing else may still turn up one day.
+     * The scraper's primary source. One packet carries score, ping, uid,
+     * country, model and who a spectator is watching. Returns null when the
+     * server does not answer it, and ScrapeServers falls back to rcon.
      */
-    public function getData() {
-        socket_sendto($this->socket, "\xff\xff\xff\xffgetstatus\x00", strlen("\xff\xff\xff\xffgetstatus\x00"), 0, $this->ip, $this->port);
-        $data = socket_read($this->socket, 4096);
-
-        list($serverData, $players) = $this->parseResponseBody(substr($data, 19));
-
-        $serverData['players'] = $this->parsePlayers($players);
-
-        $playerList = [];
-        $i = 0;
-
-        foreach ($serverData['players'] as $player) {
-            $playerList[$i] = $player;
-            $i++;
-        }
-
-        $result = [
-            'players' => $playerList,
-            'map' => $serverData['mapname'],
-            'hostname' => $serverData['sv_hostname'],
-            'defrag' => $this->getGameMode($serverData),
-            'defrag_gametype' => $serverData['defrag_gametype'] ?? '5',
-            'scores' => [
-                'num_players' => count($serverData['players']),
-                'speed' => 0,
-                'speed_player_num' => 0,
-                'speed_player_name' => "",
-                'players' => $serverData['players'],
-            ],
-            'rcon'  =>  false
-        ];
-
-        return $result;
-    }
-
     public function getDfStatusData() {
         socket_sendto($this->socket, "\xff\xff\xff\xffgetdfstatus\x00", strlen("\xff\xff\xff\xffgetdfstatus\x00"), 0, $this->ip, $this->port);
         $data = socket_read($this->socket, 8192);
@@ -179,7 +138,7 @@ class DefragServer
         list($serverData, $playerLines) = $this->parseResponseBody(substr($data, $headerEnd + 1));
 
         // Reject responses that aren't real statusResponse packets (e.g. "print\nBad command")
-        // so the caller can fall back to getstatus instead of saving empty data.
+        // so the caller can fall back to rcon instead of saving empty data.
         if (empty($serverData['mapname']) || empty($serverData['sv_hostname'])) {
             return null;
         }
@@ -413,28 +372,6 @@ class DefragServer
         }
 
         return $scores;
-    }
-
-    public function parsePlayers($data) {
-        $players = [];
-        foreach ($data as $line) {
-            if ($line == '') {
-                continue;
-            }
-
-            $line = utf8_decode($line);
-
-            $parts = explode(' ', $line, 3);
-
-            if (count($parts) < 3) {
-                continue;
-            }
-
-            $player = array_combine(['score', 'ping', 'name'], $parts);
-            $players[] = ['name' => $player['name']];
-        }
-
-        return $players;
     }
 
     public function parseResponseBody($body) {
