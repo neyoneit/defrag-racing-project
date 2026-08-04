@@ -267,7 +267,7 @@
                     <!-- Spacer matching sidebar width -->
                     <div class="hidden md:block flex-shrink-0 w-[300px]">
                         <div class="flex items-center gap-3 flex-wrap">
-                            <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
+                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
                             <button
                                 @click="pickRandomMap"
@@ -310,7 +310,7 @@
                     <div class="flex-1 min-w-0">
                         <!-- Mobile title -->
                         <div class="md:hidden flex items-center gap-3 mb-2 flex-wrap">
-                            <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">Maps</h1>
+                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Maps</h1>
                             <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
                             <button
                                 @click="pickRandomMap"

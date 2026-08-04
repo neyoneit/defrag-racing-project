@@ -12,7 +12,7 @@
 <template>
     <Tournament :tournament="tournament" tab="Standings">
         <div class="flex justify-between items-center">
-            <h1 class="font-black text-3xl text-white mb-3">Standings</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white mb-3">Standings</h1>
         </div>
     
         <div class="tech-line-overview"></div>

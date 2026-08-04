@@ -69,7 +69,7 @@ const displayPages = () => reordering.value ? localPages.value : props.pages;
             <div class="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Wiki</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Wiki</h1>
                         <p class="text-gray-400">Community knowledge base for Quake III DeFRaG</p>
                     </div>
                     <div class="flex items-center gap-2">

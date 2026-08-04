@@ -7,7 +7,7 @@ export default {
 </script>
 
 <script setup>
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
@@ -234,20 +234,30 @@ const submitNewCred = () => {
     <Head title="Server hosting access" />
 
     <div class="container mx-auto max-w-3xl px-4 py-10">
-        <h1 class="text-2xl font-bold text-white mb-2">Server hosting access</h1>
+        <h1 class="text-2xl md:text-3xl font-bold text-white mb-2">Server hosting access</h1>
         <p class="text-sm text-gray-400 mb-3">
             If you host (or plan to host) a public defrag server, apply here for an SFTP account
             on our storage VPS. Approved server owners get a chroot-isolated drop-box where the
+            server bundle can ship <code>.dm_68</code> demos for indexing on defrag.racing.
+        </p>
+        <p class="text-sm text-gray-400 mb-3">
+            Bundles:
             <a href="https://github.com/Defrag-racing/defrag-server-bundle"
                target="_blank" rel="noopener"
                class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">
                 defrag-server-bundle
             </a>
-            can ship <code>.dm_68</code> demos for indexing on defrag.racing.
+            for Linux,
+            <a href="https://github.com/Defrag-racing/defrag-server-bundle-windows"
+               target="_blank" rel="noopener"
+               class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">
+                defrag-server-bundle-windows
+            </a>
+            for Windows.
         </p>
         <p class="text-xs text-gray-500 mb-8">
             Install the bundle on your defrag host first, then plug your SFTP credentials into
-            <code>sv.conf</code> — we'll give them to you after approval. Running servers on
+            <code>sv.conf</code> - we'll give them to you after approval. Running servers on
             several machines? Add one credential per VPS so each box has its own login.
         </p>
 
@@ -312,6 +322,11 @@ const submitNewCred = () => {
                 <p class="text-xs text-gray-500 pt-2 border-t border-white/5">
                     These rules exist to keep the record system verifiable. Demos stay private and untouched unless a
                     confirmed report requires a review. Thanks for hosting!
+                </p>
+                <p class="text-xs text-gray-500">
+                    Players on your server are bound by the
+                    <Link :href="route('rules')" class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">player rules</Link>.
+                    Worth reading: most of what an admin gets asked about is in there.
                 </p>
             </div>
         </details>

@@ -23,7 +23,7 @@
     <Tournament :tournament="tournament" tab="Overview">
         <div v-if="latestNews.length > 0">
             <div class="flex justify-between items-center">
-                <h1 class="font-black text-3xl text-white mb-3">Latest News</h1>
+                <h1 class="font-black text-2xl md:text-3xl text-white mb-3">Latest News</h1>
             </div>
 
             <div class="">
@@ -36,7 +36,7 @@
         <!-- Top Bar -->
         <div>
             <div class="flex justify-between items-center">
-                <h1 class="font-black text-3xl text-white">{{ tournament.name }}</h1>
+                <h1 class="font-black text-2xl md:text-3xl text-white">{{ tournament.name }}</h1>
     
                 <div class="flex items-center">
                     <div v-if="tournament.trailer">
@@ -94,7 +94,7 @@
 
         <!-- Live Streamers -->
         <div v-if="tournament.streamers.length > 0">
-            <h1 class="font-black text-3xl text-white my-5">Live Streamers</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Live Streamers</h1>
 
             <div class="tech-line-overview"></div>
 
@@ -111,7 +111,7 @@
 
         <!-- Prize Pool -->
         <div v-if="tournament.prize_pool > 0">
-            <h1 class="font-black text-3xl text-white my-5">Prize Pool</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Prize Pool</h1>
 
             <div class="tech-line-overview"></div>
 
@@ -122,7 +122,7 @@
 
         <!-- Organizers -->
         <div>
-            <h1 class="font-black text-3xl text-white my-5">Organizers</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Organizers</h1>
 
             <div class="tech-line-overview"></div>
 
@@ -141,7 +141,7 @@
 
         <!-- Related Tournaments -->
         <div v-if="tournament.related_tournaments > 0">
-            <h1 class="font-black text-3xl text-white my-5">Related Tournaments</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white my-5">Related Tournaments</h1>
 
             <div class="tech-line-overview"></div>
 

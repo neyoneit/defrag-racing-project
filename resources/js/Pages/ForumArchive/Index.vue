@@ -25,7 +25,7 @@ const toggleForum = (id) => {
                     <span>/</span>
                     <span class="text-gray-400">Forum Archive</span>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">q3df.org Forum Archive</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">q3df.org Forum Archive</h1>
                 <p class="text-gray-500 mt-2 text-sm">
                     Preserved copy of the original q3df.org community forum. {{ totalTopics }} archived topics.
                 </p>

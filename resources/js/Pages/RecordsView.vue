@@ -114,7 +114,7 @@
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <!-- Title -->
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Latest Records</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Latest Records</h1>
                         <div class="flex items-center gap-2 text-gray-400">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />

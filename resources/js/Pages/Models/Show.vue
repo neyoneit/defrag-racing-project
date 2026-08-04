@@ -1501,7 +1501,7 @@ const confirmNsfw = () => {
                                 <!-- Row 1: Title + Command + Tags -->
                                 <div class="flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-3 min-w-0">
-                                        <h1 class="text-3xl font-black text-white leading-tight">{{ model.name }}</h1>
+                                        <h1 class="text-2xl md:text-3xl font-black text-white leading-tight">{{ model.name }}</h1>
                                         <div v-if="inGameCommand && !isShadowModel && !isWeaponModel" class="flex items-center gap-1.5 shrink-0">
                                             <code class="text-emerald-300 font-mono text-xs font-bold bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-0.5">{{ inGameCommand }}</code>
                                             <button @click="copyCommand" class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-400 text-[10px] font-semibold hover:bg-emerald-500/25 transition-colors">

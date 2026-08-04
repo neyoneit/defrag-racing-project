@@ -384,7 +384,7 @@ const getFunctionName = (abbr) => {
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex justify-between items-center flex-wrap gap-4">
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90">
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
                         Live Servers
                     </h1>
 
@@ -397,6 +397,19 @@ const getFunctionName = (abbr) => {
                         </svg>
                         <span class="font-bold text-white whitespace-nowrap">Get the launcher</span>
                         <span class="hidden sm:inline text-blue-200/80 font-semibold text-xs">connect to servers in 1 click + many more features</span>
+                    </Link>
+
+                    <!-- The rules belong where people are about to join a
+                         server, not only in the footer. Every finished run on
+                         these servers is recorded and may be reviewed, and
+                         somebody should not learn that after the fact. -->
+                    <Link :href="route('rules')"
+                          class="flex items-center gap-2 bg-gradient-to-r from-amber-600/25 to-amber-500/10 hover:from-amber-600/35 hover:to-amber-500/20 backdrop-blur-sm px-3 py-2 rounded-lg border border-amber-400/40 hover:border-amber-300/60 transition-colors text-sm">
+                        <svg class="w-5 h-5 text-amber-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971Zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971Z" />
+                        </svg>
+                        <span class="font-bold text-white whitespace-nowrap">Rules</span>
+                        <span class="hidden sm:inline text-amber-200/80 font-semibold text-xs">read before you set a record</span>
                     </Link>
 
                     <div class="flex items-center gap-3 text-sm">

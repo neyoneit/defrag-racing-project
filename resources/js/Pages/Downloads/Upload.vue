@@ -74,7 +74,7 @@ const submit = () => {
                     <span class="text-gray-700">/</span>
                     <span class="text-gray-500">Upload</span>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">Upload</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Upload</h1>
             </div>
         </div>
 

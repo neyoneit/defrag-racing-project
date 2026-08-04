@@ -859,7 +859,7 @@ onUnmounted(() => {
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-4">
-                        <h1 class="text-3xl font-black text-gray-200">Community Tasks</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-200">Community Tasks</h1>
                         <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Round {{ roundNumber }}</span>
                     </div>
                     <div class="flex items-center gap-3 mt-1">

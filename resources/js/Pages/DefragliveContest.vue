@@ -178,36 +178,52 @@ const statusColor = (s) => ({
         <!-- Evergreen intro: what this is + live stream. Independent of any
              single contest, so the explainer is never duplicated per period. -->
         <div class="rounded-2xl border border-purple-500/20 bg-black/40 backdrop-blur-sm p-6 md:p-8 mb-6 shadow-2xl">
-            <div class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-start">
-                <div class="lg:col-span-2">
-                    <div class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold mb-1">DefragLive Watch Contest</div>
-                    <a :href="`https://twitch.tv/${TWITCH_CHANNEL}`" target="_blank" rel="noopener"
-                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#a970ff] hover:text-[#bf94ff] hover:underline mb-2">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
-                        twitch.tv/{{ TWITCH_CHANNEL }}
-                    </a>
-                    <h1 class="text-3xl md:text-4xl font-black text-white">Get watched, get rewarded</h1>
+            <div class="grid lg:grid-cols-4 gap-6 lg:gap-8 items-start">
+                <div class="lg:col-span-3">
+                    <!-- Label and channel share a line: two short strings do
+                         not each deserve one, and stacking them pushed the
+                         actual heading down to a third row. -->
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mb-1">
+                        <span class="text-xs uppercase tracking-widest text-purple-300/80 font-semibold">DefragLive Watch Contest</span>
+                        <a :href="`https://twitch.tv/${TWITCH_CHANNEL}`" target="_blank" rel="noopener"
+                            class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#a970ff] hover:text-[#bf94ff] hover:underline">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
+                            twitch.tv/{{ TWITCH_CHANNEL }}
+                        </a>
+                    </div>
+                    <h1 class="text-2xl md:text-3xl font-black text-white">Get watched, get rewarded</h1>
+                    <!-- Kept to what this is and who it is for. How the winner
+                         is chosen has its own section below; saying any of it
+                         twice is what made this column a wall. -->
                     <div class="text-gray-400 mt-3 text-sm space-y-2 leading-relaxed">
                         <p>
-                            <span class="text-gray-200 font-semibold">DefragLive</span> streams live defrag runs to Twitch around the clock,
-                            so anyone can experience defrag from anywhere - no install, no setup, just watch the action unfold.
+                            <span class="text-gray-200 font-semibold">DefragLive</span> streams defrag to Twitch around the clock,
+                            so anyone can watch from anywhere with no install and no setup. The players it spectates are the ones
+                            putting on that show, and this contest is <span class="text-gray-200 font-semibold">their reward for it</span>.
                         </p>
                         <p>
-                            This contest is a <span class="text-gray-200 font-semibold">reward for the players who make that possible</span>:
-                            everyone who lets the bot spectate them is the one putting on the show for viewers around the world.
-                            The more the bot watches you, the more raffle tickets you earn - but anyone with a ticket can win.
+                            Let the bot watch you and you are in. There is nothing to sign up for and nothing to play differently.
                         </p>
-                        <p>
-                            Curious what's been on? Browse the
-                            <Link href="/defraglive/maps" class="text-[#a970ff] hover:text-[#bf94ff] font-semibold hover:underline">full map log</Link>
-                            - every map the bot streamed, from when to when, and who it spectated.
+                        <p class="text-xs text-gray-500">
+                            <Link href="/defraglive/maps" class="text-[#a970ff] hover:text-[#bf94ff] font-semibold hover:underline">Full map log</Link>
+                            - every map streamed, when, and who was spectated.
                         </p>
                     </div>
+
                     <div class="mt-3 flex items-start gap-2 text-sm text-amber-100 bg-amber-500/20 border border-amber-400/40 rounded-lg px-3.5 py-2.5">
                         <svg class="w-5 h-5 shrink-0 mt-px text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>This prize comes <strong class="text-white">straight out of my own pocket</strong> - it is <strong class="text-white">not</strong> funded by the donations you send to support the site. 100% a personal gift to the community.</span>
+                    </div>
+
+                    <!-- Heading stays in this column so it follows the prize
+                         note directly. Put below the grid it would sit under
+                         the stream card, which is taller than this column, and
+                         leave a hole the height of the difference. -->
+                    <div class="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <h2 class="text-lg font-bold text-white">How the winner is picked</h2>
+                        <p class="text-sm text-gray-500">Watch time buys tickets, then one ticket is drawn. That is the whole of it.</p>
                     </div>
                 </div>
 
@@ -263,6 +279,57 @@ const statusColor = (s) => ({
                         <div class="text-[11px] text-gray-500">The interactive overlay (player list, controls) works on Twitch.</div>
                     </div>
                 </a>
+            </div>
+
+            <!-- Under the grid rather than beside it, so it spans the stream
+                 card as well and gets the whole width to lay out across. This
+                 is the part that keeps being misread - people top the ticket
+                 list, do not win, and write in asking why - and inside the
+                 text column it was a wall nobody would read. -->
+            <div class="mt-3">
+            <div class="grid gap-3 md:grid-cols-3">
+                <div v-for="(step, i) in [
+                    { head: '1 minute watched = 1 ticket', body: 'Whole minutes, and nothing else earns any. Under a minute across the entire period is no ticket and no entry.' },
+                    { head: 'One ticket is drawn at random', body: 'At the end of the period, from every ticket in the pool. Whoever is holding it takes the prize.' },
+                    { head: 'Most tickets is best odds, not a win', body: 'Hold 5% of the pool and you win one time in twenty. Hold 40% and you lose three times out of five.' },
+                ]" :key="i" class="rounded-xl border border-white/10 bg-black/30 p-4">
+                    <div class="flex items-center gap-2.5 mb-1.5">
+                        <span class="shrink-0 w-6 h-6 rounded-full bg-purple-500/25 border border-purple-400/40 text-purple-200 text-xs font-black flex items-center justify-center">{{ i + 1 }}</span>
+                        <span class="text-sm font-bold text-white">{{ step.head }}</span>
+                    </div>
+                    <p class="text-sm text-gray-400 leading-relaxed">{{ step.body }}</p>
+                </div>
+            </div>
+
+            <div class="mt-3 flex flex-col lg:flex-row lg:items-center gap-3">
+                <p class="flex-1 text-sm text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-lg px-4 py-2.5">
+                    Being first on the list below does <strong class="text-white">not</strong> mean you win. It means the draw is
+                    most likely to go your way. Weight it any harder and whoever is watched most would take every period,
+                    leaving nobody else a reason to play.
+                </p>
+
+                <!-- "It is random" is exactly the claim somebody who has just
+                     lost has no reason to take on trust, so the method is
+                     written out and the drawn number is stored, not promised. -->
+                <details class="lg:w-80 shrink-0 rounded-lg border border-white/10 bg-black/30 px-4 py-2.5">
+                    <summary class="cursor-pointer select-none text-sm text-purple-300 hover:text-purple-200 transition">
+                        How the draw works, exactly
+                    </summary>
+                    <div class="mt-2.5 pt-2.5 border-t border-white/10 text-sm text-gray-400 space-y-2">
+                        <p>
+                            Everyone with at least one ticket goes in. The tickets are laid end to end and numbered from 1 to
+                            the size of the pool, so 300 tickets is 300 consecutive numbers. One number is drawn with the
+                            operating system's cryptographic random generator and whoever holds it wins. It is the textbook
+                            weighted raffle, sometimes called roulette wheel selection: no seed anyone can guess, nothing
+                            that favours a name.
+                        </p>
+                        <p>
+                            The drawn number, the winner's tickets and the size of the pool are recorded at the moment of the
+                            draw and shown under past winners, so a result can be checked instead of taken on trust.
+                        </p>
+                    </div>
+                </details>
+            </div>
             </div>
         </div>
 
@@ -329,15 +396,19 @@ const statusColor = (s) => ({
                 <div class="text-2xl font-black text-white">{{ myEntry.tickets }}</div>
             </div>
             <div>
-                <div class="text-xs uppercase text-gray-500">Win chance</div>
+                <div class="text-xs uppercase text-gray-500">Chance in the draw</div>
                 <div class="text-2xl font-black text-emerald-400">{{ myEntry.odds }}%</div>
+                <div class="text-[11px] text-gray-500">odds, not a place</div>
             </div>
         </div>
 
         <!-- Leaderboard -->
         <div class="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-sm overflow-hidden mb-8 shadow-2xl">
             <div class="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-                <h2 class="font-bold text-gray-200">Most watched this period</h2>
+                <div>
+                    <h2 class="font-bold text-gray-200">Most watched this period</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Watch time and odds, not a ranking of who wins - the winner is drawn.</p>
+                </div>
                 <span class="text-xs text-gray-500">{{ totalTickets }} tickets in the pool</span>
             </div>
 

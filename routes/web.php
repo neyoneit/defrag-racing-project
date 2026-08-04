@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\MapsController;
 use App\Http\Controllers\MapStatsController;
@@ -62,6 +63,10 @@ Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers
 Route::get('/launcher/latest.json', [LauncherController::class, 'latestManifest'])->name('launcher.manifest');
 
 Route::get('/launcher', [LauncherController::class, 'page'])->name('launcher');
+
+// Player rules. Static, so no controller - but a real page rather than a CMS
+// entry, because people cite rule numbers and those have to stay put.
+Route::get('/rules', fn () => Inertia::render('Rules'))->name('rules');
 
 Route::get('/maps', [MapsController::class, 'index'])->name('maps');
 Route::get('/maps/filters', [MapsController::class, 'filters'])->name('maps.filters');

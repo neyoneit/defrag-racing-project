@@ -204,7 +204,7 @@
                 <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                     <!-- Left: Title + Info -->
                     <div>
-                        <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Player Rankings</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Player Rankings</h1>
                         <div class="flex items-center gap-3 text-gray-500">
                             <div class="relative group">
                                 <Link href="/ranking/how-it-works" class="flex items-center gap-1.5 text-xs hover:text-gray-300 transition-colors">

@@ -1227,7 +1227,7 @@
                     <div class="relative z-10">
                     <!-- Map Title row: name + copy + badges -->
                     <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 mb-1">
-                        <h1 class="text-4xl md:text-5xl font-bold text-white">
+                        <h1 class="text-2xl md:text-3xl font-bold text-white">
                             {{ map.name }}
                         </h1>
                         <CopyButton :text="map.name" size="md" />

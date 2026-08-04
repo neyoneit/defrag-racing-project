@@ -38,7 +38,7 @@ const formatDate = (date) => {
                     <span>/</span>
                     <span class="text-gray-400">History</span>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">History: {{ page.title }}</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">History: {{ page.title }}</h1>
             </div>
         </div>
 

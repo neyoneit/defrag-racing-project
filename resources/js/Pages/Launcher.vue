@@ -152,7 +152,7 @@ const features = [
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[11px] font-semibold uppercase tracking-wider mb-4">
                     Desktop launcher
                 </div>
-                <h1 class="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-4 leading-tight">
                     Defrag Racing <span class="text-blue-500">Launcher</span>
                 </h1>
                 <p class="text-base text-gray-400 max-w-2xl mx-auto mb-5">

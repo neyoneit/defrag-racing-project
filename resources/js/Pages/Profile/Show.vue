@@ -895,7 +895,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
         <div class="relative pt-6 pb-8" style="z-index: 10;">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div>
-                    <h1 class="text-4xl md:text-5xl font-black text-gray-300/90 mb-2">Settings</h1>
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90 mb-2">Settings</h1>
                     <p class="text-sm text-gray-400">Customize your profile and preferences</p>
                 </div>
             </div>

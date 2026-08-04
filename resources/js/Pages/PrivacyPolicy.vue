@@ -13,7 +13,7 @@ defineProps({
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-black text-white mb-2">Privacy Policy</h1>
+                <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Privacy Policy</h1>
                 <p class="text-gray-400">How we handle your data</p>
             </div>
 

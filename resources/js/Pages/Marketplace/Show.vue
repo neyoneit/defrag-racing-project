@@ -89,7 +89,7 @@ const renderStars = (rating) => {
                             <StatusBadge :status="listing.status" />
                         </div>
 
-                        <h1 class="text-2xl font-black text-white mb-4">{{ listing.title }}</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-white mb-4">{{ listing.title }}</h1>
 
                         <div class="prose prose-invert max-w-none">
                             <p class="text-gray-300 whitespace-pre-wrap">{{ listing.description }}</p>

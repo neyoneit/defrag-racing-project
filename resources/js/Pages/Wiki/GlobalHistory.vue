@@ -42,7 +42,7 @@ const relativeTime = (date) => {
                 </div>
                 <div class="flex items-center justify-between">
                     <div>
-                        <h1 class="text-3xl md:text-4xl font-black text-gray-300/90">Recent Changes</h1>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Recent Changes</h1>
                         <p class="text-gray-500 mt-1">All edits across the wiki</p>
                     </div>
                     <Link

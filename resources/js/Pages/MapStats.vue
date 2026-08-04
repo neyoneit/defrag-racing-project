@@ -418,7 +418,7 @@ onMounted(() => {
     <Head title="Map Statistics" />
 
     <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-            <h1 class="text-3xl font-black text-white mb-2">Map Statistics</h1>
+            <h1 class="text-2xl md:text-3xl font-black text-white mb-2">Map Statistics</h1>
             <p class="text-gray-400 mb-6 text-sm">
                 Aggregates across the whole defrag.racing dataset. Updated every six hours
                 from the live records database.
