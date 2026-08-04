@@ -5,6 +5,7 @@
     import DemoReportModal from '@/Components/DemoReportModal.vue';
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
     import DemoRenderButton from '@/Components/DemoRenderButton.vue';
+    import DemoDetails from '@/Components/DemoDetails.vue';
 
     const props = defineProps({
         record: Object,
@@ -74,6 +75,24 @@
     const renderError = ref(null);
     const showRenderConfirm = ref(false);
     const etiquetteAccepted = ref(false);
+
+    // Clicking a download chip shows what the demo is first. The chip stays a
+    // real link, so middle-click and ctrl-click still download straight away -
+    // only a plain left click is intercepted.
+    const showDemoInfo = ref(false);
+
+    const openDemoInfo = (event) => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) {
+            return;
+        }
+
+        if (! getDemoForReport.value) {
+            return;
+        }
+
+        event.preventDefault();
+        showDemoInfo.value = true;
+    };
 
     const renderedVideo = computed(() => {
         const videos = props.record.rendered_videos;
@@ -515,7 +534,7 @@
                     <component
                         :is="demoDownloadUrl ? 'a' : 'span'"
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
                         :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
                         :title="demoDownloadUrl ? 'Download online demo' : ''"
@@ -543,7 +562,7 @@
                     <component
                         :is="demoDownloadUrl ? 'a' : 'span'"
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
                         :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
                         :title="demoDownloadUrl ? 'Download offline demo' : ''"
@@ -607,7 +626,7 @@
                 >
                     <a
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
                         :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
                         title="Download demo"
@@ -670,7 +689,7 @@
                     <a
                         v-if="demoDownloadUrl"
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 transition-colors"
                         :class="{ 'rounded-r': !canRequestRender || renderedVideo }"
                         title="Download demo"
@@ -699,7 +718,7 @@
                     <component
                         :is="demoDownloadUrl ? 'a' : 'span'"
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-500/20 text-gray-400"
                         :class="{ 'hover:bg-gray-500/30 hover:text-gray-300 transition-colors': demoDownloadUrl }"
                         :title="demoDownloadUrl ? 'Download offline demo' : ''"
@@ -728,7 +747,7 @@
                     <component
                         :is="demoDownloadUrl ? 'a' : 'span'"
                         :href="demoDownloadUrl"
-                        @click.stop
+                        @click.stop="openDemoInfo"
                         class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400"
                         :class="{ 'hover:bg-blue-500/30 hover:text-blue-300 transition-colors': demoDownloadUrl }"
                         :title="demoDownloadUrl ? 'Download online demo' : ''"
@@ -1040,6 +1059,49 @@
             ></iframe>
         </div>
     </div>
+
+    <!-- What this demo is, before a download is spent on it -->
+    <Teleport to="body" v-if="showDemoInfo && getDemoForReport">
+        <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4" @click.self="showDemoInfo = false">
+            <div class="bg-gray-900 border border-white/10 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-y-auto">
+                <div class="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+                    <div class="min-w-0">
+                        <h3 class="text-sm font-bold text-white truncate">
+                            {{ getDemoForReport.map_name || record.mapname }}
+                        </h3>
+                        <p class="text-xs text-gray-500 mt-0.5">Demo details</p>
+                    </div>
+                    <button
+                        @click="showDemoInfo = false"
+                        class="flex-shrink-0 p-1 text-gray-500 hover:text-white transition-colors"
+                        aria-label="Close">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="px-5">
+                    <DemoDetails :demo="getDemoForReport" />
+                </div>
+
+                <div class="flex justify-end gap-2 px-5 py-4">
+                    <button
+                        @click="showDemoInfo = false"
+                        class="px-3 py-1.5 text-xs font-medium text-gray-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <a
+                        :href="demoDownloadUrl"
+                        @click="showDemoInfo = false"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-200 bg-blue-600/30 hover:bg-blue-600/40 border border-blue-500/40 rounded-lg transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                        Download
+                    </a>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- Demo Report Modal -->
     <DemoReportModal
