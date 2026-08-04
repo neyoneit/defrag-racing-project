@@ -92,23 +92,11 @@ class DefragServer
             }
         }
     
-        // Extract defrag_gametype - rcon score doesn't include it, so we need to get it via getstatus
-        $defrag_gametype = '5'; // default
-
-        // Send getstatus to get server CVARs including defrag_gametype
-        socket_sendto($this->socket, "\xff\xff\xff\xffgetstatus\x00", strlen("\xff\xff\xff\xffgetstatus\x00"), 0, $this->ip, $this->port);
-        $statusData = socket_read($this->socket, 4096);
-
-        if ($statusData && preg_match('/defrag_gametype\\\\(\d+)/', $statusData, $matches)) {
-            $defrag_gametype = $matches[1];
-        }
-
         $result = [
             'players' => $players,
             'map' => explode(':', $data[0])[1],
             'hostname' => explode(':', $data[1])[1],
             'defrag' => explode(':', $data[2])[1],
-            'defrag_gametype' => $defrag_gametype,
             'scores' => $scores,
             'rcon'   => true
         ];
@@ -257,7 +245,6 @@ class DefragServer
             'map' => $serverData['mapname'] ?? '',
             'hostname' => $serverData['sv_hostname'] ?? '',
             'defrag' => $this->getGameMode($serverData),
-            'defrag_gametype' => $serverData['defrag_gametype'] ?? '5',
             'scores' => [
                 'num_players' => count($players),
                 'speed' => 0,
