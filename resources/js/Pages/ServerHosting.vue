@@ -307,6 +307,18 @@ const submitNewCred = () => {
                         nothing to say they exist</strong> - on servers configured for 32 slots. We would be listing
                         your server with a third of its players and matching records against a scoreboard that is not
                         the real one.</p>
+                        <p class="text-gray-400 mt-2">A bigger packet is not the answer - past the network's MTU it
+                        gets split in transit, and losing one piece loses the whole reply instead of just the end of
+                        a list. Neither is a shorter line. As it stands a line cannot go below 25 bytes with every
+                        text field empty (nine spaces, a newline, five pairs of quotes, and five numbers of at least
+                        one digit), and 32 of those on top of a 700 byte server info is already over the limit before
+                        the first character of the first nickname.</p>
+                        <p class="text-gray-400 mt-2">Even throwing the format away entirely does not get there.
+                        With <strong class="text-gray-200">nothing but a slot and a name</strong> - no ping, no
+                        score, no country, no MDD id, no model - 32 players leave about 15 bytes each for the name on
+                        a typical server. Measured against the nicknames online right now, a quarter of them are
+                        already too long for that, and colour codes count (<code>^8</code> is two bytes). So the
+                        reply gets asked for in parts instead.</p>
                         <p class="text-gray-400 mt-2">So the reply has to be askable in parts. Run a current
                         <a href="https://github.com/Defrag-racing/oDFe" target="_blank" rel="noopener"
                            class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">oDFe</a> or the
