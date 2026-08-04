@@ -8,7 +8,7 @@ export default {
 
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps({
     application: { type: Object, default: null },
@@ -60,7 +60,24 @@ const statusClass = {
 const canApply = computed(() => !props.application
     || ['rejected', 'not_selected'].includes(props.application.status));
 
+// The server wants 60 characters. Checking it here as well means a short
+// answer never becomes a request - the rate limit counts every POST, so a
+// rejected one used to cost the applicant an attempt for nothing.
+const MOTIVATION_MIN = 60;
+
+const motivationLength = computed(() => form.motivation.trim().length);
+const motivationTooShort = computed(() => motivationLength.value < MOTIVATION_MIN);
+
+// Inertia keeps errors until the next response, so a "too short" message sat
+// under a long answer the applicant had since rewritten. It read like the
+// validation was broken. Typing clears it, and the counter takes over.
+watch(() => form.motivation, () => form.clearErrors('motivation', 'throttle'));
+
 const submit = () => {
+    if (motivationTooShort.value) {
+        return;
+    }
+
     form.post(route('serverdemo-validators.apply'), {
         preserveScroll: true,
         onSuccess: () => form.reset(),
@@ -303,16 +320,19 @@ const submit = () => {
                             class="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         ></textarea>
                         <p v-if="form.errors.motivation" class="text-red-400 text-sm mt-1">{{ form.errors.motivation }}</p>
+                        <p v-else-if="motivationTooShort" class="text-gray-500 text-sm mt-1">
+                            {{ MOTIVATION_MIN - motivationLength }} more character{{ MOTIVATION_MIN - motivationLength === 1 ? '' : 's' }} needed.
+                        </p>
                     </div>
 
                     <div>
                         <label class="block text-sm font-semibold text-gray-300 mb-2">
-                            Anything that makes you good at spotting a bad run?
+                            Anything that helps you spot a demo that broke the rules?
                         </label>
                         <textarea
                             v-model="form.experience"
                             rows="4"
-                            placeholder="Years played, physics you know well, moderating you have done elsewhere. Optional."
+                            placeholder="Years played, physics you know well, scripts and binds you can recognise, moderating you have done elsewhere. Optional."
                             class="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         ></textarea>
                         <p v-if="form.errors.experience" class="text-red-400 text-sm mt-1">{{ form.errors.experience }}</p>
@@ -342,9 +362,11 @@ const submit = () => {
                         </div>
                     </div>
 
+                    <p v-if="form.errors.throttle" class="text-red-400 text-sm">{{ form.errors.throttle }}</p>
+
                     <button
                         type="submit"
-                        :disabled="form.processing || !form.motivation.trim()"
+                        :disabled="form.processing || motivationTooShort"
                         class="px-5 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
                     >
                         {{ form.processing ? 'Sending...' : 'Send application' }}

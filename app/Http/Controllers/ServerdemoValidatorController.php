@@ -110,7 +110,9 @@ class ServerdemoValidatorController extends Controller
             'availability' => ['nullable', 'string', 'max:255'],
             'contact' => ['nullable', 'string', 'max:255'],
         ], [
-            'motivation.min' => 'Tell us a bit more - a couple of sentences at least.',
+            // Naming the actual number: "a bit more" left people guessing and
+            // each guess cost them one of their attempts.
+            'motivation.min' => 'Tell us a bit more - at least 60 characters, a couple of sentences.',
         ]);
 
         ServerdemoValidatorApplication::create([
