@@ -131,8 +131,14 @@ if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "
   # přepsaly v B2 navzájem. Přejmenování kolizí řeší ten patnáctiminutový běh,
   # tady jde jen o to nepřepsat nic dřív, než se k tomu dostane. Kolizní
   # soubor se nenahraje, ostatní projdou.
+  # --exclude *.dm_68 taky viz serverdemos-mirror.sh: syrové demo je na disku
+  # jen tu chvíli, než ho ingest zabalí, a nahrát ho sem znamená nechat ho v
+  # B2 navždy vedle jeho vlastního archivu. To, co se opravdu nezabalilo,
+  # zálohuje ten patnáctiminutový běh, který si u každého ověří, že vedle
+  # sebe archiv nemá.
   rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
     --exclude "*.part" \
+    --exclude "*.dm_68" \
     --immutable \
     --transfers 4 --sftp-concurrency 8 || true
   echo "[$(date)] Serverdemos mirror na B2 OK"

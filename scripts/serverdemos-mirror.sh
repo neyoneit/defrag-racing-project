@@ -110,6 +110,7 @@ trap 'rm -f "$RUN_LOG"' EXIT
 set +e
 rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
   --exclude "*.part" \
+  --exclude "*.dm_68" \
   --immutable \
   ${SELECT_ARGS[@]+"${SELECT_ARGS[@]}"} \
   --transfers 4 \
@@ -159,10 +160,39 @@ for rel in ${KOLIZE[@]+"${KOLIZE[@]}"}; do
   fi
 done
 
+# Syrová dema se nahrávají jen tehdy, když se nezabalila.
+#
+# Ingest balí demo hned po příchodu, ale zrcadlení jede po čtvrthodinách a
+# dřív nebo později se do toho okna trefí. Pak nahraje syrovou verzi, o pár
+# minut později vedle ní přistane archiv a syrová kopie tam zůstane navždy,
+# protože copy nikdy nic nemaže. Takhle se v bucketu 4.8.2026 našly čtyři a
+# pátý přibyl během hodiny, co se první tři uklízely.
+#
+# Vypnout je natvrdo ale nejde: když se balení nepovede, je ta syrová verze
+# jediná, co existuje, a bez zálohy by visela v jedné kopii na disku, který
+# už jednou došel. Rozhoduje proto přesná podmínka - archiv vedle sebe na
+# storage. Za normálního provozu je tenhle seznam prázdný, takže to nic
+# nestojí.
+mapfile -t SYROVA < <(
+  rclone lsf sdsftp:/var/lib/serverdemos -R --files-only --include "*.dm_68" 2>/dev/null
+)
+
+nezabalenych=0
+for raw in ${SYROVA[@]+"${SYROVA[@]}"}; do
+  if rclone lsf "sdsftp:/var/lib/serverdemos/${raw}.7z" >/dev/null 2>&1; then
+    continue
+  fi
+  nezabalenych=$((nezabalenych + 1))
+  echo "[$(date)] NEZABALENO, zálohuji syrové: $raw" >&2
+  rclone copyto "sdsftp:/var/lib/serverdemos/$raw" \
+                "sdb2:$B2_SERVERDEMOS_BUCKET/serverdemos/$raw" \
+    || echo "[$(date)] záloha syrového selhala: $raw" >&2
+done
+
 # Nenulový kód bez jediné kolize je skutečná chyba a musí být vidět.
 if [ "$rc" -ne 0 ] && [ "${#KOLIZE[@]}" -eq 0 ]; then
   echo "[$(date)] Serverdemos mirror ($MODE_NOTE) SELHAL, rclone rc=$rc" >&2
   exit "$rc"
 fi
 
-echo "[$(date)] Serverdemos mirror ($MODE_NOTE) OK, kolizí: ${#KOLIZE[@]}"
+echo "[$(date)] Serverdemos mirror ($MODE_NOTE) OK, kolizí: ${#KOLIZE[@]}, nezabalených: $nezabalenych"
