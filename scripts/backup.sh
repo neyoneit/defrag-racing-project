@@ -125,9 +125,16 @@ if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "
 
   # --exclude *.part viz serverdemos-mirror.sh: rozdělaný archiv z ingestu
   # se do B2 nesmí dostat, protože odtud už se nikdy nesmaže.
+  #
+  # --immutable taky viz serverdemos-mirror.sh: jméno dema není unikátní a bez
+  # tohohle přepínače by se dvě různé jízdy se stejným časem od jednoho hráče
+  # přepsaly v B2 navzájem. Přejmenování kolizí řeší ten patnáctiminutový běh,
+  # tady jde jen o to nepřepsat nic dřív, než se k tomu dostane. Kolizní
+  # soubor se nenahraje, ostatní projdou.
   rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
     --exclude "*.part" \
-    --transfers 4 --sftp-concurrency 8
+    --immutable \
+    --transfers 4 --sftp-concurrency 8 || true
   echo "[$(date)] Serverdemos mirror na B2 OK"
 else
   echo "[$(date)] Serverdemos přeskočeny (B2_SERVERDEMOS_* / STORAGE_VPS_DL_* není v .env)"
