@@ -74,10 +74,19 @@ export const describePhysics = (physics) => {
  */
 const VALIDITY_NOTES = {
     sv_cheats: 'Cheats were enabled on the server',
-    pmove_fixed: 'pmove_fixed setting',
-    sv_fps: 'Server tickrate',
-    com_maxfps: 'Client framerate cap',
+    sv_fps: 'Server tickrate, normally 125',
+    df_mp_interferenceoff: 'Player interference setting, normally 3',
+    timescale: 'Game speed, normally 1',
+    com_maxfps: 'Client framerate cap, normally 125',
     client_finish: 'The client never registered the finish',
+    tool_assisted: 'The run looks tool-assisted',
+    pmove_fixed: 'pmove_fixed, normally 1',
+    g_speed: 'Movement speed, normally 320',
+    g_gravity: 'Gravity, normally 800',
+    g_knockback: 'Knockback, normally 1000',
+    pmove_msec: 'pmove_msec, normally 8',
+    handicap: 'Handicap, normally 100',
+    g_killWallbug: 'Wallbug kill setting, normally 1',
 };
 
 export const describeValidity = (validity) => {
