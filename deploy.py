@@ -96,10 +96,43 @@ def pipeline_cmds(name):
         "php artisan mapstats:rebuild",
         'supervisorctl restart "defrag-racing-octane:*"',
         'supervisorctl restart "defrag-racing-worker:*"',
-        "php artisan octane:reload",
         "php artisan queue:restart",
         # Give octane a couple seconds to come up before we hit it.
         "sleep 3",
+        # Prove the restart above actually took, because once it did not and
+        # nothing said so. Supervisor signals the swoole master, waits
+        # stopwaitsecs, and if the master is still winding its workers down it
+        # declares it stopped and spawns a replacement - which cannot bind
+        # port 8000, dies, and lands in BACKOFF. The original keeps serving,
+        # orphaned, from a release directory the prune below then deletes. The
+        # site stays up on old code and starts 404ing its own assets, while
+        # the deploy log says nothing at all.
+        #
+        # So compare the app bundle this release built against the one the
+        # running octane hands out, and if they differ, take the port back the
+        # hard way and check again. Never exits non-zero: a deploy that has
+        # already swung the symlink must not stop half way, and every outcome
+        # is printed for the log either way.
+        r"""set +e
+check() { curl -s --max-time 10 -H 'Host: defrag.racing' http://127.0.0.1:8000/maps | grep -o 'assets/app-[^"]*\.js' | head -1; }
+want=$(grep -o 'assets/app-[^"]*\.js' public/build/manifest.json | head -1)
+got=$(check)
+if [ -n "$want" ] && [ "$want" = "$got" ]; then
+    echo "    octane is serving $want"
+else
+    echo "!!! octane is serving '$got', this release built '$want' - a stale process is holding port 8000"
+    pkill -f 'artisan octane:start'
+    sleep 3
+    supervisorctl start 'defrag-racing-octane:*'
+    sleep 5
+    got=$(check)
+    if [ "$want" = "$got" ]; then
+        echo "    recovered, octane is serving $want"
+    else
+        echo "!!! STILL STALE: serving '$got', expected '$want' - check: supervisorctl status"
+    fi
+fi
+exit 0""",
         # Warm the rest of the public-page caches by triggering the
         # Cache::remember blocks inside the controllers (homepage
         # totals, ranking prebuilt pages, records, community
