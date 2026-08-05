@@ -43,6 +43,13 @@ class ServerdemoValidationDownloadController extends Controller
         abort_if($case === null, 403);
         abort_unless($case->isOpen() || $user->isAdmin(), 403);
 
+        // Reporting a run must never be a way to get the demo of it. Anyone
+        // who reported this case, and anyone who ever shared a clan with a
+        // reporter, is refused here as well as being skipped by the
+        // assignment - otherwise the everyone-at-once stage would hand them
+        // the demo anyway.
+        abort_if(! $user->isAdmin() && in_array($user->id, $case->conflictedUserIds(), true), 403);
+
         $entitled = $user->isAdmin()
             || $case->assigned_to_user_id === $user->id
             || in_array($case->validation_stage, ['all_validators', 'admin'], true);

@@ -39,6 +39,10 @@ class ServerdemoValidationResource extends Resource
      * The admin sees every case. A validator sees only cases handed to them
      * and cases opened to everyone - nothing else is listed, so nothing else
      * can be opened.
+     *
+     * A case reported by this validator, or by anyone who ever shared a clan
+     * with them, is not listed at all. The download route refuses them too,
+     * but a case they may never act on has no business being on their screen.
      */
     public static function getEloquentQuery(): Builder
     {
@@ -51,6 +55,7 @@ class ServerdemoValidationResource extends Resource
 
         return $query
             ->whereNull('validation_closed_at')
+            ->notReportedBy(ServerdemoValidationCase::conflictIdsFor($user))
             ->where(function (Builder $q) use ($user) {
                 $q->where('assigned_to_user_id', $user?->id)
                     ->orWhereIn('validation_stage', ['all_validators', 'admin']);
