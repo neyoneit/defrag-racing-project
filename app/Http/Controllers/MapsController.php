@@ -50,7 +50,7 @@ class MapsController extends Controller
             return redirect()->route('maps', ['page' => $maps->lastPage()]);
         }
 
-        return Inertia::render('Maps')->with('maps', $maps);
+        return Inertia::render('Maps')->with('maps', $this->attachPlayed($request, $maps));
     }
 
     public function filters(Request $request) {
@@ -74,8 +74,112 @@ class MapsController extends Controller
         }
 
         return Inertia::render('Maps')
-            ->with('maps', $maps)
+            ->with('maps', $this->attachPlayed($request, $maps))
             ->with('queries', $queries);
+    }
+
+    /**
+     * Mark which maps on this page the logged in player has already run.
+     *
+     * Played means "has an MDD record here", because a record is the only
+     * trace the site ever sees - loading a map and not finishing leaves
+     * nothing behind. Worth saying out loud when someone asks why a map they
+     * remember playing is not marked.
+     *
+     * The badge follows the filters that are on screen. With no physics or
+     * gametype filter, any record counts and the card says nothing about
+     * which one. Filter the list to VQ3 and only a VQ3 record marks the map,
+     * so the badge can never claim a run the filtered list would not show.
+     *
+     * One extra query per page of 16 maps, on (mdd_id, mapname).
+     */
+    private function attachPlayed(Request $request, $maps)
+    {
+        $mddId = $request->user()?->mdd_id;
+
+        if (! $mddId) {
+            return $maps;
+        }
+
+        $names = $maps->getCollection()->pluck('name')->filter();
+
+        if ($names->isEmpty()) {
+            return $maps;
+        }
+
+        $physics = $this->playedPhysics($request);
+        $modes = $this->playedModes($request);
+
+        $played = Record::where('mdd_id', $mddId)
+            ->whereIn('mapname', $names)
+            ->when($physics, fn ($query) => $query->where('physics', $physics))
+            ->when($modes, fn ($query) => $query->whereIn('mode', $modes))
+            ->select('mapname', 'physics')
+            ->distinct()
+            ->get()
+            // Keyed lowercase on both sides. MySQL matched `bardok-2026`
+            // against the map called `BardoK-2026` happily, being
+            // case-insensitive, and then PHP did not - so a map with a
+            // capital in its name never got the badge.
+            ->groupBy(fn ($record) => mb_strtolower($record->mapname));
+
+        $maps->getCollection()->transform(function ($map) use ($played) {
+            $found = $played->get(mb_strtolower($map->name))?->pluck('physics')->unique();
+
+            $map->played = $found !== null;
+            $map->played_physics = match (true) {
+                $found === null => null,
+                $found->count() > 1 => 'both',
+                default => $found->first(),
+            };
+
+            return $map;
+        });
+
+        return $maps;
+    }
+
+    /**
+     * The physics a record has to be in to count, or null for any of them.
+     * Both boxes ticked is the same as neither.
+     */
+    private function playedPhysics(Request $request): ?string
+    {
+        $physics = array_map('strtolower', array_filter((array) $request->input('physics', [])));
+        $physics = array_values(array_intersect($physics, ['vq3', 'cpm']));
+
+        return count($physics) === 1 ? $physics[0] : null;
+    }
+
+    /**
+     * The record modes that count, or an empty list for any of them.
+     *
+     * `records.mode` only ever holds `run` and `ctf1`..`ctf7`, so fastcaps is
+     * the one gametype worth narrowing by, and any of the seven does. Team
+     * and freestyle runs are written as plain `run` rows, and the map list is
+     * already filtered to those maps anyway, so narrowing there would only
+     * hide runs the player really did.
+     */
+    private function playedModes(Request $request): array
+    {
+        $gametypes = array_map('strtolower', array_filter((array) $request->input('gametype', [])));
+        $modes = [];
+
+        foreach ($gametypes as $gametype) {
+            if ($gametype === 'run') {
+                $modes[] = 'run';
+                continue;
+            }
+
+            if ($gametype === 'fastcaps') {
+                $modes = array_merge($modes, ['ctf1', 'ctf2', 'ctf3', 'ctf4', 'ctf5', 'ctf6', 'ctf7']);
+                continue;
+            }
+
+            return [];
+        }
+
+        return array_values(array_unique($modes));
     }
 
     /**
