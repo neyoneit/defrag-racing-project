@@ -89,6 +89,61 @@
     animation: gradient-animation 7s ease infinite;
 }
 
+/* The PLAYED pill. Dark, because every hue on a map card is already spoken
+   for - green by CPM and Easy, blue by VQ3, red by NSFW and Extreme - so the
+   badge is told apart by shape instead. A sheen crosses it every few seconds
+   and a soft glow breathes around it, so it still catches the eye on a page
+   of sixteen. The sweep rests between passes rather than running
+   continuously: a badge that never stops moving is the one people learn to
+   ignore. */
+.played-badge {
+    /* White by default, which is the case where the player has a record in
+       both physics and no single colour would be honest. */
+    --played-sheen: rgba(255, 255, 255, 0.30);
+    --played-glow-dim: rgba(255, 255, 255, 0.25);
+    --played-glow: rgba(255, 255, 255, 0.65);
+
+    background-image: linear-gradient(100deg, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.78) 42%, var(--played-sheen) 50%, rgba(0, 0, 0, 0.78) 58%, rgba(0, 0, 0, 0.78) 100%);
+    background-size: 300% 100%;
+    background-color: rgba(0, 0, 0, 0.78);
+    animation: played-sheen 3.4s ease-in-out infinite, played-glow 3.4s ease-in-out infinite;
+}
+
+/* The blues and greens the physics badges already use, so the light coming
+   off the badge says which physics the record is in without reading it. */
+.played-badge-vq3 {
+    --played-sheen: rgba(93, 204, 255, 0.45);
+    --played-glow-dim: rgba(93, 204, 255, 0.30);
+    --played-glow: rgba(93, 204, 255, 0.80);
+}
+
+.played-badge-cpm {
+    --played-sheen: rgba(93, 255, 93, 0.45);
+    --played-glow-dim: rgba(93, 255, 93, 0.30);
+    --played-glow: rgba(93, 255, 93, 0.80);
+}
+
+/* Dark pill, white streak. The streak has to contrast with the base or the
+   effect is technically running and nobody can see it - which is what the
+   first white-on-white version did. */
+@keyframes played-sheen {
+    0%, 15% {
+        background-position: 150% 0;
+    }
+    65%, 100% {
+        background-position: -50% 0;
+    }
+}
+
+@keyframes played-glow {
+    0%, 100% {
+        box-shadow: 0 0 6px var(--played-glow-dim);
+    }
+    45% {
+        box-shadow: 0 0 18px var(--played-glow);
+    }
+}
+
 .defrag-scrollbar {
     max-height: 450px;
     overflow-y: auto;

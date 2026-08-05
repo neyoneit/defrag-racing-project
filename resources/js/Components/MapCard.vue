@@ -54,6 +54,31 @@
         return difficultyLabels[level - 1] || null;
     });
 
+    // The pill itself stays dark, because every hue on a card is taken -
+    // green by CPM and Easy, blue by VQ3, red by NSFW and Extreme - and the
+    // physics shows in the light coming off it instead: blue for a VQ3
+    // record, green for CPM, white when there are both and no single colour
+    // would be honest. Fastcaps records are physics like any other here, the
+    // ctf mode does not change the colour.
+    const playedBadge = computed(() => {
+        const badges = {
+            vq3: 'played-badge played-badge-vq3',
+            cpm: 'played-badge played-badge-cpm',
+        };
+
+        return badges[props.map.played_physics] ?? 'played-badge';
+    });
+
+    const playedDots = computed(() => {
+        const dots = {
+            vq3: ['bg-sky-400'],
+            cpm: ['bg-green-400'],
+            both: ['bg-sky-400', 'bg-green-400'],
+        };
+
+        return dots[props.map.played_physics] ?? [];
+    });
+
     const background = computed(() => {
         const physics = props.map.physics.toLowerCase()
         const bgs = {
@@ -114,6 +139,16 @@
                 <div v-if="difficultyBadge" class="absolute top-2 left-2">
                     <div :class="`px-2 py-0.5 rounded text-[11px] font-bold uppercase text-white ${difficultyBadge.color}`">
                         {{ difficultyBadge.label }}
+                    </div>
+                </div>
+                <!-- Played Badge (top centre) - only ever shown to a player
+                     whose account is paired to an MDD id, since it is their
+                     own records it is built from -->
+                <div v-if="map.played" class="absolute top-2 left-1/2 -translate-x-1/2">
+                    <div :class="`${playedBadge} flex items-center gap-1 px-2.5 py-1 rounded border border-white/25 backdrop-blur-sm text-[12px] font-black uppercase tracking-wide text-white`">
+                        <span>&check;</span>
+                        Played
+                        <span v-for="dot in playedDots" :key="dot" :class="['w-2 h-2 rounded-full ring-1 ring-black/30', dot]"></span>
                     </div>
                 </div>
                 <!-- Physics Badge (top right) -->
