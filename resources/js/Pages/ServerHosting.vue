@@ -300,7 +300,7 @@ const submitNewCred = () => {
                         and record system and may be delisted until updated.</p>
                     </li>
                     <li>
-                        <div class="font-semibold text-gray-100 mb-1">5. Your engine must answer with the whole player list</div>
+                        <div class="font-semibold text-gray-100 mb-1">5. Your engine must answer with the whole player list, and say when cheats are on</div>
                         <p class="text-gray-400">A <code>getdfstatus</code> reply is one 1400 byte packet. The server
                         info takes 550-700 of it and each player line another 57-74, so the reply fills up at around
                         ten players and everyone after that is <strong class="text-gray-200">missing from it with
@@ -323,11 +323,28 @@ const submitNewCred = () => {
                         <a href="https://github.com/Defrag-racing/oDFe" target="_blank" rel="noopener"
                            class="text-emerald-300 hover:text-emerald-200 underline decoration-dotted">oDFe</a> or the
                         defrag.racing server bundle and you already have it. On any other engine it is these few lines
-                        in <code>SVC_Status_Defrag</code>, right after the <code>challenge</code> key is set:</p>
-                        <pre class="mt-2 p-3 rounded-lg bg-black/50 border border-white/10 text-xs text-gray-300 overflow-x-auto"><code>// "getdfstatus &lt;challenge&gt; &lt;first&gt;" - answer from that player on
-firstClient = atoi( Cmd_Argv( 2 ) );
+                        in <code>SVC_Status_Defrag</code>:</p>
+                        <pre class="mt-2 p-3 rounded-lg bg-black/50 border border-white/10 text-xs text-gray-300 overflow-x-auto"><code>// Read both arguments FIRST, before anything else in this handler runs.
+// Cbuf_ExecuteText( EXEC_NOW, "score" ) goes through Cmd_ExecuteString,
+// which tokenizes "score" over this packet's own arguments, and every
+// Cmd_Argv after that line comes back empty. Put these two below the
+// score call and the paging argument is always 0 - and the challenge
+// echo has been silently broken by exactly this for years.
+Q_strncpyz( challenge, Cmd_Argv( 1 ), sizeof( challenge ) );
+firstClient = atoi( Cmd_Argv( 2 ) );        // "getdfstatus &lt;challenge&gt; &lt;first&gt;"
 if ( firstClient &lt; 0 ) {
     firstClient = 0;
+}
+
+// ...then, where the infostring is built:
+Info_SetValueForKey( infostring, "challenge", challenge );
+
+// Cheats are systeminfo, so they are not in the serverinfo string above
+// and no server browser can see them. Only sent when they are on - the
+// key costs twelve bytes and nearly every server would be paying it to
+// say "no". Send it and clients/clientsFrom together, never one alone.
+if ( Cvar_VariableIntegerValue( "sv_cheats" ) ) {
+    Info_SetValueForKey( infostring, "sv_cheats", "1" );
 }
 
 for ( i = 0; i &lt; sv.maxclients; i++ ) {
@@ -339,12 +356,18 @@ for ( i = 0; i &lt; sv.maxclients; i++ ) {
 Info_SetValueForKey( infostring, "clients", va( "%i", totalClients ) );
 Info_SetValueForKey( infostring, "clientsFrom", va( "%i", firstClient ) );
 
-// ...and in the loop that writes the player lines, skip the ones
-// an earlier part already carried:
-if ( listedClients++ &lt; firstClient ) {
-    continue;
-}</code></pre>
-                        <p class="text-gray-400 mt-2">It breaks nothing. An engine without it ignores the extra
+// ...and start the loop that writes the player lines at that slot
+// instead of at zero:
+for ( i = firstClient; i &lt; sv.maxclients; i++ ) {</code></pre>
+                        <p class="text-gray-400 mt-2">Page by the client slot, not by how many lines you have already
+                        sent. If somebody disconnects between two requests everyone behind them moves down a place, and
+                        a count would step straight over whoever landed on the boundary. The asker continues from one
+                        past the last slot it received, which is the same answer whatever happened in between.</p>
+                        <p class="text-gray-400 mt-2"><strong class="text-gray-200">Both parts or neither.</strong>
+                        A server that sends <code>clientsFrom</code> is telling us its engine is new enough to report
+                        cheats, so a missing <code>sv_cheats</code> is read as cheats being off. Take the paging and
+                        leave the cheat line out and your server will be listed as clean whether it is or not.</p>
+                        <p class="text-gray-400 mt-2">It breaks nothing. An engine without any of it ignores the extra
                         argument and replies as it always did, and one request is still one reply, so the existing rate
                         limit bounds it exactly as before. We can see which servers have it - the reply either carries
                         <code>clients</code> or it does not - and a server that never sends it will be delisted once
