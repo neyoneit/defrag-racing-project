@@ -144,12 +144,18 @@ class ServerdemoValidationService
      *
      * Random rather than a rotation: a predictable order tells a reported
      * player who is about to look at their runs.
+     *
+     * Nobody who reported the case, and nobody who ever shared a clan with a
+     * reporter, is a candidate - see ServerdemoValidationCase::conflictedUserIds().
+     * If that leaves nobody, the case goes to the everyone-at-once stage,
+     * where the same people are still refused the demo itself.
      */
     public function assignNext(ServerdemoValidationCase $case, ?User $actor = null): ?User
     {
         $seen = collect($case->validators_seen ?? []);
+        $conflicted = collect($case->conflictedUserIds());
         $candidate = $this->validators()
-            ->reject(fn (User $user) => $seen->contains($user->id))
+            ->reject(fn (User $user) => $seen->contains($user->id) || $conflicted->contains($user->id))
             ->shuffle()
             ->first();
 
