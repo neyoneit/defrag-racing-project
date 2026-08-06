@@ -9,18 +9,22 @@ export default {
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, getCurrentInstance, onMounted, onUnmounted, ref, watch } from 'vue';
+import Pagination from '@/Components/Basic/Pagination.vue';
 
 const props = defineProps({
     hasMddAccount: { type: Boolean, default: false },
     blocked: { type: Object, default: null },
-    records: { type: Array, default: () => [] },
+    records: { type: Object, default: () => ({ data: [] }) },
     search: { type: String, default: '' },
     sort: { type: String, default: 'date' },
     totalRecords: { type: Number, default: 0 },
-    shown: { type: Number, default: 0 },
     reasons: { type: Object, default: () => ({}) },
     mine: { type: Array, default: () => [] },
 });
+
+// The rows of the page being looked at. Everything else on this page talks
+// about the whole collection, so the two are kept apart by name.
+const rows = computed(() => props.records?.data ?? []);
 
 const { proxy } = getCurrentInstance();
 const formatTime = proxy.formatTime;
@@ -35,15 +39,16 @@ const SORTS = {
 const search = ref(props.search);
 const sort = ref(props.sort);
 
-// Both filters are a server round trip rather than client-side work: only the
-// first 120 rows are sent, so sorting or filtering what arrived would quietly
-// reorder a slice instead of the whole list.
+// Both filters are a server round trip rather than client-side work: one page
+// of rows is in the browser, so sorting or filtering what arrived would quietly
+// reorder a slice instead of the whole list. No page parameter, so changing
+// either goes back to the first page rather than to page 9 of a new search.
 const reload = () => {
     router.get('/amnesty', { search: search.value, sort: sort.value }, {
         preserveState: true,
         preserveScroll: true,
         replace: true,
-        only: ['records', 'search', 'sort', 'shown'],
+        only: ['records', 'search', 'sort'],
     });
 };
 
@@ -65,15 +70,15 @@ const toggle = (id) => {
     picked.value = next;
 };
 
-const allShownPicked = computed(() => props.records.length > 0
-    && props.records.every((record) => picked.value.has(record.id)));
+const allShownPicked = computed(() => rows.value.length > 0
+    && rows.value.every((record) => picked.value.has(record.id)));
 
 const toggleAllShown = () => {
     const next = new Set(picked.value);
     if (allShownPicked.value) {
-        props.records.forEach((record) => next.delete(record.id));
+        rows.value.forEach((record) => next.delete(record.id));
     } else {
-        props.records.forEach((record) => next.add(record.id));
+        rows.value.forEach((record) => next.add(record.id));
     }
     picked.value = next;
 };
@@ -253,22 +258,24 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             </button>
                         </div>
 
-                        <button type="button" @click="toggleAllShown" :disabled="!records.length"
+                        <button type="button" @click="toggleAllShown" :disabled="!rows.length"
                             class="px-3 py-2 rounded-lg text-sm font-bold bg-white/5 hover:bg-white/10 text-gray-200 transition-colors disabled:opacity-40">
-                            {{ allShownPicked ? 'Unselect these' : 'Select these' }}
+                            {{ allShownPicked ? 'Unselect this page' : 'Select this page' }}
                         </button>
 
                         <span class="text-xs text-gray-500 whitespace-nowrap">
-                            {{ shown }} of {{ totalRecords }}
+                            {{ records.total ?? rows.length }} run<span v-if="(records.total ?? rows.length) !== 1">s</span>
+                            <span v-if="search"> found</span>
+                            <span v-else> in total</span>
                         </span>
                     </div>
 
-                    <div v-if="!records.length" class="p-10 text-center text-gray-500">
+                    <div v-if="!rows.length" class="p-10 text-center text-gray-500">
                         No runs found.
                     </div>
 
                     <div v-else class="divide-y divide-white/5">
-                        <label v-for="record in records" :key="record.id"
+                        <label v-for="record in rows" :key="record.id"
                             class="flex items-center gap-4 p-3 cursor-pointer transition-colors"
                             :class="picked.has(record.id) ? 'bg-emerald-500/10' : 'hover:bg-white/[0.04]'">
 
@@ -299,9 +306,12 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         </label>
                     </div>
 
-                    <div v-if="shown < totalRecords" class="p-3 text-center text-xs text-gray-500 border-t border-white/5">
-                        Showing the first {{ shown }}. Search or re-sort to reach the rest - anything you have
-                        already ticked stays ticked.
+                    <!-- Anything ticked stays ticked across pages, searches and
+                         re-sorts: the selection is held in the browser, and the
+                         page changes are partial reloads. -->
+                    <div v-if="records.last_page > 1" class="p-3 border-t border-white/5">
+                        <Pagination :last_page="records.last_page" :current_page="records.current_page"
+                            :link="records.first_page_url" :only="['records']" />
                     </div>
                 </div>
 

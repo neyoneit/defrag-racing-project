@@ -42,8 +42,8 @@ class SelfReportController extends Controller
         'map_added' => ['maps.date_added', 'desc'],
     ];
 
-    /** Rows sent at once. Past this, searching beats scrolling. */
-    private const PAGE_SIZE = 120;
+    /** Rows per page. Thumbnails make a longer page heavy for no gain. */
+    private const PAGE_SIZE = 60;
 
     public function index(Request $request)
     {
@@ -59,7 +59,7 @@ class SelfReportController extends Controller
                     'since' => $user->amnesty_blocked_at?->toIso8601String(),
                     'reason' => $user->amnesty_blocked_reason,
                 ],
-                'records' => [],
+                'records' => ['data' => []],
                 'reasons' => RecordFlagController::FLAG_TYPES,
                 'mine' => [],
             ]);
@@ -69,7 +69,7 @@ class SelfReportController extends Controller
         $sort = $request->input('sort');
         $sort = isset(self::SORTS[$sort]) ? $sort : 'date';
 
-        $records = collect();
+        $records = ['data' => []];
         $total = 0;
 
         if ($user->mdd_id) {
@@ -85,8 +85,9 @@ class SelfReportController extends Controller
                 ->where('records.mdd_id', $user->mdd_id)
                 ->when($search !== '', fn ($query) => $query->where('records.mapname', 'like', '%' . $search . '%'))
                 ->orderBy($column, $direction)
-                ->limit(self::PAGE_SIZE)
-                ->get([
+                // Paginated rather than capped: with a thousand runs behind it,
+                // "search for the rest" is not a way to reach the rest.
+                ->paginate(self::PAGE_SIZE, [
                     'records.id',
                     'records.mapname',
                     'records.physics',
@@ -98,7 +99,8 @@ class SelfReportController extends Controller
                     'maps.thumbnail as map_thumbnail',
                     'maps.date_added as map_added',
                 ])
-                ->map(fn ($record) => [
+                ->withQueryString()
+                ->through(fn ($record) => [
                     'id' => $record->id,
                     'mapname' => $record->mapname,
                     'physics' => $record->physics,
@@ -118,7 +120,6 @@ class SelfReportController extends Controller
             'search' => $search,
             'sort' => $sort,
             'totalRecords' => $total,
-            'shown' => $records->count(),
             'reasons' => RecordFlagController::FLAG_TYPES,
             // Your own withdrawals, with the reason you gave. Private like the
             // rest of it, but you are allowed to see what you did and why -
