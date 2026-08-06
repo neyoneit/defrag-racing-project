@@ -170,9 +170,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                 </div>
 
                 <p class="text-gray-400 mt-2 max-w-3xl">
-                    You cheated, or you broke a rule without knowing it, and you have worked out which of
-                    your times should not be standing. This is where you put it right, privately. Tick as
-                    many runs as you like and send them in one go.
+                    You cheated, and you have worked out which of your times should not be standing.
+                    This is where you put it right, privately. Tick as many runs as you like and send
+                    them in one go.
                 </p>
             </div>
         </div>
