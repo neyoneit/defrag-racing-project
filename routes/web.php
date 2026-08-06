@@ -93,6 +93,33 @@ Route::post('/serverdemo-validators/vote/{application}', [\App\Http\Controllers\
     ->middleware(['auth', 'verified', 'throttle:60,60'])
     ->name('serverdemo-validators.vote');
 
+// The public validation log. Deliberately open to everyone including logged
+// out visitors: it exists so that somebody who does not trust us can check
+// what was reported and what came of it.
+Route::get('/validation-log', [\App\Http\Controllers\ValidationLogController::class, 'index'])->name('validation-log');
+
+// Self-report amnesty: withdrawing your own invalid time. Verified account
+// only - it deletes a record, so it has to be a real person's own account -
+// and throttled like the other forms.
+Route::get('/self-report', [\App\Http\Controllers\SelfReportController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('self-report.index');
+Route::post('/self-report', [\App\Http\Controllers\SelfReportController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:30,60'])
+    ->name('self-report.store');
+
+// Wishlist. Reading is public, writing and voting need an account.
+Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index');
+Route::post('/wishlist', [\App\Http\Controllers\WishlistController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('wishlist.store');
+Route::post('/wishlist/{wish}/vote', [\App\Http\Controllers\WishlistController::class, 'vote'])
+    ->middleware(['auth', 'verified', 'throttle:120,60'])
+    ->name('wishlist.vote');
+Route::delete('/wishlist/{wish}', [\App\Http\Controllers\WishlistController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('wishlist.destroy');
+
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 

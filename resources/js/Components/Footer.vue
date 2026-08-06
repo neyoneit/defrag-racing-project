@@ -61,12 +61,17 @@
                     </Link>
                 </div>
             </div>
-            <div v-if="footerPages" class="flex space-x-4 flex-grow sm:flex-grow-0 mx-auto mt-3">
+            <div class="flex space-x-4 flex-grow sm:flex-grow-0 mx-auto mt-3">
                 <!-- Footer Navigation Menu-->
                 <div class="max-w-8xl mx-auto mt-2">
-                    <!-- Navigation Links -->
+                    <!-- Navigation Links. The validation log is here rather
+                         than behind a login because its whole purpose is to be
+                         checkable by anyone, including somebody who does not
+                         have an account and does not trust us. -->
                     <div class="space-x-8 md:-my-px md:flex pb-1">
-                        <FooterLink v-for="page in footerPages" :key="page.slug" :href="'/' + page.slug" :active="false" :text="page.title" />
+                        <FooterLink :href="route('validation-log')" :active="false" text="Validation log" />
+                        <FooterLink :href="route('wishlist.index')" :active="false" text="Wishlist" />
+                        <FooterLink v-for="page in footerPages || []" :key="page.slug" :href="'/' + page.slug" :active="false" :text="page.title" />
                     </div>
                 </div>
             </div>
