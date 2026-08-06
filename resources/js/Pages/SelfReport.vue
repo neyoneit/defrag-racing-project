@@ -171,8 +171,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                 <p class="text-gray-400 mt-2 max-w-3xl">
                     You cheated, and you have worked out which of your times should not be standing.
-                    This is where you put it right, privately. Tick as many runs as you like and send
-                    them in one go.
+                    This is where you put it right, privately. Send them one at a time or all at once,
+                    but the reason you give has to be true for every run in the batch - anything you did
+                    differently goes in a batch of its own.
                 </p>
             </div>
         </div>
@@ -389,7 +390,11 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         </div>
 
                         <div ref="reasonBox" class="relative min-w-[16rem] flex-1">
-                            <label class="block text-xs text-gray-400 mb-1">What was wrong with them</label>
+                            <label class="block text-xs text-gray-400 mb-1">
+                                What you did in
+                                <span v-if="pickedCount === 1">this run</span>
+                                <span v-else>all {{ pickedCount }} of these runs</span>
+                            </label>
                             <button type="button" @click="reasonOpen = !reasonOpen"
                                 class="w-full flex items-center justify-between gap-2 bg-black/50 border rounded-lg px-3 py-2 text-left text-white transition-colors"
                                 :class="reasonOpen ? 'border-emerald-400/60' : 'border-white/10 hover:border-white/25'">
@@ -445,9 +450,12 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         </div>
 
                         <div class="flex items-center gap-4">
-                            <label class="flex items-center gap-2 text-sm text-gray-300 max-w-xs">
-                                <input type="checkbox" v-model="form.confirm" class="w-5 h-5 rounded bg-black/50 border-white/20 text-emerald-500" />
-                                <span>I understand this cannot be taken back.</span>
+                            <label class="flex items-start gap-2 text-sm text-gray-300 max-w-sm">
+                                <input type="checkbox" v-model="form.confirm" class="mt-0.5 w-5 h-5 shrink-0 rounded bg-black/50 border-white/20 text-emerald-500" />
+                                <span>
+                                    To the best of my knowledge and conscience, what I have said about
+                                    these runs is true.
+                                </span>
                             </label>
 
                             <button type="submit" :disabled="form.processing"
@@ -478,6 +486,15 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             You are sending <span class="font-bold text-white">{{ pickedCount }}</span> of your
                             own run<span v-if="pickedCount !== 1">s</span> to be taken off the board. This step
                             is irreversible - once they are handled you cannot bring them back.
+                        </p>
+
+                        <p class="text-gray-300 leading-relaxed mb-3">
+                            You are declaring, to the best of your knowledge and conscience, that
+                            <span class="font-semibold text-white">{{ reasons[form.reason] }}</span> is what
+                            happened in
+                            <span v-if="pickedCount === 1">this run</span>
+                            <span v-else>every one of these {{ pickedCount }} runs</span>. If it is not
+                            true of all of them, go back and send them in separate batches.
                         </p>
 
                         <p class="text-gray-300 leading-relaxed mb-5">

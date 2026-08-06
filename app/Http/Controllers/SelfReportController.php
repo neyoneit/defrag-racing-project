@@ -178,7 +178,7 @@ class SelfReportController extends Controller
             'confirm' => ['accepted'],
         ], [
             'record_ids.required' => 'Pick at least one run.',
-            'confirm.accepted' => 'Tick the box to send it.',
+            'confirm.accepted' => 'Tick the declaration first - the reason has to be true for every run in the batch.',
         ]);
 
         // Yours means yours. The MDD id is what ties a record to a person, so
