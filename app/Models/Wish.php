@@ -16,9 +16,15 @@ class Wish extends Model
         'body',
         'status',
         'status_note',
+        'approved_at',
+        'approved_by',
         'upvotes',
         'downvotes',
         'score',
+    ];
+
+    protected $casts = [
+        'approved_at' => 'datetime',
     ];
 
     public const STATUSES = [
@@ -54,6 +60,17 @@ class Wish extends Model
     public function votes()
     {
         return $this->hasMany(WishVote::class);
+    }
+
+    /** Live on the public list. */
+    public function scopeApproved($query)
+    {
+        return $query->whereNotNull('approved_at');
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approved_at !== null;
     }
 
     /**

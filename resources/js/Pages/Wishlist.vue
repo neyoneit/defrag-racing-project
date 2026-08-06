@@ -44,7 +44,7 @@ const submit = () => {
 // decides the order of the list, and a number that moves before the server
 // agrees is a number people stop trusting.
 const vote = (wish, value) => {
-    if (!user.value) return;
+    if (!user.value || wish.pending) return;
     router.post(`/wishlist/${wish.id}/vote`, { value }, { preserveScroll: true, preserveState: true });
 };
 
@@ -137,10 +137,16 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         placeholder="Briefly: what it does, and why it would help."></textarea>
                     <div v-if="form.errors.body" class="text-red-400 text-sm mt-1">{{ form.errors.body }}</div>
                 </div>
-                <button type="submit" :disabled="form.processing"
-                    class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors disabled:opacity-50">
-                    Post it
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="submit" :disabled="form.processing"
+                        class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors disabled:opacity-50">
+                        Post it
+                    </button>
+                    <span class="text-sm text-gray-500">
+                        An admin reads it before it goes on the list. You will see it here with a
+                        "waiting" mark until then.
+                    </span>
+                </div>
             </form>
 
             <!-- Project first, status second: which of our things you care
@@ -183,8 +189,8 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                     <!-- Score column. The net number is the big one because it
                          is what the list is sorted by; the split sits under it
                          so a contested wish does not read like an ignored one. -->
-                    <div class="flex flex-col items-center gap-1 w-16 shrink-0">
-                        <button @click="vote(wish, 1)" :disabled="!user"
+                    <div class="flex flex-col items-center gap-1 w-16 shrink-0" :class="wish.pending ? 'opacity-40' : ''">
+                        <button @click="vote(wish, 1)" :disabled="!user || wish.pending"
                             class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
                             :class="wish.my_vote === 1 ? 'bg-green-500/25 text-green-300' : 'bg-white/5 text-gray-400 hover:bg-white/10'">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10h-6v6h-4v-6H4z"/></svg>
@@ -193,7 +199,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             {{ wish.score > 0 ? '+' : '' }}{{ wish.score }}
                         </div>
                         <div class="text-[10px] text-gray-600 whitespace-nowrap">+{{ wish.upvotes }} / -{{ wish.downvotes }}</div>
-                        <button @click="vote(wish, -1)" :disabled="!user"
+                        <button @click="vote(wish, -1)" :disabled="!user || wish.pending"
                             class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
                             :class="wish.my_vote === -1 ? 'bg-red-500/25 text-red-300' : 'bg-white/5 text-gray-400 hover:bg-white/10'">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20L4 10h6V4h4v6h6z"/></svg>
@@ -202,6 +208,10 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span v-if="wish.pending"
+                                class="text-[11px] px-2 py-0.5 rounded border border-amber-400/40 bg-amber-500/15 text-amber-200 font-bold">
+                                Waiting for approval
+                            </span>
                             <button type="button" @click="setProject(wish.project)"
                                 class="text-[11px] px-2 py-0.5 rounded border border-blue-400/30 bg-blue-500/15 text-blue-200 font-bold hover:bg-blue-500/25 transition-colors">
                                 {{ wish.project_label }}

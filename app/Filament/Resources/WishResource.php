@@ -39,6 +39,17 @@ class WishResource extends Resource
         return false;
     }
 
+    /** Waiting wishes are the only thing here that needs doing. */
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) Wish::whereNull('approved_at')->count() ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -68,8 +79,20 @@ class WishResource extends Resource
     {
         return $table
             ->striped()
+            // Waiting first, whatever the sort: they are the queue, the rest
+            // is archive.
             ->defaultSort('score', 'desc')
+            ->modifyQueryUsing(fn ($query) => $query->orderByRaw('approved_at is null desc'))
             ->columns([
+                Tables\Columns\IconColumn::make('approved_at')
+                    ->label('Live')
+                    ->alignCenter()
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-clock')
+                    ->trueColor('success')
+                    ->falseColor('warning'),
+
                 Tables\Columns\TextColumn::make('score')
                     ->label('Score')
                     ->badge()
@@ -107,10 +130,37 @@ class WishResource extends Resource
                     ->sortable(),
             ])
             ->filters([
+                Tables\Filters\TernaryFilter::make('approved_at')
+                    ->label('Approval')
+                    ->placeholder('All')
+                    ->trueLabel('Live on the list')
+                    ->falseLabel('Waiting for approval')
+                    ->nullable(),
                 Tables\Filters\SelectFilter::make('project')->options(Wish::PROJECTS),
                 Tables\Filters\SelectFilter::make('status')->options(Wish::STATUSES),
             ])
             ->actions([
+                // Approval is the gate: until this is pressed the wish is not
+                // on the public list and cannot be voted on.
+                Tables\Actions\Action::make('approve')
+                    ->label(fn (Wish $record) => $record->isApproved() ? 'Take off the list' : 'Approve')
+                    ->icon(fn (Wish $record) => $record->isApproved() ? 'heroicon-o-eye-slash' : 'heroicon-o-check-circle')
+                    ->color(fn (Wish $record) => $record->isApproved() ? 'gray' : 'success')
+                    ->requiresConfirmation(fn (Wish $record) => $record->isApproved())
+                    ->action(function (Wish $record) {
+                        if ($record->isApproved()) {
+                            $record->update(['approved_at' => null, 'approved_by' => null]);
+
+                            Notification::make()->success()->title('Taken off the list')->send();
+
+                            return;
+                        }
+
+                        $record->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
+
+                        Notification::make()->success()->title('Wish approved')->send();
+                    }),
+
                 Tables\Actions\EditAction::make(),
 
                 // The common case is answering a wish without rewriting it, so
@@ -140,6 +190,15 @@ class WishResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('approveAll')
+                        ->label('Approve selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn ($records) => $records->each->update([
+                            'approved_at' => now(),
+                            'approved_by' => auth()->id(),
+                        ])),
+
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);

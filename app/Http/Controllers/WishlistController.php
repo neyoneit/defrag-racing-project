@@ -29,8 +29,21 @@ class WishlistController extends Controller
 
         $wishes = Wish::query()
             ->with('user:id,name,plain_name,profile_photo_path,country')
+            // Approved only, plus your own while it waits. Hiding somebody's
+            // wish from themselves reads as it having been deleted, and they
+            // post it again.
+            ->where(function ($query) use ($user) {
+                $query->approved();
+
+                if ($user) {
+                    $query->orWhere('user_id', $user->id);
+                }
+            })
             ->when(in_array($filter, array_keys(Wish::STATUSES), true), fn ($q) => $q->where('status', $filter))
             ->when(in_array($project, array_keys(Wish::PROJECTS), true), fn ($q) => $q->where('project', $project))
+            // Anything still waiting sits at the top for its author, who has
+            // just posted it and is looking for it.
+            ->orderByRaw('approved_at is null desc')
             ->orderByDesc('score')
             ->orderByDesc('created_at')
             ->limit(300)
@@ -57,6 +70,7 @@ class WishlistController extends Controller
                 'score' => $wish->score,
                 'my_vote' => (int) ($myVotes[$wish->id] ?? 0),
                 'mine' => $user && $wish->user_id === $user->id,
+                'pending' => ! $wish->isApproved(),
                 'created_at' => $wish->created_at?->toIso8601String(),
                 'author' => $wish->user ? [
                     'id' => $wish->user->id,
@@ -71,7 +85,8 @@ class WishlistController extends Controller
             'projectFilter' => in_array($project, array_keys(Wish::PROJECTS), true) ? $project : null,
             // Counts per project so the filter row can say where the activity
             // is, instead of sending people into empty lists to find out.
-            'projectCounts' => Wish::selectRaw('project, count(*) as total')
+            'projectCounts' => Wish::approved()
+                ->selectRaw('project, count(*) as total')
                 ->groupBy('project')
                 ->pluck('total', 'project'),
         ]);
@@ -87,6 +102,7 @@ class WishlistController extends Controller
             'body.min' => 'Say a bit more - at least 20 characters, so people know what they are voting on.',
         ]);
 
+        // Not approved: it goes nowhere public until an admin lets it through.
         $wish = Wish::create([
             'user_id' => $request->user()->id,
             'project' => $data['project'],
@@ -104,7 +120,7 @@ class WishlistController extends Controller
         ]);
         $wish->recount();
 
-        return back()->with('success', 'Wish added.');
+        return back()->with('success', 'Wish submitted. It goes on the list once an admin has looked at it.');
     }
 
     /**
@@ -114,6 +130,12 @@ class WishlistController extends Controller
      */
     public function vote(Request $request, Wish $wish)
     {
+        // Its own author can see it while it waits, so the guard has to be
+        // here too rather than relying on the list not showing it.
+        if (! $wish->isApproved()) {
+            return back(303);
+        }
+
         $data = $request->validate([
             'value' => ['required', 'integer', 'in:1,-1'],
         ]);
