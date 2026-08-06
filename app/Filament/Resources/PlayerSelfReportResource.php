@@ -43,12 +43,34 @@ class PlayerSelfReportResource extends Resource
         return false;
     }
 
+    /** Requests nobody has acted on yet. */
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) PlayerSelfReport::pending()->count() ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->striped()
             ->defaultSort('created_at', 'desc')
-            ->modifyQueryUsing(fn ($query) => $query->with('user:id,name,plain_name,amnesty_blocked_at'))
+            ->modifyQueryUsing(fn ($query) => $query
+                ->with('user:id,name,plain_name,amnesty_blocked_at')
+                // Anything still waiting on a decision first, whatever the sort.
+                ->orderByRaw('processed_at is null desc'))
+            ->filters([
+                Tables\Filters\Filter::make('pending')
+                    ->label('Waiting to be handled')
+                    ->query(fn ($query) => $query->whereNull('processed_at')),
+                Tables\Filters\SelectFilter::make('handling')
+                    ->label('When')
+                    ->options(PlayerSelfReport::HANDLING),
+            ])
             ->columns([
                 Tables\Columns\TextColumn::make('player_name')
                     ->label('Player')
@@ -76,6 +98,16 @@ class PlayerSelfReportResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (string $state) => RecordFlagController::FLAG_TYPES[$state] ?? $state),
 
+                Tables\Columns\TextColumn::make('processed_at')
+                    ->label('State')
+                    ->badge()
+                    ->state(fn (PlayerSelfReport $record) => $record->isProcessed()
+                        ? 'Off the board'
+                        : ($record->handling === 'immediate' ? 'Waiting on you' : 'Queued for the merge'))
+                    ->color(fn (PlayerSelfReport $record) => $record->isProcessed()
+                        ? 'success'
+                        : ($record->handling === 'immediate' ? 'warning' : 'gray')),
+
                 Tables\Columns\TextColumn::make('note')
                     ->label('Note')
                     ->wrap()
@@ -88,6 +120,27 @@ class PlayerSelfReportResource extends Resource
                     ->sortable(),
             ])
             ->actions([
+                // The hide itself. Nothing leaves the leaderboard until this
+                // is pressed, which is also what the player was promised.
+                Tables\Actions\Action::make('hide')
+                    ->label('Approve and hide the run')
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('success')
+                    ->visible(fn (PlayerSelfReport $record) => ! $record->isProcessed() && $record->record_id)
+                    ->requiresConfirmation()
+                    ->modalDescription('Takes the run off the leaderboard here. Until the MDD databases are merged it still stands on q3df.org.')
+                    ->action(function (PlayerSelfReport $record) {
+                        $run = Record::find($record->record_id);
+
+                        // Soft delete: the model's hooks detach uploaded demos
+                        // and clear the profile and listing caches.
+                        $run?->delete();
+
+                        $record->update(['processed_at' => now(), 'processed_by' => auth()->id()]);
+
+                        Notification::make()->success()->title('Run hidden')->send();
+                    }),
+
                 // Abuse is spotted here and nowhere else, so the switch that
                 // answers it lives here too. It does not touch the withdrawal
                 // it was noticed on: taking a run back and taking the right
@@ -134,7 +187,7 @@ class PlayerSelfReportResource extends Resource
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('This puts the record back on the leaderboard and removes it from the public log. Use it when the wrong run was withdrawn.')
+                    ->modalDescription('Puts the record back on the leaderboard and drops the request. Use it when the wrong run was sent.')
                     ->visible(fn (PlayerSelfReport $record) => $record->record_id
                         && Record::onlyTrashed()->whereKey($record->record_id)->exists())
                     ->action(function (PlayerSelfReport $record) {

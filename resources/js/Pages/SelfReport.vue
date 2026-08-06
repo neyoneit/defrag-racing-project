@@ -19,6 +19,7 @@ const props = defineProps({
     sort: { type: String, default: 'date' },
     totalRecords: { type: Number, default: 0 },
     reasons: { type: Object, default: () => ({}) },
+    handlingOptions: { type: Object, default: () => ({}) },
     mine: { type: Array, default: () => [] },
 });
 
@@ -88,15 +89,29 @@ const clearPicked = () => { picked.value = new Set(); };
 const form = useForm({
     record_ids: [],
     reason: 'other',
+    handling: 'on_merge',
     note: '',
     confirm: false,
 });
+
+// Nothing is sent from the bar itself. The last thing between a player and a
+// list of their own runs disappearing is a sentence they have to read.
+const confirming = ref(false);
+
+const askConfirm = () => {
+    if (!form.confirm) {
+        form.setError('confirm', 'Tick the box first.');
+        return;
+    }
+    confirming.value = true;
+};
 
 const submit = () => {
     form.record_ids = [...picked.value];
     form.post('/amnesty', {
         preserveScroll: true,
         onSuccess: () => {
+            confirming.value = false;
             clearPicked();
             form.reset();
         },
@@ -155,9 +170,9 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                 </div>
 
                 <p class="text-gray-400 mt-2 max-w-3xl">
-                    If a time of yours should not be standing - wrong cvar, a run that was never
-                    legitimate, anything - take it down yourself. Tick as many as you like and withdraw
-                    them in one go.
+                    You cheated, or you broke a rule without knowing it, and you have worked out which of
+                    your times should not be standing. This is where you put it right, privately. Tick as
+                    many runs as you like and send them in one go.
                 </p>
             </div>
         </div>
@@ -186,14 +201,29 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                 </div>
             </div>
 
+            <!-- Set the expectation before anything else, because the first
+                 complaint would otherwise be "I sent it and my run is still
+                 there, on q3df too". -->
+            <div class="rounded-2xl border border-amber-400/35 bg-amber-500/[0.08] p-5 mb-4">
+                <h2 class="text-amber-200 font-black text-lg mb-1">Nothing disappears the moment you send it</h2>
+                <p class="text-gray-200 leading-relaxed">
+                    These requests are handled when the MDD databases are merged. That merge is planned
+                    but not done, and until it happens a run taken off this site still stands on
+                    q3df.org - we cannot reach that database yet. So you choose which you want: have it
+                    hidden here as soon as an admin approves it and accept that q3df still shows it for
+                    now, or leave it queued and have both handled together at the merge. Either way an
+                    admin approves the hide, and your run stays on the board until they do.
+                </p>
+            </div>
+
             <!-- Three facts people ask before clicking, and the one reason to
                  do it now rather than later. -->
             <div class="grid gap-3 md:grid-cols-3 mb-8">
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
-                    <div class="text-white font-bold text-sm mb-1">It happens immediately</div>
+                    <div class="text-white font-bold text-sm mb-1">You cannot take it back</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        The times come off the leaderboard the moment you confirm, and you cannot take
-                        that back. Check what you have ticked before you do it.
+                        Once a run is handled it is off the board, and undoing that is not yours to do.
+                        Check what you have ticked before you send it.
                     </p>
                 </div>
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
@@ -204,7 +234,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                     </p>
                 </div>
                 <div class="rounded-xl border border-red-400/25 bg-red-500/[0.07] p-4">
-                    <div class="text-red-300 font-bold text-sm mb-1">Only while you are ahead of it</div>
+                    <div class="text-red-300 font-bold text-sm mb-1">Only while you are ahead of a report</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
                         Once somebody else reports the run it becomes a case, and when validators decide
                         it, the outcome is published with your name on it.
@@ -317,14 +347,22 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
                 <div v-if="mine.length" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
                     <div class="p-4 border-b border-white/5 flex flex-wrap items-baseline gap-x-3">
-                        <span class="text-white font-bold">Runs you have withdrawn</span>
+                        <span class="text-white font-bold">Runs you have sent</span>
                         <span class="text-gray-500 text-sm">{{ mine.length }} in total, and why</span>
                         <span class="ml-auto text-xs text-gray-600">Visible to you and the site admin. Nobody else.</span>
                     </div>
                     <div class="divide-y divide-white/5">
                         <div v-for="row in mine" :key="row.id" class="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div class="min-w-0 flex-1">
-                                <div class="font-semibold text-white">{{ row.mapname }}</div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-semibold text-white">{{ row.mapname }}</span>
+                                    <span class="text-[11px] px-2 py-0.5 rounded border font-bold"
+                                        :class="row.processed
+                                            ? 'border-green-400/30 bg-green-500/15 text-green-300'
+                                            : 'border-amber-400/40 bg-amber-500/15 text-amber-200'">
+                                        {{ row.processed ? 'Off the board' : (row.handling === 'immediate' ? 'Waiting for an admin' : 'Queued for the MDD merge') }}
+                                    </span>
+                                </div>
                                 <div class="text-sm text-gray-400 mt-0.5">
                                     {{ row.reason }}<span v-if="row.note" class="text-gray-500"> - {{ row.note }}</span>
                                 </div>
@@ -341,7 +379,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                      from whatever was just ticked. -->
                 <div v-if="pickedCount"
                     class="fixed bottom-0 inset-x-0 z-40 border-t border-emerald-400/30 bg-gray-950/95 backdrop-blur-xl shadow-[0_-8px_40px_rgba(0,0,0,0.6)]">
-                    <form @submit.prevent="submit" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-4 flex flex-wrap items-end gap-4">
+                    <form @submit.prevent="askConfirm" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 py-4 flex flex-wrap items-end gap-4">
 
                         <div class="shrink-0">
                             <div class="text-2xl font-black text-emerald-300 leading-none">{{ pickedCount }}</div>
@@ -388,6 +426,24 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                                 placeholder="Only the site admin reads this." />
                         </div>
 
+                        <div class="min-w-[18rem] flex-1">
+                            <label class="block text-xs text-gray-400 mb-1">When</label>
+                            <div class="flex flex-col gap-1">
+                                <button v-for="(label, key) in handlingOptions" :key="key" type="button"
+                                    @click="form.handling = key"
+                                    class="flex items-start gap-2 text-left px-3 py-1.5 rounded-lg text-sm transition-colors"
+                                    :class="form.handling === key
+                                        ? 'bg-emerald-500/20 text-emerald-100'
+                                        : 'text-gray-400 hover:bg-white/10 hover:text-white'">
+                                    <svg class="w-4 h-4 shrink-0 mt-0.5" :class="form.handling === key ? 'opacity-100' : 'opacity-0'"
+                                        fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                    </svg>
+                                    <span>{{ label }}</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="flex items-center gap-4">
                             <label class="flex items-center gap-2 text-sm text-gray-300 max-w-xs">
                                 <input type="checkbox" v-model="form.confirm" class="w-5 h-5 rounded bg-black/50 border-white/20 text-emerald-500" />
@@ -400,11 +456,61 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             </button>
                         </div>
 
-                        <div v-if="form.errors.confirm || form.errors.record_ids || form.errors.reason"
+                        <div v-if="form.errors.confirm || form.errors.record_ids || form.errors.reason || form.errors.handling"
                             class="w-full text-red-400 text-sm">
-                            {{ form.errors.confirm || form.errors.record_ids || form.errors.reason }}
+                            {{ form.errors.confirm || form.errors.record_ids || form.errors.reason || form.errors.handling }}
                         </div>
                     </form>
+                </div>
+
+                <!-- The last thing between a player and their own runs coming
+                     off the board. Deliberately blunt, and deliberately not a
+                     browser confirm() - this one has to be read. -->
+                <div v-if="confirming" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="confirming = false"></div>
+
+                    <div class="relative w-full max-w-lg rounded-2xl border border-red-400/40 bg-gray-950 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.8)]">
+                        <h2 class="text-xl md:text-2xl font-black text-red-300 mb-3">
+                            Are you sure you want to do this?
+                        </h2>
+
+                        <p class="text-gray-200 leading-relaxed mb-3">
+                            You are sending <span class="font-bold text-white">{{ pickedCount }}</span> of your
+                            own run<span v-if="pickedCount !== 1">s</span> to be taken off the board. This step
+                            is irreversible - once they are handled you cannot bring them back.
+                        </p>
+
+                        <p class="text-gray-300 leading-relaxed mb-5">
+                            This exists for runs that should never have counted. Abusing it to delete times
+                            you are simply not happy with costs you access to this section permanently.
+                        </p>
+
+                        <div class="rounded-xl border border-white/10 bg-black/40 p-3 mb-5 text-sm">
+                            <div class="flex justify-between gap-3 py-0.5">
+                                <span class="text-gray-500">Runs</span>
+                                <span class="text-white font-semibold">{{ pickedCount }}</span>
+                            </div>
+                            <div class="flex justify-between gap-3 py-0.5">
+                                <span class="text-gray-500">Reason</span>
+                                <span class="text-white font-semibold text-right">{{ reasons[form.reason] }}</span>
+                            </div>
+                            <div class="flex justify-between gap-3 py-0.5">
+                                <span class="text-gray-500">When</span>
+                                <span class="text-white font-semibold text-right">{{ handlingOptions[form.handling] }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 justify-end">
+                            <button type="button" @click="confirming = false"
+                                class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
+                                No, take me back
+                            </button>
+                            <button type="button" @click="submit" :disabled="form.processing"
+                                class="px-5 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-bold transition-colors disabled:opacity-50">
+                                Yes, send {{ pickedCount }} run<span v-if="pickedCount !== 1">s</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </template>
 

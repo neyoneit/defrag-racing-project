@@ -77,12 +77,22 @@ class SelfReportController extends Controller
 
             $total = Record::where('mdd_id', $user->mdd_id)->count();
 
+            // Runs already waiting on an admin drop out of the pickable list -
+            // they are in "runs you have sent" below, and offering them again
+            // only invites a duplicate request.
+            $pending = PlayerSelfReport::pending()
+                ->where('user_id', $user->id)
+                ->pluck('record_id')
+                ->filter()
+                ->all();
+
             $records = Record::query()
                 // Left join, not a relation: the list sorts by the map's own
                 // date, and a record whose map is missing from the maps table
                 // still has to appear rather than being silently dropped.
                 ->leftJoin('maps', 'maps.name', '=', 'records.mapname')
                 ->where('records.mdd_id', $user->mdd_id)
+                ->when($pending, fn ($query) => $query->whereNotIn('records.id', $pending))
                 ->when($search !== '', fn ($query) => $query->where('records.mapname', 'like', '%' . $search . '%'))
                 ->orderBy($column, $direction)
                 // Paginated rather than capped: with a thousand runs behind it,
@@ -125,9 +135,10 @@ class SelfReportController extends Controller
             // rest of it, but you are allowed to see what you did and why -
             // months later "which runs did I take down" is a fair question and
             // the answer should not only exist in the admin panel.
+            'handlingOptions' => PlayerSelfReport::HANDLING,
             'mine' => PlayerSelfReport::where('user_id', $user->id)
                 ->orderByDesc('created_at')
-                ->get(['id', 'mapname', 'physics', 'mode', 'time', 'reason', 'note', 'created_at'])
+                ->get()
                 ->map(fn (PlayerSelfReport $report) => [
                     'id' => $report->id,
                     'mapname' => $report->mapname,
@@ -135,7 +146,9 @@ class SelfReportController extends Controller
                     'mode' => $report->mode,
                     'time' => $report->time,
                     'reason' => RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason,
+                    'handling' => $report->handling,
                     'note' => $report->note,
+                    'processed' => $report->isProcessed(),
                     'created_at' => $report->created_at?->toIso8601String(),
                 ]),
         ]);
@@ -160,11 +173,12 @@ class SelfReportController extends Controller
             'record_ids' => ['required', 'array', 'min:1', 'max:100'],
             'record_ids.*' => ['integer'],
             'reason' => ['required', 'string', 'in:' . implode(',', array_keys(RecordFlagController::FLAG_TYPES))],
+            'handling' => ['required', 'string', 'in:' . implode(',', array_keys(PlayerSelfReport::HANDLING))],
             'note' => ['nullable', 'string', 'max:500'],
             'confirm' => ['accepted'],
         ], [
             'record_ids.required' => 'Pick at least one run.',
-            'confirm.accepted' => 'Tick the box - the times come off the leaderboard straight away.',
+            'confirm.accepted' => 'Tick the box to send it.',
         ]);
 
         // Yours means yours. The MDD id is what ties a record to a person, so
@@ -181,7 +195,24 @@ class SelfReportController extends Controller
             ]);
         }
 
+        // Already asked about, so asking again would only duplicate the queue.
+        $alreadyAsked = PlayerSelfReport::pending()
+            ->whereIn('record_id', $records->pluck('id'))
+            ->pluck('record_id')
+            ->all();
+
+        $records = $records->reject(fn (Record $record) => in_array($record->id, $alreadyAsked, true));
+
+        if ($records->isEmpty()) {
+            return back()->withErrors([
+                'record_ids' => 'Those runs are already waiting to be handled.',
+            ]);
+        }
+
         foreach ($records as $record) {
+            // The record is NOT touched here. It comes off the board when an
+            // admin approves the hide, which is also when the player is no
+            // longer told one thing while q3df.org shows another.
             PlayerSelfReport::create([
                 'user_id' => $user->id,
                 'mdd_id' => $record->mdd_id,
@@ -193,26 +224,23 @@ class SelfReportController extends Controller
                 'gametype' => $record->gametype,
                 'time' => $record->time,
                 'reason' => $data['reason'],
+                'handling' => $data['handling'],
                 'note' => $data['note'] ?? null,
             ]);
-
-            // Soft delete: the model's own hooks detach uploaded demos and
-            // clear the profile and listing caches, which is exactly what has
-            // to happen and is what the admin-side deletions already do.
-            $record->delete();
         }
 
-        Log::info('Self-reported records withdrawn', [
+        Log::info('Self-report requests filed', [
             'user_id' => $user->id,
             'mdd_id' => $user->mdd_id,
             'record_ids' => $records->pluck('id')->all(),
             'reason' => $data['reason'],
+            'handling' => $data['handling'],
         ]);
 
         $count = $records->count();
 
         return back()->with('success', $count === 1
-            ? 'Time withdrawn. It is off the leaderboard, and nobody but the site admin is told about it.'
-            : $count . ' times withdrawn. They are off the leaderboard, and nobody but the site admin is told about it.');
+            ? 'Sent. The run stays on the board until an admin handles it, and nobody but the admin is told about it.'
+            : $count . ' runs sent. They stay on the board until an admin handles them, and nobody but the admin is told about it.');
     }
 }
