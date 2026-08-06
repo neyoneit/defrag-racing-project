@@ -25,10 +25,12 @@ use Inertia\Inertia;
  * a week, and the player has already told us it does not belong there - there
  * is nothing left to establish.
  *
- * The delete is a SOFT delete, so a misclick is recoverable: an admin can put
- * the run back from the withdrawn-times list, which also drops the entry from
- * the public log. Nothing about this is destructive, and the page says so
- * rather than threatening people into hesitating.
+ * The delete is a SOFT delete, so a misclick IS recoverable from the
+ * withdrawn-times list in the admin panel. The page deliberately does not
+ * mention that: told there is a way back, people stop reading what they ticked
+ * and start asking for reversals, and the safety net turns into a queue. What
+ * it says instead is true from where the player stands - they cannot take it
+ * back themselves.
  */
 class SelfReportController extends Controller
 {
@@ -118,9 +120,23 @@ class SelfReportController extends Controller
             'totalRecords' => $total,
             'shown' => $records->count(),
             'reasons' => RecordFlagController::FLAG_TYPES,
+            // Your own withdrawals, with the reason you gave. Private like the
+            // rest of it, but you are allowed to see what you did and why -
+            // months later "which runs did I take down" is a fair question and
+            // the answer should not only exist in the admin panel.
             'mine' => PlayerSelfReport::where('user_id', $user->id)
                 ->orderByDesc('created_at')
-                ->get(['id', 'mapname', 'physics', 'mode', 'time', 'reason', 'created_at']),
+                ->get(['id', 'mapname', 'physics', 'mode', 'time', 'reason', 'note', 'created_at'])
+                ->map(fn (PlayerSelfReport $report) => [
+                    'id' => $report->id,
+                    'mapname' => $report->mapname,
+                    'physics' => $report->physics,
+                    'mode' => $report->mode,
+                    'time' => $report->time,
+                    'reason' => RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason,
+                    'note' => $report->note,
+                    'created_at' => $report->created_at?->toIso8601String(),
+                ]),
         ]);
     }
 

@@ -181,8 +181,8 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
                     <div class="text-white font-bold text-sm mb-1">It happens immediately</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
-                        The times come off the leaderboard when you confirm. Nothing is wiped from the
-                        database, so an admin can put a run back if you pick the wrong one.
+                        The times come off the leaderboard the moment you confirm, and you cannot take
+                        that back. Check what you have ticked before you do it.
                     </p>
                 </div>
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
@@ -300,16 +300,22 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                 </div>
 
                 <div v-if="mine.length" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
-                    <div class="p-4 border-b border-white/5 text-white font-bold">
-                        Times you have withdrawn
-                        <span class="font-normal text-gray-500 text-sm">- visible to you and the admin only</span>
+                    <div class="p-4 border-b border-white/5 flex flex-wrap items-baseline gap-x-3">
+                        <span class="text-white font-bold">Runs you have withdrawn</span>
+                        <span class="text-gray-500 text-sm">{{ mine.length }} in total, and why</span>
+                        <span class="ml-auto text-xs text-gray-600">Visible to you and the site admin. Nobody else.</span>
                     </div>
                     <div class="divide-y divide-white/5">
                         <div v-for="row in mine" :key="row.id" class="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <div class="min-w-0 flex-1 font-semibold text-white">{{ row.mapname }}</div>
-                            <div class="text-sm text-gray-400 uppercase">{{ row.physics }} {{ row.mode }}</div>
-                            <div class="font-mono text-sm text-gray-300">{{ formatTime(row.time) }}</div>
-                            <div class="text-sm text-gray-500">{{ fmtDate(row.created_at) }}</div>
+                            <div class="min-w-0 flex-1">
+                                <div class="font-semibold text-white">{{ row.mapname }}</div>
+                                <div class="text-sm text-gray-400 mt-0.5">
+                                    {{ row.reason }}<span v-if="row.note" class="text-gray-500"> - {{ row.note }}</span>
+                                </div>
+                            </div>
+                            <div class="text-sm text-gray-400 uppercase whitespace-nowrap">{{ row.physics }} {{ row.mode }}</div>
+                            <div class="font-mono text-sm text-gray-300 whitespace-nowrap">{{ formatTime(row.time) }}</div>
+                            <div class="text-sm text-gray-500 whitespace-nowrap">{{ fmtDate(row.created_at) }}</div>
                         </div>
                     </div>
                 </div>
@@ -369,7 +375,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         <div class="flex items-center gap-4">
                             <label class="flex items-center gap-2 text-sm text-gray-300 max-w-xs">
                                 <input type="checkbox" v-model="form.confirm" class="w-5 h-5 rounded bg-black/50 border-white/20 text-emerald-500" />
-                                <span>I understand only an admin can put them back.</span>
+                                <span>I understand this cannot be taken back.</span>
                             </label>
 
                             <button type="submit" :disabled="form.processing"
