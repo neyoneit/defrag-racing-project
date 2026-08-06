@@ -1,6 +1,7 @@
 <script setup>
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Rating from '@/Components/Rating.vue';
+    import AmnestyBanner from '@/Components/AmnestyBanner.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import { watchEffect, ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -185,6 +186,8 @@
 <template>
     <div class="">
         <Head title="Ranking" />
+
+        <AmnestyBanner />
 
         <!-- WIP Banner -->
         <div class="relative z-20 bg-red-600 border-b-4 border-red-800 px-4 py-4 text-center">

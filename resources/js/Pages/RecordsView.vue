@@ -1,6 +1,7 @@
 <script setup>
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Record from '@/Components/Record.vue';
+    import AmnestyBanner from '@/Components/AmnestyBanner.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import { watchEffect, ref, computed, onMounted } from 'vue';
@@ -102,6 +103,8 @@
 <template>
     <div class="pb-4">
         <Head title="Records" />
+
+        <AmnestyBanner />
 
         <!-- Resolution Debug Indicator -->
         <div class="fixed bottom-2 right-2 z-[99999] bg-black/80 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-mono text-green-400 pointer-events-none">
