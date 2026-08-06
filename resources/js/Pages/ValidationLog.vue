@@ -199,7 +199,7 @@ const tabs = computed(() => [
                     account. Once somebody else reports it, that choice is gone: it becomes a case, and
                     when the case is decided it is published here with your name on it.
                 </p>
-                <Link href="/self-report"
+                <Link href="/amnesty"
                     class="inline-flex mt-3 px-4 py-2 rounded-lg bg-blue-500/80 hover:bg-blue-500 text-white text-sm font-bold transition-colors">
                     Withdraw one of your times
                 </Link>

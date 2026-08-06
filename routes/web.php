@@ -98,15 +98,15 @@ Route::post('/serverdemo-validators/vote/{application}', [\App\Http\Controllers\
 // what was reported and what came of it.
 Route::get('/validation-log', [\App\Http\Controllers\ValidationLogController::class, 'index'])->name('validation-log');
 
-// Self-report amnesty: withdrawing your own invalid time. Verified account
-// only - it deletes a record, so it has to be a real person's own account -
-// and throttled like the other forms.
-Route::get('/self-report', [\App\Http\Controllers\SelfReportController::class, 'index'])
+// The amnesty: withdrawing your own invalid time. Verified account only - it
+// takes a record off the leaderboard, so it has to be a real person's own
+// account - and throttled like the other forms.
+Route::get('/amnesty', [\App\Http\Controllers\SelfReportController::class, 'index'])
     ->middleware(['auth', 'verified'])
-    ->name('self-report.index');
-Route::post('/self-report', [\App\Http\Controllers\SelfReportController::class, 'store'])
+    ->name('amnesty.index');
+Route::post('/amnesty', [\App\Http\Controllers\SelfReportController::class, 'store'])
     ->middleware(['auth', 'verified', 'throttle:30,60'])
-    ->name('self-report.store');
+    ->name('amnesty.store');
 
 // Wishlist. Reading is public, writing and voting need an account.
 Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index');

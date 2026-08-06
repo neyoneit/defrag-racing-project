@@ -39,7 +39,7 @@ const sort = ref(props.sort);
 // first 120 rows are sent, so sorting or filtering what arrived would quietly
 // reorder a slice instead of the whole list.
 const reload = () => {
-    router.get('/self-report', { search: search.value, sort: sort.value }, {
+    router.get('/amnesty', { search: search.value, sort: sort.value }, {
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -89,7 +89,7 @@ const form = useForm({
 
 const submit = () => {
     form.record_ids = [...picked.value];
-    form.post('/self-report', {
+    form.post('/amnesty', {
         preserveScroll: true,
         onSuccess: () => {
             clearPicked();
@@ -137,7 +137,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 </script>
 
 <template>
-    <Head title="Withdraw your own time" />
+    <Head title="Amnesty - self report" />
 
     <!-- Bottom padding leaves room for the action bar, which is fixed and
          would otherwise cover the last rows of the list. -->

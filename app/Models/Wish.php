@@ -35,13 +35,13 @@ class Wish extends Model
      */
     public const PROJECTS = [
         'web' => 'defrag.racing',
-        'launcher' => 'Launcher',
+        'launcher' => 'Defrag Launcher',
         'defraglive' => 'DefragLive',
         'defraglive_extension' => 'DefragLive extension',
         'demome' => 'Demome',
         'defraglegends' => 'DefragLegends',
         'odfe' => 'oDFe engine',
-        'server_bundle' => 'Server bundle',
+        'server_bundle' => 'Server bundle Linux',
         'server_bundle_windows' => 'Server bundle (Windows)',
         'other' => 'Something else',
     ];

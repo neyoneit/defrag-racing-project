@@ -720,7 +720,7 @@
                                             <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                             <Link :href="route('server-hosting.index')" class="block text-sm text-gray-400 hover:text-emerald-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Server hosting</Link>
                                             <Link :href="route('serverdemo-validators.index')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Serverdemo validators</Link>
-                                            <Link :href="route('self-report.index')" class="block text-sm text-gray-400 hover:text-amber-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Withdraw your own time</Link>
+                                            <Link :href="route('amnesty.index')" class="block text-sm text-gray-400 hover:text-amber-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Amnesty - self report</Link>
                                         </div>
                                         <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" target="_blank" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
                                             Admin Panel
