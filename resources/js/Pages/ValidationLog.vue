@@ -53,23 +53,24 @@ const tabs = computed(() => [
 <template>
     <Head title="Validation log" />
 
-    <div class="min-h-screen py-10">
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-
-            <div class="mb-8">
-                <!-- Label beside the heading, not above it: on its own line it
-                     cost a whole row of the fold to say two words. -->
-                <div class="flex items-center gap-3 flex-wrap mb-3">
-                    <h1 class="text-2xl md:text-3xl font-black text-white">Validation log</h1>
-                    <span class="px-3 py-1 rounded-full bg-purple-500/15 border border-purple-400/30 text-purple-300 text-xs font-bold uppercase tracking-wider">
-                        Public record
-                    </span>
+    <div class="">
+        <!-- Header Section - same shape as Servers, Records and Ranking. -->
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
+                        Validation log
+                    </h1>
                 </div>
-                <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
+
+                <p class="text-gray-400 mt-2 max-w-3xl">
                     Every report filed on this site, and what came of it. Nothing is enforced against anyone
                     before it can be read here.
                 </p>
             </div>
+        </div>
+
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
 
             <!-- The rules of the log itself, stated on the log. Somebody who
                  arrives here because they were reported should not have to ask

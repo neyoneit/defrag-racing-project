@@ -71,6 +71,7 @@ class WishlistController extends Controller
                 'my_vote' => (int) ($myVotes[$wish->id] ?? 0),
                 'mine' => $user && $wish->user_id === $user->id,
                 'pending' => ! $wish->isApproved(),
+                'removal_requested' => $wish->removal_requested_at !== null,
                 'created_at' => $wish->created_at?->toIso8601String(),
                 'author' => $wish->user ? [
                     'id' => $wish->user->id,
@@ -161,15 +162,26 @@ class WishlistController extends Controller
         return back(303);
     }
 
-    /** Authors can withdraw their own wish; anything else is the admin's. */
-    public function destroy(Request $request, Wish $wish)
+    /**
+     * Ask for your wish to be taken down. Only asking: once it is on the list
+     * other people have voted on it, and an author who could delete at will
+     * could withdraw an idea the moment it started collecting downvotes.
+     */
+    public function requestRemoval(Request $request, Wish $wish)
     {
-        if ($wish->user_id !== $request->user()->id && ! $request->user()->isAdmin()) {
+        if ($wish->user_id !== $request->user()->id) {
             abort(403);
         }
 
-        $wish->delete();
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        return back()->with('success', 'Wish removed.');
+        $wish->update([
+            'removal_requested_at' => now(),
+            'removal_reason' => $data['reason'] ?? null,
+        ]);
+
+        return back()->with('success', 'Asked the admin to remove it. It stays on the list until they do.');
     }
 }

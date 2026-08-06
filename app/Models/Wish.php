@@ -18,6 +18,8 @@ class Wish extends Model
         'status_note',
         'approved_at',
         'approved_by',
+        'removal_requested_at',
+        'removal_reason',
         'upvotes',
         'downvotes',
         'score',
@@ -25,6 +27,7 @@ class Wish extends Model
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'removal_requested_at' => 'datetime',
     ];
 
     public const STATUSES = [

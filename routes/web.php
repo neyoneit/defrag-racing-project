@@ -116,9 +116,11 @@ Route::post('/wishlist', [\App\Http\Controllers\WishlistController::class, 'stor
 Route::post('/wishlist/{wish}/vote', [\App\Http\Controllers\WishlistController::class, 'vote'])
     ->middleware(['auth', 'verified', 'throttle:120,60'])
     ->name('wishlist.vote');
-Route::delete('/wishlist/{wish}', [\App\Http\Controllers\WishlistController::class, 'destroy'])
-    ->middleware(['auth', 'verified'])
-    ->name('wishlist.destroy');
+// Authors ask, they do not delete: by the time a wish is on the list other
+// people have voted on it. Removal itself is an admin action in the panel.
+Route::post('/wishlist/{wish}/request-removal', [\App\Http\Controllers\WishlistController::class, 'requestRemoval'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('wishlist.request-removal');
 
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');

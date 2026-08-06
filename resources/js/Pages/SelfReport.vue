@@ -139,26 +139,28 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 <template>
     <Head title="Amnesty - self report" />
 
-    <!-- Bottom padding leaves room for the action bar, which is fixed and
-         would otherwise cover the last rows of the list. -->
-    <div class="min-h-screen py-10" :class="pickedCount ? 'pb-56' : ''">
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
-
-            <div class="mb-6">
-                <!-- Label beside the heading, not above it: on its own line it
-                     cost a whole row of the fold to say one word. -->
-                <div class="flex items-center gap-3 flex-wrap mb-3">
-                    <h1 class="text-2xl md:text-3xl font-black text-white">Withdraw your own times</h1>
-                    <span class="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+    <div class="">
+        <!-- Header Section - same shape as Servers, Records and Ranking. -->
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
                         Amnesty
-                    </span>
+                    </h1>
                 </div>
-                <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
+
+                <p class="text-gray-400 mt-2 max-w-3xl">
                     If a time of yours should not be standing - wrong cvar, a run that was never
                     legitimate, anything - take it down yourself. Tick as many as you like and withdraw
                     them in one go.
                 </p>
             </div>
+        </div>
+
+        <!-- Bottom padding leaves room for the action bar, which is fixed and
+             would otherwise cover the last rows of the list. -->
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" :class="pickedCount ? 'pb-56' : ''"
+            style="margin-top: -22rem;">
 
             <!-- Said once, loudly, before anything else. The single reason
                  somebody would not use this is the fear that using it is itself

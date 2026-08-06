@@ -39,10 +39,12 @@ class WishResource extends Resource
         return false;
     }
 
-    /** Waiting wishes are the only thing here that needs doing. */
+    /** Everything here that needs a decision: waiting, or asked to be taken down. */
     public static function getNavigationBadge(): ?string
     {
-        return (string) Wish::whereNull('approved_at')->count() ?: null;
+        return (string) Wish::query()
+            ->where(fn ($query) => $query->whereNull('approved_at')->orWhereNotNull('removal_requested_at'))
+            ->count() ?: null;
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -79,10 +81,12 @@ class WishResource extends Resource
     {
         return $table
             ->striped()
-            // Waiting first, whatever the sort: they are the queue, the rest
-            // is archive.
+            // Anything needing a decision first, whatever the sort: those are
+            // the queue, the rest is archive.
             ->defaultSort('score', 'desc')
-            ->modifyQueryUsing(fn ($query) => $query->orderByRaw('approved_at is null desc'))
+            ->modifyQueryUsing(fn ($query) => $query
+                ->orderByRaw('removal_requested_at is not null desc')
+                ->orderByRaw('approved_at is null desc'))
             ->columns([
                 Tables\Columns\IconColumn::make('approved_at')
                     ->label('Live')
@@ -109,7 +113,10 @@ class WishResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->wrap()
-                    ->description(fn (Wish $record) => str($record->body)->limit(140)),
+                    ->description(fn (Wish $record) => $record->removal_requested_at
+                        ? 'REMOVAL REQUESTED' . ($record->removal_reason ? ': ' . $record->removal_reason : '')
+                        : str($record->body)->limit(140))
+                    ->color(fn (Wish $record) => $record->removal_requested_at ? 'warning' : null),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
@@ -136,6 +143,9 @@ class WishResource extends Resource
                     ->trueLabel('Live on the list')
                     ->falseLabel('Waiting for approval')
                     ->nullable(),
+                Tables\Filters\Filter::make('removal_requested')
+                    ->label('Removal requested')
+                    ->query(fn ($query) => $query->whereNotNull('removal_requested_at')),
                 Tables\Filters\SelectFilter::make('project')->options(Wish::PROJECTS),
                 Tables\Filters\SelectFilter::make('status')->options(Wish::STATUSES),
             ])
@@ -159,6 +169,20 @@ class WishResource extends Resource
                         $record->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
 
                         Notification::make()->success()->title('Wish approved')->send();
+                    }),
+
+                // The author asked for it to go. Either it goes, or the request
+                // is turned down and the wish stays exactly as it was.
+                Tables\Actions\Action::make('declineRemoval')
+                    ->label('Keep it (decline)')
+                    ->icon('heroicon-o-hand-raised')
+                    ->color('gray')
+                    ->visible(fn (Wish $record) => $record->removal_requested_at !== null)
+                    ->requiresConfirmation()
+                    ->action(function (Wish $record) {
+                        $record->update(['removal_requested_at' => null, 'removal_reason' => null]);
+
+                        Notification::make()->success()->title('Removal request declined')->send();
                     }),
 
                 Tables\Actions\EditAction::make(),

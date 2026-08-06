@@ -187,8 +187,6 @@
     <div class="">
         <Head title="Ranking" />
 
-        <AmnestyBanner />
-
         <!-- WIP Banner -->
         <div class="relative z-20 bg-red-600 border-b-4 border-red-800 px-4 py-4 text-center">
             <div class="max-w-4xl mx-auto">
@@ -241,6 +239,10 @@
                                     <p>Rankings are recalculated instantly every time a new record is submitted. A full recalculation across all maps also runs once daily.</p>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <AmnestyBanner />
                         </div>
                     </div>
 

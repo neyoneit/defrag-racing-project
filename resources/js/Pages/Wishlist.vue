@@ -48,9 +48,13 @@ const vote = (wish, value) => {
     router.post(`/wishlist/${wish.id}/vote`, { value }, { preserveScroll: true, preserveState: true });
 };
 
-const remove = (wish) => {
-    if (!confirm('Remove this wish?')) return;
-    router.delete(`/wishlist/${wish.id}`, { preserveScroll: true });
+// Asking, not deleting. Other people have voted on this by now, so taking it
+// down is the admin's call and the wish stays up meanwhile.
+const askRemoval = (wish) => {
+    const reason = prompt('Ask an admin to remove this wish. Why? (optional)');
+    if (reason === null) return;
+
+    router.post(`/wishlist/${wish.id}/request-removal`, { reason }, { preserveScroll: true });
 };
 
 // Both filters go through the same call so picking one never silently drops
@@ -66,6 +70,9 @@ const applyFilters = (status, project) => {
 const setFilter = (status) => applyFilters(status, props.projectFilter);
 const setProject = (project) => applyFilters(props.filter, project);
 
+const totalWishes = computed(() => Object.values(props.projectCounts || {})
+    .reduce((sum, count) => sum + Number(count || 0), 0));
+
 const statusClass = (status) => ({
     considering: 'bg-white/5 border-white/15 text-gray-300',
     planned: 'bg-blue-500/15 border-blue-400/30 text-blue-300',
@@ -79,34 +86,39 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 <template>
     <Head title="Wishlist" />
 
-    <div class="min-h-screen py-10">
-        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
+    <div class="">
+        <!-- Header Section - same shape as Servers, Records and Ranking: the
+             gradient block holds the heading, the content is pulled up under
+             it. A page of ours that starts differently reads as a page from
+             somewhere else. -->
+        <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
+            <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
+                <div class="flex justify-between items-center flex-wrap gap-4">
+                    <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">
+                        Wishlist
+                    </h1>
 
-            <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <!-- Label beside the heading, not above it: on its own line
-                         it cost a whole row of the fold to say one word. -->
-                    <div class="flex items-center gap-3 flex-wrap mb-3">
-                        <h1 class="text-2xl md:text-3xl font-black text-white">Wishlist</h1>
-                        <span class="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
-                            Book of wishes
-                        </span>
-                    </div>
-                    <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
-                        What do you want built here? Write it down, and vote on what everyone else wants.
-                        The list is ordered by score, so what the community actually wants sits at the top.
-                    </p>
+                    <button v-if="user" @click="showForm = !showForm"
+                        class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors">
+                        {{ showForm ? 'Close' : 'Add a wish' }}
+                    </button>
+                    <Link v-else href="/login"
+                        class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
+                        Log in to add or vote
+                    </Link>
                 </div>
 
-                <button v-if="user" @click="showForm = !showForm"
-                    class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors">
-                    {{ showForm ? 'Close' : 'Add a wish' }}
-                </button>
-                <Link v-else href="/login"
-                    class="px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 font-bold transition-colors">
-                    Log in to add or vote
-                </Link>
+                <p class="text-gray-400 mt-2 max-w-3xl">
+                    Ask for something to be added or changed, and vote on what other people asked for.
+                    The more votes a request has, the sooner it gets done.
+                </p>
+                <p class="text-gray-500 text-sm italic mt-1">
+                    Yours truly, <Link href="/profile/8" class="not-italic font-semibold hover:text-gray-300 transition-colors">neyo</Link>
+                </p>
             </div>
+        </div>
+
+        <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-12" style="margin-top: -22rem;">
 
             <form v-if="showForm && user" @submit.prevent="submit"
                 class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mb-6 space-y-4">
@@ -149,34 +161,53 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                 </div>
             </form>
 
-            <!-- Project first, status second: which of our things you care
-                 about narrows the list far harder than what state it is in. -->
-            <div class="flex flex-wrap gap-2 mb-3">
-                <button @click="setProject(null)"
-                    class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors"
-                    :class="!projectFilter ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
-                    All projects
-                </button>
-                <button v-for="(label, key) in projects" :key="key" @click="setProject(key)"
-                    class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors"
-                    :class="projectFilter === key ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
-                    {{ label }}
-                    <span class="ml-1 text-xs opacity-60">{{ projectCounts[key] || 0 }}</span>
-                </button>
-            </div>
+            <!-- Two questions, two shapes. The projects are a standing menu
+                 down the side; the status is a switch over the list. As two
+                 rows of pills they were one control wearing two hats. -->
+            <div class="lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-5">
 
-            <div class="flex flex-wrap gap-2 mb-4">
-                <button @click="setFilter(null)"
-                    class="px-4 py-2 rounded-lg text-sm font-bold border transition-colors"
-                    :class="!filter ? 'bg-purple-500/20 border-purple-400/40 text-purple-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
-                    Any status
-                </button>
-                <button v-for="(label, key) in statuses" :key="key" @click="setFilter(key)"
-                    class="px-4 py-2 rounded-lg text-sm font-bold border transition-colors"
-                    :class="filter === key ? 'bg-purple-500/20 border-purple-400/40 text-purple-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
-                    {{ label }}
-                </button>
-            </div>
+                <aside class="mb-4 lg:mb-0">
+                    <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-2 lg:sticky lg:top-4">
+                        <div class="px-2 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Projects</div>
+
+                        <!-- Horizontal scroll on small screens, a list on wide
+                             ones: the same buttons either way. -->
+                        <div class="flex lg:block gap-1 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+                            <button @click="setProject(null)"
+                                class="shrink-0 lg:w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                                :class="!projectFilter ? 'bg-blue-500/20 text-blue-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                <span>All projects</span>
+                                <span class="text-xs opacity-50">{{ totalWishes }}</span>
+                            </button>
+                            <button v-for="(label, key) in projects" :key="key" @click="setProject(key)"
+                                class="shrink-0 lg:w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                                :class="projectFilter === key ? 'bg-blue-500/20 text-blue-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                <span>{{ label }}</span>
+                                <span class="text-xs opacity-50">{{ projectCounts[key] || 0 }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-3 mb-4">
+                        <div class="flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/10">
+                            <button @click="setFilter(null)"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                                :class="!filter ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                Any status
+                            </button>
+                            <button v-for="(label, key) in statuses" :key="key" @click="setFilter(key)"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                                :class="filter === key ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                {{ label }}
+                            </button>
+                        </div>
+
+                        <div class="ml-auto text-xs text-gray-500">
+                            {{ wishes.length }} request<span v-if="wishes.length !== 1">s</span>
+                        </div>
+                    </div>
 
             <div v-if="!wishes.length" class="bg-black/40 border border-white/10 rounded-2xl p-10 text-center text-gray-500">
                 Nothing here yet. Be the first.
@@ -233,9 +264,17 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             </Link>
                             <span v-else>deleted account</span>
                             <span>{{ fmtDate(wish.created_at) }}</span>
-                            <button v-if="wish.mine" @click="remove(wish)" class="text-red-400 hover:underline">Remove</button>
+                            <span v-if="wish.mine && wish.removal_requested" class="text-amber-300">
+                                Removal requested - waiting for an admin
+                            </span>
+                            <button v-else-if="wish.mine" @click="askRemoval(wish)" class="text-red-400 hover:underline">
+                                Ask an admin to remove it
+                            </button>
                         </div>
                     </div>
+                </div>
+            </div>
+
                 </div>
             </div>
 

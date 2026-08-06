@@ -104,8 +104,6 @@
     <div class="pb-4">
         <Head title="Records" />
 
-        <AmnestyBanner />
-
         <!-- Resolution Debug Indicator -->
         <div class="fixed bottom-2 right-2 z-[99999] bg-black/80 border border-white/20 rounded-lg px-3 py-1.5 text-xs font-mono text-green-400 pointer-events-none">
             {{ breakpointLabel }}
@@ -125,6 +123,8 @@
                             <span class="text-sm font-semibold">{{ (vq3Records?.total || 0) + (cpmRecords?.total || 0) }} total records</span>
                         </div>
                     </div>
+
+                    <AmnestyBanner />
 
                     <!-- Gamemode Filter -->
                     <div class="flex flex-wrap items-center gap-2 bg-black/40 backdrop-blur-sm rounded-xl p-2.5">
