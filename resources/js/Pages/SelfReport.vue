@@ -219,7 +219,7 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
 
             <!-- Three facts people ask before clicking, and the one reason to
                  do it now rather than later. -->
-            <div class="grid gap-3 md:grid-cols-3 mb-8">
+            <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mb-8">
                 <div class="rounded-xl border border-white/10 bg-black/40 p-4">
                     <div class="text-white font-bold text-sm mb-1">You cannot take it back</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
@@ -234,6 +234,14 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                         putting the leaderboard right, because that is what it is.
                     </p>
                 </div>
+                <div class="rounded-xl border border-white/10 bg-black/40 p-4">
+                    <div class="text-white font-bold text-sm mb-1">Beating it settles it</div>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Go back and run the map properly, and the new time replaces the old one on its
+                        own. Your request closes itself as beaten - no admin, no waiting.
+                    </p>
+                </div>
+
                 <div class="rounded-xl border border-red-400/25 bg-red-500/[0.07] p-4">
                     <div class="text-red-300 font-bold text-sm mb-1">Only while you are ahead of a report</div>
                     <p class="text-gray-400 text-sm leading-relaxed">
@@ -358,10 +366,12 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="font-semibold text-white">{{ row.mapname }}</span>
                                     <span class="text-[11px] px-2 py-0.5 rounded border font-bold"
-                                        :class="row.processed
-                                            ? 'border-green-400/30 bg-green-500/15 text-green-300'
-                                            : 'border-amber-400/40 bg-amber-500/15 text-amber-200'">
-                                        {{ row.processed ? 'Off the board' : (row.handling === 'immediate' ? 'Waiting for an admin' : 'Queued for the MDD merge') }}
+                                        :class="row.beaten
+                                            ? 'border-blue-400/30 bg-blue-500/15 text-blue-200'
+                                            : row.processed
+                                                ? 'border-green-400/30 bg-green-500/15 text-green-300'
+                                                : 'border-amber-400/40 bg-amber-500/15 text-amber-200'">
+                                        {{ row.state }}
                                     </span>
                                 </div>
                                 <div class="text-sm text-gray-400 mt-0.5">

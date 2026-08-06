@@ -42,6 +42,10 @@ class Kernel extends ConsoleKernel
         // Update last_activity in player_ratings from records (~20s)
         $schedule->command('ratings:update-activity')->withoutOverlapping()->hourly();
 
+        // Close amnesty requests whose author has since beaten the time: the new
+        // run already replaced the old record, so there is nothing left to hide.
+        $schedule->command('amnesty:resolve-beaten')->withoutOverlapping()->hourly();
+
         // Cache WR/Top3 counts for clan statistics (updates cached_wr_count and cached_top3_count on users table)
         $schedule->command('rankings:cache')->withoutOverlapping()->hourly();
 

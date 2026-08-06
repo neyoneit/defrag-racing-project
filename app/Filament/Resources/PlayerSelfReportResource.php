@@ -101,12 +101,16 @@ class PlayerSelfReportResource extends Resource
                 Tables\Columns\TextColumn::make('processed_at')
                     ->label('State')
                     ->badge()
-                    ->state(fn (PlayerSelfReport $record) => $record->isProcessed()
-                        ? 'Off the board'
-                        : ($record->handling === 'immediate' ? 'Waiting on you' : 'Queued for the merge'))
-                    ->color(fn (PlayerSelfReport $record) => $record->isProcessed()
-                        ? 'success'
-                        : ($record->handling === 'immediate' ? 'warning' : 'gray')),
+                    ->state(fn (PlayerSelfReport $record) => $record->wasBeaten()
+                        ? 'Beaten - resolved'
+                        : ($record->isProcessed()
+                            ? 'Off the board'
+                            : ($record->handling === 'immediate' ? 'Waiting on you' : 'Queued for the merge')))
+                    ->color(fn (PlayerSelfReport $record) => $record->wasBeaten()
+                        ? 'info'
+                        : ($record->isProcessed()
+                            ? 'success'
+                            : ($record->handling === 'immediate' ? 'warning' : 'gray'))),
 
                 Tables\Columns\TextColumn::make('note')
                     ->label('Note')

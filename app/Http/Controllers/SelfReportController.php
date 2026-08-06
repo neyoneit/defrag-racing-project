@@ -149,6 +149,8 @@ class SelfReportController extends Controller
                     'handling' => $report->handling,
                     'note' => $report->note,
                     'processed' => $report->isProcessed(),
+                    'beaten' => $report->wasBeaten(),
+                    'state' => $report->stateLabel(),
                     'created_at' => $report->created_at?->toIso8601String(),
                 ]),
         ]);

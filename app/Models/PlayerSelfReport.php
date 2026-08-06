@@ -24,6 +24,7 @@ class PlayerSelfReport extends Model
         'handling',
         'processed_at',
         'processed_by',
+        'resolution',
     ];
 
     protected $casts = [
@@ -40,6 +41,11 @@ class PlayerSelfReport extends Model
         'on_merge' => 'Wait for the MDD merge and do both at once',
     ];
 
+    public const RESOLUTIONS = [
+        'hidden' => 'Hidden by an admin',
+        'beaten' => 'Beaten by a new run',
+    ];
+
     public function scopePending($query)
     {
         return $query->whereNull('processed_at');
@@ -48,6 +54,27 @@ class PlayerSelfReport extends Model
     public function isProcessed(): bool
     {
         return $this->processed_at !== null;
+    }
+
+    public function wasBeaten(): bool
+    {
+        return $this->resolution === 'beaten';
+    }
+
+    /** What the player sees as the state of their request. */
+    public function stateLabel(): string
+    {
+        if ($this->wasBeaten()) {
+            return 'Beaten - resolved';
+        }
+
+        if ($this->isProcessed()) {
+            return 'Off the board';
+        }
+
+        return $this->handling === 'immediate'
+            ? 'Waiting for an admin'
+            : 'Queued for the MDD merge';
     }
 
     public function user()
