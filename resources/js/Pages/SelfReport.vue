@@ -145,10 +145,14 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
 
             <div class="mb-6">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-4">
-                    Amnesty
+                <!-- Label beside the heading, not above it: on its own line it
+                     cost a whole row of the fold to say one word. -->
+                <div class="flex items-center gap-3 flex-wrap mb-3">
+                    <h1 class="text-2xl md:text-3xl font-black text-white">Withdraw your own times</h1>
+                    <span class="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                        Amnesty
+                    </span>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Withdraw your own times</h1>
                 <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
                     If a time of yours should not be standing - wrong cvar, a run that was never
                     legitimate, anything - take it down yourself. Tick as many as you like and withdraw

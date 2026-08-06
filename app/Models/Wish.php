@@ -11,6 +11,7 @@ class Wish extends Model
 
     protected $fillable = [
         'user_id',
+        'project',
         'title',
         'body',
         'status',
@@ -25,6 +26,24 @@ class Wish extends Model
         'planned' => 'Planned',
         'done' => 'Done',
         'rejected' => 'Not happening',
+    ];
+
+    /**
+     * Everything a wish can be about: the public repositories in the org, plus
+     * the two things that are ours but are not repositories, plus a catch-all.
+     * Without the catch-all people file website wishes about the engine.
+     */
+    public const PROJECTS = [
+        'web' => 'defrag.racing',
+        'launcher' => 'Launcher',
+        'defraglive' => 'DefragLive',
+        'defraglive_extension' => 'DefragLive extension',
+        'demome' => 'Demome',
+        'defraglegends' => 'DefragLegends',
+        'odfe' => 'oDFe engine',
+        'server_bundle' => 'Server bundle',
+        'server_bundle_windows' => 'Server bundle (Windows)',
+        'other' => 'Something else',
     ];
 
     public function user()

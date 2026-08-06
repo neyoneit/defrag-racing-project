@@ -42,6 +42,10 @@ class WishResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Select::make('project')
+                ->options(Wish::PROJECTS)
+                ->required(),
+
             Forms\Components\TextInput::make('title')
                 ->required()
                 ->maxLength(120),
@@ -74,6 +78,11 @@ class WishResource extends Resource
                     ->color(fn ($state) => $state > 0 ? 'success' : ($state < 0 ? 'danger' : 'gray'))
                     ->description(fn (Wish $record) => "+{$record->upvotes} / -{$record->downvotes}"),
 
+                Tables\Columns\TextColumn::make('project')
+                    ->badge()
+                    ->color('info')
+                    ->formatStateUsing(fn (?string $state) => Wish::PROJECTS[$state] ?? $state),
+
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->wrap()
@@ -98,6 +107,7 @@ class WishResource extends Resource
                     ->sortable(),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('project')->options(Wish::PROJECTS),
                 Tables\Filters\SelectFilter::make('status')->options(Wish::STATUSES),
             ])
             ->actions([

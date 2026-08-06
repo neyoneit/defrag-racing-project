@@ -25,10 +25,12 @@ class WishlistController extends Controller
     {
         $user = $request->user();
         $filter = $request->input('status');
+        $project = $request->input('project');
 
         $wishes = Wish::query()
             ->with('user:id,name,plain_name,profile_photo_path,country')
             ->when(in_array($filter, array_keys(Wish::STATUSES), true), fn ($q) => $q->where('status', $filter))
+            ->when(in_array($project, array_keys(Wish::PROJECTS), true), fn ($q) => $q->where('project', $project))
             ->orderByDesc('score')
             ->orderByDesc('created_at')
             ->limit(300)
@@ -43,6 +45,8 @@ class WishlistController extends Controller
         return Inertia::render('Wishlist', [
             'wishes' => $wishes->map(fn (Wish $wish) => [
                 'id' => $wish->id,
+                'project' => $wish->project,
+                'project_label' => Wish::PROJECTS[$wish->project] ?? $wish->project,
                 'title' => $wish->title,
                 'body' => $wish->body,
                 'status' => $wish->status,
@@ -62,13 +66,21 @@ class WishlistController extends Controller
                 ] : null,
             ]),
             'statuses' => Wish::STATUSES,
+            'projects' => Wish::PROJECTS,
             'filter' => $filter,
+            'projectFilter' => in_array($project, array_keys(Wish::PROJECTS), true) ? $project : null,
+            // Counts per project so the filter row can say where the activity
+            // is, instead of sending people into empty lists to find out.
+            'projectCounts' => Wish::selectRaw('project, count(*) as total')
+                ->groupBy('project')
+                ->pluck('total', 'project'),
         ]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
+            'project' => ['required', 'string', 'in:' . implode(',', array_keys(Wish::PROJECTS))],
             'title' => ['required', 'string', 'min:6', 'max:120'],
             'body' => ['required', 'string', 'min:20', 'max:2000'],
         ], [
@@ -77,6 +89,7 @@ class WishlistController extends Controller
 
         $wish = Wish::create([
             'user_id' => $request->user()->id,
+            'project' => $data['project'],
             'title' => $data['title'],
             'body' => $data['body'],
         ]);

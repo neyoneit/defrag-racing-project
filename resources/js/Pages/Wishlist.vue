@@ -13,7 +13,10 @@ import { computed, ref } from 'vue';
 const props = defineProps({
     wishes: { type: Array, default: () => [] },
     statuses: { type: Object, default: () => ({}) },
+    projects: { type: Object, default: () => ({}) },
+    projectCounts: { type: Object, default: () => ({}) },
     filter: { type: String, default: null },
+    projectFilter: { type: String, default: null },
 });
 
 const page = usePage();
@@ -22,6 +25,7 @@ const user = computed(() => page.props.auth?.user);
 const showForm = ref(false);
 
 const form = useForm({
+    project: 'web',
     title: '',
     body: '',
 });
@@ -49,9 +53,18 @@ const remove = (wish) => {
     router.delete(`/wishlist/${wish.id}`, { preserveScroll: true });
 };
 
-const setFilter = (status) => {
-    router.get('/wishlist', status ? { status } : {}, { preserveScroll: true, preserveState: true, replace: true });
+// Both filters go through the same call so picking one never silently drops
+// the other.
+const applyFilters = (status, project) => {
+    const query = {};
+    if (status) query.status = status;
+    if (project) query.project = project;
+
+    router.get('/wishlist', query, { preserveScroll: true, preserveState: true, replace: true });
 };
+
+const setFilter = (status) => applyFilters(status, props.projectFilter);
+const setProject = (project) => applyFilters(props.filter, project);
 
 const statusClass = (status) => ({
     considering: 'bg-white/5 border-white/15 text-gray-300',
@@ -71,10 +84,14 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 
             <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-4">
-                        Book of wishes
+                    <!-- Label beside the heading, not above it: on its own line
+                         it cost a whole row of the fold to say one word. -->
+                    <div class="flex items-center gap-3 flex-wrap mb-3">
+                        <h1 class="text-2xl md:text-3xl font-black text-white">Wishlist</h1>
+                        <span class="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                            Book of wishes
+                        </span>
                     </div>
-                    <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Wishlist</h1>
                     <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
                         What do you want built here? Write it down, and vote on what everyone else wants.
                         The list is ordered by score, so what the community actually wants sits at the top.
@@ -93,6 +110,19 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 
             <form v-if="showForm && user" @submit.prevent="submit"
                 class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mb-6 space-y-4">
+                <div>
+                    <label class="block text-sm text-gray-300 mb-2">Which project is it about?</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button v-for="(label, key) in projects" :key="key" type="button" @click="form.project = key"
+                            class="px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors"
+                            :class="form.project === key
+                                ? 'bg-purple-500/20 border-purple-400/50 text-purple-200'
+                                : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/25'">
+                            {{ label }}
+                        </button>
+                    </div>
+                    <div v-if="form.errors.project" class="text-red-400 text-sm mt-1">{{ form.errors.project }}</div>
+                </div>
                 <div>
                     <label class="block text-sm text-gray-300 mb-1">Title</label>
                     <input v-model="form.title" type="text" maxlength="120"
@@ -113,11 +143,27 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                 </button>
             </form>
 
+            <!-- Project first, status second: which of our things you care
+                 about narrows the list far harder than what state it is in. -->
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button @click="setProject(null)"
+                    class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors"
+                    :class="!projectFilter ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
+                    All projects
+                </button>
+                <button v-for="(label, key) in projects" :key="key" @click="setProject(key)"
+                    class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors"
+                    :class="projectFilter === key ? 'bg-blue-500/20 border-blue-400/40 text-blue-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
+                    {{ label }}
+                    <span class="ml-1 text-xs opacity-60">{{ projectCounts[key] || 0 }}</span>
+                </button>
+            </div>
+
             <div class="flex flex-wrap gap-2 mb-4">
                 <button @click="setFilter(null)"
                     class="px-4 py-2 rounded-lg text-sm font-bold border transition-colors"
                     :class="!filter ? 'bg-purple-500/20 border-purple-400/40 text-purple-200' : 'bg-black/30 border-white/10 text-gray-400 hover:text-white'">
-                    All
+                    Any status
                 </button>
                 <button v-for="(label, key) in statuses" :key="key" @click="setFilter(key)"
                     class="px-4 py-2 rounded-lg text-sm font-bold border transition-colors"
@@ -156,6 +202,10 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
 
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <button type="button" @click="setProject(wish.project)"
+                                class="text-[11px] px-2 py-0.5 rounded border border-blue-400/30 bg-blue-500/15 text-blue-200 font-bold hover:bg-blue-500/25 transition-colors">
+                                {{ wish.project_label }}
+                            </button>
                             <h2 class="text-lg font-bold text-white">{{ wish.title }}</h2>
                             <span class="text-[11px] px-2 py-0.5 rounded border font-bold" :class="statusClass(wish.status)">
                                 {{ wish.status_label }}

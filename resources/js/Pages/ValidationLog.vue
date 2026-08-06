@@ -57,10 +57,14 @@ const tabs = computed(() => [
         <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8">
 
             <div class="mb-8">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-400/30 text-purple-300 text-xs font-bold uppercase tracking-wider mb-4">
-                    Public record
+                <!-- Label beside the heading, not above it: on its own line it
+                     cost a whole row of the fold to say two words. -->
+                <div class="flex items-center gap-3 flex-wrap mb-3">
+                    <h1 class="text-2xl md:text-3xl font-black text-white">Validation log</h1>
+                    <span class="px-3 py-1 rounded-full bg-purple-500/15 border border-purple-400/30 text-purple-300 text-xs font-bold uppercase tracking-wider">
+                        Public record
+                    </span>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-white mb-3">Validation log</h1>
                 <p class="text-gray-300 text-lg leading-relaxed max-w-3xl">
                     Every report filed on this site, and what came of it. Nothing is enforced against anyone
                     before it can be read here.
