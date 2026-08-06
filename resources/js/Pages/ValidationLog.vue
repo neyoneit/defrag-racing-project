@@ -14,13 +14,11 @@ const props = defineProps({
     stats: { type: Object, default: () => ({}) },
     closed: { type: Array, default: () => [] },
     open: { type: Array, default: () => [] },
-    selfReports: { type: Array, default: () => [] },
     minReports: { type: Number, default: 2 },
 });
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
-const formatTime = proxy.formatTime;
 
 const tab = ref('closed');
 
@@ -49,7 +47,6 @@ const kindLabel = (kind) => kind === 'public_demo' ? 'Uploaded demo' : 'Serverde
 const tabs = computed(() => [
     { key: 'closed', label: 'Decided', count: props.closed.length },
     { key: 'open', label: 'In progress', count: props.open.length },
-    { key: 'self', label: 'Withdrawn by the player', count: props.selfReports.length },
 ]);
 </script>
 
@@ -105,7 +102,7 @@ const tabs = computed(() => [
                     { label: 'Being validated', value: stats.in_validation },
                     { label: 'Upheld', value: stats.upheld, tone: 'text-red-300' },
                     { label: 'Cleared', value: stats.dismissed, tone: 'text-green-300' },
-                    { label: 'Withdrawn by the player', value: stats.self_reports, tone: 'text-blue-300' },
+                    { label: 'Inconclusive', value: stats.inconclusive },
                 ]" :key="cell.label" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div class="text-2xl font-black" :class="cell.tone || 'text-white'">{{ cell.value ?? 0 }}</div>
                     <div class="text-[11px] uppercase tracking-wide text-gray-500 mt-1">{{ cell.label }}</div>
@@ -160,7 +157,7 @@ const tabs = computed(() => [
             </div>
 
             <!-- Open cases, anonymous -->
-            <div v-else-if="tab === 'open'" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+            <div v-else class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
                 <div v-if="!open.length" class="p-8 text-center text-gray-500">
                     Nothing is being validated right now.
                 </div>
@@ -186,32 +183,22 @@ const tabs = computed(() => [
                 </div>
             </div>
 
-            <!-- Self-reports -->
-            <div v-else class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
-                <div class="p-4 md:p-5 border-b border-white/5 text-sm text-gray-400">
-                    Times their own owners took down. No validation, no verdict, no mark on the account -
-                    <Link href="/self-report" class="text-purple-300 hover:underline">withdraw one of yours</Link>.
-                </div>
-                <div v-if="!selfReports.length" class="p-8 text-center text-gray-500">
-                    Nobody has withdrawn a time yet.
-                </div>
-                <div v-else class="divide-y divide-white/5">
-                    <div v-for="row in selfReports" :key="row.id" class="p-4 md:p-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <Link v-if="row.user_id" :href="`/profile/${row.user_id}`"
-                                    class="font-bold hover:underline" v-html="q3tohtml(row.player)" />
-                                <span v-else class="font-bold text-white" v-html="q3tohtml(row.player)"></span>
-                                <span class="text-gray-500">on</span>
-                                <Link :href="`/maps/${row.mapname}`" class="text-white font-semibold hover:underline">{{ row.mapname }}</Link>
-                            </div>
-                            <div class="text-sm text-gray-400 mt-1">{{ row.reason }}<span v-if="row.note"> - {{ row.note }}</span></div>
-                        </div>
-                        <div class="text-sm text-gray-400 uppercase whitespace-nowrap">{{ row.physics }}</div>
-                        <div class="font-mono text-white whitespace-nowrap">{{ formatTime(row.time) }}</div>
-                        <div class="text-sm text-gray-500 whitespace-nowrap">{{ fmtDate(row.created_at) }}</div>
-                    </div>
-                </div>
+            <!-- The way out, on the page somebody reads when they are worried.
+                 No numbers and no list: what gets withdrawn is private, and
+                 saying "3 people did this" against a leaderboard anyone can
+                 diff would not be. -->
+            <div class="mt-6 rounded-2xl border border-blue-400/25 bg-blue-500/[0.07] p-5">
+                <h2 class="text-white font-bold mb-2">Standing on a time that should not count?</h2>
+                <p class="text-gray-300 text-sm leading-relaxed max-w-3xl">
+                    Take it down yourself and none of this happens to you. No case, no validators, no
+                    entry on this page - it is between you and the admin, and nothing goes on your
+                    account. Once somebody else reports it, that choice is gone: it becomes a case, and
+                    when the case is decided it is published here with your name on it.
+                </p>
+                <Link href="/self-report"
+                    class="inline-flex mt-3 px-4 py-2 rounded-lg bg-blue-500/80 hover:bg-blue-500 text-white text-sm font-bold transition-colors">
+                    Withdraw one of your times
+                </Link>
             </div>
 
         </div>

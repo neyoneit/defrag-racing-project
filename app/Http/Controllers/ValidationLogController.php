@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PlayerSelfReport;
 use App\Models\RecordFlag;
 use App\Models\ServerdemoValidationCase;
 use Illuminate\Http\Request;
@@ -28,6 +27,12 @@ use Inertia\Inertia;
  * Who reported what is never public, at any stage. The reporters are the one
  * group with something to lose from transparency here, and a report is not
  * evidence - it is a request to go look.
+ *
+ * Withdrawn times are NOT in here. A player who takes their own run down has
+ * not been accused of anything and has not been judged by anybody, so there is
+ * no verdict to be transparent about - publishing it would just be a second
+ * punishment for the one response we actually want to encourage. Those stay
+ * with the admin alone, not even with the validators.
  */
 class ValidationLogController extends Controller
 {
@@ -51,7 +56,6 @@ class ValidationLogController extends Controller
             'stats' => $this->stats(),
             'closed' => $this->closed(),
             'open' => $this->open(),
-            'selfReports' => $this->selfReports(),
             'minReports' => (int) config('serverdemos.validation.min_reports', 2),
         ]);
     }
@@ -71,7 +75,6 @@ class ValidationLogController extends Controller
             'upheld' => ServerdemoValidationCase::where('validation_outcome', 'upheld')->count(),
             'dismissed' => ServerdemoValidationCase::where('validation_outcome', 'dismissed')->count(),
             'inconclusive' => ServerdemoValidationCase::where('validation_outcome', 'inconclusive')->count(),
-            'self_reports' => PlayerSelfReport::count(),
         ];
     }
 
@@ -119,31 +122,6 @@ class ValidationLogController extends Controller
                 'runs' => $case->flags_count,
                 'stage' => self::STAGE_LABELS[$case->validation_stage] ?? $case->validation_stage,
                 'opened_at' => $case->created_at?->toIso8601String(),
-            ]);
-    }
-
-    /**
-     * Times their own owners took down. Named, because the time itself was
-     * public and its disappearance from the map is public too - explaining
-     * where it went is the only version of this that is not a quiet edit.
-     */
-    private function selfReports()
-    {
-        return PlayerSelfReport::query()
-            ->with('user:id,name,plain_name,profile_photo_path,country')
-            ->orderByDesc('created_at')
-            ->limit(200)
-            ->get()
-            ->map(fn (PlayerSelfReport $report) => [
-                'id' => $report->id,
-                'player' => $report->player_name,
-                'user_id' => $report->user_id,
-                'mapname' => $report->mapname,
-                'physics' => trim(($report->physics ?? '') . ' ' . ($report->mode ?? '')),
-                'time' => $report->time,
-                'reason' => RecordFlagController::FLAG_TYPES[$report->reason] ?? $report->reason,
-                'note' => $report->note,
-                'created_at' => $report->created_at?->toIso8601String(),
             ]);
     }
 

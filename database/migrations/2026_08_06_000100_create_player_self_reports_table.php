@@ -7,14 +7,19 @@ use Illuminate\Support\Facades\Schema;
 /**
  * A player taking their own invalid time down, before anyone reports it.
  *
- * The row is a SNAPSHOT rather than a pointer, because the record it
- * describes is deleted in the same breath. The public log has to be able to
- * say "this time, on this map, was withdrawn" long after the record row is
- * gone, and a join to a deleted record cannot do that.
+ * ADMIN EYES ONLY. Nothing in this table is shown to validators or to the
+ * public, and no count derived from it is either - on a leaderboard anyone can
+ * diff, "three runs were withdrawn this week" is most of a name. The amnesty
+ * only works if using it is invisible.
  *
- * There is no status and no reviewer. The whole point of the amnesty is that
- * admitting it costs nothing and needs nobody's approval - the moment it
- * needs a verdict, people stop using it and report each other instead.
+ * The row is a SNAPSHOT rather than a pointer, because the record it describes
+ * is soft-deleted in the same breath: the admin view has to still say which
+ * time on which map this was, and it has to survive the record row being
+ * cleaned up later.
+ *
+ * There is no status and no reviewer. The whole point is that admitting it
+ * costs nothing and needs nobody's approval - the moment it needs a verdict,
+ * people stop using it and let themselves be reported instead.
  */
 return new class extends Migration
 {

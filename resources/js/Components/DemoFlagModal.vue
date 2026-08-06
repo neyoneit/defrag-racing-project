@@ -99,6 +99,11 @@ const FLAG_TYPES = {
     'pmove_fixed': 'pmove',
     'pmove_msec': 'msec',
     'df_mp_interferenceoff': 'interference',
+    'left_right': '+left/+right',
+    'scripts': 'scripts',
+    'upmove': 'upmove',
+    'replay_cheat': 'replay',
+    'engine_cheat': 'engine',
     'other': 'other',
 };
 

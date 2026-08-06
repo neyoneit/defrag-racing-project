@@ -308,6 +308,11 @@
         'pmove_fixed': { short: 'pmove', desc: 'Non-standard pmove_fixed - flagged by community' },
         'pmove_msec': { short: 'msec', desc: 'Non-standard pmove_msec - flagged by community' },
         'df_mp_interferenceoff': { short: 'interf', desc: 'Interference setting modified - flagged by community' },
+        'left_right': { short: '+left/+right', desc: '+left / +right turn binds - flagged by community' },
+        'scripts': { short: 'scripts', desc: 'Scripted movement - flagged by community' },
+        'upmove': { short: 'upmove', desc: 'Upmove script - flagged by community' },
+        'replay_cheat': { short: 'replay', desc: 'Replay cheat - flagged by community' },
+        'engine_cheat': { short: 'engine', desc: 'Modified engine - flagged by community' },
         'other': { short: 'flagged', desc: 'Flagged by community for validity issue' },
     };
 

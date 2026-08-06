@@ -14,32 +14,89 @@ use Inertia\Inertia;
  * The amnesty is the point. Somebody who set a time years ago with the wrong
  * cvar has, right now, two options: say nothing and hope, or be reported and
  * argued over. Neither ends with the leaderboard being correct. This is a
- * third one, and it only works while it stays free: no validator, no verdict,
- * no mark on the account. The time goes, and the log says who took it down
- * and why.
+ * third one, and it only works while it stays free AND private: no validator,
+ * no verdict, no mark on the account, and nobody told. A withdrawal that shows
+ * up anywhere others can read it is a confession, and people do not volunteer
+ * confessions - so this is visible to the admin alone, not even to the
+ * validators, and never on the public log.
  *
- * It deletes the record on the spot for the same reason. A queue would mean
- * the honest answer still leaves the wrong time standing for a week, and the
- * player has already told us it does not belong there - there is nothing left
- * to establish.
+ * It takes the record off the leaderboard on the spot for the same reason. A
+ * queue would mean the honest answer still leaves the wrong time standing for
+ * a week, and the player has already told us it does not belong there - there
+ * is nothing left to establish.
+ *
+ * The delete is a SOFT delete, so a misclick is recoverable: an admin can put
+ * the run back from the withdrawn-times list, which also drops the entry from
+ * the public log. Nothing about this is destructive, and the page says so
+ * rather than threatening people into hesitating.
  */
 class SelfReportController extends Controller
 {
+    /** How the list can be ordered, and what that means in SQL. */
+    private const SORTS = [
+        'date' => ['records.date_set', 'desc'],
+        'rank' => ['records.rank', 'asc'],
+        'name' => ['records.mapname', 'asc'],
+        'map_added' => ['maps.date_added', 'desc'],
+    ];
+
+    /** Rows sent at once. Past this, searching beats scrolling. */
+    private const PAGE_SIZE = 120;
+
     public function index(Request $request)
     {
         $user = $request->user();
+
+        // Blocked players still get the page, with the reason on it. Silently
+        // hiding the feature would leave somebody clicking a dead link and
+        // guessing, and the point of the block is that it was earned.
+        if ($user->amnesty_blocked_at) {
+            return Inertia::render('SelfReport', [
+                'hasMddAccount' => (bool) $user->mdd_id,
+                'blocked' => [
+                    'since' => $user->amnesty_blocked_at?->toIso8601String(),
+                    'reason' => $user->amnesty_blocked_reason,
+                ],
+                'records' => [],
+                'reasons' => RecordFlagController::FLAG_TYPES,
+                'mine' => [],
+            ]);
+        }
+
         $search = trim((string) $request->input('search', ''));
+        $sort = $request->input('sort');
+        $sort = isset(self::SORTS[$sort]) ? $sort : 'date';
 
         $records = collect();
+        $total = 0;
 
         if ($user->mdd_id) {
+            [$column, $direction] = self::SORTS[$sort];
+
+            $total = Record::where('mdd_id', $user->mdd_id)->count();
+
             $records = Record::query()
-                ->where('mdd_id', $user->mdd_id)
-                ->when($search !== '', fn ($query) => $query->where('mapname', 'like', '%' . $search . '%'))
-                ->orderByDesc('date_set')
-                ->limit(60)
-                ->get(['id', 'mapname', 'physics', 'mode', 'gametype', 'time', 'date_set', 'rank'])
-                ->map(fn (Record $record) => [
+                // Left join, not a relation: the list sorts by the map's own
+                // date, and a record whose map is missing from the maps table
+                // still has to appear rather than being silently dropped.
+                ->leftJoin('maps', 'maps.name', '=', 'records.mapname')
+                ->where('records.mdd_id', $user->mdd_id)
+                ->when($search !== '', fn ($query) => $query->where('records.mapname', 'like', '%' . $search . '%'))
+                ->orderBy($column, $direction)
+                ->limit(self::PAGE_SIZE)
+                ->get([
+                    'records.id',
+                    'records.mapname',
+                    'records.physics',
+                    'records.mode',
+                    'records.gametype',
+                    'records.time',
+                    'records.date_set',
+                    'records.rank',
+                    'maps.thumbnail as map_thumbnail',
+                    'maps.date_added as map_added',
+                ])
+                ->map(fn ($record) => [
                     'id' => $record->id,
                     'mapname' => $record->mapname,
                     'physics' => $record->physics,
@@ -48,6 +105,8 @@ class SelfReportController extends Controller
                     'time' => $record->time,
                     'date_set' => $record->date_set,
                     'rank' => $record->rank,
+                    'map_thumbnail' => $record->map_thumbnail,
+                    'map_added' => $record->map_added,
                 ]);
         }
 
@@ -55,7 +114,9 @@ class SelfReportController extends Controller
             'hasMddAccount' => (bool) $user->mdd_id,
             'records' => $records,
             'search' => $search,
-            'totalRecords' => $user->mdd_id ? Record::where('mdd_id', $user->mdd_id)->count() : 0,
+            'sort' => $sort,
+            'totalRecords' => $total,
+            'shown' => $records->count(),
             'reasons' => RecordFlagController::FLAG_TYPES,
             'mine' => PlayerSelfReport::where('user_id', $user->id)
                 ->orderByDesc('created_at')
@@ -63,57 +124,78 @@ class SelfReportController extends Controller
         ]);
     }
 
+    /**
+     * Withdraw one or more runs in a single go. Somebody cleaning up after an
+     * old habit is rarely cleaning up exactly one map, and making them repeat
+     * a confirmation forty times is how a good intention turns into "later".
+     */
     public function store(Request $request)
     {
         $user = $request->user();
 
+        if ($user->amnesty_blocked_at) {
+            return back()->withErrors([
+                'record_ids' => 'You no longer have access to the amnesty.',
+            ]);
+        }
+
         $data = $request->validate([
-            'record_id' => ['required', 'integer', 'exists:records,id'],
+            'record_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'record_ids.*' => ['integer'],
             'reason' => ['required', 'string', 'in:' . implode(',', array_keys(RecordFlagController::FLAG_TYPES))],
             'note' => ['nullable', 'string', 'max:500'],
             'confirm' => ['accepted'],
         ], [
-            'confirm.accepted' => 'Tick the box - the time is deleted straight away and cannot be put back by us.',
+            'record_ids.required' => 'Pick at least one run.',
+            'confirm.accepted' => 'Tick the box - the times come off the leaderboard straight away.',
         ]);
 
-        $record = Record::find($data['record_id']);
-
         // Yours means yours. The MDD id is what ties a record to a person, so
-        // an account without one cannot withdraw anything, and an account with
-        // a different one is somebody else's run.
-        if (! $record || ! $user->mdd_id || (int) $record->mdd_id !== (int) $user->mdd_id) {
+        // an account without one cannot withdraw anything, and the ownership
+        // check is part of the QUERY rather than a loop over what was posted -
+        // anything not covered by it simply never comes back.
+        $records = $user->mdd_id
+            ? Record::whereIn('id', $data['record_ids'])->where('mdd_id', $user->mdd_id)->get()
+            : collect();
+
+        if ($records->isEmpty()) {
             return back()->withErrors([
-                'record_id' => 'That run is not yours.',
+                'record_ids' => 'Those runs are not yours.',
             ]);
         }
 
-        PlayerSelfReport::create([
+        foreach ($records as $record) {
+            PlayerSelfReport::create([
+                'user_id' => $user->id,
+                'mdd_id' => $record->mdd_id,
+                'player_name' => $record->name,
+                'record_id' => $record->id,
+                'mapname' => $record->mapname,
+                'physics' => $record->physics,
+                'mode' => $record->mode,
+                'gametype' => $record->gametype,
+                'time' => $record->time,
+                'reason' => $data['reason'],
+                'note' => $data['note'] ?? null,
+            ]);
+
+            // Soft delete: the model's own hooks detach uploaded demos and
+            // clear the profile and listing caches, which is exactly what has
+            // to happen and is what the admin-side deletions already do.
+            $record->delete();
+        }
+
+        Log::info('Self-reported records withdrawn', [
             'user_id' => $user->id,
-            'mdd_id' => $record->mdd_id,
-            'player_name' => $record->name,
-            'record_id' => $record->id,
-            'mapname' => $record->mapname,
-            'physics' => $record->physics,
-            'mode' => $record->mode,
-            'gametype' => $record->gametype,
-            'time' => $record->time,
+            'mdd_id' => $user->mdd_id,
+            'record_ids' => $records->pluck('id')->all(),
             'reason' => $data['reason'],
-            'note' => $data['note'] ?? null,
         ]);
 
-        // Soft delete: the model's own hooks detach uploaded demos and clear
-        // the profile and listing caches, which is exactly what has to happen
-        // and is already tested by the admin-side deletions.
-        $record->delete();
+        $count = $records->count();
 
-        Log::info('Self-reported record withdrawn', [
-            'user_id' => $user->id,
-            'mdd_id' => $record->mdd_id,
-            'record_id' => $record->id,
-            'mapname' => $record->mapname,
-            'reason' => $data['reason'],
-        ]);
-
-        return back()->with('success', 'Time withdrawn. It is off the leaderboard and listed in the public validation log.');
+        return back()->with('success', $count === 1
+            ? 'Time withdrawn. It is off the leaderboard, and nobody but the site admin is told about it.'
+            : $count . ' times withdrawn. They are off the leaderboard, and nobody but the site admin is told about it.');
     }
 }
