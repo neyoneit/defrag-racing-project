@@ -220,7 +220,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         <!-- Your votes. Sits next to the list rather than in a
                              help page, because the number changes as you use
                              it and that is the whole point of showing it. -->
-                        <div v-if="budget"
+                        <div v-if="budget && budget.total"
                             class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border"
                             :class="votesLeft ? 'border-white/10' : 'border-amber-400/40'">
                             <span class="text-sm font-bold" :class="votesLeft ? 'text-green-300' : 'text-amber-300'">
@@ -236,7 +236,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         </div>
                     </div>
 
-                    <div v-if="budget && !votesLeft" class="mb-4 text-xs text-gray-500">
+                    <div v-if="budget && budget.total && !votesLeft" class="mb-4 text-xs text-gray-500">
                         You have spent all your votes. Take one back from a wish you care less about to
                         free it up - downvotes and your own wishes never cost you anything.
                     </div>

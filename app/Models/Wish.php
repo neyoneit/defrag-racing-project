@@ -58,10 +58,16 @@ class Wish extends Model
     /**
      * How many upvotes one person gets to spend, in total, across the board.
      *
-     * It grows with the board so the rule never becomes absurd: five while the
-     * list is short, a third of it once it is long. A fixed number ages badly -
-     * five votes over two hundred wishes is not a priority, it is a lottery
-     * ticket.
+     * Three rules stacked, in this order:
+     *
+     * - never more votes than there are wishes. One wish on the board is one
+     *   vote, not five - a budget that offers more than there is to spend is
+     *   not a budget, and it makes the counter read as broken.
+     * - five while the list is short, so an early board is not a fight over
+     *   two votes.
+     * - a third of the board once it is long, because a fixed number ages
+     *   badly: five votes over two hundred wishes is a lottery ticket, not a
+     *   priority.
      *
      * Downvotes are deliberately outside the budget. The budget exists to make
      * people choose what they want most; saying "this is a bad idea" is not a
@@ -69,7 +75,9 @@ class Wish extends Model
      */
     public static function voteBudget(): int
     {
-        return max(5, (int) ceil(static::approved()->count() / 3));
+        $wishes = static::approved()->count();
+
+        return min($wishes, max(5, (int) ceil($wishes / 3)));
     }
 
     /**
