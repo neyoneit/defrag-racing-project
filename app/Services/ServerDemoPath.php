@@ -135,7 +135,15 @@ class ServerDemoPath
         // genuinely different runs - one had already overwritten the other.
         // Both have to survive, so the second is stored as [2], the third as
         // [3], and they still read as the same map, time and player.
-        if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\](?:\[(\d+)\])?$/', $base, $m)) {
+        // Two optional trailing brackets, not one. Since 2026-08-08 the ingest
+        // stamps an arriving demo with the second it was recorded in, which is
+        // what stops two different runs ever wanting one name. That takes the
+        // slot the copy number used to have, and a copy number can still land
+        // behind it when the very same demo is sent twice. With one optional
+        // group the lazy map match slid along and read
+        // regrelue04[25344][10293][1754369794][2] as map "regrelue04[25344]",
+        // time 10293, player 1754369794.
+        if (preg_match('/^(.+?)\[(\d+)\]\[(\d+)\](?:\[(\d+)\])?(?:\[(\d+)\])?$/', $base, $m)) {
             return ['map' => $m[1], 'time' => (int) $m[2], 'mdd_id' => (int) $m[3]];
         }
 
