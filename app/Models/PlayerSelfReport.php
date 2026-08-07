@@ -25,10 +25,12 @@ class PlayerSelfReport extends Model
         'processed_at',
         'processed_by',
         'resolution',
+        'detached',
     ];
 
     protected $casts = [
         'processed_at' => 'datetime',
+        'detached' => 'array',
     ];
 
     /**
@@ -75,6 +77,67 @@ class PlayerSelfReport extends Model
         return $this->handling === 'immediate'
             ? 'Waiting for an admin'
             : 'Queued for the MDD merge';
+    }
+
+    /**
+     * Hide the run, remembering what that pulled off it.
+     *
+     * Record::deleting detaches uploaded demos and nothing puts them back, so
+     * without this snapshot a restore would silently cost the record its demo,
+     * the YouTube render hanging off that demo, and its time history entry.
+     */
+    public function hideRun(?int $adminId): bool
+    {
+        $run = Record::find($this->record_id);
+
+        if (! $run) {
+            return false;
+        }
+
+        $demos = UploadedDemo::where('record_id', $run->id)
+            ->whereIn('status', ['assigned', 'fallback-assigned'])
+            ->get(['id', 'status'])
+            ->map(fn ($demo) => ['id' => $demo->id, 'status' => $demo->status])
+            ->all();
+
+        $run->delete();
+
+        $this->update([
+            'processed_at' => now(),
+            'processed_by' => $adminId,
+            'detached' => $demos ?: null,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Put the run back, demos and all.
+     *
+     * A demo is only re-attached if it is still loose: demos:rematch-all may
+     * have given it to somebody else in the meantime, and taking it back off
+     * them would trade one wrong answer for another.
+     */
+    public function restoreRun(): bool
+    {
+        $run = Record::onlyTrashed()->whereKey($this->record_id)->first();
+
+        if (! $run) {
+            return false;
+        }
+
+        $run->restore();
+
+        foreach ($this->detached ?? [] as $demo) {
+            UploadedDemo::whereKey($demo['id'] ?? null)
+                ->whereNull('record_id')
+                ->update([
+                    'record_id' => $run->id,
+                    'status' => $demo['status'] ?? 'assigned',
+                ]);
+        }
+
+        return true;
     }
 
     /**

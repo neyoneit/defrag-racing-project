@@ -348,13 +348,7 @@ class PlayerSelfReportResource extends Resource
                     ->requiresConfirmation()
                     ->modalDescription('Takes the run off the leaderboard here. Until the MDD databases are merged it still stands on q3df.org.')
                     ->action(function (PlayerSelfReport $record) {
-                        $run = Record::find($record->record_id);
-
-                        // Soft delete: the model's hooks detach uploaded demos
-                        // and clear the profile and listing caches.
-                        $run?->delete();
-
-                        $record->update(['processed_at' => now(), 'processed_by' => auth()->id()]);
+                        $record->hideRun(auth()->id());
 
                         Notification::make()->success()->title('Run hidden')->send();
                     }),
@@ -364,11 +358,11 @@ class PlayerSelfReportResource extends Resource
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('Puts the record back on the leaderboard and drops the request. Use it when the wrong run was sent.')
+                    ->modalDescription('Puts the record back on the leaderboard, with its demo and video, and drops the request. Use it when the wrong run was sent.')
                     ->visible(fn (PlayerSelfReport $record) => $record->record_id
                         && Record::onlyTrashed()->whereKey($record->record_id)->exists())
                     ->action(function (PlayerSelfReport $record) {
-                        Record::onlyTrashed()->whereKey($record->record_id)->first()?->restore();
+                        $record->restoreRun();
                         $record->delete();
 
                         Notification::make()->success()->title('Run restored')->send();
@@ -392,9 +386,9 @@ class PlayerSelfReportResource extends Resource
                                 continue;
                             }
 
-                            Record::find($record->record_id)?->delete();
-                            $record->update(['processed_at' => now(), 'processed_by' => auth()->id()]);
-                            $done++;
+                            if ($record->hideRun(auth()->id())) {
+                                $done++;
+                            }
                         }
 
                         Notification::make()->success()
@@ -413,13 +407,10 @@ class PlayerSelfReportResource extends Resource
                         $done = 0;
 
                         foreach ($records as $record) {
-                            $run = Record::onlyTrashed()->whereKey($record->record_id)->first();
-
-                            if (! $run) {
+                            if (! $record->restoreRun()) {
                                 continue;
                             }
 
-                            $run->restore();
                             $record->delete();
                             $done++;
                         }
