@@ -145,10 +145,16 @@ for rel in ${KOLIZE[@]+"${KOLIZE[@]}"}; do
 
   # Volné pořadí se hledá na obou stranách. B2 proto, že archivy ze storage
   # jednou zmizí a trvalou pravdou o tom, co už existuje, zůstane bucket.
+  #
+  # Rozhoduje VÝPIS, ne návratový kód. U B2 se neexistující cesta chová jako
+  # prázdný prefix: rclone vrátí nulu a nevypíše nic, takže test podle kódu
+  # hlásil "existuje" pro každé pořadí a cyklus vždycky doběhl na dvacítku.
+  # Všechny čtyři kolize z 8.8.2026 tak skončily hláškou o dvaceti kopiích,
+  # každá po pětadvaceti sekundách marného ptaní se.
   n=2
   while [ "$n" -le 20 ] \
-    && { rclone lsf "sdsftp:/var/lib/serverdemos/${stem}[${n}]${ext}" >/dev/null 2>&1 \
-      || rclone lsf "sdb2:$B2_SERVERDEMOS_BUCKET/serverdemos/${stem}[${n}]${ext}" >/dev/null 2>&1; }; do
+    && { [ -n "$(rclone lsf "sdsftp:/var/lib/serverdemos/${stem}[${n}]${ext}" 2>/dev/null)" ] \
+      || [ -n "$(rclone lsf "sdb2:$B2_SERVERDEMOS_BUCKET/serverdemos/${stem}[${n}]${ext}" 2>/dev/null)" ]; }; do
     n=$((n + 1))
   done
 
