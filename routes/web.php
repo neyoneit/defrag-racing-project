@@ -93,6 +93,35 @@ Route::post('/serverdemo-validators/vote/{application}', [\App\Http\Controllers\
     ->middleware(['auth', 'verified', 'throttle:60,60'])
     ->name('serverdemo-validators.vote');
 
+// The public validation log. Deliberately open to everyone including logged
+// out visitors: it exists so that somebody who does not trust us can check
+// what was reported and what came of it.
+Route::get('/validation-log', [\App\Http\Controllers\ValidationLogController::class, 'index'])->name('validation-log');
+
+// The amnesty: withdrawing your own invalid time. Verified account only - it
+// takes a record off the leaderboard, so it has to be a real person's own
+// account - and throttled like the other forms.
+Route::get('/amnesty', [\App\Http\Controllers\SelfReportController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('amnesty.index');
+Route::post('/amnesty', [\App\Http\Controllers\SelfReportController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:30,60'])
+    ->name('amnesty.store');
+
+// Wishlist. Reading is public, writing and voting need an account.
+Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index');
+Route::post('/wishlist', [\App\Http\Controllers\WishlistController::class, 'store'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('wishlist.store');
+Route::post('/wishlist/{wish}/vote', [\App\Http\Controllers\WishlistController::class, 'vote'])
+    ->middleware(['auth', 'verified', 'throttle:120,60'])
+    ->name('wishlist.vote');
+// Authors ask, they do not delete: by the time a wish is on the list other
+// people have voted on it. Removal itself is an admin action in the panel.
+Route::post('/wishlist/{wish}/request-removal', [\App\Http\Controllers\WishlistController::class, 'requestRemoval'])
+    ->middleware(['auth', 'verified', 'throttle:20,60'])
+    ->name('wishlist.request-removal');
+
 Route::get('/ranking', [RankingController::class, 'index'])->name('ranking');
 Route::get('/ranking/how-it-works', [RankingController::class, 'howItWorks'])->name('ranking.how-it-works');
 
@@ -109,6 +138,12 @@ Route::get('/defraghq/storage-download', \App\Http\Controllers\StorageBrowserDow
 Route::get('/defraghq/validation-demo/{flag}', \App\Http\Controllers\ServerdemoValidationDownloadController::class)
     ->middleware(['auth', 'signed'])
     ->name('defraghq.validation-demo');
+
+// The serverdemo of a run its own owner withdrew. Admin only - a withdrawal
+// is private, and so is the demo that shows which run it was.
+Route::get('/defraghq/amnesty-demo/{report}', \App\Http\Controllers\AmnestyDemoDownloadController::class)
+    ->middleware(['auth', 'signed'])
+    ->name('defraghq.amnesty-demo');
 
 // DefragLive most-watched-player contest (public leaderboard + raffle odds).
 Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');

@@ -97,54 +97,31 @@ fi
 
 # ===== 3) Serverdemos mirror (storage VPS -> defrag-serverdemos) =====
 sekce_serverdemos() {
-# Archiv, ne sync: rclone copy jen přidává - smazání na storage nikdy
-# nesmaže nic v B2. Čte se přes dlbrowser SFTP účet (read ACL na
-# /var/lib/serverdemos), takže na storage VPS nic neinstalujeme.
-B2_SERVERDEMOS_KEY_ID="$(read_env B2_SERVERDEMOS_KEY_ID)"
-B2_SERVERDEMOS_APP_KEY="$(read_env B2_SERVERDEMOS_APP_KEY)"
-B2_SERVERDEMOS_BUCKET="$(read_env B2_SERVERDEMOS_BUCKET)"; B2_SERVERDEMOS_BUCKET="${B2_SERVERDEMOS_BUCKET:-defrag-serverdemos}"
-SD_HOST="$(read_env STORAGE_VPS_DL_HOST)"
-SD_PORT="$(read_env STORAGE_VPS_DL_PORT)"; SD_PORT="${SD_PORT:-2258}"
-SD_USER="$(read_env STORAGE_VPS_DL_USER)"; SD_USER="${SD_USER:-dlbrowser}"
-SD_KEY_PATH="$(read_env STORAGE_VPS_DL_KEY_PATH)"
+# Tahle sekce měla vlastní `rclone copy` s `|| true` a hláškou "OK" pod ním,
+# takže selhání spolkla úplně všechna - vypršelý klíč i odstavený storage by
+# vypadaly stejně jako úspěch.
+#
+# A hlavně jí chyběla polovina práce. Kolizi jmen (mapa[čas][mdd] není
+# unikátní) umí vyřešit přejmenováním na [2] jen serverdemos-mirror.sh, jenže
+# ten jede s --max-age 6h a archivu se schválně nastavuje čas původního dema,
+# takže archiv starého dema do jeho okna nikdy nespadne. Kolize na takovém
+# souboru tedy neřešil nikdo: noční běh ji každou noc odmítl, napsal ERROR,
+# napsal OK a šel dál. V logu k 7.8.2026 tak stálo pět dem, která ležela na
+# storage v jediné kopii a v B2 nebyla pod žádným jménem.
+#
+# Proto se tu nekopíruje ručně, ale zavolá se ten samý skript v režimu
+# CATCH_UP=1, tedy plný průchod bez omezení stáří. Získáme tím přejmenování
+# kolizí, zálohu nezabalených syrových dem i poctivé hlášení chyb, a nemáme
+# zrcadlení napsané dvakrát. Svůj zámek si drží sám, takže se to nepopere se
+# souběžným patnáctiminutovým během.
+MIRROR="$APP_DIR/scripts/serverdemos-mirror.sh"
 
-if [ -n "$B2_SERVERDEMOS_KEY_ID" ] && [ -n "$B2_SERVERDEMOS_APP_KEY" ] && [ -n "$SD_HOST" ] && [ -n "$SD_KEY_PATH" ]; then
-  export RCLONE_CONFIG_SDSFTP_TYPE=sftp
-  export RCLONE_CONFIG_SDSFTP_HOST="$SD_HOST"
-  export RCLONE_CONFIG_SDSFTP_PORT="$SD_PORT"
-  export RCLONE_CONFIG_SDSFTP_USER="$SD_USER"
-  export RCLONE_CONFIG_SDSFTP_KEY_FILE="$SD_KEY_PATH"
-  # Bez tohohle si rclone klíč hostitele vůbec neověřuje a jen na to upozorní
-  # v logu - spojení by tak šlo podvrhnout a dema poslat jinam. Soubor se plní
-  # ručně z ověřeného otisku, takže neexistující nebo prázdný known_hosts je
-  # důvod k selhání, ne k tichému pokračování.
-  export RCLONE_CONFIG_SDSFTP_KNOWN_HOSTS_FILE="${HOME:-/root}/.ssh/known_hosts"
-  export RCLONE_CONFIG_SDB2_TYPE=b2
-  export RCLONE_CONFIG_SDB2_ACCOUNT="$B2_SERVERDEMOS_KEY_ID"
-  export RCLONE_CONFIG_SDB2_KEY="$B2_SERVERDEMOS_APP_KEY"
-
-  # --exclude *.part viz serverdemos-mirror.sh: rozdělaný archiv z ingestu
-  # se do B2 nesmí dostat, protože odtud už se nikdy nesmaže.
-  #
-  # --immutable taky viz serverdemos-mirror.sh: jméno dema není unikátní a bez
-  # tohohle přepínače by se dvě různé jízdy se stejným časem od jednoho hráče
-  # přepsaly v B2 navzájem. Přejmenování kolizí řeší ten patnáctiminutový běh,
-  # tady jde jen o to nepřepsat nic dřív, než se k tomu dostane. Kolizní
-  # soubor se nenahraje, ostatní projdou.
-  # --exclude *.dm_68 taky viz serverdemos-mirror.sh: syrové demo je na disku
-  # jen tu chvíli, než ho ingest zabalí, a nahrát ho sem znamená nechat ho v
-  # B2 navždy vedle jeho vlastního archivu. To, co se opravdu nezabalilo,
-  # zálohuje ten patnáctiminutový běh, který si u každého ověří, že vedle
-  # sebe archiv nemá.
-  rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemos/ \
-    --exclude "*.part" \
-    --exclude "*.dm_68" \
-    --immutable \
-    --transfers 4 --sftp-concurrency 8 || true
-  echo "[$(date)] Serverdemos mirror na B2 OK"
-else
-  echo "[$(date)] Serverdemos přeskočeny (B2_SERVERDEMOS_* / STORAGE_VPS_DL_* není v .env)"
+if [ ! -x "$MIRROR" ]; then
+  echo "[$(date)] Serverdemos přeskočeny (chybí $MIRROR)" >&2
+  return 1
 fi
+
+CATCH_UP=1 "$MIRROR"
 }
 
 # ---- Spuštění ----

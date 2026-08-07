@@ -415,6 +415,10 @@ class CommunityScoreService
         // Records link to users via mdd_id, not user_id
         $counts = DB::table('records')
             ->join('users', 'users.mdd_id', '=', 'records.mdd_id')
+            // Deleted records are not contributions. Without this a withdrawn
+            // or removed run keeps paying its owner, which is the one thing
+            // the amnesty must never do.
+            ->whereNull('records.deleted_at')
             ->whereNotNull('records.mdd_id')
             ->whereNotNull('users.mdd_id')
             ->groupBy('users.id')

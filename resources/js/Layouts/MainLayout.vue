@@ -38,6 +38,7 @@
         return {
             home: route().current('home'),
             servers: route().current('servers'),
+            wishlist: route().current('wishlist.*'),
             players: route().current('records') || route().current('clans.*'),
             rankings: route().current('ranking') || route().current('community'),
             mapsmodels: route().current('maps') || route().current('maps.stats') || route().current('models.*'),
@@ -719,6 +720,7 @@
                                             <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
                                             <Link :href="route('server-hosting.index')" class="block text-sm text-gray-400 hover:text-emerald-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Server hosting</Link>
                                             <Link :href="route('serverdemo-validators.index')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Serverdemo validators</Link>
+                                            <Link :href="route('amnesty.index')" class="block text-sm text-gray-400 hover:text-amber-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Amnesty - self report</Link>
                                         </div>
                                         <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" target="_blank" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
                                             Admin Panel
@@ -762,7 +764,14 @@
                             Servers
                         </NavLink>
 
-                        <!-- 2. Players - visible from md -->
+                        <!-- 2. Wishlist - always visible. Third on purpose:
+                             a suggestion box nobody walks past is a suggestion
+                             box nobody writes in. -->
+                        <NavLink :href="route('wishlist.index')" :active="navActive.wishlist">
+                            Wishlist
+                        </NavLink>
+
+                        <!-- 3. Players - visible from md -->
                         <div class="hidden md:block">
                             <Dropdown align="left" width="48" :hoverable="true">
                                 <template #trigger="{ open }">
@@ -779,7 +788,7 @@
                             </Dropdown>
                         </div>
 
-                        <!-- 3. Rankings - visible from lg -->
+                        <!-- 4. Rankings - visible from lg -->
                         <div class="hidden lg:block">
                             <Dropdown align="left" width="56" :hoverable="true">
                                 <template #trigger="{ open }">
@@ -796,7 +805,7 @@
                             </Dropdown>
                         </div>
 
-                        <!-- 4. Maps & Models - visible from md -->
+                        <!-- 5. Maps & Models - visible from md -->
                         <div class="hidden md:block">
                             <Dropdown align="left" width="48" :hoverable="true">
                                 <template #trigger="{ open }">
@@ -821,7 +830,7 @@
                             Maplists
                         </Link>
 
-                        <!-- 5. Demos - visible from md -->
+                        <!-- 6. Demos - visible from md -->
                         <div class="hidden md:block">
                             <Dropdown align="left" width="48" :hoverable="true">
                                 <template #trigger="{ open }">
@@ -838,7 +847,7 @@
                             </Dropdown>
                         </div>
 
-                        <!-- 6. Challenges - visible from lg -->
+                        <!-- 7. Challenges - visible from lg -->
                         <div class="hidden lg:block">
                             <Dropdown align="left" width="48" :hoverable="true">
                                 <template #trigger="{ open }">
@@ -857,28 +866,28 @@
                             </Dropdown>
                         </div>
 
-                        <!-- 7. Tournaments - visible from xl -->
+                        <!-- 8. Tournaments - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
                                 Tournaments
                             </NavLink>
                         </div>
 
-                        <!-- 8. Wiki - visible from xl -->
+                        <!-- 9. Wiki - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('wiki.index')" :active="navActive.wiki">
                                 Wiki
                             </NavLink>
                         </div>
 
-                        <!-- 9. Downloads - visible from xl -->
+                        <!-- 10. Downloads - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('downloads')" :active="navActive.bundles">
                                 Downloads
                             </NavLink>
                         </div>
 
-                        <!-- 9. Beta - visible from xl -->
+                        <!-- 11. Beta - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink href="/test-map-viewer.html?map=pornstar-cpmrun">
                                 Beta

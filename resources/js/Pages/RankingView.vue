@@ -1,6 +1,7 @@
 <script setup>
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Rating from '@/Components/Rating.vue';
+    import AmnestyBanner from '@/Components/AmnestyBanner.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import { watchEffect, ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -238,6 +239,10 @@
                                     <p>Rankings are recalculated instantly every time a new record is submitted. A full recalculation across all maps also runs once daily.</p>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <AmnestyBanner />
                         </div>
                     </div>
 

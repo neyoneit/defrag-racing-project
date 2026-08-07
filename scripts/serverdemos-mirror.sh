@@ -120,8 +120,13 @@ rclone copy sdsftp:/var/lib/serverdemos sdb2:"$B2_SERVERDEMOS_BUCKET"/serverdemo
 rc=${PIPESTATUS[0]}
 set -e
 
+# Kotva na začátek řádku tu byla špatně: rclone píše do souboru s datem
+# vepředu ("2026/08/07 23:45:06 ERROR : cesta: ..."), takže `^ERROR : ` nesedlo
+# nikdy a seznam kolizí byl vždycky prázdný. Nic se proto nepřejmenovalo a
+# každý běh s kolizí se navíc tvářil jako skutečné selhání - od 5.8.2026 jich
+# takhle v logu bylo 135. Hledá se tedy kdekoliv na řádku.
 mapfile -t KOLIZE < <(
-  grep -oP '^ERROR : \K.*(?=: Source and destination exist but do not match: immutable file modified$)' \
+  grep -oP 'ERROR\s*:\s*\K.*(?=: Source and destination exist but do not match: immutable file modified$)' \
     "$RUN_LOG" | sort -u
 )
 

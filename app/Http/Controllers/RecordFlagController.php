@@ -22,6 +22,11 @@ class RecordFlagController extends Controller
         'pmove_fixed' => 'Non-standard pmove_fixed',
         'pmove_msec' => 'Non-standard pmove_msec',
         'df_mp_interferenceoff' => 'Interference setting modified',
+        'left_right' => '+left / +right turn binds',
+        'scripts' => 'Scripted movement',
+        'upmove' => 'Upmove script',
+        'replay_cheat' => 'Replay cheat',
+        'engine_cheat' => 'Modified engine',
         'other' => 'Other validity issue',
     ];
 

@@ -1,6 +1,7 @@
 <script setup>
     import { Head, router, Link, usePage } from '@inertiajs/vue3';
     import Record from '@/Components/Record.vue';
+    import AmnestyBanner from '@/Components/AmnestyBanner.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import { watchEffect, ref, computed, onMounted } from 'vue';
@@ -122,6 +123,8 @@
                             <span class="text-sm font-semibold">{{ (vq3Records?.total || 0) + (cpmRecords?.total || 0) }} total records</span>
                         </div>
                     </div>
+
+                    <AmnestyBanner />
 
                     <!-- Gamemode Filter -->
                     <div class="flex flex-wrap items-center gap-2 bg-black/40 backdrop-blur-sm rounded-xl p-2.5">
