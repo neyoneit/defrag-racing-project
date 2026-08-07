@@ -61,30 +61,6 @@ class PlayerSelfReportResource extends Resource
         return 'warning';
     }
 
-    /**
-     * Which reasons each player has used, for the summary row.
-     *
-     * One query for the whole page rather than one per row. Static because a
-     * Livewire request renders the table once and the answer must not change
-     * halfway down it.
-     */
-    public static function reasonsByPlayer(): array
-    {
-        static $reasons = null;
-
-        if ($reasons === null) {
-            $reasons = PlayerSelfReport::query()
-                ->select('mdd_id', 'reason')
-                ->distinct()
-                ->get()
-                ->groupBy('mdd_id')
-                ->map(fn ($rows) => $rows->pluck('reason')->all())
-                ->all();
-        }
-
-        return $reasons;
-    }
-
     /** The name of one player, for the heading of their page. */
     public static function playerName(?string $mdd): string
     {
@@ -109,6 +85,11 @@ class PlayerSelfReportResource extends Resource
                 ->selectRaw('min(id) as id, mdd_id, max(user_id) as user_id, max(player_name) as player_name')
                 ->selectRaw('count(*) as runs')
                 ->selectRaw('count(distinct reason) as reason_count')
+                // The reasons themselves come out of the same aggregate. They
+                // used to be a second query memoised in a static, which under
+                // Octane outlives the request and freezes on whatever the
+                // worker saw first.
+                ->selectRaw("group_concat(distinct reason order by reason separator ',') as reason_list")
                 // Open splits in two, because the two halves are different
                 // jobs: one is waiting on an admin, the other is waiting on
                 // the MDD merge and needs nobody.
@@ -162,7 +143,7 @@ class PlayerSelfReportResource extends Resource
                     ->color('gray')
                     ->sortable()
                     ->description(function (PlayerSelfReport $record) {
-                        $reasons = static::reasonsByPlayer()[$record->mdd_id] ?? [];
+                        $reasons = array_filter(explode(',', (string) $record->reason_list));
                         $labels = array_map(fn ($r) => RecordFlagController::FLAG_TYPES[$r] ?? $r, $reasons);
 
                         return implode(', ', array_slice($labels, 0, 3))
@@ -393,7 +374,7 @@ class PlayerSelfReportResource extends Resource
                     ->color('warning')
                     ->requiresConfirmation()
                     ->modalDescription('Puts the record back on the leaderboard, with its demo and video, and drops the request. Use it when the wrong run was sent.')
-                    ->visible(fn (PlayerSelfReport $record) => $record->record_id
+                    ->visible(fn (PlayerSelfReport $record) => $record->hidRun()
                         && Record::onlyTrashed()->whereKey($record->record_id)->exists())
                     ->action(function (PlayerSelfReport $record) {
                         $record->restoreRun(auth()->id());

@@ -28,8 +28,19 @@ class RematchAllDemos extends Command
         // Single-demo mode bypasses chunking/preload entirely — one demo
         // doesn't justify loading ~650k Records into memory, and verbose
         // per-field output only makes sense for a targeted run.
+        // Demos a player withdrew through the amnesty. Rematching one would
+        // file it as an offline record under their name and undo the whole
+        // point of the withdrawal - see PlayerSelfReport::withheldDemoIds.
+        $withheld = \App\Models\PlayerSelfReport::withheldDemoIds();
+
         if ($demoId) {
             $this->info("Rematching demo ID {$demoId}...");
+
+            if (in_array((int) $demoId, $withheld, true)) {
+                $this->warn("Demo {$demoId} belongs to a withdrawn run and is off limits.");
+                return 0;
+            }
+
             $demo = UploadedDemo::where('id', $demoId)->whereNotNull('player_name')->first();
             if (!$demo) {
                 $this->warn("Demo {$demoId} not found or has no player_name");
@@ -50,6 +61,12 @@ class RematchAllDemos extends Command
             // fuzzy-match to do anything useful.
             $query = UploadedDemo::where('status', '!=', 'assigned')->whereNotNull('player_name');
         }
+
+        if (!empty($withheld)) {
+            $query->whereNotIn('id', $withheld);
+            $this->info('Skipping ' . count($withheld) . ' demo(s) held down by the amnesty');
+        }
+
         $total = (clone $query)->count();
         $this->info("Found {$total} demos to rematch");
 

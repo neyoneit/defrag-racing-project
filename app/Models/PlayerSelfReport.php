@@ -70,6 +70,17 @@ class PlayerSelfReport extends Model
         return $this->resolution === 'restored';
     }
 
+    /**
+     * Did this request take the run off the board, and is it still off?
+     *
+     * "Beaten" never hid anything - the player replaced the time themselves -
+     * and "restored" already put it back, so neither is undoable.
+     */
+    public function hidRun(): bool
+    {
+        return $this->isProcessed() && ! $this->wasBeaten() && ! $this->wasRestored();
+    }
+
     public function stateLabel(): string
     {
         if ($this->wasBeaten()) {
@@ -131,6 +142,13 @@ class PlayerSelfReport extends Model
      */
     public function restoreRun(?int $adminId = null): bool
     {
+        // Only what THIS request took down. A record can be gone because some
+        // other admin removed it for some other reason, and the amnesty is not
+        // allowed to undo that just because the run happens to be missing.
+        if (! $this->hidRun()) {
+            return false;
+        }
+
         $run = Record::onlyTrashed()->whereKey($this->record_id)->first();
 
         if (! $run) {
@@ -159,6 +177,29 @@ class PlayerSelfReport extends Model
         ]);
 
         return true;
+    }
+
+    /**
+     * Demos the amnesty is currently holding down.
+     *
+     * Hiding a run detaches its demos, and `demos:rematch-all` picks up loose
+     * demos every Monday, fuzzy-matches the nickname and files them as offline
+     * records - which would put the withdrawn run back in front of everybody a
+     * week after the player was told it was gone. These are off limits to it
+     * until the request is restored, which clears the list by itself.
+     */
+    public static function withheldDemoIds(): array
+    {
+        return static::query()
+            ->whereNotNull('processed_at')
+            ->whereNotNull('detached')
+            ->where(fn ($q) => $q->whereNull('resolution')->orWhereNotIn('resolution', ['beaten', 'restored']))
+            ->pluck('detached')
+            ->flatMap(fn ($demos) => collect($demos)->pluck('id'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -226,19 +267,22 @@ class PlayerSelfReport extends Model
 
     /**
      * Each lookup runs once per row. The admin table asks the same question in
-     * the badge column and again in the download action.
+     * the badge column and again in every download action.
+     *
+     * On the instance, NOT in a static: under Octane a static outlives the
+     * request and the whole worker keeps answering from it. It did - the panel
+     * went on offering a serverdemo that had been deleted three requests
+     * earlier. This dies with the row that owns it.
      */
+    private array $lookups = [];
+
     private function memo(string $key, \Closure $resolve)
     {
-        static $cache = [];
-
-        $id = $key . ':' . $this->getKey();
-
-        if (! array_key_exists($id, $cache)) {
-            $cache[$id] = $resolve();
+        if (! array_key_exists($key, $this->lookups)) {
+            $this->lookups[$key] = $resolve();
         }
 
-        return $cache[$id];
+        return $this->lookups[$key];
     }
 
     public function user()
