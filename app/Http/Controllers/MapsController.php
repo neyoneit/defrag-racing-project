@@ -191,6 +191,39 @@ class MapsController extends Controller
      *   demo_id : int — UploadedDemo.id to use as seed
      *   physics : 'vq3' | 'cpm'
      */
+    /**
+     * The fastcap a demo belongs to, or null for a normal run.
+     *
+     * uploaded_demos.physics carries the mode in a suffix: "CPM" for a run,
+     * "CPM.TR" for a trick run, "CPM.0" through "CPM.8" for the fastcaps.
+     */
+    private static function fastcapOf(?string $demoPhysics): ?string
+    {
+        return preg_match('/\.(\d)$/', (string) $demoPhysics, $m) ? $m[1] : null;
+    }
+
+    /**
+     * Narrow a demo query to one gametype.
+     *
+     * A ctf2 list must not see CPM.1, and a defrag run must not see fastcaps
+     * at all - they are different gametypes, not variants of one.
+     */
+    private function scopeDemoPhysics($query, string $physics, ?string $fastcap)
+    {
+        $base = strtoupper($physics);
+
+        if ($fastcap !== null) {
+            return $query->where('physics', $base . '.' . $fastcap);
+        }
+
+        // A run, so everything except the numbered fastcaps. ".TR" stays: a
+        // trick run is the same run, recorded by somebody showing off.
+        return $query->where(function ($q) use ($base) {
+            $q->where('physics', $base)
+                ->orWhere('physics', $base . '.TR');
+        });
+    }
+
     public function timeHistory(Request $request, $mapname)
     {
         $demoId = (int) $request->input('demo_id');
@@ -208,7 +241,11 @@ class MapsController extends Controller
         // cluster member shows in the drawer.
         if (!$demoId && ($userId || $mddId)) {
             $profileKey = $userId ? ('user:' . $userId) : ('mdd:' . $mddId);
-            return $this->timeHistoryForProfile($mapname, $physics, $profileKey);
+            // No seed demo to read the fastcap off, so the caller says which
+            // one it is looking at. Absent, it behaves as before.
+            $viewed = preg_match('/^ctf(\d)/', (string) $request->input('gametype'), $ctf) ? $ctf[1] : null;
+
+            return $this->timeHistoryForProfile($mapname, $physics, $profileKey, $viewed);
         }
 
         $seed = UploadedDemo::find($demoId);
@@ -216,15 +253,12 @@ class MapsController extends Controller
             return response()->json(['history' => [], 'signals' => 0]);
         }
 
-        // Fetch all demos on this map+physics (both online-assigned and offline-only)
-        // uploaded_demos.physics is uppercase ("CPM", "VQ3", possibly with ".TR"),
-        // so match case-insensitively on the leading segment.
-        $physicsUpper = strtoupper($physics);
+        // Fetch all demos on this map+physics (both online-assigned and offline-only).
+        // The fastcap the seed belongs to decides the set: a ctf1 attempt has
+        // nothing to do with the same player's ctf2 attempt, and before this
+        // they landed in one history together.
         $demos = UploadedDemo::where('map_name', $mapname)
-            ->where(function ($q) use ($physicsUpper) {
-                $q->where('physics', $physicsUpper)
-                  ->orWhere('physics', 'LIKE', $physicsUpper . '.%');
-            })
+            ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, self::fastcapOf($seed->physics)))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -376,7 +410,7 @@ class MapsController extends Controller
      * Resolves demos via approved aliases against the profile key
      * ("user:<id>" or "mdd:<id>") and returns every online cluster member.
      */
-    private function timeHistoryForProfile(string $mapname, string $physics, string $profileKey)
+    private function timeHistoryForProfile(string $mapname, string $physics, string $profileKey, ?string $fastcap = null)
     {
         $user = null;
         if (str_starts_with($profileKey, 'user:')) {
@@ -388,12 +422,8 @@ class MapsController extends Controller
             return response()->json(['history' => [], 'signals' => 0]);
         }
 
-        $physicsUpper = strtoupper($physics);
         $demos = UploadedDemo::where('map_name', $mapname)
-            ->where(function ($q) use ($physicsUpper) {
-                $q->where('physics', $physicsUpper)
-                  ->orWhere('physics', 'LIKE', $physicsUpper . '.%');
-            })
+            ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -705,11 +735,14 @@ class MapsController extends Controller
         // Physics patterns are needed for both the unified leaderboard (when
         // showOffline is on) and the standalone Demos Top fallback, so pull
         // them out of the if-block.
-        $offlineGametype = (str_starts_with($map->name, 'actf') || str_starts_with($map->name, 'ctf')) ? 'fc' : 'df';
-        if ($offlineGametype === 'fc' && strpos($gametype, 'ctf') === 0) {
-            $ctfNumber = substr($gametype, 3, 1);
-            $cpmPattern = "CPM.{$ctfNumber}%";
-            $vq3Pattern = "VQ3.{$ctfNumber}%";
+        // Which fastcap the page is showing decides this, NOT the map's name.
+        // Only 66 of the 1584 maps that hold fastcap records are called ctf*
+        // or actf* - q3ctf1, q3wcp16 and rtctf5 are fastcap maps too - and for
+        // every other one the name test fell through to CPM%, which matches
+        // CPM.1 through CPM.7. That put a ctf1 demo in the ctf2 leaderboard.
+        if (preg_match('/^ctf(\d)/', $gametype, $ctf)) {
+            $cpmPattern = "CPM.{$ctf[1]}%";
+            $vq3Pattern = "VQ3.{$ctf[1]}%";
         } else {
             $cpmPattern = 'CPM%';
             $vq3Pattern = 'VQ3%';
@@ -796,8 +829,9 @@ class MapsController extends Controller
                 $r->user_id ? 'user:' . (int) $r->user_id : null,
                 $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
             ]))->unique()->values()->toArray();
-        $clusterMetaVq3 = $this->computeClusterMetadataForMap($map->name, 'vq3', $vq3MainKeys);
-        $clusterMetaCpm = $this->computeClusterMetadataForMap($map->name, 'cpm', $cpmMainKeys);
+        $viewedFastcap = preg_match('/^ctf(\d)/', $gametype, $ctfViewed) ? $ctfViewed[1] : null;
+        $clusterMetaVq3 = $this->computeClusterMetadataForMap($map->name, 'vq3', $vq3MainKeys, $viewedFastcap);
+        $clusterMetaCpm = $this->computeClusterMetadataForMap($map->name, 'cpm', $cpmMainKeys, $viewedFastcap);
 
         // Get servers currently playing this map
         $servers = \App\Models\Server::where('map', $map->name)
@@ -878,14 +912,12 @@ class MapsController extends Controller
      * Returns a map: ['<demo_id>' => ['count' => int, 'signals' => int]]
      * so the frontend can look up per-row badge data in O(1).
      */
-    private function computeClusterMetadataForMap(string $mapname, string $physics, array $priorityProfileKeys = []): array
+    private function computeClusterMetadataForMap(string $mapname, string $physics, array $priorityProfileKeys = [], ?string $fastcap = null): array
     {
-        $physicsUpper = strtoupper($physics);
+        // Same gametype rule as the drawer itself, or the badge would promise
+        // a count the drawer then refuses to show.
         $demos = UploadedDemo::where('map_name', $mapname)
-            ->where(function ($q) use ($physicsUpper) {
-                $q->where('physics', $physicsUpper)
-                  ->orWhere('physics', 'LIKE', $physicsUpper . '.%');
-            })
+            ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
             ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
                    'time_ms', 'gametype', 'record_date', 'record_id', 'file_hash', 'created_at']);
 
