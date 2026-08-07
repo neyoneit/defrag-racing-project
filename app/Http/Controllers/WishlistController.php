@@ -82,6 +82,13 @@ class WishlistController extends Controller
             ]),
             'statuses' => Wish::STATUSES,
             'projects' => Wish::PROJECTS,
+            // Shown on the page, always. A budget people only discover by
+            // running out of it reads as the site being broken.
+            'budget' => $user ? [
+                'total' => Wish::voteBudget(),
+                'spent' => Wish::upvotesSpentBy($user->id),
+                'left' => Wish::upvotesLeftFor($user->id),
+            ] : null,
             'filter' => $filter,
             'projectFilter' => in_array($project, array_keys(Wish::PROJECTS), true) ? $project : null,
             // Counts per project so the filter row can say where the activity
@@ -128,6 +135,10 @@ class WishlistController extends Controller
      * One vote per person per wish. Clicking the side you already picked
      * takes the vote back, which is the only way to say "I no longer care"
      * without it counting as the opposite.
+     *
+     * Upvotes come out of a budget (see Wish::voteBudget). Taking a vote back
+     * or flipping it to a downvote refunds it, so nobody is ever stuck with a
+     * vote they no longer mean.
      */
     public function vote(Request $request, Wish $wish)
     {
@@ -141,9 +152,24 @@ class WishlistController extends Controller
             'value' => ['required', 'integer', 'in:1,-1'],
         ]);
 
+        $user = $request->user();
+
         $existing = WishVote::where('wish_id', $wish->id)
-            ->where('user_id', $request->user()->id)
+            ->where('user_id', $user->id)
             ->first();
+
+        // Charged only when this click actually adds an upvote to somebody
+        // else's wish: not when taking one back, not when flipping to a
+        // downvote, not on your own.
+        $spendsAVote = (int) $data['value'] === 1
+            && $wish->user_id !== $user->id
+            && (! $existing || $existing->value !== 1);
+
+        if ($spendsAVote && Wish::upvotesLeftFor($user->id) < 1) {
+            return back(303)->withErrors([
+                'vote' => 'You have used all your votes. Take one back from another wish to free it up.',
+            ]);
+        }
 
         if ($existing && $existing->value === (int) $data['value']) {
             $existing->delete();
@@ -152,7 +178,7 @@ class WishlistController extends Controller
         } else {
             WishVote::create([
                 'wish_id' => $wish->id,
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
                 'value' => (int) $data['value'],
             ]);
         }

@@ -17,10 +17,22 @@ const props = defineProps({
     projectCounts: { type: Object, default: () => ({}) },
     filter: { type: String, default: null },
     projectFilter: { type: String, default: null },
+    budget: { type: Object, default: null },
 });
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user);
+
+// The vote budget, always on screen. Running out is a rule people should have
+// seen coming, not a button that suddenly refuses.
+const votesLeft = computed(() => props.budget?.left ?? 0);
+const voteError = computed(() => page.props.errors?.vote);
+
+// Taking your own vote back is always allowed, and your own wish is free -
+// only a fresh upvote on somebody else's costs anything.
+const canUpvote = (wish) => !!user.value
+    && !wish.pending
+    && (wish.my_vote === 1 || wish.mine || votesLeft.value > 0);
 
 const showForm = ref(false);
 
@@ -45,6 +57,7 @@ const submit = () => {
 // agrees is a number people stop trusting.
 const vote = (wish, value) => {
     if (!user.value || wish.pending) return;
+    if (value === 1 && !canUpvote(wish)) return;
     router.post(`/wishlist/${wish.id}/vote`, { value }, { preserveScroll: true, preserveState: true });
 };
 
@@ -204,9 +217,33 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             </button>
                         </div>
 
+                        <!-- Your votes. Sits next to the list rather than in a
+                             help page, because the number changes as you use
+                             it and that is the whole point of showing it. -->
+                        <div v-if="budget"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border"
+                            :class="votesLeft ? 'border-white/10' : 'border-amber-400/40'">
+                            <span class="text-sm font-bold" :class="votesLeft ? 'text-green-300' : 'text-amber-300'">
+                                {{ votesLeft }}
+                            </span>
+                            <span class="text-xs text-gray-500">
+                                of {{ budget.total }} votes left
+                            </span>
+                        </div>
+
                         <div class="ml-auto text-xs text-gray-500">
                             {{ wishes.length }} request<span v-if="wishes.length !== 1">s</span>
                         </div>
+                    </div>
+
+                    <div v-if="budget && !votesLeft" class="mb-4 text-xs text-gray-500">
+                        You have spent all your votes. Take one back from a wish you care less about to
+                        free it up - downvotes and your own wishes never cost you anything.
+                    </div>
+
+                    <div v-if="voteError"
+                        class="mb-4 px-4 py-3 rounded-xl border border-amber-400/40 bg-amber-500/10 text-sm text-amber-200">
+                        {{ voteError }}
                     </div>
 
             <div v-if="!wishes.length" class="bg-black/40 border border-white/10 rounded-2xl p-10 text-center text-gray-500">
@@ -221,8 +258,9 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                          is what the list is sorted by; the split sits under it
                          so a contested wish does not read like an ignored one. -->
                     <div class="flex flex-col items-center gap-1 w-16 shrink-0" :class="wish.pending ? 'opacity-40' : ''">
-                        <button @click="vote(wish, 1)" :disabled="!user || wish.pending"
-                            class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40"
+                        <button @click="vote(wish, 1)" :disabled="!canUpvote(wish)"
+                            :title="user && !canUpvote(wish) ? 'No votes left - take one back from another wish' : ''"
+                            class="w-9 h-9 rounded-lg flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                             :class="wish.my_vote === 1 ? 'bg-green-500/25 text-green-300' : 'bg-white/5 text-gray-400 hover:bg-white/10'">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4l8 10h-6v6h-4v-6H4z"/></svg>
                         </button>
