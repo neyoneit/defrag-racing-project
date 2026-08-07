@@ -67,8 +67,13 @@ class PlayerAmnesty extends ListRecords
         $queued = fn (Builder $query) => $query
             ->whereNull('processed_at')->where('handling', 'on_merge');
 
+        // Done is what stayed down. A run that was put back is the opposite of
+        // done, so it gets its own tab rather than sitting among the settled.
         $done = fn (Builder $query) => $query
-            ->whereNotNull('processed_at');
+            ->whereNotNull('processed_at')
+            ->where(fn ($q) => $q->whereNull('resolution')->orWhere('resolution', '!=', 'restored'));
+
+        $restored = fn (Builder $query) => $query->where('resolution', 'restored');
 
         return [
             'waiting' => Tab::make('Waiting on you')
@@ -85,6 +90,11 @@ class PlayerAmnesty extends ListRecords
                 ->modifyQueryUsing($done)
                 ->badge(fn () => $count($done))
                 ->badgeColor('success'),
+
+            'restored' => Tab::make('Put back')
+                ->modifyQueryUsing($restored)
+                ->badge(fn () => $count($restored))
+                ->badgeColor('danger'),
 
             'all' => Tab::make('All'),
         ];
@@ -107,7 +117,13 @@ class PlayerAmnesty extends ListRecords
             return 'queued';
         }
 
-        return 'done';
+        if ((clone $base())->whereNotNull('processed_at')
+            ->where(fn ($q) => $q->whereNull('resolution')->orWhere('resolution', '!=', 'restored'))
+            ->exists()) {
+            return 'done';
+        }
+
+        return 'restored';
     }
 
     protected function getHeaderActions(): array
