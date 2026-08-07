@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\PlayerSelfReportResource\Pages;
 
 use App\Filament\Resources\PlayerSelfReportResource;
+use App\Models\PlayerSelfReport;
 use Filament\Actions;
+use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * One player's withdrawals.
@@ -45,6 +48,66 @@ class PlayerAmnesty extends ListRecords
     public function table(Table $table): Table
     {
         return PlayerSelfReportResource::detailTable($table, $this->mdd);
+    }
+
+    /**
+     * The three things a request can be, in the order they happen.
+     *
+     * Waiting is work; queued is not work until the databases merge; done is
+     * over. Keeping them in one list means the four runs that need nothing
+     * from you sit among the ones that do.
+     */
+    public function getTabs(): array
+    {
+        $count = fn (\Closure $scope) => $scope(PlayerSelfReport::where('mdd_id', $this->mdd))->count() ?: null;
+
+        $waiting = fn (Builder $query) => $query
+            ->whereNull('processed_at')->where('handling', 'immediate');
+
+        $queued = fn (Builder $query) => $query
+            ->whereNull('processed_at')->where('handling', 'on_merge');
+
+        $done = fn (Builder $query) => $query
+            ->whereNotNull('processed_at');
+
+        return [
+            'waiting' => Tab::make('Waiting on you')
+                ->modifyQueryUsing($waiting)
+                ->badge(fn () => $count($waiting))
+                ->badgeColor('warning'),
+
+            'queued' => Tab::make('Queued for the merge')
+                ->modifyQueryUsing($queued)
+                ->badge(fn () => $count($queued))
+                ->badgeColor('info'),
+
+            'done' => Tab::make('Done')
+                ->modifyQueryUsing($done)
+                ->badge(fn () => $count($done))
+                ->badgeColor('success'),
+
+            'all' => Tab::make('All'),
+        ];
+    }
+
+    /**
+     * Open on the first tab that has anything in it. A player whose requests
+     * are all settled would otherwise land on an empty Waiting tab, which
+     * reads as the page having lost them.
+     */
+    public function getDefaultActiveTab(): string | int | null
+    {
+        $base = fn () => PlayerSelfReport::where('mdd_id', $this->mdd);
+
+        if ((clone $base())->whereNull('processed_at')->where('handling', 'immediate')->exists()) {
+            return 'waiting';
+        }
+
+        if ((clone $base())->whereNull('processed_at')->exists()) {
+            return 'queued';
+        }
+
+        return 'done';
     }
 
     protected function getHeaderActions(): array
