@@ -73,6 +73,11 @@ def pipeline_cmds(name):
         "php artisan storage:link",
         "php artisan migrate --force",
         "php artisan filament:assets",
+        # Without this a newly added Filament resource answers 404 to a logged
+        # in admin while `route:list` happily shows its route, because the panel
+        # serves whatever component list it cached. Every other cache below is
+        # rebuilt here; this one was the odd one out and cost a deploy.
+        "php artisan filament:cache-components",
         "php artisan livewire:publish --assets",
         "php artisan cache:clear",
         "php artisan config:cache",
