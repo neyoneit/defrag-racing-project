@@ -110,8 +110,9 @@ class PlayerSelfReportResource extends Resource
                 ->selectRaw('count(*) as runs')
                 ->selectRaw('count(distinct reason) as reason_count')
                 ->selectRaw('sum(processed_at is null) as open_count')
-                ->selectRaw("sum(processed_at is not null and coalesce(resolution, '') <> 'beaten') as hidden_count")
+                ->selectRaw("sum(processed_at is not null and coalesce(resolution, '') not in ('beaten', 'restored')) as hidden_count")
                 ->selectRaw("sum(coalesce(resolution, '') = 'beaten') as beaten_count")
+                ->selectRaw("sum(coalesce(resolution, '') = 'restored') as restored_count")
                 ->selectRaw('max(created_at) as last_request')
                 ->with('user:id,name,plain_name,amnesty_blocked_at')
                 ->groupBy('mdd_id')
@@ -180,6 +181,13 @@ class PlayerSelfReportResource extends Resource
                     ->sortable()
                     ->tooltip('Closed by the player beating the time themselves'),
 
+                Tables\Columns\TextColumn::make('restored_count')
+                    ->label('Put back')
+                    ->badge()
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray')
+                    ->sortable()
+                    ->tooltip('Hidden and then put back on the board by an admin'),
+
                 Tables\Columns\TextColumn::make('last_request')
                     ->label('Last request')
                     ->dateTime()
@@ -226,13 +234,15 @@ class PlayerSelfReportResource extends Resource
                         'open' => 'Anything still open',
                         'hidden' => 'Off the board',
                         'beaten' => 'Beaten - resolved',
+                        'restored' => 'Put back',
                     ])
                     ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
                         'waiting' => $query->whereNull('processed_at')->where('handling', 'immediate'),
                         'queued' => $query->whereNull('processed_at')->where('handling', 'on_merge'),
                         'open' => $query->whereNull('processed_at'),
-                        'hidden' => $query->whereNotNull('processed_at')->where(fn ($q) => $q->whereNull('resolution')->orWhere('resolution', '!=', 'beaten')),
+                        'hidden' => $query->whereNotNull('processed_at')->where(fn ($q) => $q->whereNull('resolution')->orWhereNotIn('resolution', ['beaten', 'restored'])),
                         'beaten' => $query->where('resolution', 'beaten'),
+                        'restored' => $query->where('resolution', 'restored'),
                         default => $query,
                     }),
 
@@ -265,16 +275,20 @@ class PlayerSelfReportResource extends Resource
                 Tables\Columns\TextColumn::make('processed_at')
                     ->label('State')
                     ->badge()
-                    ->state(fn (PlayerSelfReport $record) => $record->wasBeaten()
-                        ? 'Beaten - resolved'
-                        : ($record->isProcessed()
-                            ? 'Off the board'
-                            : ($record->handling === 'immediate' ? 'Waiting on you' : 'Queued for the merge')))
-                    ->color(fn (PlayerSelfReport $record) => $record->wasBeaten()
-                        ? 'info'
-                        : ($record->isProcessed()
-                            ? 'success'
-                            : ($record->handling === 'immediate' ? 'warning' : 'gray'))),
+                    ->state(fn (PlayerSelfReport $record) => match (true) {
+                        $record->wasBeaten() => 'Beaten - resolved',
+                        $record->wasRestored() => 'Put back',
+                        $record->isProcessed() => 'Off the board',
+                        $record->handling === 'immediate' => 'Waiting on you',
+                        default => 'Queued for the merge',
+                    })
+                    ->color(fn (PlayerSelfReport $record) => match (true) {
+                        $record->wasBeaten() => 'info',
+                        $record->wasRestored() => 'danger',
+                        $record->isProcessed() => 'success',
+                        $record->handling === 'immediate' => 'warning',
+                        default => 'gray',
+                    }),
 
                 // What evidence exists for this run, before deciding anything
                 // about it. A withdrawal with a serverdemo behind it can be
@@ -344,7 +358,11 @@ class PlayerSelfReportResource extends Resource
                     ->label('Approve and hide the run')
                     ->icon('heroicon-o-eye-slash')
                     ->color('success')
-                    ->visible(fn (PlayerSelfReport $record) => ! $record->isProcessed() && $record->record_id)
+                    // Offered again after a restore: putting a run back can
+                    // itself be the mistake, and then there is no way forward.
+                    ->visible(fn (PlayerSelfReport $record) => $record->record_id
+                        && (! $record->isProcessed() || $record->wasRestored())
+                        && Record::whereKey($record->record_id)->exists())
                     ->requiresConfirmation()
                     ->modalDescription('Takes the run off the leaderboard here. Until the MDD databases are merged it still stands on q3df.org.')
                     ->action(function (PlayerSelfReport $record) {
@@ -362,8 +380,7 @@ class PlayerSelfReportResource extends Resource
                     ->visible(fn (PlayerSelfReport $record) => $record->record_id
                         && Record::onlyTrashed()->whereKey($record->record_id)->exists())
                     ->action(function (PlayerSelfReport $record) {
-                        $record->restoreRun();
-                        $record->delete();
+                        $record->restoreRun(auth()->id());
 
                         Notification::make()->success()->title('Run restored')->send();
                     }),
@@ -407,12 +424,9 @@ class PlayerSelfReportResource extends Resource
                         $done = 0;
 
                         foreach ($records as $record) {
-                            if (! $record->restoreRun()) {
-                                continue;
+                            if ($record->restoreRun(auth()->id())) {
+                                $done++;
                             }
-
-                            $record->delete();
-                            $done++;
                         }
 
                         Notification::make()->success()

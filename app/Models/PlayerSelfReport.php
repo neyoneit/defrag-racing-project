@@ -46,6 +46,7 @@ class PlayerSelfReport extends Model
     public const RESOLUTIONS = [
         'hidden' => 'Hidden by an admin',
         'beaten' => 'Beaten by a new run',
+        'restored' => 'Put back by an admin',
     ];
 
     public function scopePending($query)
@@ -64,10 +65,19 @@ class PlayerSelfReport extends Model
     }
 
     /** What the player sees as the state of their request. */
+    public function wasRestored(): bool
+    {
+        return $this->resolution === 'restored';
+    }
+
     public function stateLabel(): string
     {
         if ($this->wasBeaten()) {
             return 'Beaten - resolved';
+        }
+
+        if ($this->wasRestored()) {
+            return 'Put back on the board';
         }
 
         if ($this->isProcessed()) {
@@ -105,6 +115,7 @@ class PlayerSelfReport extends Model
         $this->update([
             'processed_at' => now(),
             'processed_by' => $adminId,
+            'resolution' => 'hidden',
             'detached' => $demos ?: null,
         ]);
 
@@ -118,7 +129,7 @@ class PlayerSelfReport extends Model
      * have given it to somebody else in the meantime, and taking it back off
      * them would trade one wrong answer for another.
      */
-    public function restoreRun(): bool
+    public function restoreRun(?int $adminId = null): bool
     {
         $run = Record::onlyTrashed()->whereKey($this->record_id)->first();
 
@@ -136,6 +147,16 @@ class PlayerSelfReport extends Model
                     'status' => $demo['status'] ?? 'assigned',
                 ]);
         }
+
+        // The row stays. Deleting it would leave the panel unable to answer
+        // "what happened to that request" - and a run that was taken down and
+        // put back is exactly the case somebody asks about later.
+        $this->update([
+            'processed_at' => $this->processed_at ?? now(),
+            'processed_by' => $adminId ?? $this->processed_by,
+            'resolution' => 'restored',
+            'detached' => null,
+        ]);
 
         return true;
     }
