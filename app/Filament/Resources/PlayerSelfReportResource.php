@@ -54,6 +54,29 @@ class PlayerSelfReportResource extends Resource
         return 'warning';
     }
 
+    /**
+     * How many requests each player has, and how many of those are still open.
+     *
+     * One query for the whole page rather than one per group header. Static
+     * because a Livewire request renders the table once and the numbers must
+     * not change halfway down the list.
+     */
+    protected static function playerTotals(): array
+    {
+        static $totals = null;
+
+        if ($totals === null) {
+            $totals = PlayerSelfReport::query()
+                ->selectRaw('player_name, count(*) as total, sum(processed_at is null) as waiting')
+                ->groupBy('player_name')
+                ->get()
+                ->keyBy('player_name')
+                ->all();
+        }
+
+        return $totals;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -63,13 +86,77 @@ class PlayerSelfReportResource extends Resource
                 ->with('user:id,name,plain_name,amnesty_blocked_at')
                 // Anything still waiting on a decision first, whatever the sort.
                 ->orderByRaw('processed_at is null desc'))
+            // One player at a time. Withdrawals arrive in batches - somebody
+            // reads the rules and sends six runs at once - and reading those
+            // six interleaved with everyone else's is how a mistake gets made.
+            ->groups([
+                Tables\Grouping\Group::make('player_name')
+                    ->label('Player')
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false)
+                    ->getTitleFromRecordUsing(fn (PlayerSelfReport $record) => trim(preg_replace('/\^[0-9A-Za-z]/', '', $record->player_name ?? '')) ?: 'Unknown player')
+                    ->getDescriptionFromRecordUsing(function (PlayerSelfReport $record) {
+                        $totals = static::playerTotals()[$record->player_name] ?? null;
+                        $parts = [];
+
+                        if ($totals) {
+                            $parts[] = $totals->total . ' ' . ($totals->total == 1 ? 'run' : 'runs');
+
+                            if ($totals->waiting > 0) {
+                                $parts[] = $totals->waiting . ' still open';
+                            }
+                        }
+
+                        if ($record->mdd_id) {
+                            $parts[] = 'MDD #' . $record->mdd_id;
+                        }
+
+                        if ($record->user?->amnesty_blocked_at) {
+                            $parts[] = 'BLOCKED from the amnesty';
+                        }
+
+                        return implode(' - ', $parts);
+                    }),
+                Tables\Grouping\Group::make('reason')
+                    ->label('Reason')
+                    ->collapsible()
+                    ->getTitleFromRecordUsing(fn (PlayerSelfReport $record) => RecordFlagController::FLAG_TYPES[$record->reason] ?? $record->reason),
+                Tables\Grouping\Group::make('mapname')
+                    ->label('Map')
+                    ->collapsible(),
+            ])
+            ->defaultGroup('player_name')
             ->filters([
-                Tables\Filters\Filter::make('pending')
-                    ->label('Waiting to be handled')
-                    ->query(fn ($query) => $query->whereNull('processed_at')),
-                Tables\Filters\SelectFilter::make('handling')
-                    ->label('When')
-                    ->options(PlayerSelfReport::HANDLING),
+                Tables\Filters\SelectFilter::make('state')
+                    ->label('State')
+                    ->options([
+                        'waiting' => 'Waiting on you',
+                        'queued' => 'Queued for the merge',
+                        'open' => 'Anything still open',
+                        'hidden' => 'Off the board',
+                        'beaten' => 'Beaten - resolved',
+                    ])
+                    ->query(fn ($query, array $data) => match ($data['value'] ?? null) {
+                        'waiting' => $query->whereNull('processed_at')->where('handling', 'immediate'),
+                        'queued' => $query->whereNull('processed_at')->where('handling', 'on_merge'),
+                        'open' => $query->whereNull('processed_at'),
+                        'hidden' => $query->whereNotNull('processed_at')->where('resolution', '!=', 'beaten'),
+                        'beaten' => $query->where('resolution', 'beaten'),
+                        default => $query,
+                    }),
+
+                Tables\Filters\SelectFilter::make('reason')
+                    ->label('Reason')
+                    ->multiple()
+                    ->options(RecordFlagController::FLAG_TYPES),
+
+                Tables\Filters\SelectFilter::make('physics')
+                    ->options(['cpm' => 'CPM', 'vq3' => 'VQ3']),
+
+                // Whoever is already blocked is the one worth re-reading.
+                Tables\Filters\Filter::make('blocked')
+                    ->label('Blocked players only')
+                    ->query(fn ($query) => $query->whereHas('user', fn ($q) => $q->whereNotNull('amnesty_blocked_at'))),
             ])
             ->columns([
                 Tables\Columns\TextColumn::make('player_name')
@@ -199,6 +286,61 @@ class PlayerSelfReportResource extends Resource
                         $record->delete();
 
                         Notification::make()->success()->title('Run restored')->send();
+                    }),
+            ])
+            // A batch arrives as a batch and is usually decided as one. Doing
+            // six of them one modal at a time is where the seventh gets missed.
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('hideSelected')
+                    ->label('Approve and hide the selected runs')
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalDescription('Takes every selected run off the leaderboard here. Until the MDD databases are merged they still stand on q3df.org.')
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function ($records) {
+                        $done = 0;
+
+                        foreach ($records as $record) {
+                            if ($record->isProcessed() || ! $record->record_id) {
+                                continue;
+                            }
+
+                            Record::find($record->record_id)?->delete();
+                            $record->update(['processed_at' => now(), 'processed_by' => auth()->id()]);
+                            $done++;
+                        }
+
+                        Notification::make()->success()
+                            ->title($done . ' ' . ($done === 1 ? 'run' : 'runs') . ' hidden')
+                            ->send();
+                    }),
+
+                Tables\Actions\BulkAction::make('restoreSelected')
+                    ->label('Put the selected runs back')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalDescription('Puts the records back on the leaderboard and drops the requests.')
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function ($records) {
+                        $done = 0;
+
+                        foreach ($records as $record) {
+                            $run = Record::onlyTrashed()->whereKey($record->record_id)->first();
+
+                            if (! $run) {
+                                continue;
+                            }
+
+                            $run->restore();
+                            $record->delete();
+                            $done++;
+                        }
+
+                        Notification::make()->success()
+                            ->title($done . ' ' . ($done === 1 ? 'run' : 'runs') . ' restored')
+                            ->send();
                     }),
             ]);
     }
