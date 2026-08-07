@@ -139,6 +139,12 @@ Route::get('/defraghq/validation-demo/{flag}', \App\Http\Controllers\ServerdemoV
     ->middleware(['auth', 'signed'])
     ->name('defraghq.validation-demo');
 
+// The serverdemo of a run its own owner withdrew. Admin only - a withdrawal
+// is private, and so is the demo that shows which run it was.
+Route::get('/defraghq/amnesty-demo/{report}', \App\Http\Controllers\AmnestyDemoDownloadController::class)
+    ->middleware(['auth', 'signed'])
+    ->name('defraghq.amnesty-demo');
+
 // DefragLive most-watched-player contest (public leaderboard + raffle odds).
 Route::get('/defraglive/contest', [DefragliveContestController::class, 'index'])->name('defraglive.contest');
 // OBS Browser Source overlay (transparent top-3 widget) + its JSON feed.

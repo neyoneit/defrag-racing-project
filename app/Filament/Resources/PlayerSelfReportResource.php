@@ -276,6 +276,32 @@ class PlayerSelfReportResource extends Resource
                             ? 'success'
                             : ($record->handling === 'immediate' ? 'warning' : 'gray'))),
 
+                // What evidence exists for this run, before deciding anything
+                // about it. A withdrawal with a serverdemo behind it can be
+                // checked; one with nothing cannot, and that is worth seeing
+                // at a glance rather than by clicking every row.
+                Tables\Columns\TextColumn::make('evidence')
+                    ->label('Available')
+                    ->badge()
+                    ->state(function (PlayerSelfReport $record) {
+                        $has = [];
+
+                        if ($record->serverDemo()) {
+                            $has[] = 'Serverdemo';
+                        }
+
+                        if ($record->uploadedDemo()) {
+                            $has[] = 'Public demo';
+                        }
+
+                        if ($record->video()) {
+                            $has[] = 'Video';
+                        }
+
+                        return $has ?: ['Nothing'];
+                    })
+                    ->color(fn (string $state) => $state === 'Nothing' ? 'gray' : 'success'),
+
                 Tables\Columns\TextColumn::make('note')
                     ->label('Note')
                     ->wrap()
@@ -287,6 +313,31 @@ class PlayerSelfReportResource extends Resource
                     ->sortable(),
             ])
             ->actions([
+                Tables\Actions\Action::make('serverdemo')
+                    ->label('Serverdemo')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('info')
+                    ->visible(fn (PlayerSelfReport $record) => $record->serverDemo() !== null)
+                    ->url(fn (PlayerSelfReport $record) => \Illuminate\Support\Facades\URL::signedRoute(
+                        'defraghq.amnesty-demo',
+                        ['report' => $record->getKey()],
+                        now()->addHour(),
+                    ), shouldOpenInNewTab: true),
+
+                Tables\Actions\Action::make('publicdemo')
+                    ->label('Public demo')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('info')
+                    ->visible(fn (PlayerSelfReport $record) => $record->uploadedDemo() !== null)
+                    ->url(fn (PlayerSelfReport $record) => route('demos.download', $record->uploadedDemo()), shouldOpenInNewTab: true),
+
+                Tables\Actions\Action::make('video')
+                    ->label('Watch on YouTube')
+                    ->icon('heroicon-o-play')
+                    ->color('danger')
+                    ->visible(fn (PlayerSelfReport $record) => $record->video() !== null)
+                    ->url(fn (PlayerSelfReport $record) => $record->video()->youtube_url, shouldOpenInNewTab: true),
+
                 // The hide itself. Nothing leaves the leaderboard until this
                 // is pressed, which is also what the player was promised.
                 Tables\Actions\Action::make('hide')
