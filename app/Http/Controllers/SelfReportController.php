@@ -61,13 +61,43 @@ class SelfReportController extends Controller
                 ],
                 'records' => ['data' => []],
                 'reasons' => RecordFlagController::FLAG_TYPES,
-                'mine' => [],
+                'mine' => ['data' => []],
+                'mineCounts' => [],
+                'mineState' => 'all',
             ]);
         }
 
         $search = trim((string) $request->input('search', ''));
         $sort = $request->input('sort');
         $sort = isset(self::SORTS[$sort]) ? $sort : 'date';
+
+        // Your own withdrawals, filtered and paged on their own. Somebody who
+        // cleans up an old habit sends dozens at once, and a list that loads
+        // all of them forever is a list nobody scrolls twice.
+        $mineState = $request->input('mine_state');
+        $mineState = in_array($mineState, ['waiting', 'queued', 'done', 'restored'], true) ? $mineState : 'all';
+
+        $mineBase = fn () => PlayerSelfReport::where('user_id', $user->id);
+
+        $applyState = fn ($query, string $state) => match ($state) {
+            'waiting' => $query->whereNull('processed_at')->where('handling', 'immediate'),
+            'queued' => $query->whereNull('processed_at')->where('handling', 'on_merge'),
+            'done' => $query->whereNotNull('processed_at')
+                ->where(fn ($q) => $q->whereNull('resolution')->orWhere('resolution', '!=', 'restored')),
+            'restored' => $query->where('resolution', 'restored'),
+            default => $query,
+        };
+
+        $mineCounts = collect(['all', 'waiting', 'queued', 'done', 'restored'])
+            ->mapWithKeys(fn (string $state) => [$state => $applyState($mineBase(), $state)->count()])
+            ->all();
+
+        $mine = $applyState($mineBase(), $mineState)
+            ->orderByDesc('created_at')
+            // Its own page parameter: the pickable records above have a
+            // paginator too, and one `page` for both would move both lists.
+            ->paginate(20, ['*'], 'mine_page')
+            ->withQueryString();
 
         $records = ['data' => []];
         $total = 0;
@@ -136,10 +166,10 @@ class SelfReportController extends Controller
             // months later "which runs did I take down" is a fair question and
             // the answer should not only exist in the admin panel.
             'handlingOptions' => PlayerSelfReport::HANDLING,
-            'mine' => PlayerSelfReport::where('user_id', $user->id)
-                ->orderByDesc('created_at')
-                ->get()
-                ->map(fn (PlayerSelfReport $report) => [
+            'mineState' => $mineState,
+            'mineCounts' => $mineCounts,
+            'mine' => $mine
+                ->through(fn (PlayerSelfReport $report) => [
                     'id' => $report->id,
                     'mapname' => $report->mapname,
                     'physics' => $report->physics,
@@ -150,6 +180,7 @@ class SelfReportController extends Controller
                     'note' => $report->note,
                     'processed' => $report->isProcessed(),
                     'beaten' => $report->wasBeaten(),
+                    'restored' => $report->wasRestored(),
                     'state' => $report->stateLabel(),
                     'created_at' => $report->created_at?->toIso8601String(),
                 ]),

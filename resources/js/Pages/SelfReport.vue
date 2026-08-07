@@ -20,12 +20,35 @@ const props = defineProps({
     totalRecords: { type: Number, default: 0 },
     reasons: { type: Object, default: () => ({}) },
     handlingOptions: { type: Object, default: () => ({}) },
-    mine: { type: Array, default: () => [] },
+    mine: { type: Object, default: () => ({ data: [] }) },
+    mineCounts: { type: Object, default: () => ({}) },
+    mineState: { type: String, default: 'all' },
 });
 
 // The rows of the page being looked at. Everything else on this page talks
 // about the whole collection, so the two are kept apart by name.
 const rows = computed(() => props.records?.data ?? []);
+
+// Your own withdrawals: same states the admin sees, in the words a player
+// would use for them.
+const MINE_STATES = {
+    all: 'All',
+    waiting: 'Waiting',
+    queued: 'Queued for the merge',
+    done: 'Off the board',
+    restored: 'Put back',
+};
+
+const mineRows = computed(() => props.mine?.data ?? []);
+
+const setMineState = (state) => {
+    router.get('/amnesty', { mine_state: state === 'all' ? undefined : state }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['mine', 'mineState', 'mineCounts'],
+    });
+};
 
 const { proxy } = getCurrentInstance();
 const formatTime = proxy.formatTime;
@@ -354,23 +377,44 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                     </div>
                 </div>
 
-                <div v-if="mine.length" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+                <div v-if="mineCounts.all" class="mt-6 bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
                     <div class="p-4 border-b border-white/5 flex flex-wrap items-baseline gap-x-3">
                         <span class="text-white font-bold">Runs you have sent</span>
-                        <span class="text-gray-500 text-sm">{{ mine.length }} in total, and why</span>
+                        <span class="text-gray-500 text-sm">{{ mineCounts.all }} in total, and why</span>
                         <span class="ml-auto text-xs text-gray-600">Visible to you and the site admin. Nobody else.</span>
                     </div>
-                    <div class="divide-y divide-white/5">
-                        <div v-for="row in mine" :key="row.id" class="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
+
+                    <!-- Same split the admin panel uses, so what you are told
+                         here and what happens there are the same thing. -->
+                    <div class="px-4 pt-3 flex flex-wrap gap-2">
+                        <button v-for="(label, key) in MINE_STATES" :key="key" type="button"
+                            v-show="key === 'all' || mineCounts[key]"
+                            @click="setMineState(key)"
+                            class="px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors"
+                            :class="mineState === key
+                                ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-200'
+                                : 'bg-black/40 border-white/10 text-gray-400 hover:text-white hover:border-white/25'">
+                            {{ label }}
+                            <span class="ml-1 opacity-60">{{ mineCounts[key] ?? 0 }}</span>
+                        </button>
+                    </div>
+
+                    <div class="divide-y divide-white/5 mt-3">
+                        <div v-if="!mineRows.length" class="p-6 text-center text-gray-500 text-sm">
+                            Nothing in this one.
+                        </div>
+                        <div v-for="row in mineRows" :key="row.id" class="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <span class="font-semibold text-white">{{ row.mapname }}</span>
                                     <span class="text-[11px] px-2 py-0.5 rounded border font-bold"
                                         :class="row.beaten
                                             ? 'border-blue-400/30 bg-blue-500/15 text-blue-200'
-                                            : row.processed
-                                                ? 'border-green-400/30 bg-green-500/15 text-green-300'
-                                                : 'border-amber-400/40 bg-amber-500/15 text-amber-200'">
+                                            : row.restored
+                                                ? 'border-red-400/30 bg-red-500/15 text-red-200'
+                                                : row.processed
+                                                    ? 'border-green-400/30 bg-green-500/15 text-green-300'
+                                                    : 'border-amber-400/40 bg-amber-500/15 text-amber-200'">
                                         {{ row.state }}
                                     </span>
                                 </div>
@@ -382,6 +426,14 @@ const thumb = (path) => path ? `/storage/${path}` : '/images/unknown.jpg';
                             <div class="font-mono text-sm text-gray-300 whitespace-nowrap">{{ formatTime(row.time) }}</div>
                             <div class="text-sm text-gray-500 whitespace-nowrap">{{ fmtDate(row.created_at) }}</div>
                         </div>
+                    </div>
+
+                    <div v-if="mine.last_page > 1" class="p-4 border-t border-white/5">
+                        <!-- Its own page parameter, or paging this list would
+                             page the records above it as well. -->
+                        <Pagination :last_page="mine.last_page" :current_page="mine.current_page"
+                            :link="mine.first_page_url" page-name="mine_page"
+                            :only="['mine', 'mineState', 'mineCounts']" />
                     </div>
                 </div>
 
