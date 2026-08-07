@@ -109,7 +109,11 @@ class PlayerSelfReportResource extends Resource
                 ->selectRaw('min(id) as id, mdd_id, max(user_id) as user_id, max(player_name) as player_name')
                 ->selectRaw('count(*) as runs')
                 ->selectRaw('count(distinct reason) as reason_count')
-                ->selectRaw('sum(processed_at is null) as open_count')
+                // Open splits in two, because the two halves are different
+                // jobs: one is waiting on an admin, the other is waiting on
+                // the MDD merge and needs nobody.
+                ->selectRaw("sum(processed_at is null and handling = 'immediate') as waiting_count")
+                ->selectRaw("sum(processed_at is null and handling = 'on_merge') as queued_count")
                 ->selectRaw("sum(processed_at is not null and coalesce(resolution, '') not in ('beaten', 'restored')) as hidden_count")
                 ->selectRaw("sum(coalesce(resolution, '') = 'beaten') as beaten_count")
                 ->selectRaw("sum(coalesce(resolution, '') = 'restored') as restored_count")
@@ -120,9 +124,13 @@ class PlayerSelfReportResource extends Resource
                 ->orderByRaw('sum(processed_at is null) > 0 desc'))
             ->defaultSort('last_request', 'desc')
             ->filters([
-                Tables\Filters\Filter::make('open')
-                    ->label('Has something still open')
-                    ->query(fn (Builder $query) => $query->havingRaw('sum(processed_at is null) > 0')),
+                Tables\Filters\Filter::make('waiting')
+                    ->label('Waiting on you')
+                    ->query(fn (Builder $query) => $query->havingRaw("sum(processed_at is null and handling = 'immediate') > 0")),
+
+                Tables\Filters\Filter::make('queued')
+                    ->label('Queued for the merge')
+                    ->query(fn (Builder $query) => $query->havingRaw("sum(processed_at is null and handling = 'on_merge') > 0")),
 
                 Tables\Filters\Filter::make('blocked')
                     ->label('Blocked from the amnesty')
@@ -162,11 +170,19 @@ class PlayerSelfReportResource extends Resource
                     })
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('open_count')
-                    ->label('Still open')
+                Tables\Columns\TextColumn::make('waiting_count')
+                    ->label('Waiting on you')
                     ->badge()
                     ->color(fn ($state) => $state > 0 ? 'warning' : 'gray')
-                    ->sortable(),
+                    ->sortable()
+                    ->tooltip('Asked to be hidden now'),
+
+                Tables\Columns\TextColumn::make('queued_count')
+                    ->label('Queued')
+                    ->badge()
+                    ->color(fn ($state) => $state > 0 ? 'info' : 'gray')
+                    ->sortable()
+                    ->tooltip('Waiting for the MDD merge - nothing to do until then'),
 
                 Tables\Columns\TextColumn::make('hidden_count')
                     ->label('Hidden')
