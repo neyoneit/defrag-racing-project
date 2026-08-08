@@ -59,6 +59,8 @@ class ConsoleComandsParser:
             elif any(token in value for token in (
                 'broke the server record',
                 'you are now rank',
+                'is now rank',
+                'set the first record with',
                 'equalled the server record with',
             )):
                 result = get_name_q3df(value)

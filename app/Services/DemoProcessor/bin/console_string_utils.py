@@ -105,6 +105,14 @@ def get_name_q3df(demo_time_cmd: str) -> Optional[Q3DFResult]:
     stripped = text.replace('chat "', '').rstrip('"')
     stripped_colored = text_colored.replace('chat "', '').rstrip('"')
 
+    # Servers that print the announcement through the console put "console: "
+    # in front of the player. Taken off here rather than in one branch, or the
+    # first branch that matches keeps it and the name comes out "consolebert".
+    if stripped.startswith('console: '):
+        stripped = stripped[len('console: '):]
+        if stripped_colored.startswith('console: '):
+            stripped_colored = stripped_colored[len('console: '):]
+
     def parse_prefix(prefix: str, prefix_colored: Optional[str] = None) -> tuple[str, Optional[str], Optional[str]]:
         prefix = prefix.strip()
         if '(' in prefix and ')' in prefix:
@@ -156,22 +164,25 @@ def get_name_q3df(demo_time_cmd: str) -> Optional[Q3DFResult]:
         time_part = parse_time(rest)
         return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
-    if ', you are now rank' in stripped and ' with ' in stripped:
-        prefix, rest = stripped.split(', you are now rank', 1)
-        prefix_colored = split_colored(', you are now rank', stripped_colored)
+    # The very first time on a map has no record to beat, so the server says
+    # so differently. Same shape otherwise.
+    if ' set the first record with ' in stripped:
+        prefix, rest = stripped.split(' set the first record with ', 1)
+        prefix_colored = split_colored(' set the first record with ', stripped_colored)
         name, q3df, q3df_colored = parse_prefix(prefix, prefix_colored)
-        if ' with ' in rest:
-            time_part = parse_time(rest.split(' with ', 1)[1])
-            return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
-
-    if stripped.startswith('console: ') and ' with ' in stripped:
-        body = stripped[len('console: '):]
-        body_colored = stripped_colored[len('console: '):] if stripped_colored.startswith('console: ') else None
-        name_part, rest = body.split(' is now rank', 1)
-        name_part_colored = split_colored(' is now rank', body_colored) if body_colored else None
-        name, q3df, q3df_colored = parse_prefix(name_part, name_part_colored)
-        time_part = parse_time(rest.split(' with ', 1)[1])
+        time_part = parse_time(rest)
         return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
+
+    # Addressed to the runner it reads "you are now rank", printed for everyone
+    # else "<name> is now rank". Both carry the same time.
+    for marker in (', you are now rank', ' is now rank'):
+        if marker in stripped and ' with ' in stripped:
+            prefix, rest = stripped.split(marker, 1)
+            prefix_colored = split_colored(marker, stripped_colored)
+            name, q3df, q3df_colored = parse_prefix(prefix, prefix_colored)
+            if ' with ' in rest:
+                time_part = parse_time(rest.split(' with ', 1)[1])
+                return Q3DFResult(name=name, q3dfName=q3df, q3dfNameColored=q3df_colored, time=get_time_span(time_part))
 
     return None
 
