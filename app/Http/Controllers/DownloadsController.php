@@ -32,6 +32,9 @@ class DownloadsController extends Controller
     /** What /downloads opens on when no category is asked for. */
     private const DEFAULT_SHELF = 'game-bundles';
 
+    /** Parent of the shelves. Kept in the tree, never rendered as a page. */
+    private const BUNDLES_PARENT_SLUG = 'bundles-and-repacks';
+
     private const SHELVES = [
         'game-bundles' => [
             'intro' => 'A bundle is the whole thing in one download: the game files DeFRaG needs, the mod itself, an engine that runs it and a config that works out of the box. Start here if you have nothing installed yet.',
@@ -102,6 +105,14 @@ class DownloadsController extends Controller
         // the game far more often than a table of every file in every
         // category, which is why that table no longer has a nav row of its
         // own. An actual query still falls through to it, across everything.
+        // The shelves are pages now and their parent is not a node anywhere in
+        // the UI, so as a listing it was only ever a table of everything below
+        // it. Pre-hub links still point here, so they land on the front door
+        // rather than on a page nothing links to.
+        if ($category && $category->slug === self::BUNDLES_PARENT_SLUG && ! $category->parent_id) {
+            return redirect()->route('downloads');
+        }
+
         $landing = false;
 
         if (! $category && $id === null && $search === '' && ! $defragOnly) {
