@@ -67,6 +67,13 @@ const allTags = ref([]);
 const showTagSuggestions = ref(false);
 const addingTag = ref(false);
 const taggedCurrentMap = ref(false);
+// What this session put on the map in front of you: tag id -> the parent tag
+// the server attached along with it, if any. The suggestions are a grid of
+// small buttons, so a wrong tag is one misclick away and has to be one click
+// back. Only these carry an undo - somebody else's tag is not yours to drop
+// from a screen built for speed.
+const tagsAddedHere = ref(new Map());
+const removingTag = ref(null);
 
 // Effects state
 const showPointSplash = ref(false);
@@ -534,6 +541,7 @@ async function addTagToMap(tagName) {
             map.tags.push(data.parent_tag_added);
         }
         map.tags.sort((a, b) => a.display_name.localeCompare(b.display_name));
+        tagsAddedHere.value.set(data.tag.id, data.parent_tag_added?.id ?? null);
         tagInput.value = '';
         taggedCurrentMap.value = true;
         filterTagSuggestions();
@@ -543,6 +551,62 @@ async function addTagToMap(tagName) {
         console.error('Failed to add tag:', err);
     } finally {
         addingTag.value = false;
+    }
+}
+
+// Takes a tag back off the map you are looking at, along with the point it
+// paid. The permanent community score counts rows in map_tag, so detaching
+// takes care of that side by itself.
+async function undoTag(tag) {
+    const map = currentTagMap.value;
+    if (!map || removingTag.value || !tagsAddedHere.value.has(tag.id)) return;
+
+    removingTag.value = tag.id;
+
+    try {
+        const { data } = await axios.delete('/api/maps/' + map.id + '/tags/' + tag.id);
+
+        const gone = new Set([tag.id, ...(data.removed_child_ids || [])]);
+        const parentId = tagsAddedHere.value.get(tag.id);
+
+        // The parent came with this click and was not on the map before it, so
+        // it goes back off with it - but only if no other tag is left sitting
+        // under it. Removing a parent cascades its children server-side, and
+        // undoing your own click must not take somebody else's tag with it.
+        const parentStillUsed = parentId
+            && map.tags.some(t => ! gone.has(t.id) && t.id !== parentId && t.parent_tag_id === parentId);
+
+        if (parentId && ! parentStillUsed) {
+            try {
+                await axios.delete('/api/maps/' + map.id + '/tags/' + parentId);
+                gone.add(parentId);
+            } catch (err) {
+                console.warn('Parent tag stayed on the map:', err.response?.data?.error || err.message);
+            }
+        }
+
+        map.tags = map.tags.filter(t => ! gone.has(t.id));
+
+        // One point per click, so give back one per click of ours that went.
+        let refunded = 0;
+        gone.forEach(id => {
+            if (tagsAddedHere.value.delete(id)) refunded++;
+        });
+
+        deductPoints(refunded * (props.weights?.tags_added || 1));
+        streak.value = Math.max(0, streak.value - refunded);
+
+        // Nothing of yours left on this map: the button goes back to Skip, or
+        // you would get credit for a map you ended up not tagging.
+        if (tagsAddedHere.value.size === 0) {
+            taggedCurrentMap.value = false;
+        }
+
+        filterTagSuggestions();
+    } catch (err) {
+        console.error('Failed to remove tag:', err);
+    } finally {
+        removingTag.value = null;
     }
 }
 
@@ -569,6 +633,7 @@ async function skipTag() {
     }
     completedTags.value++;
     taggedCurrentMap.value = false;
+    tagsAddedHere.value.clear();
     tagInput.value = '';
     tagQueue.value.shift();
     if (tagQueue.value.length <= 1) preloadNextRound();
@@ -576,6 +641,14 @@ async function skipTag() {
 }
 
 // ─── Points & Effects ──────────────────────────────────
+// Taking back what an undone action paid. No splash, no sound: it is a
+// correction, and celebrating one would be strange.
+function deductPoints(points) {
+    if (points <= 0) return;
+
+    sessionPoints.value = Math.max(0, sessionPoints.value - points);
+}
+
 function awardPoints(points) {
     const oldScore = sessionPoints.value;
     sessionPoints.value += points;
@@ -1690,6 +1763,10 @@ onUnmounted(() => {
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
+                                    <p>Misclicked? The tags you just added have an <strong class="text-white">&times;</strong> on them. Taking one back takes its point back too.</p>
+                                </div>
+                                <div class="flex items-start gap-2">
+                                    <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
                                     <p>No video? Use <strong class="text-white">Skip + Request Render</strong> to queue a render for future taggers.</p>
                                 </div>
                                 <div class="flex items-start gap-2">
@@ -1746,9 +1823,23 @@ onUnmounted(() => {
                                     </button>
                                 </div>
                                 <div v-if="currentTagMap.tags.length > 0" class="flex flex-wrap gap-1.5">
+                                    <!-- Tags you added here carry an undo; the ones that
+                                         were already on the map are shown, not editable. -->
                                     <span v-for="tag in currentTagMap.tags" :key="tag.id"
-                                        class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
+                                        :class="tagsAddedHere.has(tag.id)
+                                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                                            : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'">
                                         {{ tag.display_name }}
+                                        <button v-if="tagsAddedHere.has(tag.id)"
+                                            @click="undoTag(tag)"
+                                            :disabled="removingTag === tag.id"
+                                            class="-mr-0.5 w-4 h-4 rounded-full flex items-center justify-center text-amber-300/70 hover:text-white hover:bg-red-500/60 disabled:opacity-40 transition-colors"
+                                            :title="'Remove ' + tag.display_name + ' again'">
+                                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
                                     </span>
                                 </div>
                                 <div v-else class="text-xs text-gray-600">No tags yet - be the first!</div>
