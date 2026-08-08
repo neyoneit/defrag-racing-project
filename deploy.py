@@ -263,6 +263,16 @@ def deploy(force=False):
     print(f"\n==> Pruning old releases (keeping {KEEP_RELEASES})...", flush=True)
     prune_releases()
 
+    # A shell that was sitting in `current` before this ran is now standing in
+    # the release we just replaced: bash resolved that symlink when you cd'd,
+    # and it holds the old directory, not the new one. Artisan there runs the
+    # previous deploy's code, and once that release is pruned it runs nothing
+    # at all. The script cannot fix that from here - a child process cannot
+    # move its parent shell - so it says so, with the line to paste.
+    print("\n==> Live.", flush=True)
+    print("    Any shell already open in `current` is now in the OLD release. Re-enter it:", flush=True)
+    print(f"\n    cd {PROJECT_PATH}/current\n", flush=True)
+
 if __name__ == "__main__":
     deploy(force="--force" in sys.argv)
 
