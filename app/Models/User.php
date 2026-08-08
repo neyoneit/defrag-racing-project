@@ -107,6 +107,22 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'oldhash',
         'two_factor_recovery_codes',
         'two_factor_secret',
+
+        // A User is serialized into public page payloads wherever it hangs off
+        // something else - a demo's uploader, a record's owner - and those
+        // payloads are readable by anyone. Measured on production 2026-08-08:
+        // /maps/2plyr with Demos Top on handed out 8 addresses and a live
+        // Discord access + refresh token to an unauthenticated request. The
+        // linked-account tokens are credentials; the address is nobody's
+        // business. Own-account email is put back in HandleInertiaRequests,
+        // which is the only place the settings page reads it from.
+        'email',
+        'discord_token',
+        'discord_refresh_token',
+        'twitch_token',
+        'twitch_refresh_token',
+        'twitter_token',
+        'twitter_refresh_token',
     ];
 
     /**
