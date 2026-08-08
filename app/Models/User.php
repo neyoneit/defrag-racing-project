@@ -64,6 +64,7 @@ class User extends Authenticatable implements FilamentUser, HasName, MustVerifyE
         'name_effects_speed',
         'defrag_news',
         'tournament_news',
+        'map_news',
         'clan_notifications',
         'records_vq3',
         'records_cpm',

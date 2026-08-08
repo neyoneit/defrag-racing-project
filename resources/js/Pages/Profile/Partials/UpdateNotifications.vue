@@ -11,12 +11,13 @@
         _method: 'POST',
         defrag_news: props.user.defrag_news ? true : false,
         tournament_news: props.user.tournament_news ? true : false,
+        map_news: props.user.map_news ? true : false,
         clan_notifications: props.user.clan_notifications ? true : false,
         invitations: true,
         records_vq3: props.user.records_vq3,
         records_cpm: props.user.records_cpm,
         preview_records: props.user.preview_records || 'all',
-        preview_system: props.user.preview_system || ['announcement', 'clan', 'tournament']
+        preview_system: props.user.preview_system || ['announcement', 'clan', 'tournament', 'map']
     });
 
     const updateSocialMediaInformation = () => {
@@ -82,6 +83,13 @@
                     </label>
 
                     <label class="flex items-center cursor-pointer">
+                        <Checkbox v-model:checked="form.map_news" name="map_news" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            New Maps (one notification per release, batches are grouped)
+                        </span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer">
                         <Checkbox v-model:checked="form.clan_notifications" name="clan_notifications" />
                         <span class="ms-2 text-xs text-gray-400">
                             Clan Notifications (Invites, kicks, transfers, join requests)
@@ -123,6 +131,13 @@
                         <Checkbox :checked="form.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" />
                         <span class="ms-2 text-xs text-gray-400">
                             Tournament Notifications
+                        </span>
+                    </label>
+
+                    <label class="flex items-center cursor-pointer mb-2">
+                        <Checkbox :checked="form.preview_system.includes('map')" @change="togglePreviewSystem('map')" />
+                        <span class="ms-2 text-xs text-gray-400">
+                            New Map Notifications
                         </span>
                     </label>
 
