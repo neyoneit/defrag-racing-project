@@ -949,7 +949,10 @@
                         'text-gray-300': compact,
                     }"
                 >
-                    {{ formatTime(record.time) }}
+                    <!-- A trick, tutorial or pads demo never finished a run, so
+                         it has no time. Printing formatTime(null) put "00.000"
+                         on it, which reads as a run of zero seconds. -->
+                    {{ record.time ? formatTime(record.time) : '-' }}
                 </div>
                 <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     -{{ formatTime(timeDiff) }}

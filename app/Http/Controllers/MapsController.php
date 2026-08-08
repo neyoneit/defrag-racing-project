@@ -225,6 +225,49 @@ class MapsController extends Controller
     }
 
     /**
+     * The mode a demo was recorded in, off its gametype. The 'm' prefix only
+     * says the run happened online, so it does not change the mode.
+     */
+    private const GAMETYPE_FAMILIES = [
+        'df' => 'run',      'mdf' => 'run',
+        'fc' => 'fastcap',  'mfc' => 'fastcap',
+        'fs' => 'freestyle', 'mfs' => 'freestyle',
+    ];
+
+    private static function familyOf(?string $gametype): ?string
+    {
+        return self::GAMETYPE_FAMILIES[$gametype] ?? null;
+    }
+
+    /**
+     * Keep a demo set to one mode. Physics alone does not separate them: a
+     * freestyle demo is stored as `[fs.cpm.2]` -> physics `CPM.2`, the same
+     * value a fastcap run on flag 2 carries, so the fastcap's time history was
+     * pulling in freestyle demos and listing them at 00.000 because freestyle
+     * has no time to show. Reported by Enter with prince_quake and cos1_beta7b;
+     * measured there, 20 of the 36 demos behind one fastcap run were freestyle.
+     *
+     * Demos with no gametype at all (2947, all but 24 of them failed uploads)
+     * are left in rather than silently dropped - they are unclassifiable, not
+     * known to be a different mode.
+     */
+    private function scopeDemoFamily($query, ?string $family)
+    {
+        if ($family === null) {
+            return $query;
+        }
+
+        $types = array_keys(array_filter(
+            self::GAMETYPE_FAMILIES,
+            fn ($f) => $f === $family
+        ));
+
+        return $query->where(function ($q) use ($types) {
+            $q->whereIn('gametype', $types)->orWhereNull('gametype');
+        });
+    }
+
+    /**
      * Demos a history must not contain at all. Only approved community flags
      * count: somebody looked at the run and decided it is not what it claims.
      *
@@ -302,6 +345,7 @@ class MapsController extends Controller
         // they landed in one history together.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, self::fastcapOf($seed->physics)))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, self::familyOf($seed->gametype)))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -458,8 +502,11 @@ class MapsController extends Controller
             return response()->json(['history' => [], 'signals' => 0]);
         }
 
+        // A main record is a run or a fastcap, never freestyle, so the mode the
+        // caller is looking at is whichever one the fastcap number says.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, $fastcap !== null ? 'fastcap' : 'run'))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -937,8 +984,11 @@ class MapsController extends Controller
     {
         // Same gametype rule as the drawer itself, or the badge would promise
         // a count the drawer then refuses to show.
+        // Same mode rule as the drawer, or the badge counts freestyle demos the
+        // drawer then refuses to list.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, $fastcap !== null ? 'fastcap' : 'run'))
             ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
                    'time_ms', 'gametype', 'record_date', 'record_id', 'file_hash', 'created_at']);
 
