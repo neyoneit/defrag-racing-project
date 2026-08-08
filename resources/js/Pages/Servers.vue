@@ -173,18 +173,29 @@ const filteredAndSortedServers = computed(() => {
             const serverType = server.type?.toLowerCase() || 'run';
             const serverName = (server.name || '').replace(/\^\d|\^x[\da-fA-F]{2}|\^[\da-fA-F]{6}/g, '').toLowerCase();
 
-            // Defrag's gametype 5 = mixed (server allows run + teamrun
-            // simultaneously). Many "10gbit cpm III"-style servers are
-            // tagged type='team' in our DB but actually advertise a
-            // run leaderboard too, so they need to surface in both
-            // the 'run' and 'teamrun' tabs. The "mixed" keyword in
-            // the server name is the other signal — admins use it
-            // for the same kind of multi-mode setup.
-            const isMixed = String(server.defrag_gametype) === '5' || serverName.includes('mixed');
+            // A mixed server advertises a run leaderboard alongside
+            // whatever else it does, so it belongs in the run tab too.
+            //
+            // defrag_gametype used to be read as that signal, on the
+            // basis that 5 means "run + teamrun at once". It is 5 on
+            // every single server we know of — 76 of 76 in production —
+            // so it said nothing, and being OR'd into both the run and
+            // teamrun cases it made those two tabs return the entire
+            // list. The name keyword and type='mixed' are the signals
+            // admins actually set.
+            const isMixed = serverType === 'mixed' || serverName.includes('mixed');
 
-            // Detect effective type: DB type first, then name-based detection
+            // Detect effective type: DB type first, then name-based detection.
+            // The type column is not a clean vocabulary — it carries
+            // 'teamruns' as well as 'team', and physics values (cpm, vq3)
+            // where a gametype belongs — so it is normalised first. Without
+            // that, the twelve servers typed by physics matched no tab at
+            // all and the two 'teamruns' ones were invisible to the team tab.
             let effectiveType = serverType;
-            if (serverType === 'run') {
+            if (effectiveType === 'teamruns') effectiveType = 'team';
+            if (effectiveType === 'cpm' || effectiveType === 'vq3' || effectiveType === 'mixed') effectiveType = 'run';
+
+            if (effectiveType === 'run') {
                 if (serverName.includes('fastcap') || serverName.includes('ctf')) effectiveType = 'fastcaps';
                 else if (serverName.includes('freestyle')) effectiveType = 'freestyle';
                 else if (serverName.includes('teamrun') || serverName.includes('team run')) effectiveType = 'team';
@@ -197,8 +208,11 @@ const filteredAndSortedServers = computed(() => {
                     return effectiveType === 'ctf' || effectiveType === 'fastcaps';
                 case 'freestyle':
                     return effectiveType === 'freestyle';
+                // Not isMixed: a teamrun can be voted on any mixed server,
+                // but someone filtering here wants the servers set up for
+                // them, not the forty run servers where it is possible.
                 case 'teamrun':
-                    return effectiveType === 'teamrun' || effectiveType === 'team' || isMixed;
+                    return effectiveType === 'teamrun' || effectiveType === 'team';
                 default:
                     return true;
             }
