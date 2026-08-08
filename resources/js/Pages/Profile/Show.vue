@@ -336,12 +336,13 @@ const notifsForm = useForm({
     _method: 'POST',
     defrag_news: user.value.defrag_news ? true : false,
     tournament_news: user.value.tournament_news ? true : false,
+    map_news: user.value.map_news ? true : false,
     clan_notifications: user.value.clan_notifications ? true : false,
     invitations: true,
     records_vq3: user.value.records_vq3 || 'all',
     records_cpm: user.value.records_cpm || 'all',
     preview_records: user.value.preview_records || 'all',
-    preview_system: user.value.preview_system || ['announcement', 'clan', 'tournament']
+    preview_system: user.value.preview_system || ['announcement', 'clan', 'tournament', 'map']
 });
 
 const togglePreviewSystem = (type) => {
@@ -2277,6 +2278,13 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
+                                <input v-model="notifsForm.map_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-300">New Maps</p>
+                                    <p class="text-xs text-gray-400">One per release, batches grouped</p>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
@@ -2352,6 +2360,10 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('tournament')" @change="togglePreviewSystem('tournament')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
                                         <span class="text-xs text-gray-300">Tournament Notifications</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" :checked="notifsForm.preview_system.includes('map')" @change="togglePreviewSystem('map')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
+                                        <span class="text-xs text-gray-300">New Map Notifications</span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('render')" @change="togglePreviewSystem('render')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />

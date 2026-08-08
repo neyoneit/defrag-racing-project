@@ -77,7 +77,10 @@ class NewMapNotifier
             $map = $maps->first();
 
             return $common + [
-                'before' => 'New map released',
+                // The label leads and the map name is the headline, so the
+                // header banner reads "New map: mapname" - it prints the
+                // headline and nothing else.
+                'before' => 'New map:',
                 'headline' => Str::limit($map->name, 200, ''),
                 'after' => $map->author ? Str::limit('by ' . $map->author, 200, '') : '',
                 'url' => '/maps/' . $map->name,
@@ -88,7 +91,7 @@ class NewMapNotifier
         $rest = $maps->count() - self::NAMES_IN_SUMMARY;
 
         return $common + [
-            'before' => 'New maps released',
+            'before' => 'New maps:',
             'headline' => $maps->count() . ' maps',
             'after' => Str::limit($rest > 0 ? $names . ' and ' . $rest . ' more' : $names, 200, ''),
             // /maps is ordered by date_added DESC, so the front page of it is
