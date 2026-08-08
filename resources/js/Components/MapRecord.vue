@@ -460,7 +460,7 @@
 
 <template>
     <div
-        class="group relative flex items-center gap-1.5 -mr-1 rounded-md transition-all duration-200 -ml-3"
+        class="group relative flex items-center gap-1.5 rounded-md transition-all duration-200 -ml-3"
         :class="{
             'py-1.5 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg': !compact,
             'py-0 opacity-70': compact,
@@ -933,7 +933,10 @@
                 <span>Time</span>
                 <span class="mt-0.5">History</span>
             </button>
-            <div class="text-right">
+            <!-- Fixed width: without one the time sat wherever the row's own
+                 badges left it, so no two rows lined up and the longest ran
+                 into the date. Sized for a time with minutes in it. -->
+            <div class="text-right w-[68px] flex-shrink-0">
                 <div
                     class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                     :class="{
