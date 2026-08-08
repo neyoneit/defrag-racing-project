@@ -469,18 +469,29 @@
             'border-l-2 border-transparent': compact,
         }"
     >
-        <!-- Rank Number - LARGE and prominent with pop animation -->
+        <!-- Rank Number - LARGE and prominent with pop animation. The score
+             took a column of its own and pushed the row's own buttons off the
+             edge on a narrower screen, so it borrows this one on hover: the
+             rank is what you read down the list, the score is what you look up
+             for one row at a time. -->
         <div
             v-if="!hideRank"
-            class="font-black text-sm w-8 flex-shrink-0 text-center leading-none transition-all duration-200 group-hover:scale-110"
+            class="font-black text-sm w-10 flex-shrink-0 text-center leading-none transition-all duration-200"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
+            @mouseenter="record.map_score && $emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
+            @mouseleave="$emit('scoreHover', null)"
         >
-            <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
-            <template v-else>{{ record.rank }}</template>
+            <span :class="record.map_score ? 'group-hover:hidden' : ''" class="inline-block transition-transform duration-200 group-hover:scale-110">
+                <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
+                <template v-else>{{ record.rank }}</template>
+            </span>
+            <span v-if="record.map_score" class="hidden group-hover:inline text-yellow-400/90 tabular-nums cursor-help">
+                {{ Math.round(record.map_score) }}
+            </span>
         </div>
         <!-- Empty spacer preserves horizontal alignment with the parent row when rank is hidden -->
-        <div v-else class="w-8 flex-shrink-0"></div>
+        <div v-else class="w-10 flex-shrink-0"></div>
 
         <!-- Player Info - Compact -->
         <component
@@ -934,17 +945,6 @@
                 <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     -{{ formatTime(timeDiff) }}
                 </div>
-            </div>
-        </div>
-
-        <!-- Map Score -->
-        <div class="w-10 sm:w-12 text-center flex-shrink-0 -ml-1 flex items-start">
-            <div v-if="record.map_score"
-                class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full cursor-help"
-                style="line-height: 16px;"
-                @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
-                @mouseleave="$emit('scoreHover', null)">
-                {{ Math.round(record.map_score) }}
             </div>
         </div>
 
