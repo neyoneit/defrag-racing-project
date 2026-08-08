@@ -1022,6 +1022,32 @@ class MapsController extends Controller
             if (count($members) === 1) {
                 $d = $members[0];
                 $meta[(string) $d->id] = ['count' => 0, 'signals' => 0];
+
+                // A cluster of one still has a drawer worth opening, and the
+                // profile-key entry below used to be skipped for it.
+                //
+                // One online demo, slower than its own player's MDD record on
+                // this map, and belonging to nobody else's cluster: Demos Top
+                // drops it on purpose (a slower online run is an attempt on
+                // the way to the PB, not a separate result), the main record
+                // has no demo of its own to hang a badge on, and with no
+                // profile key here the row offered no way in either. The demo
+                // existed, was processed, and could be reached by nothing on
+                // the map page. /time-history lists it perfectly well when
+                // asked by mdd_id.
+                //
+                // Only for a demo that is not attached to a main record - one
+                // that is attached is already the row you are looking at, and
+                // giving that row a badge counting its own demo would put a
+                // "1" on rows that today correctly have none.
+                if ($d->gametype && str_starts_with($d->gametype, 'm') && ! $d->record_id) {
+                    $rk = $profileResolver->resolve($d, $priorityProfileKeys);
+
+                    if ($rk !== null && ($meta[$rk]['count'] ?? 0) < 1) {
+                        $meta[$rk] = ['count' => 1, 'signals' => 0, 'profileKey' => $rk];
+                    }
+                }
+
                 continue;
             }
 
