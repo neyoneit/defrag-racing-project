@@ -1,5 +1,6 @@
 <script setup>
     import { Head, Link, router, usePage } from '@inertiajs/vue3';
+    import { formatTime } from '@/utils/time';
     import MapCardLine from '@/Components/MapCardLine.vue';
     import MapRecord from '@/Components/MapRecord.vue';
     import TimeHistoryExpand from '@/Components/TimeHistoryExpand.vue';
@@ -1157,16 +1158,8 @@
         return match ? match[1] : '';
     };
 
-    const formatTime = (milliseconds) => {
-        const minutes = Math.floor(milliseconds / 60000);
-        const seconds = Math.floor((milliseconds % 60000) / 1000);
-        const ms = milliseconds % 1000;
-
-        if (minutes > 0) {
-            return `${minutes}:${seconds.toString().padStart(2, '0')}:${ms.toString().padStart(3, '0')}`;
-        }
-        return `${seconds}:${ms.toString().padStart(3, '0')}`;
-    };
+    // Was a copy of the global one. It has to be the shared formatter, or the
+    // map page keeps printing colons after someone picks the decimal point.
 
     onMounted(() => {
         window.addEventListener("resize", resizeScreen);

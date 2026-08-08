@@ -28,7 +28,7 @@ window.fetch = async (...args) => {
 
 import { createApp, h } from 'vue';
 import { reactive } from 'vue'
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy/dist/vue.m';
 import Popper from "vue3-popper";
@@ -40,33 +40,10 @@ import { createVuetify } from 'vuetify'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Defrag Racing';
 
-const formatTime = (milliseconds) => {
-    milliseconds = Math.max(0, milliseconds);
-
-    // Defrag's smallest practical run is sub-minute and the largest pushes
-    // a couple hours, but the engine itself only ever displays MM:SS.mmm
-    // (minutes rolling past 60, never an "H:" prefix). Match that — a
-    // 1:30:45.123 hh:mm:ss display would just confuse players used to
-    // reading "90:45.123" off the in-game timer.
-    const minutes = Math.floor(milliseconds / 60000);
-    milliseconds %= 60000;
-    const seconds = Math.floor(milliseconds / 1000);
-    milliseconds %= 1000;
-
-    let formattedTime = '';
-
-    if (minutes > 0) {
-      formattedTime += `${padZero(minutes)}:`;
-    }
-
-    formattedTime += `${padZero(seconds)}:${milliseconds.toString().padStart(3, '0')}`;
-
-    return formattedTime;
-};
-
-const padZero = (num) => {
-    return num.toString().padStart(2, '0');
-};
+// Lives in utils/time.js now, because the separator before the milliseconds
+// is a user preference and every place that prints a run time has to agree
+// on it.
+import { formatTime, setTimeFormat } from './utils/time';
 
 const q3tohtml = (name) => {
     if (!name) return '';
@@ -194,6 +171,12 @@ createInertiaApp({
         return page
     },
     setup({ el, App, props, plugin }) {
+        // Applied before the first render, and again on every visit, because
+        // saving the preference comes back as an ordinary Inertia response
+        // carrying the new shared props.
+        setTimeFormat(props.initialPage.props.timeFormat);
+        router.on('success', (event) => setTimeFormat(event.detail.page.props.timeFormat));
+
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)

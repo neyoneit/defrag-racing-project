@@ -62,6 +62,8 @@ class WishlistController extends Controller
                 'project_label' => Wish::PROJECTS[$wish->project] ?? $wish->project,
                 'title' => $wish->title,
                 'body' => $wish->body,
+                'image_url' => $wish->imageUrl(),
+                'youtube_id' => $wish->youtube_id,
                 'status' => $wish->status,
                 'status_label' => Wish::STATUSES[$wish->status] ?? $wish->status,
                 'status_note' => $wish->status_note,
@@ -106,9 +108,26 @@ class WishlistController extends Controller
             'project' => ['required', 'string', 'in:' . implode(',', array_keys(Wish::PROJECTS))],
             'title' => ['required', 'string', 'min:6', 'max:120'],
             'body' => ['required', 'string', 'min:20', 'max:2000'],
+            // Extensions rather than the `image` rule, which accepts svg -
+            // an svg is a document that can carry script, and this one ends up
+            // inlined on a page everybody reads.
+            'image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:4096'],
+            'youtube_url' => ['nullable', 'string', 'max:255'],
         ], [
             'body.min' => 'Say a bit more - at least 20 characters, so people know what they are voting on.',
+            'image.mimes' => 'The screenshot has to be a jpg, png, webp or gif.',
+            'image.max' => 'The screenshot has to be under 4 MB.',
         ]);
+
+        $youtubeId = null;
+
+        if (filled($data['youtube_url'] ?? null)) {
+            $youtubeId = Wish::youtubeId($data['youtube_url']);
+
+            if (! $youtubeId) {
+                return back()->withErrors(['youtube_url' => 'That is not a YouTube link.'])->withInput();
+            }
+        }
 
         // Not approved: it goes nowhere public until an admin lets it through.
         $wish = Wish::create([
@@ -116,6 +135,10 @@ class WishlistController extends Controller
             'project' => $data['project'],
             'title' => $data['title'],
             'body' => $data['body'],
+            'image_path' => $request->hasFile('image')
+                ? $request->file('image')->store(Wish::IMAGE_DIR, Wish::IMAGE_DISK)
+                : null,
+            'youtube_id' => $youtubeId,
         ]);
 
         // The author wants it, obviously. Saying so explicitly means a fresh

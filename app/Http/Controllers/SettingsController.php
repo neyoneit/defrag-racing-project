@@ -310,6 +310,7 @@ class SettingsController extends Controller
             'hidden_stat_boxes' => ['present', 'array'],
             'hidden_stat_boxes.*' => ['string', 'in:performance,activity,record_types,map_features,renders'],
             'date_format' => ['sometimes', 'string', 'in:ymd,dmy,Ymd,dmY'],
+            'time_format' => ['sometimes', 'string', 'in:colon,dot'],
         ]);
 
         $user = $request->user();
@@ -317,6 +318,9 @@ class SettingsController extends Controller
             'hidden_sections' => $request->hidden_sections,
             'hidden_stat_boxes' => $request->hidden_stat_boxes,
             'date_format' => $request->date_format ?? $user->global_profile_preferences['date_format'] ?? 'dmY',
+            // Default is what the engine's own timer prints, so nobody who
+            // never opens this page sees their times change.
+            'time_format' => $request->time_format ?? $user->global_profile_preferences['time_format'] ?? 'colon',
         ];
         $user->save();
 
