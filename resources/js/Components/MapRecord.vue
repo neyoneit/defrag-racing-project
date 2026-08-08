@@ -541,6 +541,17 @@
                 v-html="q3tohtml(displayName)"
             ></span>
 
+            <!-- What the uploader called the demo. On a map with no timer the
+                 run has no time to identify it by, and the trick is the whole
+                 point - "oups-fs-b1_jpad_1xR_3xR" says more than any nick does.
+                 Only set where the backend put one on the row. -->
+            <span
+                v-if="record.demo_label"
+                class="ml-2 truncate text-gray-400"
+                :class="compact ? 'text-[10px]' : 'text-xs'"
+                :title="record.demo_label"
+            >{{ record.demo_label }}</span>
+
             <!-- Source type chips (shown in mixed views) -->
             <template v-if="showSourceChips">
                 <!-- Primary chip: what type of entry is this (clickable with download icon if demo available) -->

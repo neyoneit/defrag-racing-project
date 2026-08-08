@@ -225,6 +225,95 @@ class MapsController extends Controller
     }
 
     /**
+     * The demos on a map that has no leaderboard to put them in.
+     *
+     * A freestyle map has no timer, so nothing it holds can be ranked, and its
+     * page was two empty tables however many demos people had uploaded to it -
+     * csu1_a alone carries 1617. The same happens to a run map nobody has ever
+     * set a record on. 88 maps and 4176 demos site-wide, all of them with a
+     * thumbnail, an author and a pk3 already in hand.
+     *
+     * Returns null when the map does have times to show, so the page keeps its
+     * leaderboards and nothing else changes.
+     */
+    private function untimedDemos($map, $cpmRecords, $vq3Records): ?\Illuminate\Support\Collection
+    {
+        $hasTimes = ($cpmRecords && $cpmRecords->total() > 0) || ($vq3Records && $vq3Records->total() > 0);
+
+        if ($hasTimes) {
+            return null;
+        }
+
+        $demos = UploadedDemo::where('map_name', $map->name)
+            ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
+            ->with(['renderedVideo', 'user', 'record.user'])
+            ->orderByDesc('record_date')
+            ->orderByDesc('created_at')
+            ->limit(500)
+            ->get();
+
+        if ($demos->isEmpty()) {
+            return null;
+        }
+
+        $validityFlags = $this->validityFlagsByDemo($demos->pluck('id')->all());
+
+        // MapRecord's shape, so the list gets the same chips, download button,
+        // video and report actions the leaderboard rows have.
+        return $demos->map(function ($d) use ($validityFlags) {
+            $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
+
+            return [
+                'id' => $d->id,
+                'demo_id' => $d->id,
+                'record_id' => $d->record_id,
+                'time' => $d->time_ms,
+                'time_ms' => $d->time_ms,
+                'date_set' => $d->record_date ?? $d->created_at,
+                'player_name' => $d->player_name,
+                'name' => $d->record?->user?->name ?? $d->player_name,
+                'country' => $d->country ?? '_404',
+                'is_online' => $isOnline,
+                'verification_type' => $validityFlags[$d->id]
+                    ?? ($d->record_id ? 'verified' : ($isOnline ? 'ONLINE' : 'OFFLINE')),
+                'rank' => null,
+                'user' => $d->record?->user,
+                'demo' => $d,
+                'demo_label' => $this->demoLabel($d),
+                'uploaded_demos' => [],
+                'rendered_videos' => $d->renderedVideo ? [$d->renderedVideo] : [],
+                'q3df_login_name' => $d->q3df_login_name,
+                'q3df_login_name_colored' => $d->q3df_login_name_colored,
+            ];
+        })->values();
+    }
+
+    /**
+     * What the uploader called the demo, with everything the row already shows
+     * taken out: the map, the mode brackets, the (player.country) and the
+     * {cvars}. On a freestyle map that leftover is the whole point of the demo
+     * - "oups-fs-b1_jpad_1xR_3xR" or "Szak_white2-to-blue1" - and with no time
+     * to tell the runs apart it is the only thing that does.
+     */
+    private function demoLabel(UploadedDemo $d): ?string
+    {
+        $name = $d->original_filename ?: $d->processed_filename;
+
+        if (! $name) {
+            return null;
+        }
+
+        $name = preg_replace('/\.(dm_6\d|7z|zip)$/i', '', $name);
+        $name = preg_replace('/^' . preg_quote($d->map_name ?? '', '/') . '/i', '', $name);
+        $name = preg_replace('/\[[^\]]*\]/', '', $name);      // [fs.vq3.2]
+        $name = preg_replace('/\{[^}]*\}?/', '', $name);      // {sv_fps=120}, unclosed included
+        $name = preg_replace('/\([^)]*\)?/', '', $name);      // (player.country)
+        $name = trim($name, " \t-_.");
+
+        return $name !== '' ? $name : null;
+    }
+
+    /**
      * The mode a demo was recorded in, off its gametype. The 'm' prefix only
      * says the run happened online, so it does not change the mode.
      */
@@ -945,6 +1034,7 @@ class MapsController extends Controller
 
         return Inertia::render('MapView')
             ->with('map', $map)
+            ->with('untimedDemos', $this->untimedDemos($map, $cpmRecords, $vq3Records))
             ->with('cpmRecords', $cpmRecords)
             ->with('vq3Records', $vq3Records)
             ->with('my_cpm_record', $my_cpm_record)

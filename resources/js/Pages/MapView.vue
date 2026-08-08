@@ -245,6 +245,13 @@
             type: Object,
             default: () => ({ average: null, total: 0, distribution: {}, user_rating: null })
         },
+        // Present only on a map with nothing to rank - see
+        // MapsController::untimedDemos. Null on every other map, which is what
+        // keeps the leaderboards in place.
+        untimedDemos: {
+            type: Array,
+            default: null
+        },
         // Server-computed cluster metadata for time-history badges. Keyed by
         // uploaded_demo.id; each value is { count, signals }. Pre-computed so
         // the collapsed leaderboard badge matches the opened drawer numbers
@@ -1739,7 +1746,35 @@
                     </button>
                 </div>
 
-                <div class="lg:flex gap-4 justify-center">
+                <!-- A map with no times to rank: freestyle, or one nobody has
+                     set a record on. Two empty leaderboards said nothing while
+                     the demos people uploaded sat there unreachable, so the
+                     panel lists them instead, newest first. -->
+                <div v-if="untimedDemos" class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10">
+                    <div class="bg-gradient-to-r from-teal-600/20 to-teal-500/10 border-b border-teal-500/30 px-4 py-2">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h2 class="text-lg font-bold text-teal-300">
+                                Demos <span class="text-sm font-semibold text-teal-300/60">({{ untimedDemos.length }})</span>
+                            </h2>
+                            <div class="text-xs text-gray-400">
+                                <template v-if="map.gametype === 'freestyle'">This map has no timer, so its runs are not ranked.</template>
+                                <template v-else>No records on this map yet.</template>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-white/[0.04]">
+                        <MapRecord
+                            v-for="demo in untimedDemos"
+                            :key="demo.demo_id"
+                            :record="demo"
+                            :physics="(demo.demo?.physics || 'VQ3').split('.')[0]"
+                            :showSourceChips="true"
+                            :hideRank="true"
+                        />
+                    </div>
+                </div>
+
+                <div v-else class="lg:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
