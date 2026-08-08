@@ -931,10 +931,12 @@
                 <span>Time</span>
                 <span class="mt-0.5">History</span>
             </button>
-            <!-- Fixed width: without one the time sat wherever the row's own
-                 badges left it, so no two rows lined up and the longest ran
-                 into the date. Sized for a time with minutes in it. -->
-            <div class="text-right w-[68px] flex-shrink-0">
+            <!-- Sized to the time it holds, not to the longest time there
+                 could be. The date after it is a fixed width, so every time
+                 still ends on the same line - and the history button sits
+                 against its own row's number instead of a gap left for the
+                 minutes most runs do not have. -->
+            <div class="text-right flex-shrink-0">
                 <div
                     class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                     :class="{
