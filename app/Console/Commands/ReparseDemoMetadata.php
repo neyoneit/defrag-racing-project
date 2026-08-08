@@ -25,15 +25,22 @@ class ReparseDemoMetadata extends Command
         {--id=* : Specific demo ids, instead of the player filter}
         {--limit=0 : Stop after this many demos (0 = all)}
         {--sleep=0 : Seconds to wait between demos, to go easy on the bucket}
-        {--apply : Write the corrections. Without this nothing is saved}';
+        {--apply : Write the corrections. Without this nothing is saved}
+        {--journal= : Where to record what was written (default: storage/app/demo-reparse/<time>.jsonl)}
+        {--revert= : Put back everything a journal file recorded, instead of parsing anything}';
 
     protected $description = 'Re-parse stored demos and correct metadata the old parser got wrong';
 
     public function handle(): int
     {
+        if ($this->option('revert')) {
+            return $this->revert($this->option('revert'));
+        }
+
         $apply = (bool) $this->option('apply');
         $ids = $this->option('id');
         $limit = (int) $this->option('limit');
+        $journal = $apply ? $this->openJournal() : null;
 
         $query = $ids
             ? UploadedDemo::whereIn('id', $ids)
@@ -58,7 +65,7 @@ class ReparseDemoMetadata extends Command
             'assigned' => 0,
         ];
 
-        $query->orderBy('id')->chunkById(50, function ($demos) use ($apply, $limit, &$stats) {
+        $query->orderBy('id')->chunkById(50, function ($demos) use ($apply, $limit, $journal, &$stats) {
             foreach ($demos as $demo) {
                 if ($limit > 0 && $stats['read'] >= $limit) {
                     return false;
@@ -98,6 +105,8 @@ class ReparseDemoMetadata extends Command
                     $this->line("      {$column}: " . var_export($was, true) . ' -> ' . var_export($now, true));
                 }
 
+                $this->line('      check: ' . url('/maps/' . $demo->map_name) . '  |  ' . url('/demos/' . $demo->id . '/download'));
+
                 // A demo already sitting on a record was matched under the wrong
                 // name, so the match itself is in question. Reassigning it is an
                 // admin's call, not this command's - it only says so.
@@ -107,6 +116,15 @@ class ReparseDemoMetadata extends Command
                 }
 
                 if ($apply) {
+                    // Journal first: a line written for a save that then fails
+                    // reverts to the value already there, which is harmless.
+                    // The other order can leave a change with no way back.
+                    fwrite($journal, json_encode([
+                        'id' => $demo->id,
+                        'at' => now()->toIso8601String(),
+                        'changes' => $changes,
+                    ]) . "\n");
+
                     $demo->forceFill(array_map(fn ($pair) => $pair[1], $changes))->save();
                 }
 
@@ -131,6 +149,82 @@ class ReparseDemoMetadata extends Command
         if (! $apply && $stats['changed'] > 0) {
             $this->warn('Nothing was written. Re-run with --apply.');
         }
+
+        if ($journal) {
+            fclose($journal);
+            $this->info('Written down in: ' . $this->journalPath);
+            $this->line('Undo this run with: php artisan demos:reparse-metadata --revert=' . $this->journalPath);
+        }
+
+        return self::SUCCESS;
+    }
+
+    private string $journalPath = '';
+
+    /** @return resource */
+    private function openJournal()
+    {
+        $this->journalPath = $this->option('journal')
+            ?: storage_path('app/demo-reparse/' . now()->format('Y-m-d_His') . '.jsonl');
+
+        @mkdir(dirname($this->journalPath), 0755, true);
+
+        return fopen($this->journalPath, 'a');
+    }
+
+    /**
+     * Puts back what a journal recorded. A column whose current value is not
+     * what the run left there was changed by something else since - that one
+     * is reported and skipped rather than overwritten.
+     */
+    private function revert(string $path): int
+    {
+        if (! is_readable($path)) {
+            $this->error('No journal at ' . $path);
+
+            return self::FAILURE;
+        }
+
+        $reverted = 0;
+        $conflicts = 0;
+        $missing = 0;
+
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            $entry = json_decode($line, true);
+
+            if (! is_array($entry) || empty($entry['id'])) {
+                continue;
+            }
+
+            $demo = UploadedDemo::find($entry['id']);
+
+            if (! $demo) {
+                $missing++;
+                continue;
+            }
+
+            $restore = [];
+
+            foreach ($entry['changes'] ?? [] as $column => [$was, $now]) {
+                if ($demo->{$column} === $now) {
+                    $restore[$column] = $was;
+                    continue;
+                }
+
+                $conflicts++;
+                $this->line("  <fg=yellow>{$demo->id}</> {$column} is now " . var_export($demo->{$column}, true)
+                    . ', not ' . var_export($now, true) . ' - left alone');
+            }
+
+            if ($restore) {
+                $demo->forceFill($restore)->save();
+                $reverted++;
+                $this->line("  <fg=green>{$demo->id}</> back to " . json_encode($restore));
+            }
+        }
+
+        $this->newLine();
+        $this->info("Reverted {$reverted} demo(s), {$conflicts} column(s) left alone, {$missing} demo(s) gone.");
 
         return self::SUCCESS;
     }
