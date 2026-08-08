@@ -314,20 +314,10 @@ class MapsController extends Controller
      */
     private function demoLabel(UploadedDemo $d): ?string
     {
-        $name = $d->original_filename ?: $d->processed_filename;
-
-        if (! $name) {
-            return null;
-        }
-
-        $name = preg_replace('/\.(dm_6\d|7z|zip)$/i', '', $name);
-        $name = preg_replace('/^' . preg_quote($d->map_name ?? '', '/') . '/i', '', $name);
-        $name = preg_replace('/\[[^\]]*\]/', '', $name);      // [fs.vq3.2]
-        $name = preg_replace('/\{[^}]*\}?/', '', $name);      // {sv_fps=120}, unclosed included
-        $name = preg_replace('/\([^)]*\)?/', '', $name);      // (player.country)
-        $name = trim($name, " \t-_.");
-
-        return $name !== '' ? $name : null;
+        return \App\Services\VideoMetadataService::demoLabel(
+            $d->original_filename ?: $d->processed_filename,
+            $d->map_name
+        );
     }
 
     /**

@@ -37,11 +37,63 @@ class VideoMetadataService
         $prefix = !empty($prefixes) ? '[' . implode('] [', $prefixes) . '] ' : '';
 
         $physics = strtoupper($video->physics ?? '');
-        $time = self::formatTime($video->time_ms);
         $mapName = ContentFilter::filterText($video->map_name ?? 'Unknown');
         $playerName = self::cleanPlayerName($video->player_name ?? 'Unknown');
+        $what = self::titleSubject($video);
 
-        return "{$prefix}{$mapName} | {$time} by {$playerName} ({$physics}) - Quake 3 DeFRaG";
+        return "{$prefix}{$mapName} | {$what} by {$playerName} ({$physics}) - Quake 3 DeFRaG";
+    }
+
+    /**
+     * What the title says the video is of. A timed run says its time; a
+     * freestyle run has none - the map has no timer - and printing "00.000"
+     * called it a zero-second run. Those are named after the trick they show,
+     * so the uploader's own name for the demo goes there instead.
+     */
+    private static function titleSubject(RenderedVideo $video): string
+    {
+        $isFreestyle = in_array($video->gametype, ['fs', 'mfs'], true);
+
+        if (! $isFreestyle && $video->time_ms) {
+            return self::formatTime($video->time_ms);
+        }
+
+        $label = self::demoLabel($video->demo_filename, $video->map_name);
+
+        if ($label) {
+            // Straight from a filename somebody chose, and it is going on
+            // YouTube, so it goes through the same filter the map name does.
+            return ContentFilter::filterText(mb_substr($label, 0, 60));
+        }
+
+        return $isFreestyle ? 'Freestyle' : 'Trick';
+    }
+
+    /**
+     * What the uploader called the demo, with the parts a title states anyway
+     * taken out: the map, the [mode] brackets, the (player.country) and the
+     * {cvars}. "oups-fs-b1_jpad_1xR_3xR", "Szak_white2-to-blue1". Null when
+     * nothing is left, which is the case for a plain generated name.
+     */
+    public static function demoLabel(?string $filename, ?string $mapName): ?string
+    {
+        if (! $filename) {
+            return null;
+        }
+
+        $name = preg_replace('/\.(dm_6\d|7z|zip)$/i', '', $filename);
+
+        if ($mapName) {
+            $name = preg_replace('/^' . preg_quote($mapName, '/') . '/i', '', $name);
+        }
+
+        $name = preg_replace('/\[[^\]]*\]/', '', $name);      // [fs.vq3.2]
+        $name = preg_replace('/\{[^}]*\}?/', '', $name);      // {sv_fps=120}, unclosed included
+        $name = preg_replace('/\([^)]*\)?/', '', $name);      // (player.country)
+        $name = preg_replace('/^\d{2}\.\d{2}\.\d{3}/', '', trim($name, " \t-_."));
+        $name = trim($name, " \t-_.");
+
+        return $name !== '' ? $name : null;
     }
 
     /**
@@ -57,7 +109,12 @@ class VideoMetadataService
         $time = self::formatTime($video->time_ms);
 
         $desc = "Nickname: {$playerName}\n";
-        $desc .= "Time: {$time}\n";
+        // A freestyle run has no time to report - say what it is instead.
+        if (in_array($video->gametype, ['fs', 'mfs'], true) || ! $video->time_ms) {
+            $desc .= "Trick: " . self::titleSubject($video) . "\n";
+        } else {
+            $desc .= "Time: {$time}\n";
+        }
         $desc .= "Physics: {$physics}\n";
         $desc .= "Map: {$mapName}\n";
 
