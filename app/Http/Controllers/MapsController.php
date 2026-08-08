@@ -224,6 +224,49 @@ class MapsController extends Controller
         });
     }
 
+    /**
+     * Demos a history must not contain at all. Only approved community flags
+     * count: somebody looked at the run and decided it is not what it claims.
+     *
+     * Parser validity flags are deliberately NOT in here. `validity_flag` holds
+     * whatever cvar the run deviated on - `sv_fps=120.0` is the biggest bucket
+     * on the site - and DemosTopService already lists those demos on the map
+     * with the flag on a chip. Excluding them from the player's own history as
+     * well left runs that nothing on the site could reach: too slow for Demos
+     * Top against their own MDD record, and refused by the drawer.
+     */
+    private function communityFlaggedDemoIds(array $demoIds, array $recordIds): array
+    {
+        if (empty($demoIds) && empty($recordIds)) {
+            return [];
+        }
+
+        return RecordFlag::where('status', 'approved')
+            ->where(function ($q) use ($demoIds, $recordIds) {
+                if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
+                if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
+            })
+            ->pluck('demo_id')->filter()->unique()->values()->all();
+    }
+
+    /**
+     * demo_id => validity flag, for the demos that carry one. Fed into the
+     * history rows as `verification_type` so the drawer shows the same red chip
+     * the map page does instead of quietly calling the run ONLINE.
+     */
+    private function validityFlagsByDemo(array $demoIds): array
+    {
+        if (empty($demoIds)) {
+            return [];
+        }
+
+        return OfflineRecord::whereIn('demo_id', $demoIds)
+            ->whereNotNull('validity_flag')
+            ->where('validity_flag', '!=', '')
+            ->pluck('validity_flag', 'demo_id')
+            ->all();
+    }
+
     public function timeHistory(Request $request, $mapname)
     {
         $demoId = (int) $request->input('demo_id');
@@ -262,35 +305,25 @@ class MapsController extends Controller
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
-        // Drop flagged demos before clustering. A TAS / no_finish / pmove_cheat
-        // demo must not participate in a real player's history — both ways:
-        // it shouldn't act as seed (no timehistory button anyway), and it
-        // shouldn't appear in other players' drawers just because the name
-        // matches. Two flag sources: community flags (RecordFlag) and parser
-        // validity flags (OfflineRecord.validity_flag). Seed is checked below.
+        // Drop community-flagged demos before clustering: an approved RecordFlag
+        // is a human verdict that the run is not what it claims, and such a demo
+        // has no business in anyone's history - not as the seed, and not in
+        // someone else's drawer just because the name matches.
         $demoIds = $demos->pluck('id')->all();
         $recordIds = $demos->pluck('record_id')->filter()->all();
-        $flaggedDemoIds = [];
-        if (!empty($demoIds) || !empty($recordIds)) {
-            $flaggedDemoIds = RecordFlag::where('status', 'approved')
-                ->where(function ($q) use ($demoIds, $recordIds) {
-                    if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
-                    if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
-                })
-                ->pluck('demo_id')->filter()->unique()->all();
-        }
-        if (!empty($demoIds)) {
-            $validityFlaggedIds = OfflineRecord::whereIn('demo_id', $demoIds)
-                ->whereNotNull('validity_flag')
-                ->where('validity_flag', '!=', '')
-                ->pluck('demo_id')->filter()->unique()->all();
-            $flaggedDemoIds = array_values(array_unique(array_merge($flaggedDemoIds, $validityFlaggedIds)));
-        }
+        $flaggedDemoIds = $this->communityFlaggedDemoIds($demoIds, $recordIds);
         if (in_array($seed->id, $flaggedDemoIds, true)) {
             return response()->json(['history' => [], 'signals' => 0]);
         }
         $flaggedSet = array_flip($flaggedDemoIds);
         $demos = $demos->reject(fn ($d) => isset($flaggedSet[$d->id]))->values();
+
+        // Parser validity flags stay in. They are the cvar the run was set
+        // under, not a verdict, and the map page already lists those demos with
+        // the flag on a chip - hiding the same demo from the player's own
+        // history left runs reachable from nowhere at all. Carried through so
+        // the drawer shows the same chip.
+        $validityFlags = $this->validityFlagsByDemo($demoIds);
 
         $grouper = new VirtualPlayerGrouper();
         $cluster = $grouper->classFor($demos, $seed);
@@ -354,7 +387,7 @@ class MapsController extends Controller
         // Return MapRecord-compatible shape per entry so the frontend can reuse
         // the same <MapRecord> component (same chips: download, render, YouTube,
         // report, flag — all for free).
-        $history = $cluster->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName) {
+        $history = $cluster->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName, $validityFlags) {
             // Online-origin demos carry an 'm' prefix on gametype (mdf/mfs/mfc).
             // record_id alone is wrong: a legit mdf demo with no main-record
             // assignment still came from online play and should show ONLINE.
@@ -362,9 +395,12 @@ class MapsController extends Controller
             // Demos attached to an MDD record (record_id set) surface inside
             // the online history drawer with a "Verified" chip so the user
             // can tell which attempt corresponds to the official leaderboard.
-            $verificationType = $d->record_id
-                ? 'verified'
-                : ($isOnline ? 'ONLINE' : 'OFFLINE');
+            // A validity flag wins over all of it, same order DemosTopService
+            // uses, because that is what MapRecord turns into the red chip.
+            $verificationType = $validityFlags[$d->id]
+                ?? ($d->record_id
+                    ? 'verified'
+                    : ($isOnline ? 'ONLINE' : 'OFFLINE'));
 
             return [
                 // Identity
@@ -427,27 +463,12 @@ class MapsController extends Controller
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
-        // Drop flagged demos first (same policy as demo-seeded path).
+        // Drop community-flagged demos first (same policy as demo-seeded path).
         $demoIds = $demos->pluck('id')->all();
         $recordIds = $demos->pluck('record_id')->filter()->all();
-        $flaggedDemoIds = [];
-        if (!empty($demoIds) || !empty($recordIds)) {
-            $flaggedDemoIds = RecordFlag::where('status', 'approved')
-                ->where(function ($q) use ($demoIds, $recordIds) {
-                    if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
-                    if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
-                })
-                ->pluck('demo_id')->filter()->unique()->all();
-        }
-        if (!empty($demoIds)) {
-            $validityFlaggedIds = OfflineRecord::whereIn('demo_id', $demoIds)
-                ->whereNotNull('validity_flag')
-                ->where('validity_flag', '!=', '')
-                ->pluck('demo_id')->filter()->unique()->all();
-            $flaggedDemoIds = array_values(array_unique(array_merge($flaggedDemoIds, $validityFlaggedIds)));
-        }
-        $flaggedSet = array_flip($flaggedDemoIds);
+        $flaggedSet = array_flip($this->communityFlaggedDemoIds($demoIds, $recordIds));
         $demos = $demos->reject(fn ($d) => isset($flaggedSet[$d->id]))->values();
+        $validityFlags = $this->validityFlagsByDemo($demoIds);
 
         // Priority profile keys = profiles that own a main record on this
         // map+physics. Needed so the resolver's ambiguous-plain tiebreaker
@@ -494,8 +515,8 @@ class MapsController extends Controller
             $canonicalName = $user->name;
         }
 
-        $history = $matched->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName) {
-            $verificationType = $d->record_id ? 'verified' : 'ONLINE';
+        $history = $matched->map(function ($d) use ($canonicalUser, $canonicalCountry, $canonicalName, $validityFlags) {
+            $verificationType = $validityFlags[$d->id] ?? ($d->record_id ? 'verified' : 'ONLINE');
             return [
                 'id' => $d->id,
                 'demo_id' => $d->id,
@@ -925,28 +946,12 @@ class MapsController extends Controller
             return [];
         }
 
-        // Identify flagged demos — they must not cluster with legitimate attempts.
-        // Two sources to merge: community flags (RecordFlag) and parser-detected
-        // validity flags (OfflineRecord.validity_flag, keyed by demo_id).
+        // Identify flagged demos — they must not cluster with legitimate
+        // attempts. Community verdicts only, exactly what the drawer refuses,
+        // or the badge would again promise a count the drawer will not serve.
         $demoIds = $demos->pluck('id')->all();
         $recordIds = $demos->pluck('record_id')->filter()->all();
-        $flaggedDemoIds = [];
-        if (!empty($demoIds) || !empty($recordIds)) {
-            $flaggedDemoIds = RecordFlag::where('status', 'approved')
-                ->where(function ($q) use ($demoIds, $recordIds) {
-                    if (!empty($demoIds)) $q->whereIn('demo_id', $demoIds);
-                    if (!empty($recordIds)) $q->orWhereIn('record_id', $recordIds);
-                })
-                ->pluck('demo_id')->filter()->unique()->all();
-        }
-        if (!empty($demoIds)) {
-            $validityFlaggedIds = OfflineRecord::whereIn('demo_id', $demoIds)
-                ->whereNotNull('validity_flag')
-                ->where('validity_flag', '!=', '')
-                ->pluck('demo_id')->filter()->unique()->all();
-            $flaggedDemoIds = array_values(array_unique(array_merge($flaggedDemoIds, $validityFlaggedIds)));
-        }
-        $flaggedSet = array_flip($flaggedDemoIds);
+        $flaggedSet = array_flip($this->communityFlaggedDemoIds($demoIds, $recordIds));
 
         $grouper = new VirtualPlayerGrouper();
 
