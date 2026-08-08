@@ -486,7 +486,9 @@
                 <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
                 <template v-else>{{ record.rank }}</template>
             </span>
-            <span v-if="record.map_score" class="hidden group-hover:inline text-yellow-400/90 tabular-nums cursor-help">
+            <!-- Nudged right: a four-digit score is wider than the column, and
+                 centred it spilled past the panel's left edge. -->
+            <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap translate-x-1.5 text-yellow-400/90 tabular-nums cursor-help">
                 {{ Math.round(record.map_score) }}
             </span>
         </div>
