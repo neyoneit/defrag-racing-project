@@ -2263,11 +2263,14 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                         </div>
 
                         <form @submit.prevent="updateNotifications" class="space-y-1.5">
-                            <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
-                                <input v-model="notifsForm.defrag_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
+                            <!-- The switch is the `defrag_news` column, which has only
+                                 ever gated announcements. "Defrag News" named a category
+                                 that does not exist anywhere else on the site. -->
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/20 hover:border-amber-500/40 cursor-pointer transition-all">
+                                <input v-model="notifsForm.defrag_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-amber-600" />
                                 <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-300">Defrag News</p>
-                                    <p class="text-xs text-gray-400">Announcements & updates</p>
+                                    <p class="text-sm font-medium text-gray-200">Announcements</p>
+                                    <p class="text-xs text-gray-400">Site news, rules and changelog. Takes over the header until read.</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
@@ -2351,7 +2354,7 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 <div class="space-y-1.5">
                                     <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
                                         <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Announcements <span class="text-yellow-400">(Required)</span></span>
+                                        <span class="text-xs text-gray-300">Announcements <span class="text-amber-400">(always first)</span></span>
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('clan')" @change="togglePreviewSystem('clan')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
