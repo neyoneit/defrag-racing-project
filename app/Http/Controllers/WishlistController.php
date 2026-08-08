@@ -24,8 +24,18 @@ class WishlistController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $filter = $request->input('status');
         $project = $request->input('project');
+
+        // Anything that is not one of the four statuses means the open list,
+        // which is where the list starts. Done and Not happening are answers,
+        // not candidates, and they have a tab each.
+        $filter = in_array($request->input('status'), array_keys(Wish::STATUSES), true)
+            ? $request->input('status')
+            : 'open';
+
+        $statusScope = fn ($query) => $filter === 'open'
+            ? $query->whereIn('status', Wish::OPEN_STATUSES)
+            : $query->where('status', $filter);
 
         $wishes = Wish::query()
             ->with('user:id,name,plain_name,profile_photo_path,country')
@@ -39,7 +49,7 @@ class WishlistController extends Controller
                     $query->orWhere('user_id', $user->id);
                 }
             })
-            ->when(in_array($filter, array_keys(Wish::STATUSES), true), fn ($q) => $q->where('status', $filter))
+            ->tap($statusScope)
             ->when(in_array($project, array_keys(Wish::PROJECTS), true), fn ($q) => $q->where('project', $project))
             // Anything still waiting sits at the top for its author, who has
             // just posted it and is looking for it.
@@ -95,7 +105,10 @@ class WishlistController extends Controller
             'projectFilter' => in_array($project, array_keys(Wish::PROJECTS), true) ? $project : null,
             // Counts per project so the filter row can say where the activity
             // is, instead of sending people into empty lists to find out.
+            // Counted under the status tab in play, or the sidebar would
+            // promise wishes the list below it is not showing.
             'projectCounts' => Wish::approved()
+                ->tap($statusScope)
                 ->selectRaw('project, count(*) as total')
                 ->groupBy('project')
                 ->pluck('total', 'project'),

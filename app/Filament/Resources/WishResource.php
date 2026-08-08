@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 /**
  * The admin side of the wishlist: answering wishes and removing the ones that
@@ -109,14 +110,20 @@ class WishResource extends Resource
                 Tables\Columns\TextColumn::make('project')
                     ->badge()
                     ->color('info')
-                    ->formatStateUsing(fn (?string $state) => Wish::PROJECTS[$state] ?? $state),
+                    ->formatStateUsing(fn (?string $state) => Wish::PROJECTS[$state] ?? $state)
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->wrap()
-                    ->description(fn (Wish $record) => $record->removal_requested_at
-                        ? 'REMOVAL REQUESTED' . ($record->removal_reason ? ': ' . $record->removal_reason : '')
-                        : str($record->body)->limit(140))
+                    // nl2br because the preview is HTML, and a wish written as
+                    // three short lines otherwise arrives here as one run-on
+                    // sentence - which is how it reads when deciding on it.
+                    ->description(fn (Wish $record) => new HtmlString(nl2br(e(
+                        $record->removal_requested_at
+                            ? 'REMOVAL REQUESTED' . ($record->removal_reason ? ': ' . $record->removal_reason : '')
+                            : (string) str($record->body)->limit(140)
+                    ))))
                     ->color(fn (Wish $record) => $record->removal_requested_at ? 'warning' : null),
 
                 // A wish is approved before anyone else sees it, so whatever
@@ -127,8 +134,11 @@ class WishResource extends Resource
                     ->height(40)
                     ->extraImgAttributes(['class' => 'rounded object-cover'])
                     ->url(fn (Wish $record) => $record->imageUrl(), shouldOpenInNewTab: true)
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->toggleable(),
 
+                // Off by default: most wishes carry no video, and an empty
+                // column still costs the width of its header.
                 Tables\Columns\TextColumn::make('youtube_id')
                     ->label('Video')
                     ->formatStateUsing(fn (?string $state) => $state ? 'Watch' : null)
@@ -136,7 +146,8 @@ class WishResource extends Resource
                         ? 'https://www.youtube.com/watch?v=' . $record->youtube_id
                         : null, shouldOpenInNewTab: true)
                     ->color('info')
-                    ->placeholder('-'),
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
@@ -162,8 +173,14 @@ class WishResource extends Resource
                         default => 'gray',
                     }),
 
+                // "3 days ago" in a column, the full stamp in the tooltip: the
+                // date only matters as "how old is this", and spelled out it
+                // was the widest thing in the row after the wish itself.
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Age')
+                    ->since()
+                    ->tooltip(fn (Wish $record) => $record->created_at?->toDayDateTimeString())
+                    ->alignEnd()
                     ->sortable(),
             ])
             ->filters([
@@ -179,68 +196,77 @@ class WishResource extends Resource
                 Tables\Filters\SelectFilter::make('project')->options(Wish::PROJECTS),
                 Tables\Filters\SelectFilter::make('status')->options(Wish::STATUSES),
             ])
+            // One dropdown instead of five labelled buttons. Spelled out, the
+            // row was wider than the wish it was about and pushed the text off
+            // a laptop screen.
             ->actions([
-                // Approval is the gate: until this is pressed the wish is not
-                // on the public list and cannot be voted on.
-                Tables\Actions\Action::make('approve')
-                    ->label(fn (Wish $record) => $record->isApproved() ? 'Take off the list' : 'Approve')
-                    ->icon(fn (Wish $record) => $record->isApproved() ? 'heroicon-o-eye-slash' : 'heroicon-o-check-circle')
-                    ->color(fn (Wish $record) => $record->isApproved() ? 'gray' : 'success')
-                    ->requiresConfirmation(fn (Wish $record) => $record->isApproved())
-                    ->action(function (Wish $record) {
-                        if ($record->isApproved()) {
-                            $record->update(['approved_at' => null, 'approved_by' => null]);
+                Tables\Actions\ActionGroup::make([
+                    // Approval is the gate: until this is pressed the wish is
+                    // not on the public list and cannot be voted on.
+                    Tables\Actions\Action::make('approve')
+                        ->label(fn (Wish $record) => $record->isApproved() ? 'Take off the list' : 'Approve')
+                        ->icon(fn (Wish $record) => $record->isApproved() ? 'heroicon-o-eye-slash' : 'heroicon-o-check-circle')
+                        ->color(fn (Wish $record) => $record->isApproved() ? 'gray' : 'success')
+                        ->requiresConfirmation(fn (Wish $record) => $record->isApproved())
+                        ->action(function (Wish $record) {
+                            if ($record->isApproved()) {
+                                $record->update(['approved_at' => null, 'approved_by' => null]);
 
-                            Notification::make()->success()->title('Taken off the list')->send();
+                                Notification::make()->success()->title('Taken off the list')->send();
 
-                            return;
-                        }
+                                return;
+                            }
 
-                        $record->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
+                            $record->update(['approved_at' => now(), 'approved_by' => auth()->id()]);
 
-                        Notification::make()->success()->title('Wish approved')->send();
-                    }),
+                            Notification::make()->success()->title('Wish approved')->send();
+                        }),
 
-                // The author asked for it to go. Either it goes, or the request
-                // is turned down and the wish stays exactly as it was.
-                Tables\Actions\Action::make('declineRemoval')
-                    ->label('Keep it (decline)')
-                    ->icon('heroicon-o-hand-raised')
-                    ->color('gray')
-                    ->visible(fn (Wish $record) => $record->removal_requested_at !== null)
-                    ->requiresConfirmation()
-                    ->action(function (Wish $record) {
-                        $record->update(['removal_requested_at' => null, 'removal_reason' => null]);
+                    // The author asked for it to go. Either it goes, or the
+                    // request is turned down and the wish stays as it was.
+                    Tables\Actions\Action::make('declineRemoval')
+                        ->label('Keep it (decline)')
+                        ->icon('heroicon-o-hand-raised')
+                        ->color('gray')
+                        ->visible(fn (Wish $record) => $record->removal_requested_at !== null)
+                        ->requiresConfirmation()
+                        ->action(function (Wish $record) {
+                            $record->update(['removal_requested_at' => null, 'removal_reason' => null]);
 
-                        Notification::make()->success()->title('Removal request declined')->send();
-                    }),
+                            Notification::make()->success()->title('Removal request declined')->send();
+                        }),
 
-                Tables\Actions\EditAction::make(),
+                    Tables\Actions\EditAction::make(),
 
-                // The common case is answering a wish without rewriting it, so
-                // it gets its own one-field action instead of the full form.
-                Tables\Actions\Action::make('answer')
-                    ->label('Set status')
-                    ->icon('heroicon-o-chat-bubble-left-right')
-                    ->form([
-                        Forms\Components\Select::make('status')
-                            ->options(Wish::STATUSES)
-                            ->required(),
-                        Forms\Components\Textarea::make('status_note')
-                            ->label('Answer (public, optional)')
-                            ->rows(3),
-                    ])
-                    ->fillForm(fn (Wish $record) => [
-                        'status' => $record->status,
-                        'status_note' => $record->status_note,
-                    ])
-                    ->action(function (Wish $record, array $data) {
-                        $record->update($data);
+                    // The common case is answering a wish without rewriting it,
+                    // so it gets its own one-field action instead of the form.
+                    Tables\Actions\Action::make('answer')
+                        ->label('Set status')
+                        ->icon('heroicon-o-chat-bubble-left-right')
+                        ->form([
+                            Forms\Components\Select::make('status')
+                                ->options(Wish::STATUSES)
+                                ->required(),
+                            Forms\Components\Textarea::make('status_note')
+                                ->label('Answer (public, optional)')
+                                ->rows(3),
+                        ])
+                        ->fillForm(fn (Wish $record) => [
+                            'status' => $record->status,
+                            'status_note' => $record->status_note,
+                        ])
+                        ->action(function (Wish $record, array $data) {
+                            $record->update($data);
 
-                        Notification::make()->success()->title('Wish updated')->send();
-                    }),
+                            Notification::make()->success()->title('Wish updated')->send();
+                        }),
 
-                Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
+                    ->label('Actions')
+                    ->icon('heroicon-m-ellipsis-vertical')
+                    ->size('sm')
+                    ->color('gray'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
