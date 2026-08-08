@@ -177,7 +177,13 @@ class Demo:
             final_name += f"{{{self.validity}}}"
         if self.userId >= 0:
             final_name += f"[{self.userId}]"
-        elif self.isSpectator or (self.rawInfo and self.rawInfo.consoleComandsParser.additionalInfos and any(info.isTr for info in self.rawInfo.consoleComandsParser.additionalInfos)):
+        # [spect] means the demo was recorded by somebody watching, and a
+        # timereset says nothing about that - it is a run the player restarted
+        # the timer on. Marking every one of those [spect] tagged the physics
+        # as .tr and then contradicted it in the same filename, and since
+        # isSpectator is never set, it was the only way the marker ever
+        # appeared.
+        elif self.isSpectator:
             final_name += '[spect]'
         self._demoNewName = final_name + extension
 
