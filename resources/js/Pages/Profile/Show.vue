@@ -2262,6 +2262,12 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
                         </div>
 
+                        <p class="text-xs text-gray-400 mb-3">
+                            What reaches you at all. Switch one off and that notification is never made - it will not be
+                            waiting in the bell later. To keep getting something but stop it appearing in the header, use
+                            Header Preview below instead.
+                        </p>
+
                         <form @submit.prevent="updateNotifications" class="space-y-1.5">
                             <!-- The switch is the `defrag_news` column, which has only
                                  ever gated announcements. "Defrag News" named a category
@@ -2277,32 +2283,41 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                 <input v-model="notifsForm.tournament_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-300">Tournament News</p>
-                                    <p class="text-xs text-gray-400">Round starts & results</p>
+                                    <p class="text-xs text-gray-400">A round opens or closes, and the results when it does.</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.map_news" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-300">New Maps</p>
-                                    <p class="text-xs text-gray-400">One per release, batches grouped</p>
+                                    <p class="text-xs text-gray-400">A map is released. Maps published together arrive as one line, not one each.</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 hover:border-white/10 cursor-pointer transition-all">
                                 <input v-model="notifsForm.clan_notifications" type="checkbox" class="w-4 h-4 rounded bg-white/10 border-white/20 text-blue-600" />
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-300">Clan Notifications</p>
-                                    <p class="text-xs text-gray-400">Invites, kicks, transfers</p>
+                                    <p class="text-xs text-gray-400">Your clan invites you, removes you, hands over ownership, or someone asks to join.</p>
                                 </div>
                             </label>
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5 opacity-50 cursor-not-allowed">
                                 <input type="checkbox" checked disabled class="w-4 h-4 rounded bg-white/10 border-white/20" />
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-300">Team Invitations <span class="text-xs text-yellow-400">(Required)</span></p>
-                                    <p class="text-xs text-gray-400">Team invites</p>
+                                    <p class="text-xs text-gray-400">Somebody invites you into their tournament team. There is nothing to answer if you never see it.</p>
                                 </div>
                             </label>
 
-                            <div class="grid grid-cols-2 gap-2 pt-2">
+                            <div class="pt-3">
+                                <p class="text-sm font-medium text-gray-300">Somebody beats one of your times</p>
+                                <p class="text-xs text-gray-400 mb-2">
+                                    Set per physics. <span class="text-gray-300">All</span> is every time of yours that
+                                    gets taken back; <span class="text-gray-300">WR Only</span> is just the ones where
+                                    what they took off you was the world record.
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
                                 <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
                                     <p class="text-sm font-bold text-blue-400 mb-2">VQ3 Records</p>
                                     <div class="space-y-1.5">
@@ -2346,11 +2361,19 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             </div>
                             <h2 class="text-sm font-bold text-white">Header Preview</h2>
                         </div>
-                        <p class="text-xs text-gray-400 mb-3">Control what appears in notification previews in the header</p>
+                        <p class="text-xs text-gray-400 mb-3">
+                            The strip beside the bell that cycles through what is new. Nothing here stops a notification
+                            arriving - it only decides what gets shown up there. Whatever you switch off is still in the
+                            bell, and unread until you open it.
+                        </p>
 
                         <div class="space-y-3">
                             <div class="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                                <p class="text-xs font-bold text-blue-400 mb-2">System Preview</p>
+                                <p class="text-xs font-bold text-blue-400 mb-1">System Preview</p>
+                                <p class="text-[11px] text-gray-500 mb-2">
+                                    An unread announcement takes the strip for itself and holds everything else back,
+                                    including the records ticker, until you have read it.
+                                </p>
                                 <div class="space-y-1.5">
                                     <label class="flex items-center gap-1.5 opacity-50 cursor-not-allowed">
                                         <input type="checkbox" checked disabled class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
@@ -2370,13 +2393,17 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                                     </label>
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input type="checkbox" :checked="notifsForm.preview_system.includes('render')" @change="togglePreviewSystem('render')" class="w-3.5 h-3.5 rounded focus:ring-0 focus:ring-offset-0" />
-                                        <span class="text-xs text-gray-300">Render Notifications</span>
+                                        <span class="text-xs text-gray-300">Render Notifications <span class="text-gray-500">(your demo finished rendering)</span></span>
                                     </label>
                                 </div>
                             </div>
 
                             <div class="p-2.5 rounded-lg bg-orange-500/5 border border-orange-500/20">
-                                <p class="text-xs font-bold text-orange-400 mb-2">Record Preview</p>
+                                <p class="text-xs font-bold text-orange-400 mb-1">Record Preview</p>
+                                <p class="text-[11px] text-gray-500 mb-2">
+                                    How much of "somebody beat your time" the strip shows. This is the header only -
+                                    which ones you get is the Notifications card above.
+                                </p>
                                 <div class="space-y-1.5">
                                     <label class="flex items-center gap-1.5 cursor-pointer">
                                         <input v-model="notifsForm.preview_records" type="radio" value="all" class="w-3.5 h-3.5 focus:ring-0 focus:ring-offset-0" />
