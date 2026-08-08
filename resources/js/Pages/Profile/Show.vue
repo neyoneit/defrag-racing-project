@@ -384,6 +384,7 @@ const globalCustomizeSections = [
     { id: 'gc-map-view', label: 'Map View Defaults' },
     { id: 'gc-physics-order', label: 'Physics Order' },
     { id: 'gc-date-format', label: 'Date Format' },
+    { id: 'gc-time-format', label: 'Time Format' },
     { id: 'gc-hide-stats', label: 'Hide Stat Boxes' },
     { id: 'gc-hide-sections', label: 'Hide Sections' },
 ];
