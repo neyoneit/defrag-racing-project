@@ -547,7 +547,7 @@
                  Only set where the backend put one on the row. -->
             <span
                 v-if="record.demo_label"
-                class="ml-2 truncate text-gray-400"
+                class="ml-2 truncate font-semibold text-teal-300/90 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5"
                 :class="compact ? 'text-[10px]' : 'text-xs'"
                 :title="record.demo_label"
             >{{ record.demo_label }}</span>

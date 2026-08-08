@@ -238,29 +238,41 @@ class MapsController extends Controller
      */
     private function untimedDemos($map, $cpmRecords, $vq3Records): ?\Illuminate\Support\Collection
     {
+        // A freestyle map always gets the list: its demos are the content, and
+        // it can still hold a stray ranked row. Any other map gets it only when
+        // there is nothing to rank at all, so ordinary map pages are untouched.
+        $untimedMap = in_array($map->gametype, ['freestyle', 'unknown'], true);
         $hasTimes = ($cpmRecords && $cpmRecords->total() > 0) || ($vq3Records && $vq3Records->total() > 0);
 
-        if ($hasTimes) {
+        if (! $untimedMap && $hasTimes) {
             return null;
         }
 
-        $demos = UploadedDemo::where('map_name', $map->name)
+        // Paginated per physics, 50 a page, the same as the leaderboards - a
+        // freestyle map is not a handful of demos (csu1_a holds 1502 VQ3 and
+        // 115 CPM) and a flat cap just hid the rest.
+        $page = fn (string $base, string $pageName) => UploadedDemo::where('map_name', $map->name)
             ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
+            ->where(fn ($q) => $q->where('physics', $base)->orWhere('physics', 'LIKE', $base . '.%'))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->orderByDesc('record_date')
             ->orderByDesc('created_at')
-            ->limit(500)
-            ->get();
+            ->paginate(50, ['*'], $pageName)
+            ->withQueryString();
 
-        if ($demos->isEmpty()) {
+        $vq3 = $page('VQ3', 'vq3DemosPage');
+        $cpm = $page('CPM', 'cpmDemosPage');
+
+        if ($vq3->total() === 0 && $cpm->total() === 0) {
             return null;
         }
 
+        $demos = $vq3->getCollection()->concat($cpm->getCollection());
         $validityFlags = $this->validityFlagsByDemo($demos->pluck('id')->all());
 
         // MapRecord's shape, so the list gets the same chips, download button,
         // video and report actions the leaderboard rows have.
-        return $demos->map(function ($d) use ($validityFlags) {
+        $shape = function ($d) use ($validityFlags) {
             $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
 
             return [
@@ -285,7 +297,12 @@ class MapsController extends Controller
                 'q3df_login_name' => $d->q3df_login_name,
                 'q3df_login_name_colored' => $d->q3df_login_name_colored,
             ];
-        })->values();
+        };
+
+        $vq3->setCollection($vq3->getCollection()->map($shape)->values());
+        $cpm->setCollection($cpm->getCollection()->map($shape)->values());
+
+        return collect(['vq3' => $vq3, 'cpm' => $cpm]);
     }
 
     /**

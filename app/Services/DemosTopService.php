@@ -43,7 +43,14 @@ class DemosTopService
                 'user',
                 'renderedVideos' => fn ($q) => $q->visible()->latest(),
             ])
-            ->get();
+            ->get()
+            // A freestyle demo is not a result. The map has no timer, so
+            // whatever time reached the record came out of the filename, and on
+            // csu1_a that was the "607.1" of a speed in `run_vq3cj_607.1` read
+            // as ten minutes - one bogus row standing in for 1617 demos. They
+            // belong in the map's demo list, which is where they go now.
+            ->reject(fn ($r) => in_array($r->demo?->gametype, ['fs', 'mfs'], true))
+            ->values();
 
         // Pool 2: assigned online demos not already in main records table
         $onlineDemosQuery = UploadedDemo::where('map_name', $mapName)

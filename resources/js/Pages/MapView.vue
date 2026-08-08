@@ -249,7 +249,7 @@
         // MapsController::untimedDemos. Null on every other map, which is what
         // keeps the leaderboards in place.
         untimedDemos: {
-            type: Array,
+            type: Object,
             default: null
         },
         // Server-computed cluster metadata for time-history badges. Keyed by
@@ -1022,6 +1022,13 @@
         return props.cpmRecords;
     })
 
+    // A freestyle map gets its demo list either way, but it can still hold a
+    // ranked row, and then both belong on the page - the tables only disappear
+    // when there is nothing in them at all.
+    const hasAnyRecords = computed(() =>
+        (getVq3Records.value?.total || 0) > 0 || (getCpmRecords.value?.total || 0) > 0
+    );
+
     // Helper functions for weapon/item/function icons and names
     const getWeaponIcon = (abbr) => {
         const icons = {
@@ -1750,31 +1757,57 @@
                      set a record on. Two empty leaderboards said nothing while
                      the demos people uploaded sat there unreachable, so the
                      panel lists them instead, newest first. -->
-                <div v-if="untimedDemos" class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10">
-                    <div class="bg-gradient-to-r from-teal-600/20 to-teal-500/10 border-b border-teal-500/30 px-4 py-2">
-                        <div class="flex items-center justify-between flex-wrap gap-2">
-                            <h2 class="text-lg font-bold text-teal-300">
-                                Demos <span class="text-sm font-semibold text-teal-300/60">({{ untimedDemos.length }})</span>
-                            </h2>
-                            <div class="text-xs text-gray-400">
-                                <template v-if="map.gametype === 'freestyle'">This map has no timer, so its runs are not ranked.</template>
-                                <template v-else>No records on this map yet.</template>
+                <div v-if="untimedDemos" class="lg:flex gap-4 justify-center">
+                    <div
+                        v-for="side in [
+                            { key: 'vq3', label: 'VQ3', page: 'vq3DemosPage', accent: 'blue', list: untimedDemos.vq3 },
+                            { key: 'cpm', label: 'CPM', page: 'cpmDemosPage', accent: 'purple', list: untimedDemos.cpm },
+                        ]"
+                        :key="side.key"
+                        v-show="(mobilePhysics === 'both' || mobilePhysics === side.label) && side.list.total"
+                        :style="{ order: cpmFirst ? (side.key === 'cpm' ? 1 : 2) : (side.key === 'cpm' ? 2 : 1) }"
+                        class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10"
+                    >
+                        <div
+                            class="border-b px-4 py-2"
+                            :class="side.accent === 'blue'
+                                ? 'bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-blue-500/30'
+                                : 'bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-purple-500/30'"
+                        >
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <h2 class="text-lg font-bold" :class="side.accent === 'blue' ? 'text-blue-400' : 'text-purple-400'">
+                                    {{ side.label }} Demos
+                                    <span class="text-sm font-semibold" :class="side.accent === 'blue' ? 'text-blue-400/60' : 'text-purple-400/60'">({{ side.list.total }})</span>
+                                </h2>
+                                <div class="text-xs text-gray-400">
+                                    <template v-if="map.gametype === 'freestyle'">No timer on this map, so nothing here is ranked.</template>
+                                    <template v-else>No records on this map yet.</template>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="divide-y divide-white/[0.04]">
-                        <MapRecord
-                            v-for="demo in untimedDemos"
-                            :key="demo.demo_id"
-                            :record="demo"
-                            :physics="(demo.demo?.physics || 'VQ3').split('.')[0]"
-                            :showSourceChips="true"
-                            :hideRank="true"
-                        />
+                        <div class="divide-y divide-white/[0.04]">
+                            <MapRecord
+                                v-for="demo in side.list.data"
+                                :key="demo.demo_id"
+                                :record="demo"
+                                :physics="side.label"
+                                :showSourceChips="true"
+                                :hideRank="true"
+                            />
+                        </div>
+                        <div v-if="side.list.last_page > 1" class="px-4 py-2 border-t border-white/[0.06]">
+                            <Pagination
+                                :pageName="side.page"
+                                :last_page="side.list.last_page"
+                                :current_page="side.list.current_page"
+                                :link="side.list.first_page_url"
+                                :only="['untimedDemos']"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <div v-else class="lg:flex gap-4 justify-center">
+                <div v-if="!untimedDemos || hasAnyRecords" :class="untimedDemos ? 'lg:flex gap-4 justify-center mt-4' : 'lg:flex gap-4 justify-center'">
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
