@@ -216,9 +216,15 @@ def get_name_offline_old1(demo_time_cmd: str) -> str:
     # then beats the one out of the demo's player info. The player is the last
     # quoted string; a line with a single quoted token, or none at all, keeps
     # the old reading.
+    #
+    # Older builds leave that last string empty and write no player at all:
+    #   NewTime 117546705 1:288 "defrag 1.7" ""
+    # Report no console name for those, so the name the demo carries in its own
+    # player info wins. Falling through to the fourth token would hand back the
+    # mod again.
     quoted = re.findall(r'"([^"]*)"', demo_time_cmd)
 
-    if len(quoted) > 1 and quoted[-1].strip():
+    if len(quoted) > 1:
         return normalize_name(remove_colors(quoted[-1]) or '')
 
     parts = demo_time_cmd.split(' ')
