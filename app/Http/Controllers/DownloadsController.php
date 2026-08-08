@@ -29,6 +29,9 @@ class DownloadsController extends Controller
      * Useful PK3s is deliberately absent: it is a long list of unrelated
      * single-purpose pk3s, which is exactly what a table is for.
      */
+    /** What /downloads opens on when no category is asked for. */
+    private const DEFAULT_SHELF = 'game-bundles';
+
     private const SHELVES = [
         'game-bundles' => [
             'intro' => 'A bundle is the whole thing in one download: the game files DeFRaG needs, the mod itself, an engine that runs it and a config that works out of the box. Start here if you have nothing installed yet.',
@@ -89,9 +92,27 @@ class DownloadsController extends Controller
      */
     public function index(Request $request, $id = null, $slug = null)
     {
+        $search = trim((string) $request->input('q', ''));
+        $sort = $request->input('sort', 'newest');
+        $defragOnly = $request->boolean('defrag');
+
         $category = $this->resolveCategory($id, $slug);
 
-        if ($category && isset(self::SHELVES[$category->slug])) {
+        // The hub opens on Game bundles. Someone arriving at /downloads wants
+        // the game far more often than a table of every file in every
+        // category, which is why that table no longer has a nav row of its
+        // own. An actual query still falls through to it, across everything.
+        $landing = false;
+
+        if (! $category && $id === null && $search === '' && ! $defragOnly) {
+            $category = DownloadCategory::where('slug', self::DEFAULT_SHELF)->first();
+            $landing = (bool) $category;
+        }
+
+        // A search beats the article: the shelves keep a search box precisely
+        // so there is somewhere to type on the landing page, and answering a
+        // query with the same unfiltered article would read as broken.
+        if ($category && isset(self::SHELVES[$category->slug]) && $search === '') {
             return Inertia::render('Downloads/Index', [
                 'tree' => $this->tree(),
                 'current' => $this->currentPayload($category),
@@ -99,6 +120,9 @@ class DownloadsController extends Controller
                 'downloads' => null,
                 'filters' => ['q' => '', 'sort' => 'newest', 'defrag' => false],
                 'totalCount' => Download::published()->count(),
+                // Searching from /downloads searches everything. Searching
+                // after clicking into Game bundles searches Game bundles.
+                'landing' => $landing,
             ]);
         }
 
@@ -114,10 +138,6 @@ class DownloadsController extends Controller
                 'totalCount' => Download::published()->count(),
             ]);
         }
-
-        $search = trim((string) $request->input('q', ''));
-        $sort = $request->input('sort', 'newest');
-        $defragOnly = $request->boolean('defrag');
 
         // total_size stays 0 for entries that only carry an external_url, where
         // the bytes live on someone else's host and the listing shows a dash.

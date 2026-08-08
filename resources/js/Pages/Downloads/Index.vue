@@ -19,6 +19,9 @@ const props = defineProps({
     downloads: Object,
     filters: Object,
     totalCount: Number,
+    // True when /downloads picked the shelf itself rather than the visitor
+    // clicking into it, which is what keeps a search from there global.
+    landing: Boolean,
 });
 
 const search = ref(props.filters.q ?? '');
@@ -56,7 +59,7 @@ const browsable = computed(() => [
 ]);
 
 const baseUrl = computed(() =>
-    props.current ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
+    props.current && ! props.landing ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
 );
 
 const reload = () => {
@@ -158,18 +161,10 @@ const isNew = (d) => {
                 <!-- Category tree -->
                 <div class="lg:w-64 flex-shrink-0">
                     <div class="bg-black/45 backdrop-blur-xl rounded-xl overflow-hidden border border-white/[0.08] sticky top-[120px]">
-                        <Link
-                            href="/downloads"
-                            class="flex items-center justify-between px-3 py-2.5 border-l-2 transition-all"
-                            :class="!current
-                                ? 'bg-cyan-500/10 border-cyan-400 text-cyan-300'
-                                : 'border-transparent text-gray-400 hover:bg-cyan-500/5 hover:text-white'">
-                            <span class="text-sm font-semibold">All downloads</span>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                  :class="!current ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-gray-600'">
-                                {{ totalCount }}
-                            </span>
-                        </Link>
+                        <!-- No "All downloads" row: a table of every file across
+                             every category answered nobody's question, and
+                             /downloads opens on Game bundles instead. Searching
+                             from any folder still covers the whole hub. -->
 
                         <!-- The things you came for: the mod, the bundle, the
                              launcher. Kept apart from the browsable folders. -->
@@ -216,9 +211,14 @@ const isNew = (d) => {
                 <!-- Listing -->
                 <div class="flex-1 min-w-0">
 
-                    <!-- Toolbar. Hidden for a locked category: an article has
-                         nothing to search, sort or filter. -->
-                    <div v-if="!panel" class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-3 mb-3">
+                    <!-- Toolbar. A locked category is an auto-updating article
+                         with nothing to search, sort or filter, so it gets
+                         none of this. The curated shelves keep the search box
+                         alone - /downloads opens on one of them, and without
+                         it there would be nowhere on the landing page to
+                         search from - while sorting and filtering an article
+                         still makes no sense. -->
+                    <div v-if="!panel || panel.type === 'shelf'" class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-3 mb-3">
                         <div class="flex flex-col sm:flex-row gap-2">
                             <div class="relative flex-1">
                                 <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600"
@@ -234,6 +234,7 @@ const isNew = (d) => {
                             </div>
 
                             <button
+                                v-if="!panel"
                                 @click="toggleDefrag"
                                 class="px-3 py-2 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap"
                                 :class="filters.defrag
@@ -243,6 +244,7 @@ const isNew = (d) => {
                             </button>
 
                             <select
+                                v-if="!panel"
                                 v-model="sort"
                                 class="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:border-cyan-500/50 focus:ring-0 transition-colors">
                                 <!-- The popup is drawn by the OS and ignores the
