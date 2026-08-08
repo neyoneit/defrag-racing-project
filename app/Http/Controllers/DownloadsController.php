@@ -19,8 +19,44 @@ class DownloadsController extends Controller
 
     private const UPLOAD_DISK = 'community';
 
-    /** The one browsable branch that renders as an article, not a table. */
-    private const BUNDLES_SLUG = 'bundles-and-repacks';
+    /**
+     * The browsable categories that render as an article instead of a table.
+     * Each holds a handful of curated entries where the question is not "which
+     * of these thirty" but "what is this and which one do I take", which a
+     * table cannot answer. They live under Bundles and repacks in the tree but
+     * are pages in their own right, and the sidebar hoists them out of it.
+     *
+     * Useful PK3s is deliberately absent: it is a long list of unrelated
+     * single-purpose pk3s, which is exactly what a table is for.
+     */
+    private const SHELVES = [
+        'game-bundles' => [
+            'intro' => 'A bundle is the whole thing in one download: the game files DeFRaG needs, the mod itself, an engine that runs it and a config that works out of the box. Start here if you have nothing installed yet.',
+            'notes' => [
+                'Take the 64bit build unless the machine is genuinely old.',
+                'Already playing? The quick upgrade replaces the mod, engine and configs without pulling the whole game down again.',
+            ],
+            // The multi-part entry is the one most people came for, so it is
+            // lifted out of the list and its parts become the buttons.
+            'feature_parts' => true,
+        ],
+        'repacks' => [
+            'intro' => 'Repacks are content in bulk: the maps, textures and shaders of a whole category in a handful of pk3s, instead of downloading them one map at a time. Unpack them into your baseq3 folder.',
+            'notes' => [
+                'The map packs are bsp only - geometry without artwork - so they need the texture pack of the same category to look right.',
+                'Last rebuilt in 2020. Anything released since still comes down per map.',
+            ],
+            'feature_parts' => false,
+            'group_by' => 'gametype',
+        ],
+        'upscaled-textures' => [
+            'intro' => 'The stock artwork redrawn at a higher resolution. Cosmetic only - geometry, physics and timing are untouched, so a run made with these is an ordinary run.',
+            'notes' => [
+                'These are large. On a weak GPU they cost more than they give.',
+            ],
+            'feature_parts' => false,
+        ],
+    ];
 
     /**
      * Capped by docker/php.ini (upload_max_filesize + post_max_size = 100M).
@@ -55,15 +91,11 @@ class DownloadsController extends Controller
     {
         $category = $this->resolveCategory($id, $slug);
 
-        // Bundles and repacks is the one browsable branch that reads better as
-        // an article: five small shelves of curated collections, where a flat
-        // table of thirty near-identical rows tells you nothing about which
-        // shelf you are on.
-        if ($category && $category->slug === self::BUNDLES_SLUG && ! $category->parent_id) {
+        if ($category && isset(self::SHELVES[$category->slug])) {
             return Inertia::render('Downloads/Index', [
                 'tree' => $this->tree(),
                 'current' => $this->currentPayload($category),
-                'panel' => $this->bundlesPanel($category),
+                'panel' => $this->shelfPanel($category, self::SHELVES[$category->slug]),
                 'downloads' => null,
                 'filters' => ['q' => '', 'sort' => 'newest', 'defrag' => false],
                 'totalCount' => Download::published()->count(),
@@ -245,61 +277,84 @@ class DownloadsController extends Controller
     }
 
     /**
-     * Bundles and repacks as an article: one shelf per child category, every
-     * numbered or per-platform set already folded onto a single line.
-     *
-     * Not paginated. The whole branch is a few dozen curated entries that have
-     * barely moved since 2020, and splitting five short shelves across pages
-     * would hide the point of the page.
+     * One shelf as its own article: a lead paragraph saying what the thing is,
+     * the notes worth knowing before downloading, an optional featured entry,
+     * and the rest grouped.
      */
-    private function bundlesPanel(DownloadCategory $root): array
+    private function shelfPanel(DownloadCategory $category, array $config): array
     {
-        $sections = [];
-
-        $children = DownloadCategory::where('parent_id', $root->id)
-            ->orderBy('position')
-            ->orderBy('name')
-            ->get();
-
-        // Anything sitting directly on the root gets its own shelf at the end,
-        // so an upload into the parent category is never invisible.
-        foreach ($children->push($root) as $shelf) {
-            $ids = $shelf->is($root) ? [$root->id] : $shelf->descendantIds();
-
-            $items = Download::published()
-                ->whereIn('category_id', $ids)
+        $items = $this->foldNumberedParts(
+            Download::published()
+                ->whereIn('category_id', $category->descendantIds())
                 ->withCount('files')
                 ->withSum('files as total_size', 'size')
                 ->orderBy('position')
                 ->orderBy('name')
-                ->get();
+                ->get()
+        )->map(fn (Download $d) => [
+            'id' => $d->id,
+            'slug' => $d->slug,
+            'name' => $d->name,
+            'description' => $d->description,
+            'size' => (int) $d->total_size,
+            'downloads_count' => (int) $d->downloads_count,
+            'external_url' => $d->external_url,
+            'parts' => is_array($d->parts) ? $d->parts : null,
+        ]);
 
-            if ($items->isEmpty()) {
-                continue;
+        // The featured entry is the one that came in parts: on this shelf that
+        // is the all-in-one, and its parts are the platform choice, which is
+        // the only decision the page exists to help with.
+        $feature = null;
+
+        if (($config['feature_parts'] ?? false)) {
+            $feature = $items->firstWhere('parts', '!=', null);
+            $items = $items->reject(fn ($i) => $feature && $i['id'] === $feature['id']);
+        }
+
+        $groups = [];
+
+        if (($config['group_by'] ?? null) === 'gametype') {
+            foreach ($items as $item) {
+                $group = $this->gametypeOf($item['name']);
+                $groups[$group][] = $item;
             }
 
-            $sections[] = [
-                'id' => $shelf->id,
-                'name' => $shelf->is($root) ? 'Other' : $shelf->name,
-                'slug' => $shelf->slug,
-                'description' => $shelf->is($root) ? null : $shelf->description,
-                'items' => $this->foldNumberedParts($items)->map(fn (Download $d) => [
-                    'id' => $d->id,
-                    'slug' => $d->slug,
-                    'name' => $d->name,
-                    'description' => $d->description,
-                    'size' => (int) $d->total_size,
-                    'downloads_count' => (int) $d->downloads_count,
-                    'external_url' => $d->external_url,
-                    'parts' => is_array($d->parts) ? $d->parts : null,
-                ])->values()->all(),
-            ];
+            // Fixed order rather than whatever the listing happened to return,
+            // so Run is first on a site that is mostly run.
+            $order = ['Run', 'Fastcaps', 'Freestyle', 'Levelshots', 'Other'];
+            $groups = collect($order)
+                ->filter(fn ($name) => ! empty($groups[$name]))
+                ->map(fn ($name) => ['name' => $name, 'items' => $groups[$name]])
+                ->values()
+                ->all();
+        } elseif ($items->isNotEmpty()) {
+            $groups = [['name' => $feature ? 'Also here' : null, 'items' => $items->values()->all()]];
         }
 
         return [
-            'type' => 'bundles',
-            'sections' => $sections,
+            'type' => 'shelf',
+            'intro' => $config['intro'],
+            'notes' => $config['notes'] ?? [],
+            'feature' => $feature,
+            'groups' => $groups,
         ];
+    }
+
+    /**
+     * Which side of the game a repack belongs to, read off its name. The 2020
+     * repacks are named by gametype, and a fastcaps player wants that shelf's
+     * maps and its textures together - not every map pack on the page.
+     */
+    private function gametypeOf(string $name): string
+    {
+        return match (true) {
+            (bool) preg_match('/^levelshots/i', $name) => 'Levelshots',
+            (bool) preg_match('/^fastcaps/i', $name) => 'Fastcaps',
+            (bool) preg_match('/^freestyle/i', $name) => 'Freestyle',
+            (bool) preg_match('/^run\b/i', $name) => 'Run',
+            default => 'Other',
+        };
     }
 
     /**

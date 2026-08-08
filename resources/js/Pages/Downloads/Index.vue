@@ -5,7 +5,7 @@ import DownloadCategoryNode from '@/Components/DownloadCategoryNode.vue';
 import DefragModPanel from '@/Components/Downloads/DefragModPanel.vue';
 import ServerBundlePanel from '@/Components/Downloads/ServerBundlePanel.vue';
 import FamilyFriendlyPanel from '@/Components/Downloads/FamilyFriendlyPanel.vue';
-import BundlesPanel from '@/Components/Downloads/BundlesPanel.vue';
+import ShelfPanel from '@/Components/Downloads/ShelfPanel.vue';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -31,19 +31,29 @@ const openIds = computed(() => (props.current?.breadcrumb ?? []).map((c) => c.id
 // the server bundle - and by position they sat at the bottom, under thirty
 // folders of maps and sounds. They go on top, in their own group.
 //
-// Bundles and repacks is pinned with them and goes first, because it holds the
-// pre-hub repacks - more than half of everything on the site - and was sitting
-// last in the browsable list, below ten empty folders. It stays an ordinary
-// branch in every other respect, children and upload button included.
-const PINNED_FIRST = ['bundles-and-repacks'];
+// The three curated shelves join them and go first. They live under Bundles
+// and repacks in the tree, but each is a page in its own right, so they are
+// hoisted out and their parent never renders: as a node it only ever hid them
+// one click deep, holding more than half the files on the site while sitting
+// last in the browsable list. Whatever else is under it - Useful PK3s, a plain
+// list of unrelated pk3s - drops to the bottom of the ordinary tree, which is
+// where a plain list belongs.
+const BUNDLES_SLUG = 'bundles-and-repacks';
+const SHELF_SLUGS = ['game-bundles', 'repacks', 'upscaled-textures'];
 
-const isPinned = (node) => node.is_locked || node.auto_source || PINNED_FIRST.includes(node.slug);
+const bundlesNode = computed(() => props.tree.find((n) => n.slug === BUNDLES_SLUG));
 
 const pinned = computed(() => [
-    ...props.tree.filter((n) => PINNED_FIRST.includes(n.slug)),
-    ...props.tree.filter((n) => (n.is_locked || n.auto_source) && ! PINNED_FIRST.includes(n.slug)),
+    ...SHELF_SLUGS
+        .map((slug) => (bundlesNode.value?.children ?? []).find((c) => c.slug === slug))
+        .filter(Boolean),
+    ...props.tree.filter((n) => n.is_locked || n.auto_source),
 ]);
-const browsable = computed(() => props.tree.filter((n) => ! isPinned(n)));
+
+const browsable = computed(() => [
+    ...props.tree.filter((n) => n.slug !== BUNDLES_SLUG && ! n.is_locked && ! n.auto_source),
+    ...(bundlesNode.value?.children ?? []).filter((c) => ! SHELF_SLUGS.includes(c.slug)),
+]);
 
 const baseUrl = computed(() =>
     props.current ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
@@ -272,7 +282,7 @@ const isNew = (d) => {
                     <DefragModPanel v-if="panel?.type === 'defrag_mod'" :panel="panel" />
                     <ServerBundlePanel v-else-if="panel?.type === 'server_bundle'" :panel="panel" />
                     <FamilyFriendlyPanel v-else-if="panel?.type === 'family_friendly'" :panel="panel" />
-                    <BundlesPanel v-else-if="panel?.type === 'bundles'" :panel="panel" />
+                    <ShelfPanel v-else-if="panel?.type === 'shelf'" :panel="panel" />
 
                     <!-- Table -->
                     <div v-else-if="downloads?.data.length > 0"
