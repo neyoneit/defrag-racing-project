@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\OfflineRecord;
 use App\Models\UploadedDemo;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
@@ -63,6 +64,7 @@ class ReparseDemoMetadata extends Command
             'unchanged' => 0,
             'changed' => 0,
             'assigned' => 0,
+            'physics_left' => 0,
         ];
 
         $query->orderBy('id')->chunkById(50, function ($demos) use ($apply, $limit, $journal, &$stats) {
@@ -91,8 +93,9 @@ class ReparseDemoMetadata extends Command
                 }
 
                 $changes = $this->diff($demo, $meta);
+                $offline = $this->offlineDiff($demo, $meta);
 
-                if (! $changes) {
+                if (! $changes && ! $offline) {
                     $stats['unchanged']++;
                     continue;
                 }
@@ -103,6 +106,20 @@ class ReparseDemoMetadata extends Command
 
                 foreach ($changes as $column => [$was, $now]) {
                     $this->line("      {$column}: " . var_export($was, true) . ' -> ' . var_export($now, true));
+                }
+
+                foreach ($offline['changes'] ?? [] as $column => [$was, $now]) {
+                    $this->line("      offline record {$offline['id']} {$column}: "
+                        . var_export($was, true) . ' -> ' . var_export($now, true));
+                }
+
+                // The offline record's physics decides which group it is ranked
+                // in, so moving it would leave both groups holding stale ranks.
+                // Say so and leave it; that one is a decision, not a typo.
+                if (isset($changes['physics']) && $offline) {
+                    $stats['physics_left']++;
+                    $this->line('      <fg=yellow>offline record keeps physics ' . $offline['physics']
+                        . ' - it is what the record is ranked under</>');
                 }
 
                 $this->line('      check: ' . url('/maps/' . $demo->map_name) . '  |  ' . url('/demos/' . $demo->id . '/download'));
@@ -123,9 +140,17 @@ class ReparseDemoMetadata extends Command
                         'id' => $demo->id,
                         'at' => now()->toIso8601String(),
                         'changes' => $changes,
+                        'offline' => $offline ? ['id' => $offline['id'], 'changes' => $offline['changes']] : null,
                     ]) . "\n");
 
-                    $demo->forceFill(array_map(fn ($pair) => $pair[1], $changes))->save();
+                    if ($changes) {
+                        $demo->forceFill(array_map(fn ($pair) => $pair[1], $changes))->save();
+                    }
+
+                    if ($offline) {
+                        OfflineRecord::where('id', $offline['id'])
+                            ->update(array_map(fn ($pair) => $pair[1], $offline['changes']));
+                    }
                 }
 
                 if ($sleep = (float) $this->option('sleep')) {
@@ -144,6 +169,7 @@ class ReparseDemoMetadata extends Command
             ['file unreadable', $stats['unreadable']],
             ['parse failed', $stats['unparsed']],
             ['of the corrected, already assigned', $stats['assigned']],
+            ['offline record left on its old physics', $stats['physics_left']],
         ]);
 
         if (! $apply && $stats['changed'] > 0) {
@@ -220,6 +246,27 @@ class ReparseDemoMetadata extends Command
                 $demo->forceFill($restore)->save();
                 $reverted++;
                 $this->line("  <fg=green>{$demo->id}</> back to " . json_encode($restore));
+            }
+
+            if ($offline = ($entry['offline'] ?? null)) {
+                $record = OfflineRecord::find($offline['id']);
+
+                foreach ($offline['changes'] ?? [] as $column => [$was, $now]) {
+                    if (! $record) {
+                        $missing++;
+                        break;
+                    }
+
+                    if ($record->{$column} !== $now) {
+                        $conflicts++;
+                        $this->line("  <fg=yellow>offline record {$record->id}</> {$column} is now "
+                            . var_export($record->{$column}, true) . ' - left alone');
+                        continue;
+                    }
+
+                    $record->forceFill([$column => $was])->save();
+                    $this->line("  <fg=green>offline record {$record->id}</> {$column} back to " . var_export($was, true));
+                }
             }
         }
 
@@ -333,5 +380,30 @@ class ReparseDemoMetadata extends Command
         }
 
         return $changes;
+    }
+
+    /**
+     * The name lives twice: the demo carries it, and the offline record built
+     * from it took a copy at the time. The map page shows the record's copy,
+     * so fixing only the demo leaves the wrong name exactly where it was
+     * reported. Returns null when there is nothing to do.
+     */
+    private function offlineDiff(UploadedDemo $demo, array $meta): ?array
+    {
+        $record = OfflineRecord::where('demo_id', $demo->id)->first();
+
+        if (! $record || empty($meta['player_name'])) {
+            return null;
+        }
+
+        if ($record->player_name === $meta['player_name']) {
+            return null;
+        }
+
+        return [
+            'id' => $record->id,
+            'physics' => $record->physics,
+            'changes' => ['player_name' => [$record->player_name, $meta['player_name']]],
+        ];
     }
 }

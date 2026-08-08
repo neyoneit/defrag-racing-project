@@ -460,27 +460,43 @@
 
 <template>
     <div
-        class="group relative flex items-center gap-1.5 -mr-1 rounded-md transition-all duration-200 -ml-3"
+        class="group relative flex items-center gap-1.5 rounded-md transition-all duration-200 -ml-3"
         :class="{
-            'py-1.5 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg': !compact,
+            'py-1.5 hover:bg-white/10 hover:shadow-lg': !compact,
             'py-0 opacity-70': compact,
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop && !compact,
             'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !compact,
             'border-l-2 border-transparent': compact,
         }"
     >
-        <!-- Rank Number - LARGE and prominent with pop animation -->
+        <!-- Rank Number - LARGE and prominent with pop animation. The score
+             took a column of its own and pushed the row's own buttons off the
+             edge on a narrower screen, so it borrows this one on hover: the
+             rank is what you read down the list, the score is what you look up
+             for one row at a time. -->
         <div
             v-if="!hideRank"
-            class="font-black text-sm w-8 flex-shrink-0 text-center leading-none transition-all duration-200 group-hover:scale-110"
+            class="font-black text-sm w-10 flex-shrink-0 text-left pl-1.5 leading-none"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
+            @mouseenter="record.map_score && $emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
+            @mouseleave="$emit('scoreHover', null)"
         >
-            <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
-            <template v-else>{{ record.rank }}</template>
+            <!-- Rank and score share a left edge, so the swap moves nothing:
+                 a four-digit score simply reaches further right into room the
+                 column already has. Centred, the wider one grew out of both
+                 sides at once and the row read as jumping left. No pop on
+                 hover either - the number changing is the whole effect. -->
+            <span :class="record.map_score ? 'group-hover:hidden' : ''">
+                <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
+                <template v-else>{{ record.rank }}</template>
+            </span>
+            <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap text-yellow-400/90 tabular-nums cursor-help">
+                {{ Math.round(record.map_score) }}
+            </span>
         </div>
         <!-- Empty spacer preserves horizontal alignment with the parent row when rank is hidden -->
-        <div v-else class="w-8 flex-shrink-0"></div>
+        <div v-else class="w-10 flex-shrink-0"></div>
 
         <!-- Player Info - Compact -->
         <component
@@ -488,7 +504,6 @@
             :href="getRoute"
             :class="[
                 'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200',
-                !compact ? 'group-hover:ml-1' : '',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
         >
@@ -902,7 +917,7 @@
 
         <!-- Time - MASSIVE and eye-catching. History trigger sits next to the
              time stack, vertically centered across both rows (time + diff). -->
-        <div class="flex items-center justify-end gap-1.5 flex-shrink-0 ml-2">
+        <div class="flex items-center justify-end gap-1 flex-shrink-0 ml-0.5">
             <button
                 v-if="timeHistory && timeHistory.count"
                 type="button"
@@ -918,7 +933,12 @@
                 <span>Time</span>
                 <span class="mt-0.5">History</span>
             </button>
-            <div class="text-right">
+            <!-- Sized to the time it holds, not to the longest time there
+                 could be. The date after it is a fixed width, so every time
+                 still ends on the same line - and the history button sits
+                 against its own row's number instead of a gap left for the
+                 minutes most runs do not have. -->
+            <div class="text-right flex-shrink-0">
                 <div
                     class="font-black tabular-nums leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
                     :class="{
@@ -934,17 +954,6 @@
                 <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     -{{ formatTime(timeDiff) }}
                 </div>
-            </div>
-        </div>
-
-        <!-- Map Score -->
-        <div class="w-10 sm:w-12 text-center flex-shrink-0 -ml-1 flex items-start">
-            <div v-if="record.map_score"
-                class="text-sm font-black tabular-nums text-yellow-400/80 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] w-full cursor-help"
-                style="line-height: 16px;"
-                @mouseenter="$emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
-                @mouseleave="$emit('scoreHover', null)">
-                {{ Math.round(record.map_score) }}
             </div>
         </div>
 
