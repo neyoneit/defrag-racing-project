@@ -5,6 +5,7 @@ import DownloadCategoryNode from '@/Components/DownloadCategoryNode.vue';
 import DefragModPanel from '@/Components/Downloads/DefragModPanel.vue';
 import ServerBundlePanel from '@/Components/Downloads/ServerBundlePanel.vue';
 import FamilyFriendlyPanel from '@/Components/Downloads/FamilyFriendlyPanel.vue';
+import ShelfPanel from '@/Components/Downloads/ShelfPanel.vue';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -18,6 +19,9 @@ const props = defineProps({
     downloads: Object,
     filters: Object,
     totalCount: Number,
+    // True when /downloads picked the shelf itself rather than the visitor
+    // clicking into it, which is what keeps a search from there global.
+    landing: Boolean,
 });
 
 const search = ref(props.filters.q ?? '');
@@ -29,11 +33,33 @@ const openIds = computed(() => (props.current?.breadcrumb ?? []).map((c) => c.id
 // The locked categories are the ones people actually come here for - the mod,
 // the server bundle - and by position they sat at the bottom, under thirty
 // folders of maps and sounds. They go on top, in their own group.
-const pinned = computed(() => props.tree.filter((n) => n.is_locked || n.auto_source));
-const browsable = computed(() => props.tree.filter((n) => ! n.is_locked && ! n.auto_source));
+//
+// The three curated shelves join them and go first. They live under Bundles
+// and repacks in the tree, but each is a page in its own right, so they are
+// hoisted out and their parent never renders: as a node it only ever hid them
+// one click deep, holding more than half the files on the site while sitting
+// last in the browsable list. Whatever else is under it - Useful PK3s, a plain
+// list of unrelated pk3s - drops to the bottom of the ordinary tree, which is
+// where a plain list belongs.
+const BUNDLES_SLUG = 'bundles-and-repacks';
+const SHELF_SLUGS = ['game-bundles', 'repacks', 'upscaled-textures'];
+
+const bundlesNode = computed(() => props.tree.find((n) => n.slug === BUNDLES_SLUG));
+
+const pinned = computed(() => [
+    ...SHELF_SLUGS
+        .map((slug) => (bundlesNode.value?.children ?? []).find((c) => c.slug === slug))
+        .filter(Boolean),
+    ...props.tree.filter((n) => n.is_locked || n.auto_source),
+]);
+
+const browsable = computed(() => [
+    ...props.tree.filter((n) => n.slug !== BUNDLES_SLUG && ! n.is_locked && ! n.auto_source),
+    ...(bundlesNode.value?.children ?? []).filter((c) => ! SHELF_SLUGS.includes(c.slug)),
+]);
 
 const baseUrl = computed(() =>
-    props.current ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
+    props.current && ! props.landing ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
 );
 
 const reload = () => {
@@ -92,6 +118,10 @@ const entryUrl = (d) => `/downloads/entry/${d.id}/${d.slug}`;
 // uploads go through the file route, which signs a link and counts the hit.
 const downloadUrl = (d) => (d.external_url ? d.external_url : entryUrl(d));
 
+// One part of a folded repack. Same rule as a whole entry, but a part has its
+// own id and slug, so its detail page is still reachable.
+const partUrl = (p) => (p.external_url ? p.external_url : `/downloads/entry/${p.id}/${p.slug}`);
+
 const isNew = (d) => {
     if (!d.created_at) return false;
     return (Date.now() - new Date(d.created_at).getTime()) < 14 * 86400000;
@@ -131,18 +161,10 @@ const isNew = (d) => {
                 <!-- Category tree -->
                 <div class="lg:w-64 flex-shrink-0">
                     <div class="bg-black/45 backdrop-blur-xl rounded-xl overflow-hidden border border-white/[0.08] sticky top-[120px]">
-                        <Link
-                            href="/downloads"
-                            class="flex items-center justify-between px-3 py-2.5 border-l-2 transition-all"
-                            :class="!current
-                                ? 'bg-cyan-500/10 border-cyan-400 text-cyan-300'
-                                : 'border-transparent text-gray-400 hover:bg-cyan-500/5 hover:text-white'">
-                            <span class="text-sm font-semibold">All downloads</span>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                  :class="!current ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/5 text-gray-600'">
-                                {{ totalCount }}
-                            </span>
-                        </Link>
+                        <!-- No "All downloads" row: a table of every file across
+                             every category answered nobody's question, and
+                             /downloads opens on Game bundles instead. Searching
+                             from any folder still covers the whole hub. -->
 
                         <!-- The things you came for: the mod, the bundle, the
                              launcher. Kept apart from the browsable folders. -->
@@ -189,9 +211,14 @@ const isNew = (d) => {
                 <!-- Listing -->
                 <div class="flex-1 min-w-0">
 
-                    <!-- Toolbar. Hidden for a locked category: an article has
-                         nothing to search, sort or filter. -->
-                    <div v-if="!panel" class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-3 mb-3">
+                    <!-- Toolbar. A locked category is an auto-updating article
+                         with nothing to search, sort or filter, so it gets
+                         none of this. The curated shelves keep the search box
+                         alone - /downloads opens on one of them, and without
+                         it there would be nowhere on the landing page to
+                         search from - while sorting and filtering an article
+                         still makes no sense. -->
+                    <div v-if="!panel || panel.type === 'shelf'" class="bg-black/45 backdrop-blur-xl rounded-xl border border-white/[0.08] p-3 mb-3">
                         <div class="flex flex-col sm:flex-row gap-2">
                             <div class="relative flex-1">
                                 <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-600"
@@ -207,6 +234,7 @@ const isNew = (d) => {
                             </div>
 
                             <button
+                                v-if="!panel"
                                 @click="toggleDefrag"
                                 class="px-3 py-2 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap"
                                 :class="filters.defrag
@@ -216,6 +244,7 @@ const isNew = (d) => {
                             </button>
 
                             <select
+                                v-if="!panel"
                                 v-model="sort"
                                 class="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:border-cyan-500/50 focus:ring-0 transition-colors">
                                 <!-- The popup is drawn by the OS and ignores the
@@ -255,6 +284,7 @@ const isNew = (d) => {
                     <DefragModPanel v-if="panel?.type === 'defrag_mod'" :panel="panel" />
                     <ServerBundlePanel v-else-if="panel?.type === 'server_bundle'" :panel="panel" />
                     <FamilyFriendlyPanel v-else-if="panel?.type === 'family_friendly'" :panel="panel" />
+                    <ShelfPanel v-else-if="panel?.type === 'shelf'" :panel="panel" />
 
                     <!-- Table -->
                     <div v-else-if="downloads?.data.length > 0"
@@ -326,7 +356,28 @@ const isNew = (d) => {
                                         </td>
 
                                         <td class="px-3 py-2.5 text-right">
+                                            <!-- A repack split into parts gets a
+                                                 button per part instead of one
+                                                 row per part. -->
+                                            <div v-if="d.parts" class="inline-flex items-center justify-end gap-1 flex-wrap">
+                                                <a
+                                                    v-for="p in d.parts"
+                                                    :key="p.id"
+                                                    :href="partUrl(p)"
+                                                    :target="p.external_url ? '_blank' : '_self'"
+                                                    rel="noopener"
+                                                    :title="`Part ${p.label} - ${formatSize(p.size)}`"
+                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-gray-400 hover:bg-cyan-500/15 hover:border-cyan-500/40 hover:text-cyan-300 transition-all">
+                                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                    </svg>
+                                                    {{ p.label }}
+                                                </a>
+                                            </div>
+
                                             <a
+                                                v-else
                                                 :href="downloadUrl(d)"
                                                 :target="d.external_url ? '_blank' : '_self'"
                                                 rel="noopener"

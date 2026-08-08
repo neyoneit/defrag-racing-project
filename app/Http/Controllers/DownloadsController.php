@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Download;
 use App\Models\DownloadCategory;
 use App\Models\DownloadFile;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,51 @@ class DownloadsController extends Controller
     private const PER_PAGE = 30;
 
     private const UPLOAD_DISK = 'community';
+
+    /**
+     * The browsable categories that render as an article instead of a table.
+     * Each holds a handful of curated entries where the question is not "which
+     * of these thirty" but "what is this and which one do I take", which a
+     * table cannot answer. They live under Bundles and repacks in the tree but
+     * are pages in their own right, and the sidebar hoists them out of it.
+     *
+     * Useful PK3s is deliberately absent: it is a long list of unrelated
+     * single-purpose pk3s, which is exactly what a table is for.
+     */
+    /** What /downloads opens on when no category is asked for. */
+    private const DEFAULT_SHELF = 'game-bundles';
+
+    /** Parent of the shelves. Kept in the tree, never rendered as a page. */
+    private const BUNDLES_PARENT_SLUG = 'bundles-and-repacks';
+
+    private const SHELVES = [
+        'game-bundles' => [
+            'intro' => 'A bundle is the whole thing in one download: the game files DeFRaG needs, the mod itself, an engine that runs it and a config that works out of the box. Start here if you have nothing installed yet.',
+            'notes' => [
+                'Take the 64bit build unless the machine is genuinely old.',
+                'Already playing? The quick upgrade replaces the mod, engine and configs without pulling the whole game down again.',
+            ],
+            // The multi-part entry is the one most people came for, so it is
+            // lifted out of the list and its parts become the buttons.
+            'feature_parts' => true,
+        ],
+        'repacks' => [
+            'intro' => 'Repacks are content in bulk: the maps, textures and shaders of a whole category in a handful of pk3s, instead of downloading them one map at a time. Unpack them into your baseq3 folder.',
+            'notes' => [
+                'The map packs are bsp only - geometry without artwork - so they need the texture pack of the same category to look right.',
+                'Last rebuilt in 2020. Anything released since still comes down per map.',
+            ],
+            'feature_parts' => false,
+            'group_by' => 'gametype',
+        ],
+        'upscaled-textures' => [
+            'intro' => 'The stock artwork redrawn at a higher resolution. Cosmetic only - geometry, physics and timing are untouched, so a run made with these is an ordinary run.',
+            'notes' => [
+                'These are large. On a weak GPU they cost more than they give.',
+            ],
+            'feature_parts' => false,
+        ],
+    ];
 
     /**
      * Capped by docker/php.ini (upload_max_filesize + post_max_size = 100M).
@@ -49,7 +95,47 @@ class DownloadsController extends Controller
      */
     public function index(Request $request, $id = null, $slug = null)
     {
+        $search = trim((string) $request->input('q', ''));
+        $sort = $request->input('sort', 'newest');
+        $defragOnly = $request->boolean('defrag');
+
         $category = $this->resolveCategory($id, $slug);
+
+        // The hub opens on Game bundles. Someone arriving at /downloads wants
+        // the game far more often than a table of every file in every
+        // category, which is why that table no longer has a nav row of its
+        // own. An actual query still falls through to it, across everything.
+        // The shelves are pages now and their parent is not a node anywhere in
+        // the UI, so as a listing it was only ever a table of everything below
+        // it. Pre-hub links still point here, so they land on the front door
+        // rather than on a page nothing links to.
+        if ($category && $category->slug === self::BUNDLES_PARENT_SLUG && ! $category->parent_id) {
+            return redirect()->route('downloads');
+        }
+
+        $landing = false;
+
+        if (! $category && $id === null && $search === '' && ! $defragOnly) {
+            $category = DownloadCategory::where('slug', self::DEFAULT_SHELF)->first();
+            $landing = (bool) $category;
+        }
+
+        // A search beats the article: the shelves keep a search box precisely
+        // so there is somewhere to type on the landing page, and answering a
+        // query with the same unfiltered article would read as broken.
+        if ($category && isset(self::SHELVES[$category->slug]) && $search === '') {
+            return Inertia::render('Downloads/Index', [
+                'tree' => $this->tree(),
+                'current' => $this->currentPayload($category),
+                'panel' => $this->shelfPanel($category, self::SHELVES[$category->slug]),
+                'downloads' => null,
+                'filters' => ['q' => '', 'sort' => 'newest', 'defrag' => false],
+                'totalCount' => Download::published()->count(),
+                // Searching from /downloads searches everything. Searching
+                // after clicking into Game bundles searches Game bundles.
+                'landing' => $landing,
+            ]);
+        }
 
         // A locked category is not a listing: it renders as its own article
         // that keeps itself up to date, so it skips the table entirely.
@@ -63,10 +149,6 @@ class DownloadsController extends Controller
                 'totalCount' => Download::published()->count(),
             ]);
         }
-
-        $search = trim((string) $request->input('q', ''));
-        $sort = $request->input('sort', 'newest');
-        $defragOnly = $request->boolean('defrag');
 
         // total_size stays 0 for entries that only carry an external_url, where
         // the bytes live on someone else's host and the listing shows a dash.
@@ -97,6 +179,7 @@ class DownloadsController extends Controller
         };
 
         $downloads = $query->paginate(self::PER_PAGE)->withQueryString();
+        $downloads->setCollection($this->foldNumberedParts($downloads->getCollection()));
 
         return Inertia::render('Downloads/Index', [
             'tree' => $this->tree(),
@@ -222,6 +305,210 @@ class DownloadsController extends Controller
         ]);
 
         return $path;
+    }
+
+    /**
+     * One shelf as its own article: a lead paragraph saying what the thing is,
+     * the notes worth knowing before downloading, an optional featured entry,
+     * and the rest grouped.
+     */
+    private function shelfPanel(DownloadCategory $category, array $config): array
+    {
+        $items = $this->foldNumberedParts(
+            Download::published()
+                ->whereIn('category_id', $category->descendantIds())
+                ->withCount('files')
+                ->withSum('files as total_size', 'size')
+                ->orderBy('position')
+                ->orderBy('name')
+                ->get()
+        )->map(fn (Download $d) => [
+            'id' => $d->id,
+            'slug' => $d->slug,
+            'name' => $d->name,
+            'description' => $d->description,
+            'size' => (int) $d->total_size,
+            'downloads_count' => (int) $d->downloads_count,
+            'external_url' => $d->external_url,
+            'parts' => is_array($d->parts) ? $d->parts : null,
+        ]);
+
+        // The featured entry is the one that came in parts: on this shelf that
+        // is the all-in-one, and its parts are the platform choice, which is
+        // the only decision the page exists to help with.
+        $feature = null;
+
+        if (($config['feature_parts'] ?? false)) {
+            $feature = $items->firstWhere('parts', '!=', null);
+            $items = $items->reject(fn ($i) => $feature && $i['id'] === $feature['id']);
+        }
+
+        $groups = [];
+
+        if (($config['group_by'] ?? null) === 'gametype') {
+            foreach ($items as $item) {
+                $group = $this->gametypeOf($item['name']);
+                $groups[$group][] = $item;
+            }
+
+            // Fixed order rather than whatever the listing happened to return,
+            // so Run is first on a site that is mostly run.
+            $order = ['Run', 'Fastcaps', 'Freestyle', 'Levelshots', 'Other'];
+            $groups = collect($order)
+                ->filter(fn ($name) => ! empty($groups[$name]))
+                ->map(fn ($name) => ['name' => $name, 'items' => $groups[$name]])
+                ->values()
+                ->all();
+        } elseif ($items->isNotEmpty()) {
+            $groups = [['name' => $feature ? 'Also here' : null, 'items' => $items->values()->all()]];
+        }
+
+        return [
+            'type' => 'shelf',
+            'intro' => $config['intro'],
+            'notes' => $config['notes'] ?? [],
+            'feature' => $feature,
+            'groups' => $groups,
+        ];
+    }
+
+    /**
+     * Which side of the game a repack belongs to, read off its name. The 2020
+     * repacks are named by gametype, and a fastcaps player wants that shelf's
+     * maps and its textures together - not every map pack on the page.
+     */
+    private function gametypeOf(string $name): string
+    {
+        return match (true) {
+            (bool) preg_match('/^levelshots/i', $name) => 'Levelshots',
+            (bool) preg_match('/^fastcaps/i', $name) => 'Fastcaps',
+            (bool) preg_match('/^freestyle/i', $name) => 'Freestyle',
+            (bool) preg_match('/^run\b/i', $name) => 'Run',
+            default => 'Other',
+        };
+    }
+
+    /**
+     * Folds "RUN textures 1", "RUN textures 2", "RUN textures 3" into one row
+     * carrying a download button per part.
+     *
+     * The 2020 repacks are split only because a single pk3 that size is
+     * unwieldy; the parts are not different things and nobody wants one of
+     * them. Listed separately they filled the category with near-identical
+     * rows - four of them just for RUN maps - and pushed everything else off
+     * the screen. The number moves out of the name and onto the buttons.
+     *
+     * Folding happens within the rendered page only, so a set straddling a
+     * page boundary shows as two rows instead of one row that quietly hides
+     * where its other half went. A number that is part of a word (32bit) or a
+     * year (last update 2020) is not a part number and is left alone.
+     */
+    private function foldNumberedParts(EloquentCollection $items): EloquentCollection
+    {
+        $parsed = $items->map(fn (Download $d) => $this->partOf($d))->all();
+
+        $seen = [];
+        foreach ($parsed as $part) {
+            if ($part) {
+                $seen[$part['key']] = ($seen[$part['key']] ?? 0) + 1;
+            }
+        }
+
+        $rows = [];
+        $anchorIndex = [];
+
+        foreach ($items->values() as $i => $download) {
+            $part = $parsed[$i];
+
+            // A lone "... 1" is not a set - it keeps its number and its row.
+            if (! $part || ($seen[$part['key']] ?? 0) < 2) {
+                $rows[] = $download;
+                continue;
+            }
+
+            $entry = [
+                'id' => $download->id,
+                'slug' => $download->slug,
+                'label' => $part['label'],
+                'sort' => $part['sort'],
+                'external_url' => $download->external_url,
+                'size' => (int) $download->total_size,
+            ];
+
+            if (! isset($anchorIndex[$part['key']])) {
+                $download->name = $part['name'];
+                $download->setAttribute('parts', [$entry]);
+                $anchorIndex[$part['key']] = count($rows);
+                $rows[] = $download;
+                continue;
+            }
+
+            $anchor = $rows[$anchorIndex[$part['key']]];
+            $anchor->setAttribute('parts', array_merge($anchor->parts, [$entry]));
+            $anchor->total_size = (int) $anchor->total_size + (int) $download->total_size;
+            $anchor->downloads_count = (int) $anchor->downloads_count + (int) $download->downloads_count;
+        }
+
+        // Whatever order the listing was sorted in, the parts themselves read
+        // as 1, 2, 3 - or Windows, Linux, macOS.
+        foreach ($rows as $row) {
+            if (is_array($row->parts)) {
+                $parts = $row->parts;
+                usort($parts, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+                $row->setAttribute('parts', $parts);
+            }
+        }
+
+        return new EloquentCollection($rows);
+    }
+
+    /**
+     * Reads a name as "<set> <part><rest>" under either rule:
+     *
+     *   "RUN maps 2 (bsp) - last update 2020"   -> set "RUN maps (bsp) ...", part 2
+     *   "DeFRaG Bundle all-in-one Linux 32bit"  -> set "DeFRaG Bundle all-in-one",
+     *                                              part "Linux 32"
+     *
+     * Returns null when the name carries neither, which is most of them.
+     */
+    private function partOf(Download $download): ?array
+    {
+        $fold = function (string $set, string $rest, string $label, int $sort) use ($download): ?array {
+            $set = rtrim($set);
+
+            if ($set === '') {
+                return null;
+            }
+
+            return [
+                'key' => $download->category_id . '|' . $set . '|' . $rest,
+                'label' => $label,
+                'name' => $set . $rest,
+                'sort' => $sort,
+            ];
+        };
+
+        // Platform builds of one release. Ordered the way people pick: the
+        // system most of them are on, newest word size first.
+        if (preg_match('/^(.*?)\s(windows|linux|mac(?:os)?|osx)\s*(32|64)\s*bit(\b.*)$/iu', $download->name, $m)) {
+            $rank = ['windows' => 0, 'linux' => 1, 'mac' => 2, 'macos' => 2, 'osx' => 2];
+            $system = strtolower($m[2]);
+
+            return $fold(
+                $m[1],
+                $m[4],
+                ucfirst($system === 'osx' ? 'macOS' : $system) . ' ' . $m[3],
+                ($rank[$system] ?? 9) * 10 + ($m[3] === '64' ? 0 : 1)
+            );
+        }
+
+        // A plain part number. The \b after the digits keeps 32bit and "last
+        // update 2020" out - neither has a boundary where the number ends.
+        if (preg_match('/^(.*?)\s(\d{1,2})(\b.*)$/u', $download->name, $m)) {
+            return $fold($m[1], $m[3], $m[2], (int) $m[2]);
+        }
+
+        return null;
     }
 
     /**
@@ -433,19 +720,49 @@ class DownloadsController extends Controller
                 'name' => $d->name,
                 'description' => $d->description,
                 'filename' => $d->meta['filename'] ?? null,
+                // Older rows were published before the split and are all Linux.
+                'platform' => $d->meta['platform'] ?? 'linux',
                 'size' => $d->meta['size'] ?? null,
                 'url' => $d->external_url,
-            ])->values()->all();
+            ])->values();
 
-            $marker = $entries->first()?->meta ?? [];
+            // Two separate installs, not one page with a footnote: a repo of
+            // its own, its own core archive and its own build stamp, because
+            // the two cores are built from separate inputs and can sit a
+            // release apart. Only baseq3 belongs to both.
+            $meta = fn (string $platform) => $entries
+                ->first(fn ($d) => ($d->meta['platform'] ?? null) === $platform)?->meta ?? [];
+
+            $filesFor = fn (string $platform) => $archives
+                ->filter(fn ($a) => in_array($a['platform'], [$platform, 'both'], true))
+                ->values()
+                ->all();
+
+            $platform = fn (array $spec) => $spec + [
+                'archives' => $filesFor($spec['key']),
+                'built_at' => $meta($spec['key'])['built_at'] ?? null,
+                'engine' => $meta($spec['key'])['engine'] ?? null,
+                'mod' => $meta($spec['key'])['mod'] ?? null,
+            ];
 
             return [
                 'type' => 'server_bundle',
-                'archives' => $archives,
-                'built_at' => $marker['built_at'] ?? null,
-                'engine' => $marker['engine'] ?? null,
-                'mod' => $marker['mod'] ?? null,
-                'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle',
+                'platforms' => [
+                    $platform([
+                        'key' => 'linux',
+                        'name' => 'Linux',
+                        'summary' => 'Docker is the recommended route and needs Compose v2; a native systemd setup is documented as well. Around 2 GB of disk, 150 MB of RAM per server.',
+                        'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle',
+                        'install' => "git clone https://github.com/Defrag-racing/defrag-server-bundle.git ./dfsv\ncd dfsv\n./download_defrag.sh",
+                    ]),
+                    $platform([
+                        'key' => 'windows',
+                        'name' => 'Windows',
+                        'summary' => 'One Windows service per server, so they come back after a reboot or a crash. Demos upload themselves every 30 minutes and the map pool syncs locally, no NFS involved.',
+                        'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle-windows',
+                        'install' => "git clone https://github.com/Defrag-racing/defrag-server-bundle-windows.git C:\\dfsv\ncd C:\\dfsv\nSet-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force\n.\\scripts\\download-defrag.ps1",
+                    ]),
+                ],
             ];
         }
 
