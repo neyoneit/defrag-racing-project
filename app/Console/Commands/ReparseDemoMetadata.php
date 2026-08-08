@@ -2,9 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\RebuildDemosTopRanksJob;
 use App\Models\OfflineRecord;
 use App\Models\UploadedDemo;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -67,7 +69,14 @@ class ReparseDemoMetadata extends Command
             'physics_left' => 0,
         ];
 
-        $query->orderBy('id')->chunkById(50, function ($demos) use ($apply, $limit, $journal, &$stats) {
+        // Maps whose leaderboard was touched. The map page does not read these
+        // columns live: MapsController::buildDemosTopReps caches the whole
+        // Demos Top collection per map for an hour, keyed by a generation
+        // counter. Correcting a name in SQL alone leaves the old name on the
+        // page until that expires - it did exactly that on 2plyr and 24run.
+        $touchedMaps = [];
+
+        $query->orderBy('id')->chunkById(50, function ($demos) use ($apply, $limit, $journal, &$stats, &$touchedMaps) {
             foreach ($demos as $demo) {
                 if ($limit > 0 && $stats['read'] >= $limit) {
                     return false;
@@ -151,6 +160,10 @@ class ReparseDemoMetadata extends Command
                         OfflineRecord::where('id', $offline['id'])
                             ->update(array_map(fn ($pair) => $pair[1], $offline['changes']));
                     }
+
+                    if ($demo->map_name) {
+                        $touchedMaps[$demo->map_name] = true;
+                    }
                 }
 
                 if ($sleep = (float) $this->option('sleep')) {
@@ -160,6 +173,8 @@ class ReparseDemoMetadata extends Command
 
             return true;
         });
+
+        $this->refreshMaps(array_keys($touchedMaps));
 
         $this->newLine();
         $this->table(['', 'demos'], [
@@ -183,6 +198,28 @@ class ReparseDemoMetadata extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Makes the corrected names show up. Two things hold a stale copy: the
+     * per-map Demos Top cache the map detail reads (bumping the generation
+     * counter is enough, the next view recomputes) and the materialized
+     * demos_top_ranks table the render queue reads, which the job rebuilds.
+     * The job bumps the counter too, but it does so when a worker picks it
+     * up - the page should not wait for the queue, so bump it here as well.
+     */
+    private function refreshMaps(array $maps): void
+    {
+        if (! $maps) {
+            return;
+        }
+
+        foreach ($maps as $map) {
+            Cache::increment('demostop_gen:' . $map);
+            RebuildDemosTopRanksJob::dispatch($map);
+        }
+
+        $this->line('Refreshed the leaderboard of ' . count($maps) . ' map(s).');
     }
 
     private string $journalPath = '';
@@ -214,6 +251,7 @@ class ReparseDemoMetadata extends Command
         $reverted = 0;
         $conflicts = 0;
         $missing = 0;
+        $touchedMaps = [];
 
         foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
             $entry = json_decode($line, true);
@@ -246,6 +284,10 @@ class ReparseDemoMetadata extends Command
                 $demo->forceFill($restore)->save();
                 $reverted++;
                 $this->line("  <fg=green>{$demo->id}</> back to " . json_encode($restore));
+
+                if ($demo->map_name) {
+                    $touchedMaps[$demo->map_name] = true;
+                }
             }
 
             if ($offline = ($entry['offline'] ?? null)) {
@@ -266,9 +308,15 @@ class ReparseDemoMetadata extends Command
 
                     $record->forceFill([$column => $was])->save();
                     $this->line("  <fg=green>offline record {$record->id}</> {$column} back to " . var_export($was, true));
+
+                    if ($record->map_name) {
+                        $touchedMaps[$record->map_name] = true;
+                    }
                 }
             }
         }
+
+        $this->refreshMaps(array_keys($touchedMaps));
 
         $this->newLine();
         $this->info("Reverted {$reverted} demo(s), {$conflicts} column(s) left alone, {$missing} demo(s) gone.");
