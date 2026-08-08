@@ -989,9 +989,18 @@ class MapsController extends Controller
             }
         }
 
-        // Group items by root.
+        // Group items by root. Flagged demos are skipped here as well, not only
+        // in the linking above: they never join a bucket, so each one survived
+        // as a cluster of its own and the singleton branch below then published
+        // a profile-key badge for it. Both time-history endpoints drop flagged
+        // demos outright, so that badge opened on "No matching demos found" -
+        // four of the seven profile badges on 2plyr did exactly that.
         $clusters = [];
         foreach ($demosArr as $i => $d) {
+            if (isset($flaggedSet[$d->id])) {
+                continue;
+            }
+
             $r = $find($i);
             $clusters[$r][] = $d;
         }
