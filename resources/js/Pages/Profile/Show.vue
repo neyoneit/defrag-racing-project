@@ -234,10 +234,12 @@ const submitAboutMeSettings = () => {
 const savedHidden = user.value.global_profile_preferences?.hidden_sections || [];
 const savedHiddenStatBoxes = user.value.global_profile_preferences?.hidden_stat_boxes || [];
 const savedDateFormat = user.value.global_profile_preferences?.date_format || 'dmY';
+const savedTimeFormat = user.value.global_profile_preferences?.time_format || 'colon';
 const globalProfileForm = useForm({
     hidden_sections: [...savedHidden],
     hidden_stat_boxes: [...savedHiddenStatBoxes],
     date_format: savedDateFormat,
+    time_format: savedTimeFormat,
 });
 
 const toggleGlobalSection = (id) => {
@@ -2113,6 +2115,40 @@ const filteredProfileSubTabs = computed(() => isVerified.value ? profileSubTabs 
                             <div class="text-[10px] font-normal mt-0.5 opacity-70">02/04/2026</div>
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Time Format Card -->
+            <div id="gc-time-format" class="rounded-xl bg-black/40 backdrop-blur-sm border border-white/10 transition-all duration-500">
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-cyan-400">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">Time Format</h2>
+                            <p class="text-xs text-gray-500">What separates the milliseconds in a run time</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="globalProfileForm.time_format = 'colon'; saveGlobalPreferencesDebounced()"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.time_format === 'colon' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            Colon
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">12:20:108</div>
+                        </button>
+                        <button @click="globalProfileForm.time_format = 'dot'; saveGlobalPreferencesDebounced()"
+                            class="px-3 py-2 rounded-lg text-xs font-bold border transition-all"
+                            :class="globalProfileForm.time_format === 'dot' ? 'bg-cyan-600/20 text-cyan-300 border-cyan-500/40' : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'">
+                            Decimal point
+                            <div class="text-[10px] font-normal mt-0.5 opacity-70">12:20.108</div>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-gray-600 mt-2">
+                        Colon is what the in-game timer prints. The point reads the milliseconds as a fraction of a second.
+                    </p>
                 </div>
             </div>
 
