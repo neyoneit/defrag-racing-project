@@ -860,15 +860,28 @@ const formatFileSize = (bytes) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
+// Both sort handlers have to name the props they want, like every filter and
+// pager on this page does. A visit without `only` is a full one, and the
+// controller answers a full load with empty tables on purpose - the page
+// fetches them itself once it is mounted, so the first paint is not held up by
+// four queries. `preserveState` then keeps the very same component alive, so
+// that mount never happens again and the table simply goes blank. Reported
+// twice from the browse table: clicking Time emptied the list, while opening
+// the identical URL by hand worked.
 const sortColumn = (column) => {
     const newOrder = props.sortBy === column && props.sortOrder === 'asc' ? 'desc' : 'asc';
-    router.get(route('demos.index'), {
-        sort: column,
-        order: newOrder,
-        userPage: props.userDemos?.current_page || 1,
-    }, {
+    // Carried over from the current URL rather than rebuilt from the route, so
+    // sorting your own uploads no longer throws away the browse table's search,
+    // tab and status filters sitting further down the same page.
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('sort', column);
+    currentUrl.searchParams.set('order', newOrder);
+    currentUrl.searchParams.set('userPage', props.userDemos?.current_page || 1);
+
+    router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
         preserveState: true,
         preserveScroll: true,
+        only: ['userDemos'],
     });
 };
 
@@ -882,6 +895,7 @@ const sortBrowseColumn = (column) => {
     router.visit(currentUrl.pathname + '?' + currentUrl.searchParams.toString(), {
         preserveState: true,
         preserveScroll: true,
+        only: ['publicDemos'],
     });
 };
 

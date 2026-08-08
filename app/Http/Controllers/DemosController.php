@@ -297,7 +297,11 @@ class DemosController extends Controller
                 }
 
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
+                    // Status has no useful alphabetical order, so it is ranked
+                    // by how far a demo got. The direction still has to be
+                    // honoured: the header arrow flips on every click, and
+                    // without this the rows underneath it never moved.
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') " . ($sortOrder === 'asc' ? 'asc' : 'desc'));
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -338,7 +342,11 @@ class DemosController extends Controller
                 }
 
                 if ($sortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed')");
+                    // Status has no useful alphabetical order, so it is ranked
+                    // by how far a demo got. The direction still has to be
+                    // honoured: the header arrow flips on every click, and
+                    // without this the rows underneath it never moved.
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'processing', 'pending', 'uploaded', 'failed-validity', 'failed') " . ($sortOrder === 'asc' ? 'asc' : 'desc'));
                 } else {
                     $query->orderBy($sortBy, $sortOrder);
                 }
@@ -394,7 +402,7 @@ class DemosController extends Controller
                 }
 
                 if ($browseSortBy === 'status') {
-                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed')");
+                    $query->orderByRaw("FIELD(status, 'assigned', 'fallback-assigned', 'processed', 'failed-validity', 'failed') " . ($browseSortOrder === 'asc' ? 'asc' : 'desc'));
                 } else {
                     $query->orderBy($browseSortBy, $browseSortOrder);
                 }

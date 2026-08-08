@@ -5,6 +5,7 @@ import DownloadCategoryNode from '@/Components/DownloadCategoryNode.vue';
 import DefragModPanel from '@/Components/Downloads/DefragModPanel.vue';
 import ServerBundlePanel from '@/Components/Downloads/ServerBundlePanel.vue';
 import FamilyFriendlyPanel from '@/Components/Downloads/FamilyFriendlyPanel.vue';
+import BundlesPanel from '@/Components/Downloads/BundlesPanel.vue';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -29,8 +30,20 @@ const openIds = computed(() => (props.current?.breadcrumb ?? []).map((c) => c.id
 // The locked categories are the ones people actually come here for - the mod,
 // the server bundle - and by position they sat at the bottom, under thirty
 // folders of maps and sounds. They go on top, in their own group.
-const pinned = computed(() => props.tree.filter((n) => n.is_locked || n.auto_source));
-const browsable = computed(() => props.tree.filter((n) => ! n.is_locked && ! n.auto_source));
+//
+// Bundles and repacks is pinned with them and goes first, because it holds the
+// pre-hub repacks - more than half of everything on the site - and was sitting
+// last in the browsable list, below ten empty folders. It stays an ordinary
+// branch in every other respect, children and upload button included.
+const PINNED_FIRST = ['bundles-and-repacks'];
+
+const isPinned = (node) => node.is_locked || node.auto_source || PINNED_FIRST.includes(node.slug);
+
+const pinned = computed(() => [
+    ...props.tree.filter((n) => PINNED_FIRST.includes(n.slug)),
+    ...props.tree.filter((n) => (n.is_locked || n.auto_source) && ! PINNED_FIRST.includes(n.slug)),
+]);
+const browsable = computed(() => props.tree.filter((n) => ! isPinned(n)));
 
 const baseUrl = computed(() =>
     props.current ? `/downloads/${props.current.id}/${props.current.slug}` : '/downloads'
@@ -91,6 +104,10 @@ const entryUrl = (d) => `/downloads/entry/${d.id}/${d.slug}`;
 // External entries (the mod, repacks, the setup repo) link straight out; owned
 // uploads go through the file route, which signs a link and counts the hit.
 const downloadUrl = (d) => (d.external_url ? d.external_url : entryUrl(d));
+
+// One part of a folded repack. Same rule as a whole entry, but a part has its
+// own id and slug, so its detail page is still reachable.
+const partUrl = (p) => (p.external_url ? p.external_url : `/downloads/entry/${p.id}/${p.slug}`);
 
 const isNew = (d) => {
     if (!d.created_at) return false;
@@ -255,6 +272,7 @@ const isNew = (d) => {
                     <DefragModPanel v-if="panel?.type === 'defrag_mod'" :panel="panel" />
                     <ServerBundlePanel v-else-if="panel?.type === 'server_bundle'" :panel="panel" />
                     <FamilyFriendlyPanel v-else-if="panel?.type === 'family_friendly'" :panel="panel" />
+                    <BundlesPanel v-else-if="panel?.type === 'bundles'" :panel="panel" />
 
                     <!-- Table -->
                     <div v-else-if="downloads?.data.length > 0"
@@ -326,7 +344,28 @@ const isNew = (d) => {
                                         </td>
 
                                         <td class="px-3 py-2.5 text-right">
+                                            <!-- A repack split into parts gets a
+                                                 button per part instead of one
+                                                 row per part. -->
+                                            <div v-if="d.parts" class="inline-flex items-center justify-end gap-1 flex-wrap">
+                                                <a
+                                                    v-for="p in d.parts"
+                                                    :key="p.id"
+                                                    :href="partUrl(p)"
+                                                    :target="p.external_url ? '_blank' : '_self'"
+                                                    rel="noopener"
+                                                    :title="`Part ${p.label} - ${formatSize(p.size)}`"
+                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-semibold text-gray-400 hover:bg-cyan-500/15 hover:border-cyan-500/40 hover:text-cyan-300 transition-all">
+                                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                    </svg>
+                                                    {{ p.label }}
+                                                </a>
+                                            </div>
+
                                             <a
+                                                v-else
                                                 :href="downloadUrl(d)"
                                                 :target="d.external_url ? '_blank' : '_self'"
                                                 rel="noopener"

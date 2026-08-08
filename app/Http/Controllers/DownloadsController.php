@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Download;
 use App\Models\DownloadCategory;
 use App\Models\DownloadFile;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,9 @@ class DownloadsController extends Controller
     private const PER_PAGE = 30;
 
     private const UPLOAD_DISK = 'community';
+
+    /** The one browsable branch that renders as an article, not a table. */
+    private const BUNDLES_SLUG = 'bundles-and-repacks';
 
     /**
      * Capped by docker/php.ini (upload_max_filesize + post_max_size = 100M).
@@ -50,6 +54,21 @@ class DownloadsController extends Controller
     public function index(Request $request, $id = null, $slug = null)
     {
         $category = $this->resolveCategory($id, $slug);
+
+        // Bundles and repacks is the one browsable branch that reads better as
+        // an article: five small shelves of curated collections, where a flat
+        // table of thirty near-identical rows tells you nothing about which
+        // shelf you are on.
+        if ($category && $category->slug === self::BUNDLES_SLUG && ! $category->parent_id) {
+            return Inertia::render('Downloads/Index', [
+                'tree' => $this->tree(),
+                'current' => $this->currentPayload($category),
+                'panel' => $this->bundlesPanel($category),
+                'downloads' => null,
+                'filters' => ['q' => '', 'sort' => 'newest', 'defrag' => false],
+                'totalCount' => Download::published()->count(),
+            ]);
+        }
 
         // A locked category is not a listing: it renders as its own article
         // that keeps itself up to date, so it skips the table entirely.
@@ -97,6 +116,7 @@ class DownloadsController extends Controller
         };
 
         $downloads = $query->paginate(self::PER_PAGE)->withQueryString();
+        $downloads->setCollection($this->foldNumberedParts($downloads->getCollection()));
 
         return Inertia::render('Downloads/Index', [
             'tree' => $this->tree(),
@@ -222,6 +242,187 @@ class DownloadsController extends Controller
         ]);
 
         return $path;
+    }
+
+    /**
+     * Bundles and repacks as an article: one shelf per child category, every
+     * numbered or per-platform set already folded onto a single line.
+     *
+     * Not paginated. The whole branch is a few dozen curated entries that have
+     * barely moved since 2020, and splitting five short shelves across pages
+     * would hide the point of the page.
+     */
+    private function bundlesPanel(DownloadCategory $root): array
+    {
+        $sections = [];
+
+        $children = DownloadCategory::where('parent_id', $root->id)
+            ->orderBy('position')
+            ->orderBy('name')
+            ->get();
+
+        // Anything sitting directly on the root gets its own shelf at the end,
+        // so an upload into the parent category is never invisible.
+        foreach ($children->push($root) as $shelf) {
+            $ids = $shelf->is($root) ? [$root->id] : $shelf->descendantIds();
+
+            $items = Download::published()
+                ->whereIn('category_id', $ids)
+                ->withCount('files')
+                ->withSum('files as total_size', 'size')
+                ->orderBy('position')
+                ->orderBy('name')
+                ->get();
+
+            if ($items->isEmpty()) {
+                continue;
+            }
+
+            $sections[] = [
+                'id' => $shelf->id,
+                'name' => $shelf->is($root) ? 'Other' : $shelf->name,
+                'slug' => $shelf->slug,
+                'description' => $shelf->is($root) ? null : $shelf->description,
+                'items' => $this->foldNumberedParts($items)->map(fn (Download $d) => [
+                    'id' => $d->id,
+                    'slug' => $d->slug,
+                    'name' => $d->name,
+                    'description' => $d->description,
+                    'size' => (int) $d->total_size,
+                    'downloads_count' => (int) $d->downloads_count,
+                    'external_url' => $d->external_url,
+                    'parts' => is_array($d->parts) ? $d->parts : null,
+                ])->values()->all(),
+            ];
+        }
+
+        return [
+            'type' => 'bundles',
+            'sections' => $sections,
+        ];
+    }
+
+    /**
+     * Folds "RUN textures 1", "RUN textures 2", "RUN textures 3" into one row
+     * carrying a download button per part.
+     *
+     * The 2020 repacks are split only because a single pk3 that size is
+     * unwieldy; the parts are not different things and nobody wants one of
+     * them. Listed separately they filled the category with near-identical
+     * rows - four of them just for RUN maps - and pushed everything else off
+     * the screen. The number moves out of the name and onto the buttons.
+     *
+     * Folding happens within the rendered page only, so a set straddling a
+     * page boundary shows as two rows instead of one row that quietly hides
+     * where its other half went. A number that is part of a word (32bit) or a
+     * year (last update 2020) is not a part number and is left alone.
+     */
+    private function foldNumberedParts(EloquentCollection $items): EloquentCollection
+    {
+        $parsed = $items->map(fn (Download $d) => $this->partOf($d))->all();
+
+        $seen = [];
+        foreach ($parsed as $part) {
+            if ($part) {
+                $seen[$part['key']] = ($seen[$part['key']] ?? 0) + 1;
+            }
+        }
+
+        $rows = [];
+        $anchorIndex = [];
+
+        foreach ($items->values() as $i => $download) {
+            $part = $parsed[$i];
+
+            // A lone "... 1" is not a set - it keeps its number and its row.
+            if (! $part || ($seen[$part['key']] ?? 0) < 2) {
+                $rows[] = $download;
+                continue;
+            }
+
+            $entry = [
+                'id' => $download->id,
+                'slug' => $download->slug,
+                'label' => $part['label'],
+                'sort' => $part['sort'],
+                'external_url' => $download->external_url,
+                'size' => (int) $download->total_size,
+            ];
+
+            if (! isset($anchorIndex[$part['key']])) {
+                $download->name = $part['name'];
+                $download->setAttribute('parts', [$entry]);
+                $anchorIndex[$part['key']] = count($rows);
+                $rows[] = $download;
+                continue;
+            }
+
+            $anchor = $rows[$anchorIndex[$part['key']]];
+            $anchor->setAttribute('parts', array_merge($anchor->parts, [$entry]));
+            $anchor->total_size = (int) $anchor->total_size + (int) $download->total_size;
+            $anchor->downloads_count = (int) $anchor->downloads_count + (int) $download->downloads_count;
+        }
+
+        // Whatever order the listing was sorted in, the parts themselves read
+        // as 1, 2, 3 - or Windows, Linux, macOS.
+        foreach ($rows as $row) {
+            if (is_array($row->parts)) {
+                $parts = $row->parts;
+                usort($parts, fn ($a, $b) => $a['sort'] <=> $b['sort']);
+                $row->setAttribute('parts', $parts);
+            }
+        }
+
+        return new EloquentCollection($rows);
+    }
+
+    /**
+     * Reads a name as "<set> <part><rest>" under either rule:
+     *
+     *   "RUN maps 2 (bsp) - last update 2020"   -> set "RUN maps (bsp) ...", part 2
+     *   "DeFRaG Bundle all-in-one Linux 32bit"  -> set "DeFRaG Bundle all-in-one",
+     *                                              part "Linux 32"
+     *
+     * Returns null when the name carries neither, which is most of them.
+     */
+    private function partOf(Download $download): ?array
+    {
+        $fold = function (string $set, string $rest, string $label, int $sort) use ($download): ?array {
+            $set = rtrim($set);
+
+            if ($set === '') {
+                return null;
+            }
+
+            return [
+                'key' => $download->category_id . '|' . $set . '|' . $rest,
+                'label' => $label,
+                'name' => $set . $rest,
+                'sort' => $sort,
+            ];
+        };
+
+        // Platform builds of one release. Ordered the way people pick: the
+        // system most of them are on, newest word size first.
+        if (preg_match('/^(.*?)\s(windows|linux|mac(?:os)?|osx)\s*(32|64)\s*bit(\b.*)$/iu', $download->name, $m)) {
+            $rank = ['windows' => 0, 'linux' => 1, 'mac' => 2, 'macos' => 2, 'osx' => 2];
+            $system = strtolower($m[2]);
+
+            return $fold(
+                $m[1],
+                $m[4],
+                ucfirst($system === 'osx' ? 'macOS' : $system) . ' ' . $m[3],
+                ($rank[$system] ?? 9) * 10 + ($m[3] === '64' ? 0 : 1)
+            );
+        }
+
+        // A plain part number. The \b after the digits keeps 32bit and "last
+        // update 2020" out - neither has a boundary where the number ends.
+        if (preg_match('/^(.*?)\s(\d{1,2})(\b.*)$/u', $download->name, $m)) {
+            return $fold($m[1], $m[3], $m[2], (int) $m[2]);
+        }
+
+        return null;
     }
 
     /**
@@ -433,19 +634,49 @@ class DownloadsController extends Controller
                 'name' => $d->name,
                 'description' => $d->description,
                 'filename' => $d->meta['filename'] ?? null,
+                // Older rows were published before the split and are all Linux.
+                'platform' => $d->meta['platform'] ?? 'linux',
                 'size' => $d->meta['size'] ?? null,
                 'url' => $d->external_url,
-            ])->values()->all();
+            ])->values();
 
-            $marker = $entries->first()?->meta ?? [];
+            // Two separate installs, not one page with a footnote: a repo of
+            // its own, its own core archive and its own build stamp, because
+            // the two cores are built from separate inputs and can sit a
+            // release apart. Only baseq3 belongs to both.
+            $meta = fn (string $platform) => $entries
+                ->first(fn ($d) => ($d->meta['platform'] ?? null) === $platform)?->meta ?? [];
+
+            $filesFor = fn (string $platform) => $archives
+                ->filter(fn ($a) => in_array($a['platform'], [$platform, 'both'], true))
+                ->values()
+                ->all();
+
+            $platform = fn (array $spec) => $spec + [
+                'archives' => $filesFor($spec['key']),
+                'built_at' => $meta($spec['key'])['built_at'] ?? null,
+                'engine' => $meta($spec['key'])['engine'] ?? null,
+                'mod' => $meta($spec['key'])['mod'] ?? null,
+            ];
 
             return [
                 'type' => 'server_bundle',
-                'archives' => $archives,
-                'built_at' => $marker['built_at'] ?? null,
-                'engine' => $marker['engine'] ?? null,
-                'mod' => $marker['mod'] ?? null,
-                'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle',
+                'platforms' => [
+                    $platform([
+                        'key' => 'linux',
+                        'name' => 'Linux',
+                        'summary' => 'Docker is the recommended route and needs Compose v2; a native systemd setup is documented as well. Around 2 GB of disk, 150 MB of RAM per server.',
+                        'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle',
+                        'install' => "git clone https://github.com/Defrag-racing/defrag-server-bundle.git ./dfsv\ncd dfsv\n./download_defrag.sh",
+                    ]),
+                    $platform([
+                        'key' => 'windows',
+                        'name' => 'Windows',
+                        'summary' => 'One Windows service per server, so they come back after a reboot or a crash. Demos upload themselves every 30 minutes and the map pool syncs locally, no NFS involved.',
+                        'repo_url' => 'https://github.com/Defrag-racing/defrag-server-bundle-windows',
+                        'install' => "git clone https://github.com/Defrag-racing/defrag-server-bundle-windows.git C:\\dfsv\ncd C:\\dfsv\nSet-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force\n.\\scripts\\download-defrag.ps1",
+                    ]),
+                ],
             ];
         }
 

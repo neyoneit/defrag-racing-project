@@ -24,18 +24,34 @@ class SyncServerBundle extends Command
     protected $description = 'Publish the DeFRaG server bundle archives into the downloads hub';
 
     private const DISK = 'dl_storage';
-    private const MARKER = 'dfsv-core.version.json';
     private const PUBLIC_BASE = 'https://dl.defrag.racing/downloads/';
 
+    /**
+     * Each core archive carries its own version marker, because Linux and
+     * Windows are built from separate static inputs and can be a release
+     * apart. `platform` is what splits the article in two; baseq3 is `both`,
+     * being the same 485 MB of id paks either way.
+     */
     private const ARCHIVES = [
         [
             'file' => 'dfsv-core.tar',
-            'name' => 'Server core',
+            'name' => 'Server core (Linux)',
+            'platform' => 'linux',
+            'marker' => 'dfsv-core.version.json',
             'description' => 'The oDFe dedicated engine, the DeFRaG mod, the record system modules and ip4db. Rebuilt automatically whenever a new engine build or mod release appears.',
+        ],
+        [
+            'file' => 'dfsv-core-win.zip',
+            'name' => 'Server core (Windows)',
+            'platform' => 'windows',
+            'marker' => 'dfsv-core-win.version.json',
+            'description' => 'The same engine, mod and record system modules built for Windows, plus the support DLLs. Rebuilt on the same schedule as the Linux core.',
         ],
         [
             'file' => 'dfsv-baseq3.tar',
             'name' => 'baseq3 assets',
+            'platform' => 'both',
+            'marker' => null,
             'description' => 'The stock Quake III Arena paks (pak0 to pak8). Never changes, so the installer only pulls it when baseq3/pak0.pk3 is missing.',
         ],
     ];
@@ -50,14 +66,7 @@ class SyncServerBundle extends Command
         }
 
         $disk = Storage::disk(self::DISK);
-        $marker = [];
-
-        if ($disk->exists(self::MARKER)) {
-            $marker = json_decode($disk->get(self::MARKER), true) ?: [];
-        } else {
-            $this->warn(self::MARKER . ' not found. Run bundle:build-server first; publishing sizes only.');
-        }
-
+        $markers = [];
         $seen = [];
 
         foreach (self::ARCHIVES as $position => $archive) {
@@ -79,6 +88,17 @@ class SyncServerBundle extends Command
             $key = 'server_bundle:' . $archive['file'];
             $seen[] = $key;
 
+            $marker = [];
+
+            if ($archive['marker']) {
+                if ($disk->exists($archive['marker'])) {
+                    $marker = json_decode($disk->get($archive['marker']), true) ?: [];
+                    $markers[$archive['platform']] = $marker;
+                } else {
+                    $this->warn("{$archive['marker']} not found. Run bundle:build-server first; publishing the size only.");
+                }
+            }
+
             Download::updateOrCreate(
                 ['source_key' => $key],
                 [
@@ -93,6 +113,7 @@ class SyncServerBundle extends Command
                     'position' => $position,
                     'meta' => [
                         'filename' => $archive['file'],
+                        'platform' => $archive['platform'],
                         'size' => $size,
                         'built_at' => $marker['built_at'] ?? null,
                         'engine' => $marker['engine'] ?? null,
@@ -105,7 +126,7 @@ class SyncServerBundle extends Command
         }
 
         if (empty($seen)) {
-            $this->error('Neither archive is on the disk. Nothing published.');
+            $this->error('No archive is on the disk or reachable. Nothing published.');
             return 1;
         }
 
@@ -115,11 +136,11 @@ class SyncServerBundle extends Command
             ->delete();
 
         $this->info(sprintf(
-            'Published %d archive(s)%s. Engine %s, mod %s.',
+            'Published %d archive(s)%s. Linux mod %s, Windows mod %s.',
             count($seen),
             $removed ? ", removed {$removed} stale" : '',
-            $marker['engine'] ?? 'unknown',
-            $marker['mod'] ?? 'unknown'
+            $markers['linux']['mod'] ?? 'unknown',
+            $markers['windows']['mod'] ?? 'unknown'
         ));
 
         return 0;
