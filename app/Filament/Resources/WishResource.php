@@ -10,6 +10,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * The admin side of the wishlist: answering wishes and removing the ones that
@@ -120,7 +121,17 @@ class WishResource extends Resource
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
-                    ->searchable(),
+                    // Raw, the column printed the colour codes themselves:
+                    // ^3[^nS^mH^3]^7neyo^4. instead of a nick.
+                    ->formatStateUsing(fn (?string $state) => UserResource::q3tohtml($state ?? ''))
+                    ->html()
+                    // Searching the coloured name never matched what is on
+                    // screen, since the codes sit between the letters.
+                    ->searchable(query: fn (Builder $query, string $search) => $query->whereHas(
+                        'user',
+                        fn ($q) => $q->where('plain_name', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%")
+                    )),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
