@@ -119,6 +119,25 @@ class WishResource extends Resource
                         : str($record->body)->limit(140))
                     ->color(fn (Wish $record) => $record->removal_requested_at ? 'warning' : null),
 
+                // A wish is approved before anyone else sees it, so whatever
+                // it carries has to be visible at the point of approving it.
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->label('Shot')
+                    ->disk(Wish::IMAGE_DISK)
+                    ->height(40)
+                    ->extraImgAttributes(['class' => 'rounded object-cover'])
+                    ->url(fn (Wish $record) => $record->imageUrl(), shouldOpenInNewTab: true)
+                    ->placeholder('-'),
+
+                Tables\Columns\TextColumn::make('youtube_id')
+                    ->label('Video')
+                    ->formatStateUsing(fn (?string $state) => $state ? 'Watch' : null)
+                    ->url(fn (Wish $record) => $record->youtube_id
+                        ? 'https://www.youtube.com/watch?v=' . $record->youtube_id
+                        : null, shouldOpenInNewTab: true)
+                    ->color('info')
+                    ->placeholder('-'),
+
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Author')
                     // Raw, the column printed the colour codes themselves:

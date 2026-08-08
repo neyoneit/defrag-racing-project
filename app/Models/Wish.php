@@ -4,16 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Wish extends Model
 {
     use SoftDeletes;
+
+    /**
+     * Screenshots go on the local public disk, not the community bucket: they
+     * are small, they are part of the page rather than something anyone
+     * downloads, and storage/app/public is already in the nightly mirror.
+     */
+    public const IMAGE_DISK = 'public';
+
+    public const IMAGE_DIR = 'wishes';
 
     protected $fillable = [
         'user_id',
         'project',
         'title',
         'body',
+        'image_path',
+        'youtube_id',
         'status',
         'status_note',
         'approved_at',
@@ -107,6 +119,37 @@ class Wish extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /** Where the browser fetches the screenshot, or null when there is none. */
+    public function imageUrl(): ?string
+    {
+        return $this->image_path ? Storage::disk(self::IMAGE_DISK)->url($this->image_path) : null;
+    }
+
+    /**
+     * The eleven-character id out of whatever form of YouTube link someone
+     * pasted - watch, youtu.be, embed, shorts, or the bare id itself. Null
+     * when it is not a YouTube link at all, which is what the validator
+     * reports back to the author.
+     */
+    public static function youtubeId(?string $url): ?string
+    {
+        $url = trim((string) $url);
+
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('~^[A-Za-z0-9_-]{11}$~', $url)) {
+            return $url;
+        }
+
+        return preg_match(
+            '~(?:youtube\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})~',
+            $url,
+            $m
+        ) ? $m[1] : null;
     }
 
     public function votes()

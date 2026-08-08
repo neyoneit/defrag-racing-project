@@ -8,7 +8,7 @@ export default {
 
 <script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
     wishes: { type: Array, default: () => [] },
@@ -40,17 +40,65 @@ const form = useForm({
     project: 'web',
     title: '',
     body: '',
+    image: null,
+    youtube_url: '',
 });
 
+// Shown before the wish is posted, so the author sees what everyone else will.
+const imagePreview = ref(null);
+
+const pickImage = (event) => {
+    const file = event.target.files?.[0] ?? null;
+    form.image = file;
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+    imagePreview.value = file ? URL.createObjectURL(file) : null;
+};
+
+const clearImage = () => {
+    form.image = null;
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+    imagePreview.value = null;
+    if (imageInput.value) imageInput.value.value = '';
+};
+
+const imageInput = ref(null);
+
 const submit = () => {
+    // forceFormData: a file cannot go up as JSON, and Inertia only switches
+    // to multipart on its own when a File is present - which it is not when
+    // the author attached nothing.
     form.post('/wishlist', {
         preserveScroll: true,
+        forceFormData: true,
         onSuccess: () => {
             form.reset();
+            clearImage();
             showForm.value = false;
         },
     });
 };
+
+// Clicking a thumbnail opens the full picture. One at a time, and Escape or a
+// click anywhere closes it - it is a preview, not a page.
+const lightbox = ref(null);
+
+const openLightbox = (wish) => {
+    lightbox.value = wish;
+};
+
+const closeLightbox = () => {
+    lightbox.value = null;
+};
+
+const onKeydown = (event) => {
+    if (event.key === 'Escape') closeLightbox();
+};
+
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => {
+    window.removeEventListener('keydown', onKeydown);
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value);
+});
 
 // Voting is a plain POST rather than an optimistic local update: the score
 // decides the order of the list, and a number that moves before the server
@@ -162,6 +210,45 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         placeholder="Briefly: what it does, and why it would help."></textarea>
                     <div v-if="form.errors.body" class="text-red-400 text-sm mt-1">{{ form.errors.body }}</div>
                 </div>
+
+                <!-- Both optional. Half the wishes here are about something
+                     you can see, and a screenshot says it faster than a
+                     paragraph does. -->
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">
+                            Screenshot <span class="text-gray-600 font-normal">optional</span>
+                        </label>
+
+                        <div v-if="imagePreview" class="flex items-start gap-3">
+                            <img :src="imagePreview" alt=""
+                                class="w-24 h-16 object-cover rounded-lg border border-white/10" />
+                            <button type="button" @click="clearImage"
+                                class="text-sm text-gray-400 hover:text-red-300 transition-colors">
+                                Remove
+                            </button>
+                        </div>
+
+                        <input v-else ref="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+                            @change="pickImage"
+                            class="w-full text-sm text-gray-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-white/10 file:text-gray-200 file:font-semibold hover:file:bg-white/20 file:cursor-pointer" />
+
+                        <div v-if="form.errors.image" class="text-red-400 text-sm mt-1">{{ form.errors.image }}</div>
+                        <p v-else class="text-xs text-gray-600 mt-1">jpg, png, webp or gif, up to 4 MB.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">
+                            YouTube link <span class="text-gray-600 font-normal">optional</span>
+                        </label>
+                        <input v-model="form.youtube_url" type="text" maxlength="255"
+                            class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-purple-400/50"
+                            placeholder="https://youtube.com/watch?v=..." />
+                        <div v-if="form.errors.youtube_url" class="text-red-400 text-sm mt-1">{{ form.errors.youtube_url }}</div>
+                        <p v-else class="text-xs text-gray-600 mt-1">Any YouTube link works - watch, youtu.be or shorts.</p>
+                    </div>
+                </div>
+
                 <div class="flex flex-wrap items-center gap-3">
                     <button type="submit" :disabled="form.processing"
                         class="px-5 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold transition-colors disabled:opacity-50">
@@ -292,6 +379,30 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                         </div>
                         <p class="text-gray-300 whitespace-pre-line leading-relaxed">{{ wish.body }}</p>
 
+                        <!-- Deliberately small. A wish is read in a list of
+                             wishes, so the picture is a hint that there is one
+                             rather than the thing taking up the row. -->
+                        <div v-if="wish.image_url || wish.youtube_id" class="mt-3 flex items-center gap-2">
+                            <button v-if="wish.image_url" type="button" @click="openLightbox(wish)"
+                                class="group relative rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-colors"
+                                title="Click to enlarge">
+                                <img :src="wish.image_url" alt="" loading="lazy"
+                                    class="w-20 h-14 object-cover group-hover:opacity-80 transition-opacity" />
+                            </button>
+
+                            <button v-if="wish.youtube_id" type="button" @click="openLightbox(wish)"
+                                class="group relative w-20 h-14 rounded-lg overflow-hidden border border-white/10 hover:border-purple-400/50 transition-colors"
+                                title="Click to play">
+                                <img :src="`https://i.ytimg.com/vi/${wish.youtube_id}/mqdefault.jpg`" alt="" loading="lazy"
+                                    class="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
+                                <span class="absolute inset-0 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+
                         <div v-if="wish.status_note" class="mt-3 border-l-2 border-purple-400/40 pl-3 text-sm text-purple-200">
                             {{ wish.status_note }}
                         </div>
@@ -317,5 +428,34 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
             </div>
 
         </div>
+
+        <!-- The bigger look. Backdrop click and Escape both close it; the
+             panel itself swallows the click so hitting play does not. -->
+        <Teleport to="body">
+            <div v-if="lightbox" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+                @click="closeLightbox">
+                <div class="max-w-4xl w-full" @click.stop>
+                    <div class="flex items-start justify-between gap-4 mb-2">
+                        <h3 class="text-white font-bold">{{ lightbox.title }}</h3>
+                        <button type="button" @click="closeLightbox"
+                            class="shrink-0 text-gray-400 hover:text-white transition-colors" aria-label="Close">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <img v-if="lightbox.image_url" :src="lightbox.image_url" alt=""
+                        class="w-full max-h-[70vh] object-contain rounded-xl border border-white/10 bg-black" />
+
+                    <div v-if="lightbox.youtube_id" class="mt-3 aspect-video">
+                        <iframe class="w-full h-full rounded-xl border border-white/10"
+                            :src="`https://www.youtube.com/embed/${lightbox.youtube_id}`"
+                            title="YouTube" frameborder="0" allowfullscreen
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
