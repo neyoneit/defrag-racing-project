@@ -346,9 +346,22 @@
     const currentSystemNotificationIndex = ref(0);
     let systemNotificationInterval;
 
+    // An announcement outranks the rest of the header. While one is unread it
+    // is the only thing the preview shows - the record ticker and the other
+    // system notifications wait - because the one message the site actually
+    // wanted to deliver should not scroll past between two personal bests.
+    const pendingAnnouncements = computed(() =>
+        systemNotifications.value.filter(n => n.type === 'announcement'));
+
+    const announcementMode = computed(() => pendingAnnouncements.value.length > 0);
+
+    const previewSystemNotifications = computed(() =>
+        announcementMode.value ? pendingAnnouncements.value : systemNotifications.value);
+
     const currentSystemNotification = computed(() => {
-        if (systemNotifications.value.length === 0) return null;
-        return systemNotifications.value[currentSystemNotificationIndex.value % systemNotifications.value.length];
+        const list = previewSystemNotifications.value;
+        if (list.length === 0) return null;
+        return list[currentSystemNotificationIndex.value % list.length];
     });
 
     // What the banner calls the notification it is showing. Everything used to
@@ -366,8 +379,10 @@
     };
 
     const cycleSystemNotification = () => {
-        if (systemNotifications.value.length > 0) {
-            currentSystemNotificationIndex.value = (currentSystemNotificationIndex.value + 1) % systemNotifications.value.length;
+        const list = previewSystemNotifications.value;
+
+        if (list.length > 0) {
+            currentSystemNotificationIndex.value = (currentSystemNotificationIndex.value + 1) % list.length;
         }
     };
 
@@ -379,8 +394,8 @@
         dismissedSystemIds.value = new Set([...dismissedSystemIds.value, notification.id]);
 
         // Fix index if needed
-        if (systemNotifications.value.length > 0) {
-            currentSystemNotificationIndex.value = currentSystemNotificationIndex.value % systemNotifications.value.length;
+        if (previewSystemNotifications.value.length > 0) {
+            currentSystemNotificationIndex.value = currentSystemNotificationIndex.value % previewSystemNotifications.value.length;
         } else {
             currentSystemNotificationIndex.value = 0;
         }
@@ -620,8 +635,10 @@
 
                         <!-- Right: Notifications + Profile -->
                         <div class="flex items-center gap-3">
-                            <!-- Record Notification Preview (visible on xl, hides to icon below) -->
-                            <div v-if="$page.props.auth.user && currentNotification" class="hidden xl:flex items-center gap-1">
+                            <!-- Record Notification Preview (visible on xl, hides to icon below).
+                                 Stands down while an announcement is unread: it is still in the
+                                 bell, it just stops competing for the same strip of header. -->
+                            <div v-if="$page.props.auth.user && currentNotification && ! announcementMode" class="hidden xl:flex items-center gap-1">
                                 <button @click="dismissRecordNotification(true)" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-l-lg transition-all hover:border-orange-500/40 cursor-pointer group">
                                     <div class="shrink-0 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
                                     <div class="flex items-center gap-1.5 min-w-0 text-xs">
@@ -644,15 +661,22 @@
                                 </button>
                             </div>
 
-                            <!-- System Notification Preview (visible on lg and above) -->
+                            <!-- System Notification Preview (visible on lg and above).
+                                 In announcement mode it is the only preview on the bar and
+                                 wears its own colour, so it does not read as one more line
+                                 in the same ticker. -->
                             <div v-if="$page.props.auth.user && currentSystemNotification" class="hidden lg:flex items-center gap-1">
-                                <button @click="dismissSystemNotification(true)" class="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-l-lg transition-all hover:border-blue-500/40 cursor-pointer group">
-                                    <div class="shrink-0 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                <button @click="dismissSystemNotification(true)"
+                                    class="flex items-center gap-2 px-3 py-1.5 border rounded-l-lg transition-all cursor-pointer group"
+                                    :class="announcementMode
+                                        ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40 hover:border-amber-400/70'
+                                        : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 hover:border-blue-500/40'">
+                                    <div class="shrink-0 w-2 h-2 rounded-full animate-pulse" :class="announcementMode ? 'bg-amber-400' : 'bg-blue-400'"></div>
                                     <div class="flex items-center gap-1.5 min-w-0 text-xs">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-blue-400 shrink-0">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 shrink-0" :class="announcementMode ? 'text-amber-400' : 'text-blue-400'">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                                         </svg>
-                                        <span class="text-gray-500 shrink-0">{{ systemNotificationPrefix(currentSystemNotification) }}</span>
+                                        <span class="shrink-0" :class="announcementMode ? 'text-amber-300/80 font-semibold' : 'text-gray-500'">{{ systemNotificationPrefix(currentSystemNotification) }}</span>
                                         <template v-if="currentSystemNotification.type === 'render_completed'">
                                             <span class="font-bold text-emerald-300 truncate" v-html="q3tohtml(currentSystemNotification.before || '')"></span>
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
@@ -661,16 +685,19 @@
                                             <span class="font-bold text-blue-400 truncate">ready</span>
                                         </template>
                                         <template v-else>
-                                            <span class="font-bold text-blue-400 truncate" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
+                                            <span class="font-bold truncate" :class="announcementMode ? 'text-amber-200' : 'text-blue-400'" v-html="q3tohtml(currentSystemNotification.headline || '')"></span>
                                         </template>
                                     </div>
-                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-500 text-white text-xs font-bold rounded">
-                                        {{ systemNotifications.length }}
+                                    <div class="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-white text-xs font-bold rounded" :class="announcementMode ? 'bg-amber-500' : 'bg-blue-500'">
+                                        {{ previewSystemNotifications.length }}
                                     </div>
                                 </button>
                                 <button
                                     @click.stop="dismissSystemNotification(false)"
-                                    class="flex items-center px-1.5 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 border-l-0 rounded-r-lg transition-all hover:bg-red-500/20 hover:border-red-500/30 text-gray-500 hover:text-red-400"
+                                    class="flex items-center px-1.5 py-1.5 border border-l-0 rounded-r-lg transition-all text-gray-500 hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400"
+                                    :class="announcementMode
+                                        ? 'bg-gradient-to-r from-amber-500/15 to-orange-500/15 border-amber-500/40'
+                                        : 'bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20'"
                                     title="Dismiss"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
