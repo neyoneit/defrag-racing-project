@@ -21,6 +21,23 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
+     * User::$hidden keeps the email out of every payload, because a User gets
+     * serialized into public pages wherever it hangs off something else - a
+     * demo's uploader, a record's owner - and those pages are readable by
+     * anyone. A person's own address is theirs to see, though, and the settings
+     * page reads it from `auth.user`, which Jetstream builds from
+     * `$request->user()->toArray()`. Unhiding it on that one instance here, in
+     * handle(), puts it back before any prop is resolved without widening what
+     * the other User objects in the payload expose.
+     */
+    public function handle($request, \Closure $next)
+    {
+        $request->user()?->makeVisible('email');
+
+        return parent::handle($request, $next);
+    }
+
+    /**
      * Determines the current asset version.
      *
      * @see https://inertiajs.com/asset-versioning
