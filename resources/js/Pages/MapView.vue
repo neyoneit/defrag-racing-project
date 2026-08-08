@@ -1768,7 +1768,7 @@
                         <div v-if="getVq3Records.total > 0">
                             <!-- Column Headers -->
                             <div class="flex items-center gap-1.5 -ml-3 -mt-1 mb-0 pb-1 border-b border-white/15">
-                                <div class="w-10 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
+                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
                                 <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                                 <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">Time</div>
                                 <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
@@ -1853,7 +1853,7 @@
                         <div v-if="getCpmRecords.total > 0">
                             <!-- Column Headers -->
                             <div class="flex items-center gap-1.5 -ml-3 -mt-1 mb-0 pb-1 border-b border-white/15">
-                                <div class="w-10 flex-shrink-0 text-center pl-0.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
+                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
                                 <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
                                 <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">Time</div>
                                 <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>

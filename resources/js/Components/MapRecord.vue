@@ -476,18 +476,21 @@
              for one row at a time. -->
         <div
             v-if="!hideRank"
-            class="font-black text-sm w-10 flex-shrink-0 text-center leading-none transition-all duration-200"
+            class="font-black text-sm w-10 flex-shrink-0 text-left pl-1.5 leading-none"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
             @mouseenter="record.map_score && $emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
             @mouseleave="$emit('scoreHover', null)"
         >
-            <span :class="record.map_score ? 'group-hover:hidden' : ''" class="inline-block transition-transform duration-200 group-hover:scale-110">
+            <!-- Rank and score share a left edge, so the swap moves nothing:
+                 a four-digit score simply reaches further right into room the
+                 column already has. Centred, the wider one grew out of both
+                 sides at once and the row read as jumping left. No pop on
+                 hover either - the number changing is the whole effect. -->
+            <span :class="record.map_score ? 'group-hover:hidden' : ''">
                 <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
                 <template v-else>{{ record.rank }}</template>
             </span>
-            <!-- Just wide enough for a four-digit score, so the swap moves
-                 nothing and a one-digit rank is not left sitting in a gap. -->
             <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap text-yellow-400/90 tabular-nums cursor-help">
                 {{ Math.round(record.map_score) }}
             </span>
