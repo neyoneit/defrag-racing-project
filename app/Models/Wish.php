@@ -50,6 +50,14 @@ class Wish extends Model
     ];
 
     /**
+     * The statuses a wish is still up for grabs in, and the default view of the
+     * list. The board is sorted by score, so a finished wish with fifteen votes
+     * would otherwise sit at the top of it forever, above everything still
+     * waiting to be decided - which is the one question the list exists to ask.
+     */
+    public const OPEN_STATUSES = ['considering', 'planned'];
+
+    /**
      * Everything a wish can be about: the public repositories in the org, plus
      * the two things that are ours but are not repositories, plus a catch-all.
      * Without the catch-all people file website wishes about the engine.

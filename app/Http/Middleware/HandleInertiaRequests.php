@@ -72,7 +72,7 @@ class HandleInertiaRequests extends Middleware
             }
 
             // Filter system notifications based on preview_system setting
-            $previewSystem = $user->preview_system ?? ['announcement', 'clan', 'tournament', 'render'];
+            $previewSystem = $user->preview_system ?? ['announcement', 'clan', 'tournament', 'render', 'map'];
 
             $systemQuery = Notification::where('read', false)
                 ->where('user_id', $user->id);
@@ -98,6 +98,10 @@ class HandleInertiaRequests extends Middleware
 
             if (in_array('render', $previewSystem)) {
                 $allowedTypes[] = 'render_completed';
+            }
+
+            if (in_array('map', $previewSystem)) {
+                $allowedTypes[] = 'new_map';
             }
 
             if (!empty($allowedTypes)) {

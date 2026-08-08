@@ -705,7 +705,11 @@ class CommunityTasksController extends Controller
             ->flip();
 
         return $selectedMaps->map(function ($map) use ($videos, $mapsWithDemos) {
-            $tags = $map->tags()->select('tags.id', 'tags.display_name', 'tags.category')->get();
+            // parent_tag_id travels with the tag so the tagging screen can undo
+            // a misclick properly: adding a child auto-attaches its parent, and
+            // taking the child back off should only take the parent with it
+            // when nothing else on the map sits under it.
+            $tags = $map->tags()->select('tags.id', 'tags.display_name', 'tags.category', 'tags.parent_tag_id')->get();
             $mapVideos = $videos->get($map->name, collect());
 
             $videosByPhysics = [];
@@ -735,6 +739,7 @@ class CommunityTasksController extends Controller
                     'id' => $t->id,
                     'display_name' => $t->display_name,
                     'category' => $t->category,
+                    'parent_tag_id' => $t->parent_tag_id,
                 ])->toArray(),
             ];
         })->values()->toArray();

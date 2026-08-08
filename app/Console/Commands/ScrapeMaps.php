@@ -6,7 +6,9 @@ use Illuminate\Console\Command;
 
 use App\External\WorldSpawn;
 use App\Models\Map;
+use App\Services\NewMapNotifier;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -41,8 +43,22 @@ class ScrapeMaps extends Command
 
         $maps = $ws->scrape_until($lastMap->name);
 
+        $inserted = new Collection();
+
         foreach($maps as $map) {
-            $this->insertNewMap($map);
+            $new = $this->insertNewMap($map);
+
+            if ($new) {
+                $inserted->push($new);
+            }
+        }
+
+        // One notification for the whole run, not one per map - Worldspawn
+        // publishes in bursts and the scrape above picks a burst up whole.
+        if ($inserted->isNotEmpty()) {
+            $sent = app(NewMapNotifier::class)->notify($inserted);
+
+            $this->info("Notified {$sent} users about {$inserted->count()} new map(s)");
         }
     }
 
@@ -50,7 +66,7 @@ class ScrapeMaps extends Command
         $exists = Map::where('name', $map['name'])->exists();
 
         if ($exists) {
-            return;
+            return null;
         }
 
         $newMap = new Map();
@@ -63,6 +79,8 @@ class ScrapeMaps extends Command
         $newMap->save();
 
         $this->info("Added Map : " . $map['name']);
+
+        return $newMap;
     }
 
     public function downloadImage($url) {

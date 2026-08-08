@@ -51,13 +51,30 @@ class ProcessNotificationsJob implements ShouldQueue
             $settings = $user->notification_settings;
 
             if ($settings == 'all' || $settings == $this->record->physics) {
-                $this->sendNotification($record);
+                $this->sendNotification($record, $user);
             }
 
         }
     }
 
-    public function sendNotification ($currentRecord) {
+    public function sendNotification ($currentRecord, User $user = null) {
+        // WR-beaten = the *recipient* held rank 1 and the new record took it.
+        // processRanks() ran in ScrapeRecords before this job dispatched, so
+        // these ranks reflect the post-beat state: beater is now 1, recipient
+        // dropped to 2.
+        $worldrecord = ($this->record->rank == 1) && ($currentRecord->rank == 2);
+
+        // "WR Only" for this physics: to them, a time being taken back on some
+        // map is noise, and losing the world record is not. The setting has
+        // been on the settings page all along with nothing reading it.
+        $wanted = $this->record->physics === 'cpm'
+            ? ($user?->records_cpm ?? 'all')
+            : ($user?->records_vq3 ?? 'all');
+
+        if ($wanted === 'wr' && ! $worldrecord) {
+            return;
+        }
+
         if (! $this->shouldSendNotification($currentRecord)) {
             return;
         }
@@ -75,12 +92,7 @@ class ProcessNotificationsJob implements ShouldQueue
         $notification->mapname = $this->record->mapname;
         $notification->date_set = $this->record->date_set;
         $notification->my_time = $currentRecord->time;
-        // WR-beaten = the *recipient* held rank 1 and the new record took it.
-        // processRanks() ran in ScrapeRecords before this job dispatched, so
-        // these ranks reflect the post-beat state: beater is now 1, recipient
-        // dropped to 2.
-        $notification->worldrecord = ($this->record->rank == 1)
-            && ($currentRecord->rank == 2);
+        $notification->worldrecord = $worldrecord;
 
         $notification->save();
     }

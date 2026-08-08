@@ -209,6 +209,18 @@ def get_time_old1(demo_time_cmd: str) -> timedelta:
 
 
 def get_name_offline_old1(demo_time_cmd: str) -> str:
+    # Old defrag prints the mod before the player:
+    #   NewTime -1161238505 9:624 "defrag 1.80" "^7t^10^7t^13^7r"
+    # Taking the fourth space-separated token gives "defrag - the mod's own
+    # name - for every demo written by a build that does this, and that name
+    # then beats the one out of the demo's player info. The player is the last
+    # quoted string; a line with a single quoted token, or none at all, keeps
+    # the old reading.
+    quoted = re.findall(r'"([^"]*)"', demo_time_cmd)
+
+    if len(quoted) > 1 and quoted[-1].strip():
+        return normalize_name(remove_colors(quoted[-1]) or '')
+
     parts = demo_time_cmd.split(' ')
     return normalize_name(remove_colors(parts[3]) or '')
 

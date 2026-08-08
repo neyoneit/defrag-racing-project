@@ -122,7 +122,7 @@ const askRemoval = (wish) => {
 // the other.
 const applyFilters = (status, project) => {
     const query = {};
-    if (status) query.status = status;
+    if (status && status !== 'open') query.status = status;
     if (project) query.project = project;
 
     router.get('/wishlist', query, { preserveScroll: true, preserveState: true, replace: true });
@@ -130,6 +130,17 @@ const applyFilters = (status, project) => {
 
 const setFilter = (status) => applyFilters(status, props.projectFilter);
 const setProject = (project) => applyFilters(props.filter, project);
+
+// Two groups of tabs: what is still being decided, and what has been answered.
+// Same switch, but a wish that is Done is a different kind of thing from one
+// that is waiting, and the gap between them says so.
+const OPEN_STATUSES = ['considering', 'planned'];
+
+const openStatuses = computed(() => Object.entries(props.statuses)
+    .filter(([key]) => OPEN_STATUSES.includes(key)));
+
+const closedStatuses = computed(() => Object.entries(props.statuses)
+    .filter(([key]) => ! OPEN_STATUSES.includes(key)));
 
 const totalWishes = computed(() => Object.values(props.projectCounts || {})
     .reduce((sum, count) => sum + Number(count || 0), 0));
@@ -292,12 +303,20 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-3 mb-4">
                         <div class="flex items-center gap-1 p-1 rounded-xl bg-black/40 border border-white/10">
-                            <button @click="setFilter(null)"
+                            <button @click="setFilter('open')"
                                 class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-                                :class="!filter ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
-                                Any status
+                                :class="filter === 'open' ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                Open
                             </button>
-                            <button v-for="(label, key) in statuses" :key="key" @click="setFilter(key)"
+                            <button v-for="[key, label] in openStatuses" :key="key" @click="setFilter(key)"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+                                :class="filter === key ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
+                                {{ label }}
+                            </button>
+
+                            <span class="w-px self-stretch my-1 bg-white/10"></span>
+
+                            <button v-for="[key, label] in closedStatuses" :key="key" @click="setFilter(key)"
                                 class="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
                                 :class="filter === key ? 'bg-purple-500/25 text-purple-100' : 'text-gray-400 hover:text-white hover:bg-white/10'">
                                 {{ label }}
@@ -403,7 +422,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString() : '';
                             </button>
                         </div>
 
-                        <div v-if="wish.status_note" class="mt-3 border-l-2 border-purple-400/40 pl-3 text-sm text-purple-200">
+                        <div v-if="wish.status_note" class="mt-3 border-l-2 border-purple-400/40 pl-3 text-sm text-purple-200 whitespace-pre-line">
                             {{ wish.status_note }}
                         </div>
 

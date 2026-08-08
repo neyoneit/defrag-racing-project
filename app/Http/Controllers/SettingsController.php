@@ -53,17 +53,19 @@ class SettingsController extends Controller
             'records_cpm'       =>      ['required', 'string', 'in:all,wr'],
             'preview_records'   =>      ['required', 'string', 'in:all,wr,none'],
             'preview_system'    =>      ['required', 'array'],
-            'preview_system.*'  =>      ['string', 'in:announcement,clan,tournament,render']
+            'preview_system.*'  =>      ['string', 'in:announcement,clan,tournament,render,map']
         ]);
 
         $user = $request->user();
 
         $defrag_news = $request->input('defrag_news', false);
         $tournament_news = $request->input('tournament_news', false);
+        $map_news = $request->input('map_news', false);
         $clan_notifications = $request->input('clan_notifications', false);
 
         $user->defrag_news = $defrag_news;
         $user->tournament_news = $tournament_news;
+        $user->map_news = $map_news;
         $user->clan_notifications = $clan_notifications;
 
         $user->records_vq3 = $request->records_vq3;

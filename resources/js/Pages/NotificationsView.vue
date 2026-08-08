@@ -152,6 +152,8 @@
             return notifications.filter(n => n.type === 'alias_suggestion');
         } else if (activeSystemTab.value === 'render') {
             return notifications.filter(n => n.type === 'render_completed');
+        } else if (activeSystemTab.value === 'maps') {
+            return notifications.filter(n => n.type === 'new_map');
         }
 
         return notifications;
@@ -167,6 +169,7 @@
             tournament: notifications.filter(n => ['tournament_start', 'round_start', 'round_end'].includes(n.type)).length,
             profile: notifications.filter(n => n.type === 'alias_suggestion').length,
             render: notifications.filter(n => n.type === 'render_completed').length,
+            maps: notifications.filter(n => n.type === 'new_map').length,
         };
     });
 
@@ -274,6 +277,13 @@
                 bgColor: 'bg-indigo-500/20',
                 borderColor: 'border-indigo-500/30',
                 iconColor: 'text-indigo-400'
+            },
+            'new_map': {
+                label: 'New Maps',
+                icon: 'M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z',
+                bgColor: 'bg-amber-500/20',
+                borderColor: 'border-amber-500/30',
+                iconColor: 'text-amber-400'
             },
             'render_completed': {
                 label: 'Render Done',
@@ -540,6 +550,26 @@
                                 </span>
                             </div>
                             <div v-if="activeSystemTab === 'announcements'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
+                        </button>
+
+                        <button
+                            @click="activeSystemTab = 'maps'"
+                            class="flex-1 px-4 py-2 text-center text-sm font-semibold transition-all relative group"
+                            :class="activeSystemTab === 'maps'
+                                ? 'text-amber-400 bg-amber-500/10'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        >
+                            <div class="flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+                                </svg>
+                                <span>Maps</span>
+                                <span v-if="systemTabCounts.maps" class="px-2 py-0.5 rounded-full text-xs font-bold"
+                                      :class="activeSystemTab === 'maps' ? 'bg-amber-500/30 text-amber-300' : 'bg-white/10 text-gray-400'">
+                                    {{ systemTabCounts.maps }}
+                                </span>
+                            </div>
+                            <div v-if="activeSystemTab === 'maps'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
                         </button>
 
                         <button
