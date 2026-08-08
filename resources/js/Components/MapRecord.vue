@@ -476,7 +476,7 @@
              for one row at a time. -->
         <div
             v-if="!hideRank"
-            class="font-black text-sm w-10 flex-shrink-0 text-center leading-none transition-all duration-200"
+            class="font-black text-sm w-12 flex-shrink-0 text-center leading-none transition-all duration-200"
             :class="rankColorClass"
             :title="isVerified ? 'Verified - demo attached' : ''"
             @mouseenter="record.map_score && $emit('scoreHover', { score: record.map_score, reltime: record.reltime, base_score: record.base_score, rank_multiplier: record.rank_multiplier, multiplier: record.multiplier, el: $event.target })"
@@ -486,14 +486,16 @@
                 <span v-if="hasValidityIssue || !record.rank" class="text-red-500/50" title="Flagged - does not count for ranking">&#x2715;</span>
                 <template v-else>{{ record.rank }}</template>
             </span>
-            <!-- Nudged right: a four-digit score is wider than the column, and
-                 centred it spilled past the panel's left edge. -->
-            <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap translate-x-1.5 text-yellow-400/90 tabular-nums cursor-help">
+            <!-- The column is sized for a four-digit score, so swapping the
+                 rank for it moves nothing: both sit centred in the same box.
+                 Sized any tighter and the score spills either side and the
+                 whole row looks like it jumped left. -->
+            <span v-if="record.map_score" class="hidden group-hover:inline whitespace-nowrap text-yellow-400/90 tabular-nums cursor-help">
                 {{ Math.round(record.map_score) }}
             </span>
         </div>
         <!-- Empty spacer preserves horizontal alignment with the parent row when rank is hidden -->
-        <div v-else class="w-10 flex-shrink-0"></div>
+        <div v-else class="w-12 flex-shrink-0"></div>
 
         <!-- Player Info - Compact -->
         <component
