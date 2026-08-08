@@ -462,7 +462,7 @@
     <div
         class="group relative flex items-center gap-1.5 rounded-md transition-all duration-200 -ml-3"
         :class="{
-            'py-1.5 hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg': !compact,
+            'py-1.5 hover:bg-white/10 hover:shadow-lg': !compact,
             'py-0 opacity-70': compact,
             'bg-gradient-to-r from-emerald-500/15 to-transparent border-l-2 border-emerald-400 hover:from-emerald-500/25 hover:border-emerald-300': isMyRecord && !record.oldtop && !compact,
             'border-l-2 border-transparent hover:border-blue-500/50': !isMyRecord && !compact,
@@ -504,7 +504,6 @@
             :href="getRoute"
             :class="[
                 'flex items-center gap-2 min-w-0 flex-1 overflow-visible group/player transition-all duration-200',
-                !compact ? 'group-hover:ml-1' : '',
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
         >
