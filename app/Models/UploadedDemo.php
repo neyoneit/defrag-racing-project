@@ -52,6 +52,9 @@ class UploadedDemo extends Model
         'name_confidence',
         'match_method',
         'suggested_user_id',
+        'assigned_user_id',
+        'assigned_by_user_id',
+        'assigned_user_at',
         'matched_alias',
         'manually_assigned',
         'download_count',
@@ -105,6 +108,16 @@ class UploadedDemo extends Model
     public function suggestedUser()
     {
         return $this->belongsTo(User::class, 'suggested_user_id');
+    }
+
+    /**
+     * The account a human decided this demo belongs to. Only ever set by staff,
+     * and it outranks the alias resolver: somebody looked at the demo and said
+     * so. See the 2026_08_09 migration for why it is not user_id.
+     */
+    public function assignedUser()
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
     public function renderedVideo()

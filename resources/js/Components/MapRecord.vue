@@ -55,16 +55,17 @@
             type: Boolean,
             default: false,
         },
-        // Reporting says "this demo is on the wrong record" and flagging says
-        // "this record is not legitimate". A freestyle demo sits on no record
-        // and claims no result, so neither has anything to act on.
-        hideReport: {
+        // Everything on the row that only makes sense against a record:
+        // reporting ("this demo is on the wrong record"), flagging ("this
+        // record is not legitimate") and assigning to one. A freestyle demo
+        // sits on no record and claims no result, so none of them apply.
+        hideRecordActions: {
             type: Boolean,
             default: false,
         },
     });
 
-    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history']);
+    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history', 'assign-user']);
 
     const page = usePage();
     const showReportModal = ref(false);
@@ -177,7 +178,7 @@
     const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const canReportDemo = computed(() => {
-        if (props.hideReport) return false;
+        if (props.hideRecordActions) return false;
         return isLoggedIn.value && page.props.canReportDemos;
     });
 
@@ -185,7 +186,7 @@
     // enough of a history here to be worth listening to. Flagging a record is
     // a different thing - it only says "this time looks off", staff decide
     // the rest - so it asks for nothing but an account.
-    const canFlagRecord = computed(() => ! props.hideReport && isLoggedIn.value);
+    const canFlagRecord = computed(() => ! props.hideRecordActions && isLoggedIn.value);
 
     const isAdmin = computed(() => {
         return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
@@ -864,9 +865,23 @@
 
         <!-- Action Icons -->
         <div class="flex items-center justify-end flex-shrink-0 gap-0.5 ml-auto">
+            <!-- A demo on no record has nothing that can say whose it is. Staff
+                 can put a name on it; there is room on these rows for words. -->
+            <button
+                v-if="hideRecordActions && $page.props.canAssignDemoToUser"
+                @click.stop="emit('assign-user', record)"
+                class="mr-1 px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors"
+                :class="record.assigned_user_id
+                    ? 'bg-teal-500/15 text-teal-300 border-teal-500/30 hover:bg-teal-500/25'
+                    : 'bg-gray-700/40 text-gray-300 border-white/10 hover:bg-gray-700/70 hover:text-white'"
+                :title="record.assigned_user_id ? 'Attributed to an account - click to change' : 'Attribute this demo to an account'"
+            >
+                {{ record.assigned_user_id ? 'Assigned' : 'Assign to account' }}
+            </button>
+
             <!-- Always visible: assign/match/reassign -->
             <button
-                v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
+                v-if="! hideRecordActions && isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                 title="Assign to online record"
@@ -877,7 +892,7 @@
             </button>
 
             <button
-                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
+                v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
                 @click.stop="emit('assign-from-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
                 :title="`${demoMatches.length} possible demo match${demoMatches.length > 1 ? 'es' : ''}`"
@@ -888,7 +903,7 @@
             </button>
 
             <button
-                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                 @click.stop="emit('reassign-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                 title="Reassign demo"

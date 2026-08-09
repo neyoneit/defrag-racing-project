@@ -258,7 +258,8 @@ class MapsController extends Controller
         // relations loaded further down.
         $light = fn (string $physics) => $base($physics)
             ->orderByDesc('record_date')->orderByDesc('created_at')
-            ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored', 'record_date', 'created_at']);
+            ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
+                   'assigned_user_id', 'record_date', 'created_at']);
 
         $vq3Light = $light('VQ3');
         $cpmLight = $light('CPM');
@@ -287,7 +288,10 @@ class MapsController extends Controller
         // No profile: fall back to the nick on the demo, colours stripped, so
         // somebody the site does not know still gets one row instead of forty.
         // Only ever merges identical nicks, never two different ones.
-        $keyOf = fn ($d) => $resolver->resolve($d, $priorityKeys)
+        // A staff assignment outranks the resolver: somebody looked at the demo
+        // and said whose it is, which beats matching a nick.
+        $keyOf = fn ($d) => ($d->assigned_user_id ? 'user:' . $d->assigned_user_id : null)
+            ?: $resolver->resolve($d, $priorityKeys)
             ?: 'name:' . strtolower(trim(preg_replace('/\^[0-9a-zA-Z]/', '', $d->player_name ?? '')));
 
         // Biggest first, the way a freestyle map reads: who has been at it.
@@ -355,6 +359,7 @@ class MapsController extends Controller
                 'mdd_id' => $mddId,
                 'demo' => $d,
                 'demo_label' => $this->demoLabel($d),
+                'assigned_user_id' => $d->assigned_user_id,
                 'uploaded_demos' => [],
                 'rendered_videos' => $d->renderedVideo ? [$d->renderedVideo] : [],
                 'q3df_login_name' => $d->q3df_login_name,

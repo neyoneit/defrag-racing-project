@@ -7,6 +7,7 @@
     // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
     import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
+    import AssignDemoToUserModal from '@/Components/AssignDemoToUserModal.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
@@ -1041,6 +1042,11 @@
         closedDemoGroups.value = next;
     };
 
+    // Staff attributing a freestyle demo to an account.
+    const assignUserDemo = ref(null);
+    const openAssignUser = (record) => { assignUserDemo.value = record; };
+    const onDemoAssigned = () => { router.reload({ only: ['untimedDemos'] }); };
+
     const untimedTotal = computed(() =>
         (props.untimedDemos?.vq3?.total || 0) + (props.untimedDemos?.cpm?.total || 0)
     );
@@ -1892,7 +1898,8 @@
                                         :showSourceChips="true"
                                         :hideRank="true"
                                         :hideIdentity="true"
-                                        :hideReport="true"
+                                        :hideRecordActions="true"
+                                        @assign-user="openAssignUser"
                                     />
                                 </div>
                             </div>
@@ -2425,6 +2432,13 @@
             :server="instantPlayServer"
             :map-name="map.name"
             @close="instantPlayConfirm = false"
+        />
+
+        <AssignDemoToUserModal
+            :show="!! assignUserDemo"
+            :demo="assignUserDemo"
+            @close="assignUserDemo = null"
+            @assigned="onDemoAssigned"
         />
     </div>
 </template>
