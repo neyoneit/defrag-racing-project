@@ -245,28 +245,27 @@ class MapsController extends Controller
         // hold both these and real records (cos1_beta7b has 267 freestyle demos
         // beside 21 records), which is why the page offers both.
         //
-        // Paginated per physics, 50 a page, the same as the leaderboards - a
-        // freestyle map is not a handful of demos (csu1_a holds 1502 VQ3 and
-        // 115 CPM) and a flat cap just hid the rest.
-        $page = fn (string $base, string $pageName) => UploadedDemo::where('map_name', $map->name)
+        // Grouped by player, one row each, opening to their demos. Freestyle is
+        // not one run per person: on csu1_a two people have a hundred apiece,
+        // and 1523 demos come down to 258 names.
+        $base = fn (string $physics) => UploadedDemo::where('map_name', $map->name)
             ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
-            ->where(fn ($q) => $q->where('physics', $base)->orWhere('physics', 'LIKE', $base . '.%'))
-            ->where(fn ($q) => $q->whereIn('gametype', ['fs', 'mfs'])->orWhereNull('time_ms'))
-            ->with(['renderedVideo', 'user', 'record.user'])
-            ->orderByDesc('record_date')
-            ->orderByDesc('created_at')
-            ->paginate(50, ['*'], $pageName)
-            ->withQueryString();
+            ->where(fn ($q) => $q->where('physics', $physics)->orWhere('physics', 'LIKE', $physics . '.%'))
+            ->where(fn ($q) => $q->whereIn('gametype', ['fs', 'mfs'])->orWhereNull('time_ms'));
 
-        $vq3 = $page('VQ3', 'vq3DemosPage');
-        $cpm = $page('CPM', 'cpmDemosPage');
+        // Grouping needs the identity fields and nothing else, so the whole map
+        // is read cheaply; only the demos on the page being looked at get their
+        // relations loaded further down.
+        $light = fn (string $physics) => $base($physics)
+            ->orderByDesc('record_date')->orderByDesc('created_at')
+            ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored', 'record_date', 'created_at']);
 
-        if ($vq3->total() === 0 && $cpm->total() === 0) {
+        $vq3Light = $light('VQ3');
+        $cpmLight = $light('CPM');
+
+        if ($vq3Light->isEmpty() && $cpmLight->isEmpty()) {
             return null;
         }
-
-        $demos = $vq3->getCollection()->concat($cpm->getCollection());
-        $validityFlags = $this->validityFlagsByDemo($demos->pluck('id')->all());
 
         // Attribute them the way everything else on the site does: approved
         // aliases, through the same resolver Demos Top clusters with. A
@@ -278,26 +277,65 @@ class MapsController extends Controller
         // freestyle demos carry: that is the fuzzy matcher's guess, and putting
         // a guess under somebody's avatar asserts the run is theirs.
         $resolver = new DemoProfileResolver();
-        $priorityKeys = \App\Models\Record::where('mapname', $map->name)
+        $priorityKeys = Record::where('mapname', $map->name)
             ->select(['user_id', 'mdd_id'])->get()
             ->flatMap(fn ($r) => array_filter([
                 $r->user_id ? 'user:' . (int) $r->user_id : null,
                 $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
             ]))->unique()->values()->all();
 
-        $profileKeys = $demos->mapWithKeys(fn ($d) => [$d->id => $resolver->resolve($d, $priorityKeys)]);
-        $users = \App\Models\User::whereIn('id', $profileKeys
-            ->filter(fn ($k) => $k && str_starts_with($k, 'user:'))
+        // No profile: fall back to the nick on the demo, colours stripped, so
+        // somebody the site does not know still gets one row instead of forty.
+        // Only ever merges identical nicks, never two different ones.
+        $keyOf = fn ($d) => $resolver->resolve($d, $priorityKeys)
+            ?: 'name:' . strtolower(trim(preg_replace('/\^[0-9a-zA-Z]/', '', $d->player_name ?? '')));
+
+        // Biggest first, the way a freestyle map reads: who has been at it.
+        $group = fn ($rows) => $rows->groupBy($keyOf)
+            ->map(fn ($g) => $g->pluck('id')->all())
+            ->sortByDesc(fn ($ids) => count($ids));
+
+        $paginate = function ($groups, string $pageName) {
+            $page = max(1, (int) request()->input($pageName, 1));
+
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                // Ten a page, not fifty: the groups arrive open, and the
+                // biggest ones here run to a hundred demos apiece.
+                $groups->slice(($page - 1) * 10, 10),
+                $groups->count(),
+                10,
+                $page,
+                ['path' => request()->url(), 'pageName' => $pageName, 'query' => request()->query()]
+            );
+        };
+
+        $vq3Page = $paginate($group($vq3Light), 'vq3DemosPage');
+        $cpmPage = $paginate($group($cpmLight), 'cpmDemosPage');
+
+        // values() before merging: both are keyed by profile key, and a
+        // player with demos in both physics would otherwise have one side
+        // silently overwrite the other.
+        $shownIds = collect($vq3Page->items())->values()
+            ->merge(collect($cpmPage->items())->values())
+            ->flatten()->unique()->values();
+
+        $demos = UploadedDemo::whereIn('id', $shownIds)
+            ->with(['renderedVideo', 'user', 'record.user'])
+            ->orderByDesc('record_date')->orderByDesc('created_at')
+            ->get()->keyBy('id');
+
+        $validityFlags = $this->validityFlagsByDemo($shownIds->all());
+
+        $users = User::whereIn('id', collect($vq3Page->items())->keys()
+            ->merge(collect($cpmPage->items())->keys())
+            ->filter(fn ($k) => str_starts_with($k, 'user:'))
             ->map(fn ($k) => (int) substr($k, 5))->unique()->values())
             ->get()->keyBy('id');
 
-        // MapRecord's shape, so the list gets the same chips, download button,
-        // video and report actions the leaderboard rows have.
-        $shape = function ($d) use ($validityFlags, $profileKeys, $users) {
+        // MapRecord's shape, so the demos inside a group get the same chips,
+        // download button, video and report actions the leaderboard rows have.
+        $shape = function ($d, $owner, $mddId) use ($validityFlags) {
             $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
-            $key = $profileKeys[$d->id] ?? null;
-            $owner = $key && str_starts_with($key, 'user:') ? $users->get((int) substr($key, 5)) : null;
-            $mddId = $key && str_starts_with($key, 'mdd:') ? (int) substr($key, 4) : null;
 
             return [
                 'id' => $d->id,
@@ -307,13 +345,13 @@ class MapsController extends Controller
                 'time_ms' => $d->time_ms,
                 'date_set' => $d->record_date ?? $d->created_at,
                 'player_name' => $d->player_name,
-                'name' => $owner?->name ?? $d->record?->user?->name ?? $d->player_name,
+                'name' => $owner?->name ?? $d->player_name,
                 'country' => $d->country ?? $owner?->country ?? '_404',
                 'is_online' => $isOnline,
                 'verification_type' => $validityFlags[$d->id]
                     ?? ($d->record_id ? 'verified' : ($isOnline ? 'ONLINE' : 'OFFLINE')),
                 'rank' => null,
-                'user' => $owner ?? $d->record?->user,
+                'user' => $owner,
                 'mdd_id' => $mddId,
                 'demo' => $d,
                 'demo_label' => $this->demoLabel($d),
@@ -324,10 +362,41 @@ class MapsController extends Controller
             ];
         };
 
-        $vq3->setCollection($vq3->getCollection()->map($shape)->values());
-        $cpm->setCollection($cpm->getCollection()->map($shape)->values());
+        $buildGroups = function ($paginator) use ($demos, $users, $shape) {
+            $out = [];
 
-        return collect(['vq3' => $vq3, 'cpm' => $cpm]);
+            foreach ($paginator->items() as $key => $ids) {
+                $owner = str_starts_with($key, 'user:') ? $users->get((int) substr($key, 5)) : null;
+                $mddId = str_starts_with($key, 'mdd:') ? (int) substr($key, 4) : null;
+
+                $rows = collect($ids)->map(fn ($id) => $demos->get($id))->filter()
+                    ->map(fn ($d) => $shape($d, $owner, $mddId))->values();
+
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $out[] = [
+                    'key' => $key,
+                    'name' => $owner?->name ?? $rows->first()['player_name'],
+                    'user' => $owner,
+                    'mdd_id' => $mddId,
+                    'country' => $rows->first()['country'],
+                    'count' => $rows->count(),
+                    'latest' => $rows->first()['date_set'],
+                    'demos' => $rows,
+                ];
+            }
+
+            $paginator->setCollection(collect($out));
+
+            return $paginator;
+        };
+
+        return collect([
+            'vq3' => $buildGroups($vq3Page),
+            'cpm' => $buildGroups($cpmPage),
+        ]);
     }
 
     /**

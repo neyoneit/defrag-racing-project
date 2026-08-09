@@ -1029,6 +1029,18 @@
         (getVq3Records.value?.total || 0) > 0 || (getCpmRecords.value?.total || 0) > 0
     );
 
+    // Freestyle groups open by default - the demos are what the section is
+    // for, and a page of names you have to click through would hide them
+    // again. Tracks what has been CLOSED, keyed per side so the same nick in
+    // VQ3 and CPM collapses independently.
+    const closedDemoGroups = ref(new Set());
+    const isDemoGroupOpen = (key) => ! closedDemoGroups.value.has(key);
+    const toggleDemoGroup = (key) => {
+        const next = new Set(closedDemoGroups.value);
+        next.has(key) ? next.delete(key) : next.add(key);
+        closedDemoGroups.value = next;
+    };
+
     const untimedTotal = computed(() =>
         (props.untimedDemos?.vq3?.total || 0) + (props.untimedDemos?.cpm?.total || 0)
     );
@@ -1844,14 +1856,45 @@
                             </div>
                         </div>
                         <div class="divide-y divide-white/[0.04]">
-                            <MapRecord
-                                v-for="demo in side.list.data"
-                                :key="demo.demo_id"
-                                :record="demo"
-                                :physics="side.label"
-                                :showSourceChips="true"
-                                :hideRank="true"
-                            />
+                            <div v-for="group in side.list.data" :key="group.key">
+                                <!-- One row per player. Freestyle is not one
+                                     run each - somebody can have a hundred on a
+                                     map - so the name is said once and their
+                                     demos open under it. -->
+                                <button
+                                    @click="toggleDemoGroup(side.key + ':' + group.key)"
+                                    class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                                >
+                                    <svg
+                                        class="w-3.5 h-3.5 flex-shrink-0 text-gray-500 transition-transform"
+                                        :class="{ 'rotate-90': isDemoGroupOpen(side.key + ':' + group.key) }"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+                                    </svg>
+                                    <img
+                                        v-if="group.country"
+                                        :src="`/images/flags/${group.country}.png`"
+                                        class="w-5 h-3.5 flex-shrink-0 rounded-sm"
+                                        @error="(e) => e.target.style.display = 'none'"
+                                    />
+                                    <span class="text-sm font-semibold truncate" v-html="q3tohtml(group.name)"></span>
+                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ group.count }} demo{{ group.count === 1 ? '' : 's' }}</span>
+                                    <span class="flex-1"></span>
+                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ (group.latest || '').slice(0, 10) }}</span>
+                                </button>
+                                <div v-if="isDemoGroupOpen(side.key + ':' + group.key)" class="bg-black/20 border-l-2 border-teal-500/30 divide-y divide-white/[0.03]">
+                                    <MapRecord
+                                        v-for="demo in group.demos"
+                                        :key="demo.demo_id"
+                                        :record="demo"
+                                        :physics="side.label"
+                                        :showSourceChips="true"
+                                        :hideRank="true"
+                                        :compact="true"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         <div v-if="side.list.last_page > 1" class="px-4 py-2 border-t border-white/[0.06]">
                             <Pagination
