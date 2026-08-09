@@ -1052,8 +1052,10 @@
     );
 
     // On a map with nothing to rank the demo list is the page; on one that has
-    // records too it waits behind the switch.
-    const showFreestyle = ref(false);
+    // records too it waits behind the switch. ?freestyle opens it straight
+    // away, so a link from somewhere else can land on the demos rather than on
+    // a leaderboard the visitor has to look past.
+    const showFreestyle = ref(new URLSearchParams(window.location.search).has('freestyle'));
     const showingUntimed = computed(() => !! props.untimedDemos && (! hasAnyRecords.value || showFreestyle.value));
 
     // Helper functions for weapon/item/function icons and names

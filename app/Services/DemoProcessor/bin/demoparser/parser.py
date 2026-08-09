@@ -246,7 +246,12 @@ class Q3DemoConfigParser:
                     event.eventStartTime = True
         x_vel = abs(snapshot.ps.velocity[0])
         y_vel = abs(snapshot.ps.velocity[1])
-        speed = int((x_vel ** 2 + y_vel ** 2) ** 0.5)
+        speed = (x_vel ** 2 + y_vel ** 2) ** 0.5
+        # A snapshot can carry a velocity that is not a number, and int() throws
+        # on that. The exception came up out of the reader and killed the whole
+        # parse, so a demo was lost over one unreadable frame out of thousands.
+        # Speed is only ever a display figure here, never a result.
+        speed = int(speed) if speed == speed and speed != float('inf') else 0
         event.speed = speed
         if speed > self.client.maxSpeed:
             self.client.maxSpeed = speed

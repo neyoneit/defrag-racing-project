@@ -14,6 +14,7 @@
     import CopyButton from '@/Components/Basic/CopyButton.vue';
     import DemoRenderButton from '@/Components/DemoRenderButton.vue';
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
+    import FreestyleDemosTable from '@/Components/FreestyleDemosTable.vue';
     import axios from 'axios';
 
     const page = usePage();
@@ -77,6 +78,10 @@
         demoStats: {
             type: Object,
             default: () => ({})
+        },
+        freestyleDemos: {
+            type: Object,
+            default: () => ({ total: 0, maps: [], map_total: 0 })
         },
         assignedDemoCounts: {
             type: Object,
@@ -439,6 +444,38 @@
         const fmt = page.props.dateFormat;
         return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[56px]' : 'w-[50px]';
     });
+
+    // Records and freestyle demos share one panel, so which of the two is
+    // showing lives here. Records first, always: a profile is read for its
+    // times before anything else.
+    const recordsTab = ref('records');
+
+    // Each physics column pages on its own, through the same Pagination the
+    // records use, which builds its links off the address bar. So the search
+    // has to go in the address bar too, or paging after a search would drop
+    // it. Searching also puts both columns back to page one: the page you were
+    // on means nothing once the list behind it changes.
+    const onFreestyleSearch = (term) => {
+        const url = new URL(window.location.href);
+
+        term ? url.searchParams.set('freestyle_search', term) : url.searchParams.delete('freestyle_search');
+        url.searchParams.delete('freestyle_vq3_page');
+        url.searchParams.delete('freestyle_cpm_page');
+
+        const query = url.searchParams.toString();
+        const target = url.pathname + (query ? '?' + query : '');
+        const scrollPosition = window.scrollY;
+
+        router.visit(target, {
+            only: ['freestyleDemos'],
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                window.history.replaceState(window.history.state, '', target);
+                window.scrollTo(0, scrollPosition);
+            },
+        });
+    };
 
     // About Me
     const aboutMeEditing = ref(false);
@@ -2395,7 +2432,57 @@
             </div>
 
             <!-- Records Container with Sidebar Tabs -->
-            <div v-if="hasProfile && showSection('records')" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6" :style="{ order: sectionOrder('records') }">
+            <div v-if="hasProfile && showSection('records')" class="mb-6" :style="{ order: sectionOrder('records') }">
+                <!-- The records and the freestyle demos are the same thing seen
+                     two ways: everything this player left behind on a map. The
+                     search and the sort belong to the records, so they sit
+                     inside that tab rather than above both. -->
+                <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                    <button
+                        @click="recordsTab = 'records'"
+                        class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition-all duration-200"
+                        :class="recordsTab === 'records'
+                            ? 'bg-gradient-to-br from-blue-600/80 to-blue-500/50 border-blue-400 text-white shadow-lg shadow-blue-500/20'
+                            : 'bg-black/40 border-white/10 text-gray-500 hover:text-gray-200 hover:border-white/25'"
+                    >
+                        <svg class="w-6 h-6 fill-current shrink-0" viewBox="0 0 20 20">
+                            <use href="/images/svg/icons.svg#icon-trophy"></use>
+                        </svg>
+                        <span class="text-lg font-black uppercase tracking-wide">Records</span>
+                        <span
+                            class="text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full"
+                            :class="recordsTab === 'records' ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'"
+                        >{{ (vq3Records.total || 0) + (cpmRecords.total || 0) }}</span>
+                    </button>
+                    <button
+                        v-if="freestyleDemos && freestyleDemos.total > 0"
+                        @click="recordsTab = 'freestyle'"
+                        class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition-all duration-200"
+                        :class="recordsTab === 'freestyle'
+                            ? 'bg-gradient-to-br from-teal-600/80 to-teal-500/50 border-teal-400 text-white shadow-lg shadow-teal-500/20'
+                            : 'bg-black/40 border-white/10 text-gray-500 hover:text-gray-200 hover:border-white/25'"
+                    >
+                        <svg class="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.63 8.41m5.96 5.96a14.926 14.926 0 0 1-5.84 2.58m0 0a6.003 6.003 0 0 0-7.38-5.84h4.8m2.58-5.96a6 6 0 0 0-7.38 5.84" />
+                        </svg>
+                        <span class="text-lg font-black uppercase tracking-wide">Freestyle &amp; Tricks</span>
+                        <span
+                            class="text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full"
+                            :class="recordsTab === 'freestyle' ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'"
+                        >{{ freestyleDemos.total }}</span>
+                    </button>
+                </div>
+
+                <div v-show="recordsTab === 'freestyle'" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-2xl border border-white/5">
+                    <FreestyleDemosTable
+                        :data="freestyleDemos"
+                        :date-format="$page.props.dateFormat"
+                        :cpm-first="cpmFirst"
+                        @search="onFreestyleSearch"
+                    />
+                </div>
+
+                <div v-show="recordsTab === 'records'" class="grid grid-cols-1 lg:grid-cols-10 gap-6">
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
                     <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
@@ -2749,6 +2836,7 @@
                             <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->

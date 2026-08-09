@@ -281,7 +281,7 @@ class SettingsController extends Controller
             'stat_boxes' => ['required', 'array', 'min:1', 'max:7'],
             'stat_boxes.*' => ['string', 'in:performance,activity,record_types,map_features,demos_statistics,top_downloaded_demos,renders'],
             'sections' => ['required', 'array'],
-            'sections.*.id' => ['required', 'string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
+            'sections.*.id' => ['required', 'string', 'in:activity_history,records,rendered_videos,freestyle_demos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
             'sections.*.visible' => ['required', 'boolean'],
             'header_items' => ['sometimes', 'array'],
             'header_items.*.id' => ['required', 'string', 'in:badge_admin,badge_moderator,badge_donor,badge_community,badge_tagger,badge_assigner,clan,wr_counters,socials,player_rank,community_rank'],
@@ -308,7 +308,7 @@ class SettingsController extends Controller
     public function globalProfilePreferences(Request $request) {
         $request->validate([
             'hidden_sections' => ['present', 'array'],
-            'hidden_sections.*' => ['string', 'in:activity_history,records,rendered_videos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
+            'hidden_sections.*' => ['string', 'in:activity_history,records,rendered_videos,freestyle_demos,similar_skill_rivals,competitor_comparison,known_aliases,featured_maplists,map_completionist'],
             'hidden_stat_boxes' => ['present', 'array'],
             'hidden_stat_boxes.*' => ['string', 'in:performance,activity,record_types,map_features,renders'],
             'date_format' => ['sometimes', 'string', 'in:ymd,dmy,Ymd,dmY'],
