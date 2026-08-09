@@ -211,7 +211,6 @@ const profileSections = [
     { id: 'activity_history', label: 'Activity History' },
     { id: 'records', label: 'Records' },
     { id: 'rendered_videos', label: 'Rendered Videos' },
-    { id: 'freestyle_demos', label: 'Freestyle & Tricks' },
     { id: 'similar_skill_rivals', label: 'Similar Skill Rivals' },
     { id: 'competitor_comparison', label: 'Competitor Comparison' },
     { id: 'known_aliases', label: 'Known Aliases' },

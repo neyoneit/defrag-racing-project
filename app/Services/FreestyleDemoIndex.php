@@ -81,66 +81,142 @@ class FreestyleDemoIndex
     }
 
     /**
-     * What the profile shows: the maps this player has freestyle demos on,
-     * most recent first, with the demos themselves for the newest few.
+     * What the profile shows: a row per map, split the way the rest of the
+     * site splits everything, VQ3 on one side and CPM on the other. A map with
+     * demos in both physics appears in both, with only its own demos.
+     *
+     * Only the maps on the page being looked at load their demos, so a row can
+     * open without asking the server again.
      *
      * @param  array<string>  $profileKeys
+     * @param  array{vq3?: int, cpm?: int}  $pages
      */
-    public function forProfile(array $profileKeys, int $mapLimit = 12): array
+    public function forProfile(array $profileKeys, array $pages = [], string $search = '', int $perPage = 15): array
     {
+        $search = trim($search);
+        $empty = [
+            'total' => 0,
+            'search' => $search,
+            'vq3' => $this->emptyBlock($perPage),
+            'cpm' => $this->emptyBlock($perPage),
+        ];
+
         $ids = $this->demoIdsFor($profileKeys);
 
         if (! $ids) {
-            return ['total' => 0, 'maps' => []];
+            return $empty;
         }
 
-        $rows = UploadedDemo::whereIn('id', $ids)
-            ->orderByDesc('record_date')->orderByDesc('id')
-            ->get(['id', 'map_name', 'physics', 'gametype', 'record_date',
-                   'original_filename', 'processed_filename', 'player_name']);
+        // A row per map and physics. At a few hundred rows this is cheap
+        // enough to count, filter and page in PHP, which keeps the search off
+        // the database and the paging honest about what the search left.
+        $summary = UploadedDemo::whereIn('id', $ids)
+            ->whereNotNull('map_name')
+            ->selectRaw('map_name, physics, COUNT(*) as demo_count, MAX(COALESCE(record_date, created_at)) as latest')
+            ->groupBy('map_name', 'physics')
+            ->get();
 
-        $maps = [];
+        if ($summary->isEmpty()) {
+            return $empty;
+        }
 
-        foreach ($rows as $demo) {
-            $map = $demo->map_name ?: '?';
+        $grandTotal = (int) $summary->sum('demo_count');
+        $buckets = ['vq3' => [], 'cpm' => []];
 
-            if (! isset($maps[$map])) {
-                $maps[$map] = [
-                    'map_name' => $map,
-                    'count' => 0,
-                    'physics' => [],
-                    'latest' => $demo->record_date,
-                    'demos' => [],
-                ];
+        foreach ($summary as $row) {
+            // "CPM.2" and "VQ3.0" are the same two physics with a fastcap flag
+            // on the end.
+            $physics = strtolower(explode('.', (string) $row->physics)[0]);
+
+            if (! isset($buckets[$physics])) {
+                continue;
             }
 
-            $maps[$map]['count']++;
-
-            // VQ3 or CPM, off the front of "CPM.2" and the like.
-            $physics = strtoupper(explode('.', (string) $demo->physics)[0]);
-
-            if ($physics && ! in_array($physics, $maps[$map]['physics'], true)) {
-                $maps[$map]['physics'][] = $physics;
+            if ($search !== '' && stripos($row->map_name, $search) === false) {
+                continue;
             }
 
-            if (count($maps[$map]['demos']) < 4) {
-                $maps[$map]['demos'][] = [
-                    'id' => $demo->id,
-                    'label' => VideoMetadataService::demoLabel(
-                        $demo->original_filename ?: $demo->processed_filename,
-                        $demo->map_name
-                    ),
-                    'record_date' => $demo->record_date,
-                    'physics' => $physics,
-                ];
+            $map = $row->map_name;
+
+            if (! isset($buckets[$physics][$map])) {
+                $buckets[$physics][$map] = ['map_name' => $map, 'count' => 0, 'latest' => null];
             }
+
+            $buckets[$physics][$map]['count'] += (int) $row->demo_count;
+            $buckets[$physics][$map]['latest'] = max($buckets[$physics][$map]['latest'], $row->latest);
+        }
+
+        $blocks = [];
+        $wanted = [];
+
+        foreach ($buckets as $physics => $maps) {
+            $maps = array_values($maps);
+            usort($maps, fn ($a, $b) => [$b['latest'], $a['map_name']] <=> [$a['latest'], $b['map_name']]);
+
+            $mapTotal = count($maps);
+            $lastPage = max(1, (int) ceil($mapTotal / $perPage));
+            $page = max(1, min((int) ($pages[$physics] ?? 1), $lastPage));
+            $slice = array_slice($maps, ($page - 1) * $perPage, $perPage);
+
+            $blocks[$physics] = [
+                'maps' => $slice,
+                'map_total' => $mapTotal,
+                'total' => array_sum(array_column($maps, 'count')),
+                'page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+            ];
+
+            foreach ($slice as $map) {
+                $wanted[$map['map_name']] = true;
+            }
+        }
+
+        $demos = $wanted
+            ? UploadedDemo::whereIn('id', $ids)
+                ->whereIn('map_name', array_keys($wanted))
+                ->with('renderedVideo')
+                ->orderByDesc('record_date')->orderByDesc('id')
+                ->get(['id', 'map_name', 'physics', 'gametype', 'record_date', 'created_at', 'download_count',
+                       'original_filename', 'processed_filename', 'player_name'])
+            : collect();
+
+        foreach ($blocks as $physics => $block) {
+            $blocks[$physics]['maps'] = array_map(function ($map) use ($demos, $physics) {
+                $list = $demos
+                    ->where('map_name', $map['map_name'])
+                    ->filter(fn ($d) => strtolower(explode('.', (string) $d->physics)[0]) === $physics)
+                    ->map(fn ($demo) => [
+                        'id' => $demo->id,
+                        'label' => VideoMetadataService::demoLabel(
+                            $demo->original_filename ?: $demo->processed_filename,
+                            $demo->map_name
+                        ) ?: ($demo->processed_filename ?: $demo->original_filename),
+                        'record_date' => $demo->record_date ?: $demo->created_at,
+                        'download_count' => (int) $demo->download_count,
+                        'video_url' => $demo->renderedVideo?->youtube_url,
+                    ])
+                    ->values()->all();
+
+                $map['demos'] = $list;
+                $map['downloads'] = array_sum(array_column($list, 'download_count'));
+                $map['videos'] = count(array_filter(array_column($list, 'video_url')));
+
+                return $map;
+            }, $block['maps']);
         }
 
         return [
-            'total' => $rows->count(),
-            'maps' => array_slice(array_values($maps), 0, $mapLimit),
-            'map_total' => count($maps),
+            'total' => $grandTotal,
+            'search' => $search,
+            'vq3' => $blocks['vq3'],
+            'cpm' => $blocks['cpm'],
         ];
+    }
+
+    private function emptyBlock(int $perPage): array
+    {
+        return ['maps' => [], 'map_total' => 0, 'total' => 0, 'page' => 1, 'last_page' => 1, 'per_page' => $perPage];
     }
 
     /**

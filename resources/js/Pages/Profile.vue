@@ -14,6 +14,7 @@
     import CopyButton from '@/Components/Basic/CopyButton.vue';
     import DemoRenderButton from '@/Components/DemoRenderButton.vue';
     import DemoFlagModal from '@/Components/DemoFlagModal.vue';
+    import FreestyleDemosTable from '@/Components/FreestyleDemosTable.vue';
     import axios from 'axios';
 
     const page = usePage();
@@ -223,7 +224,6 @@
         { id: 'activity_history', visible: true },
         { id: 'records', visible: true },
         { id: 'rendered_videos', visible: true },
-        { id: 'freestyle_demos', visible: true },
         { id: 'similar_skill_rivals', visible: true },
         { id: 'competitor_comparison', visible: true },
         { id: 'known_aliases', visible: true },
@@ -445,6 +445,39 @@
         return (fmt === 'Ymd' || fmt === 'dmY') ? 'w-[56px]' : 'w-[50px]';
     });
 
+    // Records and freestyle demos share one panel, so which of the two is
+    // showing lives here. Records first, always: a profile is read for its
+    // times before anything else.
+    const recordsTab = ref('records');
+
+    // Each physics column pages on its own, and the search resets both: the
+    // page you were on in one column means nothing once the list behind it
+    // changes.
+    const freestyleQuery = ref({ freestyle_vq3_page: 1, freestyle_cpm_page: 1, freestyle_search: '' });
+
+    const reloadFreestyle = () => {
+        router.reload({
+            only: ['freestyleDemos'],
+            data: freestyleQuery.value,
+            preserveScroll: true,
+            preserveState: true,
+        });
+    };
+
+    const goToFreestylePage = ({ physics, page }) => {
+        freestyleQuery.value = { ...freestyleQuery.value, [`freestyle_${physics}_page`]: page };
+        reloadFreestyle();
+    };
+
+    const onFreestyleSearch = (term) => {
+        freestyleQuery.value = {
+            freestyle_vq3_page: 1,
+            freestyle_cpm_page: 1,
+            freestyle_search: term,
+        };
+        reloadFreestyle();
+    };
+
     // About Me
     const aboutMeEditing = ref(false);
     const aboutMeText = ref('');
@@ -481,7 +514,6 @@
         activity_history: 'Activity History',
         records: 'Records',
         rendered_videos: 'Rendered Videos',
-        freestyle_demos: 'Freestyle & Tricks',
         similar_skill_rivals: 'Similar Skill Rivals',
         competitor_comparison: 'Competitor Comparison',
         known_aliases: 'Known Aliases',
@@ -2232,62 +2264,6 @@
                 />
             </div>
 
-            <!-- Freestyle & Tricks -->
-            <div v-if="showSection('freestyle_demos') && freestyleDemos && freestyleDemos.total > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('freestyle_demos') }">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                        <svg class="w-5 h-5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.63 8.41m5.96 5.96a14.926 14.926 0 0 1-5.84 2.58m0 0a6.003 6.003 0 0 0-7.38-5.84h4.8m2.58-5.96a6 6 0 0 0-7.38 5.84" />
-                        </svg>
-                        Freestyle &amp; Tricks
-                    </h3>
-                    <span class="text-xs text-gray-500">
-                        {{ freestyleDemos.total }} {{ freestyleDemos.total === 1 ? 'demo' : 'demos' }}
-                        on {{ freestyleDemos.map_total }} {{ freestyleDemos.map_total === 1 ? 'map' : 'maps' }}
-                    </span>
-                </div>
-
-                <p class="text-xs text-gray-500 mb-4">
-                    No time on these - tricks, tutorials, runs that were never finished. They hang off no
-                    record, so they are matched to this profile by the nick on the demo.
-                </p>
-
-                <div class="grid gap-2 sm:grid-cols-2">
-                    <Link
-                        v-for="map in freestyleDemos.maps"
-                        :key="map.map_name"
-                        :href="`/maps/${encodeURIComponent(map.map_name)}?freestyle`"
-                        class="block rounded-lg bg-black/30 border border-white/5 hover:border-teal-400/30 hover:bg-white/[0.03] transition-all p-3 group"
-                    >
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-sm font-semibold text-white truncate group-hover:text-teal-300 transition-colors">{{ map.map_name }}</span>
-                            <span class="shrink-0 text-xs font-bold text-teal-400 tabular-nums">{{ map.count }}</span>
-                        </div>
-                        <div class="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <span
-                                v-for="physics in map.physics"
-                                :key="physics"
-                                class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border"
-                                :class="physics === 'CPM'
-                                    ? 'text-orange-300 bg-orange-500/10 border-orange-500/20'
-                                    : 'text-blue-300 bg-blue-500/10 border-blue-500/20'"
-                            >{{ physics }}</span>
-                            <span
-                                v-for="demo in map.demos.slice(0, 2)"
-                                :key="demo.id"
-                                v-show="demo.label"
-                                class="text-[10px] text-gray-500 truncate max-w-[9rem]"
-                            >{{ demo.label }}</span>
-                        </div>
-                    </Link>
-                </div>
-
-                <div v-if="freestyleDemos.map_total > freestyleDemos.maps.length" class="mt-3 text-xs text-gray-600">
-                    and {{ freestyleDemos.map_total - freestyleDemos.maps.length }} more
-                    {{ (freestyleDemos.map_total - freestyleDemos.maps.length) === 1 ? 'map' : 'maps' }}
-                </div>
-            </div>
-
             <!-- Rendered Videos -->
             <div v-if="showSection('rendered_videos') && latestRenderedVideos && latestRenderedVideos.length > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('rendered_videos') }">
                 <div class="flex items-center justify-between mb-4">
@@ -2457,7 +2433,46 @@
             </div>
 
             <!-- Records Container with Sidebar Tabs -->
-            <div v-if="hasProfile && showSection('records')" class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6" :style="{ order: sectionOrder('records') }">
+            <div v-if="hasProfile && showSection('records')" class="mb-6" :style="{ order: sectionOrder('records') }">
+                <!-- The records and the freestyle demos are the same thing seen
+                     two ways: everything this player left behind on a map. The
+                     search and the sort belong to the records, so they sit
+                     inside that tab rather than above both. -->
+                <div class="flex items-end gap-1 mb-3 border-b border-white/10">
+                    <button
+                        @click="recordsTab = 'records'"
+                        class="px-4 py-2 text-sm font-bold rounded-t-lg border-b-2 -mb-px transition-colors"
+                        :class="recordsTab === 'records'
+                            ? 'text-white border-blue-400 bg-white/[0.04]'
+                            : 'text-gray-500 border-transparent hover:text-gray-300'"
+                    >
+                        Records
+                        <span class="ml-1.5 text-xs font-normal opacity-60 tabular-nums">{{ (vq3Records.total || 0) + (cpmRecords.total || 0) }}</span>
+                    </button>
+                    <button
+                        v-if="freestyleDemos && freestyleDemos.total > 0"
+                        @click="recordsTab = 'freestyle'"
+                        class="px-4 py-2 text-sm font-bold rounded-t-lg border-b-2 -mb-px transition-colors"
+                        :class="recordsTab === 'freestyle'
+                            ? 'text-white border-teal-400 bg-white/[0.04]'
+                            : 'text-gray-500 border-transparent hover:text-gray-300'"
+                    >
+                        Freestyle &amp; Tricks
+                        <span class="ml-1.5 text-xs font-normal opacity-60 tabular-nums">{{ freestyleDemos.total }}</span>
+                    </button>
+                </div>
+
+                <div v-show="recordsTab === 'freestyle'" class="bg-black/40 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-2xl border border-white/5">
+                    <FreestyleDemosTable
+                        :data="freestyleDemos"
+                        :date-format="$page.props.dateFormat"
+                        :cpm-first="cpmFirst"
+                        @page="goToFreestylePage"
+                        @search="onFreestyleSearch"
+                    />
+                </div>
+
+                <div v-show="recordsTab === 'records'" class="grid grid-cols-1 lg:grid-cols-10 gap-6">
                 <!-- Sidebar Tabs -->
                 <div class="lg:col-span-2 flex">
                     <div class="bg-black/40 backdrop-blur-sm rounded-xl p-3 shadow-2xl border border-white/5 w-full flex flex-col">
@@ -2811,6 +2826,7 @@
                             <div class="text-sm text-gray-700 mt-2">This player hasn't set any records</div>
                         </div>
                     </div>
+                </div>
                 </div>
             </div>
             <!-- Competitors & Rivals Section -->

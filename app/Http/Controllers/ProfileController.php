@@ -57,7 +57,7 @@ class ProfileController extends Controller {
                         'rank' => $score->rank,
                     ]);
                 })())
-                ->with('freestyleDemos', $this->freestyleDemos(['user:' . $user->id]))
+                ->with('freestyleDemos', $this->freestyleDemos(['user:' . $user->id], $request))
                 ->with('playerRankings', []);
         }
 
@@ -261,6 +261,12 @@ class ProfileController extends Controller {
             $response->with('total_maps', $totalMaps ?? 0);
             $response->with('played_maps_count', $playedMapsCount ?? 0);
         }
+        if ($needs('freestyleDemos')) {
+            $response->with('freestyleDemos', $this->freestyleDemos(array_filter([
+                'user:' . $user->id,
+                $user->mdd_id ? 'mdd:' . $user->mdd_id : null,
+            ]), $request));
+        }
         if (!$isPartial) {
             $response->with('cpm_world_records', $stats['cpm_world_records'])
                 ->with('vq3_world_records', $stats['vq3_world_records'])
@@ -272,10 +278,6 @@ class ProfileController extends Controller {
                 ->with('can_suggest_alias', $canSuggestAlias)
                 ->with('topDownloadedDemos', $topDownloadedDemos)
                 ->with('demoStats', $demoStats)
-                ->with('freestyleDemos', $this->freestyleDemos(array_filter([
-                    'user:' . $user->id,
-                    $user->mdd_id ? 'mdd:' . $user->mdd_id : null,
-                ])))
                 ->with('renderStats', $this->getRenderStats($user->id))
                 ->with('latestRenderedVideos', $this->getLatestRenderedVideos($user->id))
                 ->with('activity_data', $activityData)
@@ -294,16 +296,26 @@ class ProfileController extends Controller {
      * hour on top of the index's own cache, since the shape shown here is
      * fixed.
      */
-    private function freestyleDemos(array $profileKeys): array
+    private function freestyleDemos(array $profileKeys, Request $request): array
     {
+        $index = app(FreestyleDemoIndex::class);
+
         if (! $profileKeys) {
-            return ['total' => 0, 'maps' => [], 'map_total' => 0];
+            return $index->forProfile([]);
         }
 
+        $pages = [
+            'vq3' => max(1, (int) $request->input('freestyle_vq3_page', 1)),
+            'cpm' => max(1, (int) $request->input('freestyle_cpm_page', 1)),
+        ];
+        $search = substr(trim((string) $request->input('freestyle_search', '')), 0, 40);
+
         return Cache::remember(
-            'profile:freestyle:' . FreestyleDemoIndex::generation() . ':' . md5(implode('|', $profileKeys)),
+            'profile:freestyle:' . FreestyleDemoIndex::generation()
+                . ':' . md5(implode('|', $profileKeys))
+                . ':' . $pages['vq3'] . 'x' . $pages['cpm'] . ':' . md5($search),
             3600,
-            fn () => app(FreestyleDemoIndex::class)->forProfile($profileKeys)
+            fn () => $index->forProfile($profileKeys, $pages, $search)
         );
     }
 
@@ -450,7 +462,7 @@ class ProfileController extends Controller {
             ->with('can_manage_aliases', false)
             ->with('user_maplists', [])
             ->with('topDownloadedDemos', [])
-            ->with('freestyleDemos', $this->freestyleDemos(['mdd:' . $userId]))
+            ->with('freestyleDemos', $this->freestyleDemos(['mdd:' . $userId], $request))
             ->with('activity_data', $activityData)
             ->with('activity_year', $activityYear)
             ->with('activity_years', $activityYears)

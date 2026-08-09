@@ -54,7 +54,6 @@ const allSections = [
     { id: 'activity_history', label: 'Activity History' },
     { id: 'records', label: 'VQ3 / CPM Records' },
     { id: 'rendered_videos', label: 'Rendered Videos' },
-    { id: 'freestyle_demos', label: 'Freestyle & Tricks' },
     { id: 'similar_skill_rivals', label: 'Skill Level & Rivals' },
     { id: 'competitor_comparison', label: 'Competitor Comparison' },
     { id: 'known_aliases', label: 'Known Aliases' },
