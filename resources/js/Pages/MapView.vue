@@ -1230,7 +1230,25 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
+                <!-- What the page is showing, flanking the card. Only on a map
+                     that holds both; one that ranks nothing has no choice to
+                     offer and one with no freestyle demos has nothing to switch
+                     to. Records is where the page always opens. -->
+                <div class="flex items-stretch justify-center gap-3 lg:gap-4 max-w-6xl mx-auto">
+                    <button
+                        v-if="untimedDemos && hasAnyRecords"
+                        @click="showFreestyle = false"
+                        :class="!showFreestyle
+                            ? 'bg-blue-600/90 border-blue-400 text-white shadow-lg shadow-blue-500/30'
+                            : 'bg-gray-800/70 border-gray-600 text-gray-300 hover:bg-gray-700/80 hover:text-white'"
+                        class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
+                    >
+                        <span class="text-2xl mb-1">🏁</span>
+                        <span class="text-sm leading-tight">Records</span>
+                        <span class="text-xs opacity-70 mt-1">{{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }}</span>
+                    </button>
+
+                <div class="w-full max-w-4xl rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
@@ -1698,20 +1716,6 @@
                             >
                                 Demos Top
                             </button>
-                            <!-- A map can hold both real records and demos that
-                                 cannot be ranked. 183 of them do. The switch
-                                 gives the second kind a place instead of
-                                 leaving it reachable from nowhere. -->
-                            <button
-                                v-if="untimedDemos && hasAnyRecords"
-                                @click="showFreestyle = !showFreestyle"
-                                :class="showFreestyle ? 'bg-teal-600 text-white border-teal-400 shadow-lg shadow-teal-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
-                                class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
-                                title="Freestyle runs, tricks and tutorials - everything this map holds that has no time"
-                            >
-                                Freestyle &amp; Tricks
-                                <span class="opacity-70">({{ untimedTotal }})</span>
-                            </button>
                             <div class="text-xs text-gray-500">
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Set your defaults
@@ -1743,6 +1747,36 @@
                     </div>
 
 </div> <!-- Close content layer -->
+                </div>
+
+                    <button
+                        v-if="untimedDemos && hasAnyRecords"
+                        @click="showFreestyle = true"
+                        :class="showFreestyle
+                            ? 'bg-teal-600/90 border-teal-400 text-white shadow-lg shadow-teal-500/30'
+                            : 'bg-gray-800/70 border-gray-600 text-gray-300 hover:bg-gray-700/80 hover:text-white'"
+                        class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
+                        title="Freestyle runs, tricks and tutorials - everything on this map that has no time"
+                    >
+                        <span class="text-2xl mb-1">🎬</span>
+                        <span class="text-sm leading-tight text-center">Freestyle<br />&amp; Tricks</span>
+                        <span class="text-xs opacity-70 mt-1">{{ untimedTotal }}</span>
+                    </button>
+                </div>
+
+                <!-- Same switch for narrow screens, where there is no room
+                     beside the card. -->
+                <div v-if="untimedDemos && hasAnyRecords" class="lg:hidden flex gap-2 justify-center mt-3">
+                    <button
+                        @click="showFreestyle = false"
+                        :class="!showFreestyle ? 'bg-blue-600/90 border-blue-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
+                        class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
+                    >Records ({{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }})</button>
+                    <button
+                        @click="showFreestyle = true"
+                        :class="showFreestyle ? 'bg-teal-600/90 border-teal-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
+                        class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
+                    >Freestyle &amp; Tricks ({{ untimedTotal }})</button>
                 </div>
             </div>
 
@@ -1803,7 +1837,8 @@
                                     <span class="text-sm font-semibold" :class="side.accent === 'blue' ? 'text-blue-400/60' : 'text-purple-400/60'">({{ side.list.total }})</span>
                                 </h2>
                                 <div class="text-xs text-gray-400">
-                                    <template v-if="map.gametype === 'freestyle'">No timer on this map, so nothing here is ranked.</template>
+                                    <template v-if="hasAnyRecords">No time on these - freestyle, tricks, tutorials.</template>
+                                    <template v-else-if="map.gametype === 'freestyle'">No timer on this map, so nothing here is ranked.</template>
                                     <template v-else>No records on this map yet.</template>
                                 </div>
                             </div>
