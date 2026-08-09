@@ -202,6 +202,7 @@ def parse_demo_metadata(file_path: Path) -> Optional[dict]:
         "map_name": demo.mapName,
         "player_name": demo.playerName,
         "physics": demo.modphysic,
+        "gameplay_physics": getattr(demo, 'gameplayPhysic', '') or None,
         "time_seconds": demo.time.total_seconds() if demo.time else None,
         "country": demo.country if demo.country else None,
         "validity": demo.validDict if demo.validDict else None,

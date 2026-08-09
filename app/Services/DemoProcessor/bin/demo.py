@@ -65,6 +65,10 @@ def normalize_country_code(country: str) -> str:
 class Demo:
     mapName: str = ''
     modphysic: str = ''
+    # vq3 or cpm on its own. A demo from before Defrag existed is tagged with
+    # its mod and its game mode, osp.ffa, so the physics never reaches the name
+    # even though the mod reports it through server_promode like any other.
+    gameplayPhysic: str = ''
     timeString: str = ''
     time: timedelta = timedelta(0)
     playerName: str = ''
@@ -284,6 +288,7 @@ class Demo:
                 demo.modphysic = f"{game_info.gameTypeShort}.{game_info.gameplayTypeShort}"
         else:
             demo.modphysic = f"{game_info.gameNameShort}.{game_info.gameTypeShort}"
+        demo.gameplayPhysic = game_info.gameplayTypeShort or ''
         if demo.hasTr:
             demo.modphysic += '.tr'
         additional = raw.consoleComandsParser.additionalInfos[-1].toDictionary() if raw.consoleComandsParser.additionalInfos else None
@@ -311,7 +316,11 @@ class Demo:
 
     @staticmethod
     def _remove_double(value: str) -> str:
-        match = re.search(r"[^a-zA-Z0-9\\(\\)\\]\[](?=[^a-zA-Z0-9\\(\\)\\]\[])", value)
+        # The C# these came from writes its patterns as ordinary strings, where
+        # "\\[" is the two characters \[ the regex engine then sees. Copied into
+        # a raw string here the backslash doubled, so the pattern went looking
+        # for a literal backslash in the filename and never matched anything.
+        match = re.search(r"[^a-zA-Z0-9()\]\[](?=[^a-zA-Z0-9()\]\[])", value)
         if not match:
             return value
         idx = match.start()
@@ -428,7 +437,18 @@ class Demo:
             if value < 0:
                 invalid[key] = params[key]
             elif value != expected:
-                invalid[key] = str(value)
+                invalid[key] = Demo._format_key_value(value)
+
+    @staticmethod
+    def _format_key_value(value: float) -> str:
+        # A whole number prints without its fraction, the way the C# does it.
+        # Python's str() gives "1.0", so a demo recorded with sv_cheats 1 got
+        # named {sv_cheats=1.0} while every older file says {sv_cheats=1}, and
+        # the rename could no longer recognise its own note to take it off.
+        if value == int(value):
+            return str(int(value))
+
+        return repr(value)
 
     @staticmethod
     def _get_key(params: Dict[str, str], key: str) -> float:
@@ -442,7 +462,10 @@ class Demo:
 
     @staticmethod
     def _get_validities(filename: str) -> Optional[Tuple[str, str]]:
-        match = re.match(r"^[^\\[]+\\[[^\\.\\]]+.[^\\]]+]\\d{2,3}\\.\\d{2}\\.\\d{3}\\(.+\\){(\\w+)=(\\w+)}(?:\\[\\d+\\])?\\.\\w+$", filename)
+        # Keeps a note an earlier rename put in the filename, like
+        # dfwc2014-5[df.vq3]00.36.904(Enter.Russia){old_map_version=true}.dm_68,
+        # when the demo itself reports nothing wrong.
+        match = re.match(r"^[^\[]+\[[^.\]]+.[^\]]+]\d{2,3}\.\d{2}\.\d{3}\(.+\){(\w+)=(\w+)}(?:\[\d+\])?\.\w+$", filename)
         if match:
             return match.group(1), match.group(2)
         return None
@@ -450,10 +473,10 @@ class Demo:
     @staticmethod
     def _try_get_user_id_from_file_name(file: Path) -> int:
         name_no_ext = file.stem
-        match = re.match(r"^.+\\[(\\d+)\\]\\[(\\d+)\\]$", name_no_ext)
+        match = re.match(r"^.+\[(\d+)\]\[(\d+)\]$", name_no_ext)
         if match:
             return int(match.group(2))
-        match = re.match(r"^.+\\[.+\\].+\\(.+\\)(?:{.+})*\\[(\\d+)\\]$", name_no_ext)
+        match = re.match(r"^.+\[.+\].+\(.+\)(?:{.+})*\[(\d+)\]$", name_no_ext)
         if match:
             return int(match.group(1))
         return -1
