@@ -450,32 +450,31 @@
     // times before anything else.
     const recordsTab = ref('records');
 
-    // Each physics column pages on its own, and the search resets both: the
-    // page you were on in one column means nothing once the list behind it
-    // changes.
-    const freestyleQuery = ref({ freestyle_vq3_page: 1, freestyle_cpm_page: 1, freestyle_search: '' });
+    // Each physics column pages on its own, through the same Pagination the
+    // records use, which builds its links off the address bar. So the search
+    // has to go in the address bar too, or paging after a search would drop
+    // it. Searching also puts both columns back to page one: the page you were
+    // on means nothing once the list behind it changes.
+    const onFreestyleSearch = (term) => {
+        const url = new URL(window.location.href);
 
-    const reloadFreestyle = () => {
-        router.reload({
+        term ? url.searchParams.set('freestyle_search', term) : url.searchParams.delete('freestyle_search');
+        url.searchParams.delete('freestyle_vq3_page');
+        url.searchParams.delete('freestyle_cpm_page');
+
+        const query = url.searchParams.toString();
+        const target = url.pathname + (query ? '?' + query : '');
+        const scrollPosition = window.scrollY;
+
+        router.visit(target, {
             only: ['freestyleDemos'],
-            data: freestyleQuery.value,
             preserveScroll: true,
             preserveState: true,
+            onSuccess: () => {
+                window.history.replaceState(window.history.state, '', target);
+                window.scrollTo(0, scrollPosition);
+            },
         });
-    };
-
-    const goToFreestylePage = ({ physics, page }) => {
-        freestyleQuery.value = { ...freestyleQuery.value, [`freestyle_${physics}_page`]: page };
-        reloadFreestyle();
-    };
-
-    const onFreestyleSearch = (term) => {
-        freestyleQuery.value = {
-            freestyle_vq3_page: 1,
-            freestyle_cpm_page: 1,
-            freestyle_search: term,
-        };
-        reloadFreestyle();
     };
 
     // About Me
@@ -2438,27 +2437,39 @@
                      two ways: everything this player left behind on a map. The
                      search and the sort belong to the records, so they sit
                      inside that tab rather than above both. -->
-                <div class="flex items-end gap-1 mb-3 border-b border-white/10">
+                <div class="flex flex-col sm:flex-row gap-2 mb-4">
                     <button
                         @click="recordsTab = 'records'"
-                        class="px-4 py-2 text-sm font-bold rounded-t-lg border-b-2 -mb-px transition-colors"
+                        class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition-all duration-200"
                         :class="recordsTab === 'records'
-                            ? 'text-white border-blue-400 bg-white/[0.04]'
-                            : 'text-gray-500 border-transparent hover:text-gray-300'"
+                            ? 'bg-gradient-to-br from-blue-600/80 to-blue-500/50 border-blue-400 text-white shadow-lg shadow-blue-500/20'
+                            : 'bg-black/40 border-white/10 text-gray-500 hover:text-gray-200 hover:border-white/25'"
                     >
-                        Records
-                        <span class="ml-1.5 text-xs font-normal opacity-60 tabular-nums">{{ (vq3Records.total || 0) + (cpmRecords.total || 0) }}</span>
+                        <svg class="w-6 h-6 fill-current shrink-0" viewBox="0 0 20 20">
+                            <use href="/images/svg/icons.svg#icon-trophy"></use>
+                        </svg>
+                        <span class="text-lg font-black uppercase tracking-wide">Records</span>
+                        <span
+                            class="text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full"
+                            :class="recordsTab === 'records' ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'"
+                        >{{ (vq3Records.total || 0) + (cpmRecords.total || 0) }}</span>
                     </button>
                     <button
                         v-if="freestyleDemos && freestyleDemos.total > 0"
                         @click="recordsTab = 'freestyle'"
-                        class="px-4 py-2 text-sm font-bold rounded-t-lg border-b-2 -mb-px transition-colors"
+                        class="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-xl border-2 transition-all duration-200"
                         :class="recordsTab === 'freestyle'
-                            ? 'text-white border-teal-400 bg-white/[0.04]'
-                            : 'text-gray-500 border-transparent hover:text-gray-300'"
+                            ? 'bg-gradient-to-br from-teal-600/80 to-teal-500/50 border-teal-400 text-white shadow-lg shadow-teal-500/20'
+                            : 'bg-black/40 border-white/10 text-gray-500 hover:text-gray-200 hover:border-white/25'"
                     >
-                        Freestyle &amp; Tricks
-                        <span class="ml-1.5 text-xs font-normal opacity-60 tabular-nums">{{ freestyleDemos.total }}</span>
+                        <svg class="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.63 8.41m5.96 5.96a14.926 14.926 0 0 1-5.84 2.58m0 0a6.003 6.003 0 0 0-7.38-5.84h4.8m2.58-5.96a6 6 0 0 0-7.38 5.84" />
+                        </svg>
+                        <span class="text-lg font-black uppercase tracking-wide">Freestyle &amp; Tricks</span>
+                        <span
+                            class="text-sm font-bold tabular-nums px-2.5 py-0.5 rounded-full"
+                            :class="recordsTab === 'freestyle' ? 'bg-black/30 text-white' : 'bg-white/5 text-gray-400'"
+                        >{{ freestyleDemos.total }}</span>
                     </button>
                 </div>
 
@@ -2467,7 +2478,6 @@
                         :data="freestyleDemos"
                         :date-format="$page.props.dateFormat"
                         :cpm-first="cpmFirst"
-                        @page="goToFreestylePage"
                         @search="onFreestyleSearch"
                     />
                 </div>

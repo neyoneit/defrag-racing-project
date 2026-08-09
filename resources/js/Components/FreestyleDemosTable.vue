@@ -1,6 +1,7 @@
 <script setup>
     import { ref, computed, watch } from 'vue';
     import { Link } from '@inertiajs/vue3';
+    import Pagination from '@/Components/Basic/Pagination.vue';
 
     // A player's freestyle and trick demos, split VQ3 and CPM the way the rest
     // of the site splits everything. A row is a map; it opens to show that
@@ -17,7 +18,7 @@
         cpmFirst: { type: Boolean, default: false },
     });
 
-    const emit = defineEmits(['page', 'search']);
+    const emit = defineEmits(['search']);
 
     const open = ref(new Set());
     const search = ref(props.data?.search || '');
@@ -39,12 +40,6 @@
         const key = rowKey(physics, map);
         next.has(key) ? next.delete(key) : next.add(key);
         open.value = next;
-    };
-
-    const goToPage = (physics, page, block) => {
-        if (page < 1 || page > (block?.last_page || 1)) return;
-        open.value = new Set();
-        emit('page', { physics, page });
     };
 
     watch(search, (value) => {
@@ -244,18 +239,13 @@
                     </div>
                 </div>
 
-                <div v-if="column.block && column.block.last_page > 1" class="flex items-center justify-between px-4 py-2.5 border-t border-white/5">
-                    <button
-                        @click="goToPage(column.key, column.block.page - 1, column.block)"
-                        :disabled="column.block.page <= 1"
-                        class="px-2.5 py-1 rounded text-xs bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5"
-                    >Previous</button>
-                    <span class="text-xs text-gray-500">{{ column.block.page }} / {{ column.block.last_page }}</span>
-                    <button
-                        @click="goToPage(column.key, column.block.page + 1, column.block)"
-                        :disabled="column.block.page >= column.block.last_page"
-                        class="px-2.5 py-1 rounded text-xs bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/5"
-                    >Next</button>
+                <div v-if="column.block && column.block.last_page > 1" class="p-3 border-t border-white/5 mt-auto">
+                    <Pagination
+                        :last_page="column.block.last_page"
+                        :current_page="column.block.page"
+                        :pageName="`freestyle_${column.key}_page`"
+                        :only="['freestyleDemos']"
+                    />
                 </div>
             </div>
         </div>
