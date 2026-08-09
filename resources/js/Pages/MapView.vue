@@ -1234,7 +1234,7 @@
                      that holds both; one that ranks nothing has no choice to
                      offer and one with no freestyle demos has nothing to switch
                      to. Records is where the page always opens. -->
-                <div class="flex items-stretch justify-center gap-3 lg:gap-4 max-w-6xl mx-auto">
+                <div class="flex items-stretch justify-center gap-3 lg:gap-4 max-w-7xl mx-auto">
                     <button
                         v-if="untimedDemos && hasAnyRecords"
                         @click="showFreestyle = false"
@@ -1248,7 +1248,7 @@
                         <span class="text-xs opacity-70 mt-1">{{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }}</span>
                     </button>
 
-                <div class="w-full max-w-4xl rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
+                <div class="w-full max-w-4xl flex-shrink rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
