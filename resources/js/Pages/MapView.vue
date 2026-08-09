@@ -1891,7 +1891,8 @@
                                         :physics="side.label"
                                         :showSourceChips="true"
                                         :hideRank="true"
-                                        :compact="true"
+                                        :hideIdentity="true"
+                                        :hideReport="true"
                                     />
                                 </div>
                             </div>

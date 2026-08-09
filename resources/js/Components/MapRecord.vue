@@ -48,6 +48,20 @@
             type: Boolean,
             default: false,
         },
+        // Inside a freestyle group the player is named once, on the group
+        // header, so the rows underneath drop the avatar, flag and nick and
+        // give the space to what the demo actually is.
+        hideIdentity: {
+            type: Boolean,
+            default: false,
+        },
+        // Reporting says "this demo is on the wrong record" and flagging says
+        // "this record is not legitimate". A freestyle demo sits on no record
+        // and claims no result, so neither has anything to act on.
+        hideReport: {
+            type: Boolean,
+            default: false,
+        },
     });
 
     const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history']);
@@ -163,6 +177,7 @@
     const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const canReportDemo = computed(() => {
+        if (props.hideReport) return false;
         return isLoggedIn.value && page.props.canReportDemos;
     });
 
@@ -170,7 +185,7 @@
     // enough of a history here to be worth listening to. Flagging a record is
     // a different thing - it only says "this time looks off", staff decide
     // the rest - so it asks for nothing but an account.
-    const canFlagRecord = computed(() => isLoggedIn.value);
+    const canFlagRecord = computed(() => ! props.hideReport && isLoggedIn.value);
 
     const isAdmin = computed(() => {
         return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
@@ -507,7 +522,7 @@
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
         >
-            <div class="overflow-visible flex-shrink-0">
+            <div v-if="! hideIdentity" class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects (effects suppressed in compact mode) -->
                 <div
                     :class="compact ? 'avatar-effect-none' : 'avatar-effect-' + (record.user?.avatar_effect || 'none')"
@@ -522,6 +537,7 @@
                 </div>
             </div>
             <img
+                v-if="! hideIdentity"
                 :src="`/images/flags/${bestrecordCountry}.png`"
                 :class="['flex-shrink-0', compact ? 'w-3.5 h-2.5' : 'w-5 h-4']"
                 onerror="this.src='/images/flags/_404.png'"
@@ -539,6 +555,7 @@
                 ]"
                 :style="compact ? '--effect-color: #ffffff' : `--effect-color: ${record.user?.color || '#ffffff'}`"
                 v-html="q3tohtml(displayName)"
+                v-if="! hideIdentity"
             ></span>
 
             <!-- What the uploader called the demo. On a map with no timer the
