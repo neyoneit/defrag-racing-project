@@ -268,10 +268,36 @@ class MapsController extends Controller
         $demos = $vq3->getCollection()->concat($cpm->getCollection());
         $validityFlags = $this->validityFlagsByDemo($demos->pluck('id')->all());
 
+        // Attribute them the way everything else on the site does: approved
+        // aliases, through the same resolver Demos Top clusters with. A
+        // freestyle demo can never hang off a record, so without this the rows
+        // showed a question mark for an avatar and led nowhere, even for people
+        // whose nick the site knows perfectly well.
+        //
+        // Deliberately NOT suggested_user_id, which 11596 of the 11640
+        // freestyle demos carry: that is the fuzzy matcher's guess, and putting
+        // a guess under somebody's avatar asserts the run is theirs.
+        $resolver = new DemoProfileResolver();
+        $priorityKeys = \App\Models\Record::where('mapname', $map->name)
+            ->select(['user_id', 'mdd_id'])->get()
+            ->flatMap(fn ($r) => array_filter([
+                $r->user_id ? 'user:' . (int) $r->user_id : null,
+                $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
+            ]))->unique()->values()->all();
+
+        $profileKeys = $demos->mapWithKeys(fn ($d) => [$d->id => $resolver->resolve($d, $priorityKeys)]);
+        $users = \App\Models\User::whereIn('id', $profileKeys
+            ->filter(fn ($k) => $k && str_starts_with($k, 'user:'))
+            ->map(fn ($k) => (int) substr($k, 5))->unique()->values())
+            ->get()->keyBy('id');
+
         // MapRecord's shape, so the list gets the same chips, download button,
         // video and report actions the leaderboard rows have.
-        $shape = function ($d) use ($validityFlags) {
+        $shape = function ($d) use ($validityFlags, $profileKeys, $users) {
             $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
+            $key = $profileKeys[$d->id] ?? null;
+            $owner = $key && str_starts_with($key, 'user:') ? $users->get((int) substr($key, 5)) : null;
+            $mddId = $key && str_starts_with($key, 'mdd:') ? (int) substr($key, 4) : null;
 
             return [
                 'id' => $d->id,
@@ -281,13 +307,14 @@ class MapsController extends Controller
                 'time_ms' => $d->time_ms,
                 'date_set' => $d->record_date ?? $d->created_at,
                 'player_name' => $d->player_name,
-                'name' => $d->record?->user?->name ?? $d->player_name,
-                'country' => $d->country ?? '_404',
+                'name' => $owner?->name ?? $d->record?->user?->name ?? $d->player_name,
+                'country' => $d->country ?? $owner?->country ?? '_404',
                 'is_online' => $isOnline,
                 'verification_type' => $validityFlags[$d->id]
                     ?? ($d->record_id ? 'verified' : ($isOnline ? 'ONLINE' : 'OFFLINE')),
                 'rank' => null,
-                'user' => $d->record?->user,
+                'user' => $owner ?? $d->record?->user,
+                'mdd_id' => $mddId,
                 'demo' => $d,
                 'demo_label' => $this->demoLabel($d),
                 'uploaded_demos' => [],
