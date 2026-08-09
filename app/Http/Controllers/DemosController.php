@@ -489,6 +489,111 @@ class DemosController extends Controller
     }
 
     /**
+     * Accounts to offer when assigning a demo to a player. Unlike
+     * searchUploaders this is every account, not just people who have uploaded
+     * something - the whole point is attributing a demo to somebody who never
+     * touched the upload form.
+     */
+    public function searchPlayers(Request $request)
+    {
+        if (! $this->canAssignDemoToUser(Auth::user())) {
+            abort(403, 'Staff only');
+        }
+
+        $q = trim((string) $request->input('q', ''));
+
+        if (strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            \App\Models\User::where('plain_name', 'LIKE', "%{$q}%")
+                ->orWhere('name', 'LIKE', "%{$q}%")
+                ->orderBy('plain_name')
+                ->limit(15)
+                ->get(['id', 'name', 'plain_name', 'country', 'profile_photo_path'])
+        );
+    }
+
+    /**
+     * Attribute a demo to an account. Written for freestyle and trick demos,
+     * which hang off no record and so had nothing that could say whose they
+     * are; the alias resolver only reaches 1 in 4 of them.
+     *
+     * With `apply_to_nick` it does the same for every other demo carrying that
+     * exact nick, which is the difference between one click and forty on a map
+     * where somebody has been at it all evening. Same nick only, colours
+     * stripped, never a similar one - a guess under somebody's avatar asserts
+     * the run is theirs.
+     *
+     * Staff only, and `user_id = null` takes an assignment back off.
+     */
+    public function assignToUser(Request $request, UploadedDemo $demo)
+    {
+        $currentUser = Auth::user();
+
+        if (! $this->canAssignDemoToUser($currentUser)) {
+            abort(403, 'Only staff can attribute a demo to an account');
+        }
+
+        $request->validate([
+            'user_id' => 'nullable|exists:users,id',
+            'apply_to_nick' => 'boolean',
+        ]);
+
+        $userId = $request->input('user_id') ?: null;
+
+        $values = [
+            'assigned_user_id' => $userId,
+            'assigned_by_user_id' => $userId ? $currentUser->id : null,
+            'assigned_user_at' => $userId ? now() : null,
+        ];
+
+        $demo->update($values);
+        $touched = 1;
+
+        if ($request->boolean('apply_to_nick') && $demo->player_name) {
+            $touched += UploadedDemo::where('id', '!=', $demo->id)
+                ->where('player_name', $demo->player_name)
+                ->update($values);
+        }
+
+        Log::info('Demo attributed to account', [
+            'demo_id' => $demo->id,
+            'user_id' => $userId,
+            'by_user' => $currentUser->id,
+            'nick' => $demo->player_name,
+            'demos_touched' => $touched,
+        ]);
+
+        // The map page reads its demo list through the Demos Top cache, which
+        // holds hydrated models - without this the attribution shows up an hour
+        // later. See RebuildDemosTopRanksJob.
+        if ($demo->map_name) {
+            Cache::increment('demostop_gen:' . $demo->map_name);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'demos_touched' => $touched,
+            'user' => $userId ? \App\Models\User::find($userId, ['id', 'name', 'plain_name', 'country', 'profile_photo_path']) : null,
+        ]);
+    }
+
+    /**
+     * Saying "this run is yours" in public is a claim about somebody else, so
+     * it stays with the people who already answer for the leaderboard.
+     */
+    private function canAssignDemoToUser($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return (bool) ($user->admin ?? false) || (bool) ($user->is_moderator ?? false);
+    }
+
+    /**
      * Upload demos with rate limiting and queue processing
      */
     public function upload(Request $request)

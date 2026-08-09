@@ -139,6 +139,10 @@ class HandleInertiaRequests extends Middleware
             'dangerRandom'                 =>      random_int(0, 1_000_000_000),
             'successRandom'                 =>      random_int(0, 1_000_000_000),
             'canReportDemos'            =>      $request->user() ? (\App\Models\Record::where('user_id', $request->user()->id)->count() >= 30) : false,
+            // Attributing somebody else's demo to their account is a public
+            // claim about them, so it sits with the people who already answer
+            // for the leaderboard. Mirrors DemosController::canAssignDemoToUser.
+            'canAssignDemoToUser'       =>      $request->user() ? ((bool) $request->user()->admin || (bool) $request->user()->is_moderator) : false,
             'canUploadDemos'            =>      $request->user() ? $request->user()->canUploadDemos() : true,
             'isVerified'                =>      $request->user() ? $request->user()->hasVerifiedEmail() : false,
             'recordsCount'              =>      $request->user() ? \App\Models\Record::where('user_id', $request->user()->id)->count() : 0,

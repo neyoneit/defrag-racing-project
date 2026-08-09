@@ -48,9 +48,24 @@
             type: Boolean,
             default: false,
         },
+        // Inside a freestyle group the player is named once, on the group
+        // header, so the rows underneath drop the avatar, flag and nick and
+        // give the space to what the demo actually is.
+        hideIdentity: {
+            type: Boolean,
+            default: false,
+        },
+        // Everything on the row that only makes sense against a record:
+        // reporting ("this demo is on the wrong record"), flagging ("this
+        // record is not legitimate") and assigning to one. A freestyle demo
+        // sits on no record and claims no result, so none of them apply.
+        hideRecordActions: {
+            type: Boolean,
+            default: false,
+        },
     });
 
-    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history']);
+    const emit = defineEmits(['assign', 'assign-from-record', 'reassign-record', 'scoreHover', 'toggle-history', 'assign-user']);
 
     const page = usePage();
     const showReportModal = ref(false);
@@ -163,6 +178,7 @@
     const isLoggedIn = computed(() => !!page.props.auth?.user);
 
     const canReportDemo = computed(() => {
+        if (props.hideRecordActions) return false;
         return isLoggedIn.value && page.props.canReportDemos;
     });
 
@@ -170,7 +186,7 @@
     // enough of a history here to be worth listening to. Flagging a record is
     // a different thing - it only says "this time looks off", staff decide
     // the rest - so it asks for nothing but an account.
-    const canFlagRecord = computed(() => isLoggedIn.value);
+    const canFlagRecord = computed(() => ! props.hideRecordActions && isLoggedIn.value);
 
     const isAdmin = computed(() => {
         return page.props.auth?.user?.is_admin || page.props.auth?.user?.admin;
@@ -507,7 +523,7 @@
                 !getRoute && isLoggedIn && !isOfflineRecord ? 'cursor-default opacity-70' : !getRoute && !isOfflineRecord ? 'cursor-help opacity-70' : !getRoute && isOfflineRecord ? 'cursor-default' : 'cursor-pointer'
             ]"
         >
-            <div class="overflow-visible flex-shrink-0">
+            <div v-if="! hideIdentity" class="overflow-visible flex-shrink-0">
                 <!-- Show user's avatar with effects (effects suppressed in compact mode) -->
                 <div
                     :class="compact ? 'avatar-effect-none' : 'avatar-effect-' + (record.user?.avatar_effect || 'none')"
@@ -522,6 +538,7 @@
                 </div>
             </div>
             <img
+                v-if="! hideIdentity"
                 :src="`/images/flags/${bestrecordCountry}.png`"
                 :class="['flex-shrink-0', compact ? 'w-3.5 h-2.5' : 'w-5 h-4']"
                 onerror="this.src='/images/flags/_404.png'"
@@ -539,7 +556,19 @@
                 ]"
                 :style="compact ? '--effect-color: #ffffff' : `--effect-color: ${record.user?.color || '#ffffff'}`"
                 v-html="q3tohtml(displayName)"
+                v-if="! hideIdentity"
             ></span>
+
+            <!-- What the uploader called the demo. On a map with no timer the
+                 run has no time to identify it by, and the trick is the whole
+                 point - "oups-fs-b1_jpad_1xR_3xR" says more than any nick does.
+                 Only set where the backend put one on the row. -->
+            <span
+                v-if="record.demo_label"
+                class="ml-2 truncate font-semibold text-teal-300/90 bg-teal-500/10 border border-teal-500/20 rounded px-1.5 py-0.5"
+                :class="compact ? 'text-[10px]' : 'text-xs'"
+                :title="record.demo_label"
+            >{{ record.demo_label }}</span>
 
             <!-- Source type chips (shown in mixed views) -->
             <template v-if="showSourceChips">
@@ -836,9 +865,23 @@
 
         <!-- Action Icons -->
         <div class="flex items-center justify-end flex-shrink-0 gap-0.5 ml-auto">
+            <!-- A demo on no record has nothing that can say whose it is. Staff
+                 can put a name on it; there is room on these rows for words. -->
+            <button
+                v-if="hideRecordActions && $page.props.canAssignDemoToUser"
+                @click.stop="emit('assign-user', record)"
+                class="mr-1 px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors"
+                :class="record.assigned_user_id
+                    ? 'bg-teal-500/15 text-teal-300 border-teal-500/30 hover:bg-teal-500/25'
+                    : 'bg-gray-700/40 text-gray-300 border-white/10 hover:bg-gray-700/70 hover:text-white'"
+                :title="record.assigned_user_id ? 'Attributed to an account - click to change' : 'Attribute this demo to an account'"
+            >
+                {{ record.assigned_user_id ? 'Assigned' : 'Assign to account' }}
+            </button>
+
             <!-- Always visible: assign/match/reassign -->
             <button
-                v-if="isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
+                v-if="! hideRecordActions && isLoggedIn && isOnlineDemo && !record.record_id && record.demo"
                 @click.stop="emit('assign', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
                 title="Assign to online record"
@@ -849,7 +892,7 @@
             </button>
 
             <button
-                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
+                v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && demoMatches.length > 0 && !(record.uploaded_demos && record.uploaded_demos.length > 0)"
                 @click.stop="emit('assign-from-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-purple-500/20 text-purple-400 hover:text-purple-300 hover:bg-purple-500/30 animate-pulse"
                 :title="`${demoMatches.length} possible demo match${demoMatches.length > 1 ? 'es' : ''}`"
@@ -860,7 +903,7 @@
             </button>
 
             <button
-                v-if="isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
+                v-if="! hideRecordActions && isLoggedIn && !isOnlineDemo && !isOfflineRecord && record.uploaded_demos && record.uploaded_demos.length > 0"
                 @click.stop="emit('reassign-record', record)"
                 class="p-0.5 rounded transition-all hover:scale-110 bg-gray-700/50 text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10"
                 title="Reassign demo"
@@ -949,7 +992,10 @@
                         'text-gray-300': compact,
                     }"
                 >
-                    {{ formatTime(record.time) }}
+                    <!-- A trick, tutorial or pads demo never finished a run, so
+                         it has no time. Printing formatTime(null) put "00.000"
+                         on it, which reads as a run of zero seconds. -->
+                    {{ record.time ? formatTime(record.time) : '-' }}
                 </div>
                 <div v-if="timeDiff" class="text-[10px] text-red-400 tabular-nums leading-none mt-0.5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
                     -{{ formatTime(timeDiff) }}

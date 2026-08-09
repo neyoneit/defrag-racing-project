@@ -470,7 +470,7 @@ const formatNumber = (num) => {
                                 <div class="flex-1 min-w-0 flex items-center gap-2">
                                     <div class="text-white text-sm font-semibold group-hover:text-purple-400 transition-colors truncate" v-html="q3tohtml(record.user_name)"></div>
                                     <div class="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0">
-                                        <Link :href="`/maps/${record.mapname}`" class="truncate max-w-[100px] hover:text-blue-400 transition-colors" @click.stop>{{ record.mapname }}</Link>
+                                        <Link :href="`/maps/${encodeURIComponent(record.mapname)}`" class="truncate max-w-[100px] hover:text-blue-400 transition-colors" @click.stop>{{ record.mapname }}</Link>
                                         <img :src="`/images/modes/${record.physics}-icon.svg`" class="w-3 h-3 flex-shrink-0" :alt="record.physics" />
                                     </div>
                                 </div>

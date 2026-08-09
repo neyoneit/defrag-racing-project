@@ -7,6 +7,7 @@
     // import MapRecordSmall from '@/Components/MapRecordSmall.vue'; // Obsolete - using MapRecord for all screen sizes now
     import MapCardLineSmall from '@/Components/MapCardLineSmall.vue';
     import Pagination from '@/Components/Basic/Pagination.vue';
+    import AssignDemoToUserModal from '@/Components/AssignDemoToUserModal.vue';
     import ToggleButton from '@/Components/Basic/ToggleButton.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
     import AddToMaplistModal from '@/Components/Maplists/AddToMaplistModal.vue';
@@ -244,6 +245,13 @@
         difficultyRating: {
             type: Object,
             default: () => ({ average: null, total: 0, distribution: {}, user_rating: null })
+        },
+        // Present only on a map with nothing to rank - see
+        // MapsController::untimedDemos. Null on every other map, which is what
+        // keeps the leaderboards in place.
+        untimedDemos: {
+            type: Object,
+            default: null
         },
         // Server-computed cluster metadata for time-history badges. Keyed by
         // uploaded_demo.id; each value is { count, signals }. Pre-computed so
@@ -1015,6 +1023,39 @@
         return props.cpmRecords;
     })
 
+    // A freestyle map gets its demo list either way, but it can still hold a
+    // ranked row, and then both belong on the page - the tables only disappear
+    // when there is nothing in them at all.
+    const hasAnyRecords = computed(() =>
+        (getVq3Records.value?.total || 0) > 0 || (getCpmRecords.value?.total || 0) > 0
+    );
+
+    // Freestyle groups open by default - the demos are what the section is
+    // for, and a page of names you have to click through would hide them
+    // again. Tracks what has been CLOSED, keyed per side so the same nick in
+    // VQ3 and CPM collapses independently.
+    const closedDemoGroups = ref(new Set());
+    const isDemoGroupOpen = (key) => ! closedDemoGroups.value.has(key);
+    const toggleDemoGroup = (key) => {
+        const next = new Set(closedDemoGroups.value);
+        next.has(key) ? next.delete(key) : next.add(key);
+        closedDemoGroups.value = next;
+    };
+
+    // Staff attributing a freestyle demo to an account.
+    const assignUserDemo = ref(null);
+    const openAssignUser = (record) => { assignUserDemo.value = record; };
+    const onDemoAssigned = () => { router.reload({ only: ['untimedDemos'] }); };
+
+    const untimedTotal = computed(() =>
+        (props.untimedDemos?.vq3?.total || 0) + (props.untimedDemos?.cpm?.total || 0)
+    );
+
+    // On a map with nothing to rank the demo list is the page; on one that has
+    // records too it waits behind the switch.
+    const showFreestyle = ref(false);
+    const showingUntimed = computed(() => !! props.untimedDemos && (! hasAnyRecords.value || showFreestyle.value));
+
     // Helper functions for weapon/item/function icons and names
     const getWeaponIcon = (abbr) => {
         const icons = {
@@ -1207,7 +1248,25 @@
 
             <!-- Hero Content (compact) -->
             <div class="relative max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pt-10 pb-6" style="z-index: 10;">
-                <div class="w-full max-w-4xl mx-auto rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
+                <!-- What the page is showing, flanking the card. Only on a map
+                     that holds both; one that ranks nothing has no choice to
+                     offer and one with no freestyle demos has nothing to switch
+                     to. Records is where the page always opens. -->
+                <div class="flex items-stretch justify-center gap-3 lg:gap-4 max-w-7xl mx-auto">
+                    <button
+                        v-if="untimedDemos && hasAnyRecords"
+                        @click="showFreestyle = false"
+                        :class="!showFreestyle
+                            ? 'bg-blue-600/90 border-blue-400 text-white shadow-lg shadow-blue-500/30'
+                            : 'bg-gray-800/70 border-gray-600 text-gray-300 hover:bg-gray-700/80 hover:text-white'"
+                        class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
+                    >
+                        <span class="text-2xl mb-1">🏁</span>
+                        <span class="text-sm leading-tight">Records</span>
+                        <span class="text-xs opacity-70 mt-1">{{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }}</span>
+                    </button>
+
+                <div class="w-full max-w-4xl flex-shrink rounded-2xl px-6 pt-6 pb-3 shadow-2xl relative border border-white/10 group">
                     <!-- Map thumbnail as card background -->
                     <div v-if="map.thumbnail" class="absolute inset-0 bg-cover bg-center rounded-2xl overflow-hidden" :style="`background-image: url('/storage/${map.thumbnail}');`">
                         <!-- Dark overlay for readability, lightens on hover -->
@@ -1707,6 +1766,36 @@
 
 </div> <!-- Close content layer -->
                 </div>
+
+                    <button
+                        v-if="untimedDemos && hasAnyRecords"
+                        @click="showFreestyle = true"
+                        :class="showFreestyle
+                            ? 'bg-teal-600/90 border-teal-400 text-white shadow-lg shadow-teal-500/30'
+                            : 'bg-gray-800/70 border-gray-600 text-gray-300 hover:bg-gray-700/80 hover:text-white'"
+                        class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
+                        title="Freestyle runs, tricks and tutorials - everything on this map that has no time"
+                    >
+                        <span class="text-2xl mb-1">🎬</span>
+                        <span class="text-sm leading-tight text-center">Freestyle<br />&amp; Tricks</span>
+                        <span class="text-xs opacity-70 mt-1">{{ untimedTotal }}</span>
+                    </button>
+                </div>
+
+                <!-- Same switch for narrow screens, where there is no room
+                     beside the card. -->
+                <div v-if="untimedDemos && hasAnyRecords" class="lg:hidden flex gap-2 justify-center mt-3">
+                    <button
+                        @click="showFreestyle = false"
+                        :class="!showFreestyle ? 'bg-blue-600/90 border-blue-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
+                        class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
+                    >Records ({{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }})</button>
+                    <button
+                        @click="showFreestyle = true"
+                        :class="showFreestyle ? 'bg-teal-600/90 border-teal-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
+                        class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
+                    >Freestyle &amp; Tricks ({{ untimedTotal }})</button>
+                </div>
             </div>
 
             <!-- Leaderboards Section (on top of background) -->
@@ -1739,7 +1828,95 @@
                     </button>
                 </div>
 
-                <div class="lg:flex gap-4 justify-center">
+                <!-- A map with no times to rank: freestyle, or one nobody has
+                     set a record on. Two empty leaderboards said nothing while
+                     the demos people uploaded sat there unreachable, so the
+                     panel lists them instead, newest first. -->
+                <div v-if="showingUntimed" class="lg:flex gap-4 justify-center">
+                    <div
+                        v-for="side in [
+                            { key: 'vq3', label: 'VQ3', page: 'vq3DemosPage', accent: 'blue', list: untimedDemos.vq3 },
+                            { key: 'cpm', label: 'CPM', page: 'cpmDemosPage', accent: 'purple', list: untimedDemos.cpm },
+                        ]"
+                        :key="side.key"
+                        v-show="(mobilePhysics === 'both' || mobilePhysics === side.label) && side.list.total"
+                        :style="{ order: cpmFirst ? (side.key === 'cpm' ? 1 : 2) : (side.key === 'cpm' ? 2 : 1) }"
+                        class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10"
+                    >
+                        <div
+                            class="border-b px-4 py-2"
+                            :class="side.accent === 'blue'
+                                ? 'bg-gradient-to-r from-blue-600/20 to-blue-500/10 border-blue-500/30'
+                                : 'bg-gradient-to-r from-purple-600/20 to-purple-500/10 border-purple-500/30'"
+                        >
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <h2 class="text-lg font-bold" :class="side.accent === 'blue' ? 'text-blue-400' : 'text-purple-400'">
+                                    {{ side.label }} Demos
+                                    <span class="text-sm font-semibold" :class="side.accent === 'blue' ? 'text-blue-400/60' : 'text-purple-400/60'">({{ side.list.total }})</span>
+                                </h2>
+                                <div class="text-xs text-gray-400">
+                                    <template v-if="hasAnyRecords">No time on these - freestyle, tricks, tutorials.</template>
+                                    <template v-else-if="map.gametype === 'freestyle'">No timer on this map, so nothing here is ranked.</template>
+                                    <template v-else>No records on this map yet.</template>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-white/[0.04]">
+                            <div v-for="group in side.list.data" :key="group.key">
+                                <!-- One row per player. Freestyle is not one
+                                     run each - somebody can have a hundred on a
+                                     map - so the name is said once and their
+                                     demos open under it. -->
+                                <button
+                                    @click="toggleDemoGroup(side.key + ':' + group.key)"
+                                    class="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                                >
+                                    <svg
+                                        class="w-3.5 h-3.5 flex-shrink-0 text-gray-500 transition-transform"
+                                        :class="{ 'rotate-90': isDemoGroupOpen(side.key + ':' + group.key) }"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+                                    >
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+                                    </svg>
+                                    <img
+                                        v-if="group.country"
+                                        :src="`/images/flags/${group.country}.png`"
+                                        class="w-5 h-3.5 flex-shrink-0 rounded-sm"
+                                        @error="(e) => e.target.style.display = 'none'"
+                                    />
+                                    <span class="text-sm font-semibold truncate" v-html="q3tohtml(group.name)"></span>
+                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ group.count }} demo{{ group.count === 1 ? '' : 's' }}</span>
+                                    <span class="flex-1"></span>
+                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ (group.latest || '').slice(0, 10) }}</span>
+                                </button>
+                                <div v-if="isDemoGroupOpen(side.key + ':' + group.key)" class="bg-black/20 border-l-2 border-teal-500/30 divide-y divide-white/[0.03]">
+                                    <MapRecord
+                                        v-for="demo in group.demos"
+                                        :key="demo.demo_id"
+                                        :record="demo"
+                                        :physics="side.label"
+                                        :showSourceChips="true"
+                                        :hideRank="true"
+                                        :hideIdentity="true"
+                                        :hideRecordActions="true"
+                                        @assign-user="openAssignUser"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="side.list.last_page > 1" class="px-4 py-2 border-t border-white/[0.06]">
+                            <Pagination
+                                :pageName="side.page"
+                                :last_page="side.list.last_page"
+                                :current_page="side.list.current_page"
+                                :link="side.list.first_page_url"
+                                :only="['untimedDemos']"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="!showingUntimed" class="lg:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->
@@ -2255,6 +2432,13 @@
             :server="instantPlayServer"
             :map-name="map.name"
             @close="instantPlayConfirm = false"
+        />
+
+        <AssignDemoToUserModal
+            :show="!! assignUserDemo"
+            :demo="assignUserDemo"
+            @close="assignUserDemo = null"
+            @assigned="onDemoAssigned"
         />
     </div>
 </template>

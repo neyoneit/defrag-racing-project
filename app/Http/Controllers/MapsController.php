@@ -225,6 +225,254 @@ class MapsController extends Controller
     }
 
     /**
+     * The demos on a map that has no leaderboard to put them in.
+     *
+     * A freestyle map has no timer, so nothing it holds can be ranked, and its
+     * page was two empty tables however many demos people had uploaded to it -
+     * csu1_a alone carries 1617. The same happens to a run map nobody has ever
+     * set a record on. 88 maps and 4176 demos site-wide, all of them with a
+     * thumbnail, an author and a pk3 already in hand.
+     *
+     * Returns null when the map does have times to show, so the page keeps its
+     * leaderboards and nothing else changes.
+     */
+    private function untimedDemos($map): ?\Illuminate\Support\Collection
+    {
+        // Everything on the map that is not a timed run: freestyle, and any
+        // demo with no time at all - a trick, a tutorial, a run that never
+        // finished. Neither can be ranked and neither belongs in a history of
+        // times, so without this list they are reachable from nowhere. 183 maps
+        // hold both these and real records (cos1_beta7b has 267 freestyle demos
+        // beside 21 records), which is why the page offers both.
+        //
+        // Grouped by player, one row each, opening to their demos. Freestyle is
+        // not one run per person: on csu1_a two people have a hundred apiece,
+        // and 1523 demos come down to 258 names.
+        $base = fn (string $physics) => UploadedDemo::where('map_name', $map->name)
+            // failed-validity belongs here too: it means the demo deviated on
+            // some cvar, not that it is unusable, and 567 freestyle demos carry
+            // it. They are listed with the flag on a chip, same as everywhere.
+            ->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity'])
+            ->where(fn ($q) => $q->where('physics', $physics)->orWhere('physics', 'LIKE', $physics . '.%'))
+            ->where(fn ($q) => $q->whereIn('gametype', ['fs', 'mfs'])->orWhereNull('time_ms'));
+
+        // Grouping needs the identity fields and nothing else, so the whole map
+        // is read cheaply; only the demos on the page being looked at get their
+        // relations loaded further down.
+        $light = fn (string $physics) => $base($physics)
+            ->orderByDesc('record_date')->orderByDesc('created_at')
+            ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
+                   'assigned_user_id', 'record_date', 'created_at']);
+
+        $vq3Light = $light('VQ3');
+        $cpmLight = $light('CPM');
+
+        if ($vq3Light->isEmpty() && $cpmLight->isEmpty()) {
+            return null;
+        }
+
+        // Attribute them the way everything else on the site does: approved
+        // aliases, through the same resolver Demos Top clusters with. A
+        // freestyle demo can never hang off a record, so without this the rows
+        // showed a question mark for an avatar and led nowhere, even for people
+        // whose nick the site knows perfectly well.
+        //
+        // Deliberately NOT suggested_user_id, which 11596 of the 11640
+        // freestyle demos carry: that is the fuzzy matcher's guess, and putting
+        // a guess under somebody's avatar asserts the run is theirs.
+        $resolver = new DemoProfileResolver();
+        $priorityKeys = Record::where('mapname', $map->name)
+            ->select(['user_id', 'mdd_id'])->get()
+            ->flatMap(fn ($r) => array_filter([
+                $r->user_id ? 'user:' . (int) $r->user_id : null,
+                $r->mdd_id ? 'mdd:' . (int) $r->mdd_id : null,
+            ]))->unique()->values()->all();
+
+        // No profile: fall back to the nick on the demo, colours stripped, so
+        // somebody the site does not know still gets one row instead of forty.
+        // Only ever merges identical nicks, never two different ones.
+        // A staff assignment outranks the resolver: somebody looked at the demo
+        // and said whose it is, which beats matching a nick.
+        $keyOf = fn ($d) => ($d->assigned_user_id ? 'user:' . $d->assigned_user_id : null)
+            ?: $resolver->resolve($d, $priorityKeys)
+            ?: 'name:' . strtolower(trim(preg_replace('/\^[0-9a-zA-Z]/', '', $d->player_name ?? '')));
+
+        // Biggest first, the way a freestyle map reads: who has been at it.
+        $group = fn ($rows) => $rows->groupBy($keyOf)
+            ->map(fn ($g) => $g->pluck('id')->all())
+            ->sortByDesc(fn ($ids) => count($ids));
+
+        $paginate = function ($groups, string $pageName) {
+            $page = max(1, (int) request()->input($pageName, 1));
+
+            return new \Illuminate\Pagination\LengthAwarePaginator(
+                // Ten a page, not fifty: the groups arrive open, and the
+                // biggest ones here run to a hundred demos apiece.
+                $groups->slice(($page - 1) * 10, 10),
+                $groups->count(),
+                10,
+                $page,
+                ['path' => request()->url(), 'pageName' => $pageName, 'query' => request()->query()]
+            );
+        };
+
+        $vq3Page = $paginate($group($vq3Light), 'vq3DemosPage');
+        $cpmPage = $paginate($group($cpmLight), 'cpmDemosPage');
+
+        // values() before merging: both are keyed by profile key, and a
+        // player with demos in both physics would otherwise have one side
+        // silently overwrite the other.
+        $shownIds = collect($vq3Page->items())->values()
+            ->merge(collect($cpmPage->items())->values())
+            ->flatten()->unique()->values();
+
+        $demos = UploadedDemo::whereIn('id', $shownIds)
+            ->with(['renderedVideo', 'user', 'record.user'])
+            ->orderByDesc('record_date')->orderByDesc('created_at')
+            ->get()->keyBy('id');
+
+        $validityFlags = $this->validityFlagsByDemo($shownIds->all());
+
+        $users = User::whereIn('id', collect($vq3Page->items())->keys()
+            ->merge(collect($cpmPage->items())->keys())
+            ->filter(fn ($k) => str_starts_with($k, 'user:'))
+            ->map(fn ($k) => (int) substr($k, 5))->unique()->values())
+            ->get()->keyBy('id');
+
+        // MapRecord's shape, so the demos inside a group get the same chips,
+        // download button, video and report actions the leaderboard rows have.
+        $shape = function ($d, $owner, $mddId) use ($validityFlags) {
+            $isOnline = $d->gametype && str_starts_with($d->gametype, 'm');
+
+            return [
+                'id' => $d->id,
+                'demo_id' => $d->id,
+                'record_id' => $d->record_id,
+                'time' => $d->time_ms,
+                'time_ms' => $d->time_ms,
+                'date_set' => $d->record_date ?? $d->created_at,
+                'player_name' => $d->player_name,
+                'name' => $owner?->name ?? $d->player_name,
+                'country' => $d->country ?? $owner?->country ?? '_404',
+                'is_online' => $isOnline,
+                'verification_type' => $validityFlags[$d->id]
+                    ?? ($d->record_id ? 'verified' : ($isOnline ? 'ONLINE' : 'OFFLINE')),
+                'rank' => null,
+                'user' => $owner,
+                'mdd_id' => $mddId,
+                'demo' => $d,
+                'demo_label' => $this->demoLabel($d),
+                'assigned_user_id' => $d->assigned_user_id,
+                'uploaded_demos' => [],
+                'rendered_videos' => $d->renderedVideo ? [$d->renderedVideo] : [],
+                'q3df_login_name' => $d->q3df_login_name,
+                'q3df_login_name_colored' => $d->q3df_login_name_colored,
+            ];
+        };
+
+        $buildGroups = function ($paginator) use ($demos, $users, $shape) {
+            $out = [];
+
+            foreach ($paginator->items() as $key => $ids) {
+                $owner = str_starts_with($key, 'user:') ? $users->get((int) substr($key, 5)) : null;
+                $mddId = str_starts_with($key, 'mdd:') ? (int) substr($key, 4) : null;
+
+                $rows = collect($ids)->map(fn ($id) => $demos->get($id))->filter()
+                    ->map(fn ($d) => $shape($d, $owner, $mddId))->values();
+
+                if ($rows->isEmpty()) {
+                    continue;
+                }
+
+                $out[] = [
+                    'key' => $key,
+                    'name' => $owner?->name ?? $rows->first()['player_name'],
+                    'user' => $owner,
+                    'mdd_id' => $mddId,
+                    'country' => $rows->first()['country'],
+                    'count' => $rows->count(),
+                    'latest' => $rows->first()['date_set'],
+                    'demos' => $rows,
+                ];
+            }
+
+            $paginator->setCollection(collect($out));
+
+            return $paginator;
+        };
+
+        return collect([
+            'vq3' => $buildGroups($vq3Page),
+            'cpm' => $buildGroups($cpmPage),
+        ]);
+    }
+
+    /**
+     * What the uploader called the demo, with everything the row already shows
+     * taken out: the map, the mode brackets, the (player.country) and the
+     * {cvars}. On a freestyle map that leftover is the whole point of the demo
+     * - "oups-fs-b1_jpad_1xR_3xR" or "Szak_white2-to-blue1" - and with no time
+     * to tell the runs apart it is the only thing that does.
+     */
+    private function demoLabel(UploadedDemo $d): ?string
+    {
+        return \App\Services\VideoMetadataService::demoLabel(
+            $d->original_filename ?: $d->processed_filename,
+            $d->map_name
+        );
+    }
+
+    /**
+     * The mode a demo was recorded in, off its gametype. The 'm' prefix only
+     * says the run happened online, so it does not change the mode.
+     */
+    private const GAMETYPE_FAMILIES = [
+        'df' => 'run',      'mdf' => 'run',
+        'fc' => 'fastcap',  'mfc' => 'fastcap',
+        'fs' => 'freestyle', 'mfs' => 'freestyle',
+    ];
+
+    private static function familyOf(?string $gametype): ?string
+    {
+        return self::GAMETYPE_FAMILIES[$gametype] ?? null;
+    }
+
+    /**
+     * Keep a demo set to one mode. Physics alone does not separate them: a
+     * freestyle demo is stored as `[fs.cpm.2]` -> physics `CPM.2`, the same
+     * value a fastcap run on flag 2 carries, so the fastcap's time history was
+     * pulling in freestyle demos and listing them at 00.000 because freestyle
+     * has no time to show. Reported by Enter with prince_quake and cos1_beta7b;
+     * measured there, 20 of the 36 demos behind one fastcap run were freestyle.
+     *
+     * Demos with no gametype at all (2947, all but 24 of them failed uploads)
+     * are left in rather than silently dropped - they are unclassifiable, not
+     * known to be a different mode.
+     */
+    private function scopeDemoFamily($query, ?string $family)
+    {
+        // A history of times cannot hold a demo with no time. Tricks, tutorials
+        // and runs that never finished were listed at 00.000 among real
+        // attempts; they belong in the map's demo list, which is where they are
+        // now. Applied whatever the mode, so it also covers a trick recorded in
+        // a fastcap or a run slot.
+        $query->whereNotNull('time_ms');
+
+        if ($family === null) {
+            return $query;
+        }
+
+        $types = array_keys(array_filter(
+            self::GAMETYPE_FAMILIES,
+            fn ($f) => $f === $family
+        ));
+
+        return $query->where(function ($q) use ($types) {
+            $q->whereIn('gametype', $types)->orWhereNull('gametype');
+        });
+    }
+
+    /**
      * Demos a history must not contain at all. Only approved community flags
      * count: somebody looked at the run and decided it is not what it claims.
      *
@@ -302,6 +550,7 @@ class MapsController extends Controller
         // they landed in one history together.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, self::fastcapOf($seed->physics)))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, self::familyOf($seed->gametype)))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -458,8 +707,11 @@ class MapsController extends Controller
             return response()->json(['history' => [], 'signals' => 0]);
         }
 
+        // A main record is a run or a fastcap, never freestyle, so the mode the
+        // caller is looking at is whichever one the fastcap number says.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, $fastcap !== null ? 'fastcap' : 'run'))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->get();
 
@@ -898,6 +1150,7 @@ class MapsController extends Controller
 
         return Inertia::render('MapView')
             ->with('map', $map)
+            ->with('untimedDemos', $this->untimedDemos($map))
             ->with('cpmRecords', $cpmRecords)
             ->with('vq3Records', $vq3Records)
             ->with('my_cpm_record', $my_cpm_record)
@@ -937,8 +1190,11 @@ class MapsController extends Controller
     {
         // Same gametype rule as the drawer itself, or the badge would promise
         // a count the drawer then refuses to show.
+        // Same mode rule as the drawer, or the badge counts freestyle demos the
+        // drawer then refuses to list.
         $demos = UploadedDemo::where('map_name', $mapname)
             ->where(fn ($q) => $this->scopeDemoPhysics($q, $physics, $fastcap))
+            ->where(fn ($q) => $this->scopeDemoFamily($q, $fastcap !== null ? 'fastcap' : 'run'))
             ->get(['id', 'player_name', 'q3df_login_name', 'q3df_login_name_colored',
                    'time_ms', 'gametype', 'record_date', 'record_id', 'file_hash', 'created_at']);
 

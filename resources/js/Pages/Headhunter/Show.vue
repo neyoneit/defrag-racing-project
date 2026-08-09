@@ -396,7 +396,7 @@ const getParticipantStatusLabel = (status) => {
                     <!-- Map with thumbnail -->
                     <div class="bg-black/40 border border-white/10 rounded-xl p-4">
                         <div class="text-sm text-gray-400 mb-1">Map</div>
-                        <Link :href="`/maps/${challenge.mapname}`" class="block hover:opacity-80 transition-opacity">
+                        <Link :href="`/maps/${encodeURIComponent(challenge.mapname)}`" class="block hover:opacity-80 transition-opacity">
                             <div v-if="map?.thumbnail" class="mb-2">
                                 <img :src="`/storage/${map.thumbnail}`" @error="$event.target.style.display='none'" class="w-full h-16 object-cover rounded" />
                             </div>

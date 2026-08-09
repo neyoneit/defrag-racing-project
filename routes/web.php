@@ -219,6 +219,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/demos/maps/{mapname}/records', [DemosController::class, 'getRecords'])->name('demos.records');
     Route::post('/demos/{demo}/assign', [DemosController::class, 'assign'])->name('demos.assign');
     Route::post('/demos/{demo}/unassign', [DemosController::class, 'unassign'])->name('demos.unassign');
+    // Attributing a demo to an account, for the freestyle and trick demos that
+    // sit on no record. Staff only, enforced in the controller.
+    Route::get('/demos/search-players', [DemosController::class, 'searchPlayers'])->name('demos.search-players');
+    Route::post('/demos/{demo}/assign-user', [DemosController::class, 'assignToUser'])->name('demos.assign-user');
     Route::post('/demos/{demo}/link-youtube', [DemosController::class, 'linkYoutube'])->name('demos.link-youtube');
 
     // OAuth routes
