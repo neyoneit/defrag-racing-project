@@ -249,7 +249,10 @@ class MapsController extends Controller
         // not one run per person: on csu1_a two people have a hundred apiece,
         // and 1523 demos come down to 258 names.
         $base = fn (string $physics) => UploadedDemo::where('map_name', $map->name)
-            ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
+            // failed-validity belongs here too: it means the demo deviated on
+            // some cvar, not that it is unusable, and 567 freestyle demos carry
+            // it. They are listed with the flag on a chip, same as everywhere.
+            ->whereIn('status', ['assigned', 'fallback-assigned', 'processed', 'failed-validity'])
             ->where(fn ($q) => $q->where('physics', $physics)->orWhere('physics', 'LIKE', $physics . '.%'))
             ->where(fn ($q) => $q->whereIn('gametype', ['fs', 'mfs'])->orWhereNull('time_ms'));
 

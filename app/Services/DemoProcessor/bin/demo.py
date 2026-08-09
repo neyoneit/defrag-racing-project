@@ -376,11 +376,21 @@ class Demo:
 
     @staticmethod
     def _try_get_time_from_brackets(part: str) -> Optional[timedelta]:
+        # Only defrag's own shape counts: MM.SS.mmm, minutes two or three
+        # digits. Any two numbers with a dot between them used to pass, so a
+        # filename fragment like "run_vq3cj_607.1_scripted" - a speed - became a
+        # run of ten minutes and seven seconds, and "Tutorial_4.1" became four
+        # seconds. Measured over the demos whose time came from their name:
+        # 491 carry the real shape, 8 carried a speed, a chapter or a date.
         tokens = re.split(r"[-.]", part)
-        if not 2 <= len(tokens) <= 3:
+
+        if len(tokens) != 3:
             return None
         if any(not token or not token.isdigit() for token in tokens):
             return None
+        if not (2 <= len(tokens[0]) <= 3) or len(tokens[1]) != 2 or len(tokens[2]) != 3:
+            return None
+
         return get_time_span(part)
 
     @staticmethod
