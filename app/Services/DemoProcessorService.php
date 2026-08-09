@@ -84,10 +84,31 @@ class DemoProcessorService
             $format = config('app.demo_compression_format', '7z');
             $compressedFilename = pathinfo($processedFilename, PATHINFO_FILENAME) . '.' . $format;
 
-            // Block non-defrag demos (CPMA, OSP, Q3A, etc.)
-            $blockedGametypes = ['osp', 'q3a', 'cpma', 'q3uft', 'ra3', 'q3xp', 'q3w'];
+            // Quake 3 had no timer before Defrag existed, so the trick demos
+            // from 2002 and 2003 were recorded in plain Q3 or in OSP, on
+            // servers that called themselves running servers. Those belong on
+            // the map they were made on. A duel recorded in the same mod does
+            // not, and the mode in the tag is what separates them: osp.ffa is
+            // somebody running, cpma.1v1 is a match POV off a broadcast.
+            $foreignMods = ['osp', 'q3a', 'cpma', 'q3uft', 'ra3', 'q3xp', 'q3w'];
             $detectedGametype = $metadata['gametype'] ?? null;
-            if ($detectedGametype && in_array(strtolower($detectedGametype), $blockedGametypes)) {
+            $isForeignMod = $detectedGametype && in_array(strtolower($detectedGametype), $foreignMods);
+            $keepAsFreestyle = $isForeignMod && strtolower($metadata['physics'] ?? '') === 'ffa';
+
+            if ($keepAsFreestyle) {
+                // No timer ran, so nothing here is a result. Whatever the
+                // filename claims, it does not become one.
+                $metadata['time_ms'] = null;
+
+                // The map page lists demos under VQ3 or CPM, and "FFA" is
+                // neither, so the demo would be stored and then be reachable
+                // from nowhere. The mod reports the physics through
+                // server_promode; plain Quake 3, which has no such setting, is
+                // VQ3 by definition.
+                $metadata['physics'] = $metadata['gameplay_physics'] ?? 'VQ3';
+            }
+
+            if ($isForeignMod && ! $keepAsFreestyle) {
                 // Clean up temp files
                 $originalTempDir = storage_path("app/demos/temp/{$demo->id}");
                 if (is_dir($originalTempDir)) {
@@ -99,10 +120,14 @@ class DemoProcessorService
 
                 $demo->update([
                     'status' => 'failed',
-                    'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Rejected: not a Defrag demo (gametype: ' . $detectedGametype . ')',
+                    'processing_output' => '[' . now()->format('Y-m-d H:i:s') . '] Rejected: not a Defrag demo (gametype: ' . $detectedGametype . '.' . strtolower($metadata['physics'] ?? '?') . ')',
                 ]);
 
-                Log::info("Rejected non-defrag demo", ['demo_id' => $demo->id, 'gametype' => $detectedGametype]);
+                Log::info("Rejected non-defrag demo", [
+                    'demo_id' => $demo->id,
+                    'gametype' => $detectedGametype,
+                    'mode' => $metadata['physics'] ?? null,
+                ]);
                 return;
             }
 
@@ -165,7 +190,16 @@ class DemoProcessorService
                 'will_skip_to_validity_branch' => $demo->status === 'failed-validity',
             ]);
 
-            if ($demo->status !== 'failed-validity') {
+            if ($keepAsFreestyle) {
+                // Kept for the map's Freestyle and Tricks section and nothing
+                // else. There was no timer, so there is no result to rank and
+                // no online record it could belong to.
+                Log::info('Kept a pre-Defrag demo as freestyle', [
+                    'demo_id' => $demo->id,
+                    'gametype' => $demo->gametype,
+                    'map' => $demo->map_name,
+                ]);
+            } elseif ($demo->status !== 'failed-validity') {
                 if ($demo->is_offline) {
                     // Create offline record for offline demos
                     $this->createOfflineRecord($demo, $compressedLocalPath);
@@ -317,6 +351,12 @@ class DemoProcessorService
                     'parts' => $physicsParts,
                     'result' => $metadata['physics'],
                 ]);
+            }
+            // vq3 or cpm on its own, which a demo from a mod other than Defrag
+            // carries but never gets into its name: its tag holds the mod and
+            // the game mode instead, osp.ffa.
+            if (! empty($jsonData['gameplay_physics'])) {
+                $metadata['gameplay_physics'] = strtoupper($jsonData['gameplay_physics']);
             }
             if (isset($jsonData['time_seconds'])) {
                 $metadata['time_ms'] = (int)($jsonData['time_seconds'] * 1000);

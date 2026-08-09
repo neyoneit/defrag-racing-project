@@ -65,6 +65,10 @@ def normalize_country_code(country: str) -> str:
 class Demo:
     mapName: str = ''
     modphysic: str = ''
+    # vq3 or cpm on its own. A demo from before Defrag existed is tagged with
+    # its mod and its game mode, osp.ffa, so the physics never reaches the name
+    # even though the mod reports it through server_promode like any other.
+    gameplayPhysic: str = ''
     timeString: str = ''
     time: timedelta = timedelta(0)
     playerName: str = ''
@@ -284,6 +288,7 @@ class Demo:
                 demo.modphysic = f"{game_info.gameTypeShort}.{game_info.gameplayTypeShort}"
         else:
             demo.modphysic = f"{game_info.gameNameShort}.{game_info.gameTypeShort}"
+        demo.gameplayPhysic = game_info.gameplayTypeShort or ''
         if demo.hasTr:
             demo.modphysic += '.tr'
         additional = raw.consoleComandsParser.additionalInfos[-1].toDictionary() if raw.consoleComandsParser.additionalInfos else None
