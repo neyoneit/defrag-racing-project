@@ -1029,6 +1029,15 @@
         (getVq3Records.value?.total || 0) > 0 || (getCpmRecords.value?.total || 0) > 0
     );
 
+    const untimedTotal = computed(() =>
+        (props.untimedDemos?.vq3?.total || 0) + (props.untimedDemos?.cpm?.total || 0)
+    );
+
+    // On a map with nothing to rank the demo list is the page; on one that has
+    // records too it waits behind the switch.
+    const showFreestyle = ref(false);
+    const showingUntimed = computed(() => !! props.untimedDemos && (! hasAnyRecords.value || showFreestyle.value));
+
     // Helper functions for weapon/item/function icons and names
     const getWeaponIcon = (abbr) => {
         const icons = {
@@ -1689,6 +1698,20 @@
                             >
                                 Demos Top
                             </button>
+                            <!-- A map can hold both real records and demos that
+                                 cannot be ranked. 183 of them do. The switch
+                                 gives the second kind a place instead of
+                                 leaving it reachable from nowhere. -->
+                            <button
+                                v-if="untimedDemos && hasAnyRecords"
+                                @click="showFreestyle = !showFreestyle"
+                                :class="showFreestyle ? 'bg-teal-600 text-white border-teal-400 shadow-lg shadow-teal-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
+                                class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
+                                title="Freestyle runs, tricks and tutorials - everything this map holds that has no time"
+                            >
+                                Freestyle &amp; Tricks
+                                <span class="opacity-70">({{ untimedTotal }})</span>
+                            </button>
                             <div class="text-xs text-gray-500">
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
                                     Set your defaults
@@ -1757,7 +1780,7 @@
                      set a record on. Two empty leaderboards said nothing while
                      the demos people uploaded sat there unreachable, so the
                      panel lists them instead, newest first. -->
-                <div v-if="untimedDemos" class="lg:flex gap-4 justify-center">
+                <div v-if="showingUntimed" class="lg:flex gap-4 justify-center">
                     <div
                         v-for="side in [
                             { key: 'vq3', label: 'VQ3', page: 'vq3DemosPage', accent: 'blue', list: untimedDemos.vq3 },
@@ -1807,7 +1830,7 @@
                     </div>
                 </div>
 
-                <div v-if="!untimedDemos || hasAnyRecords" :class="untimedDemos ? 'lg:flex gap-4 justify-center mt-4' : 'lg:flex gap-4 justify-center'">
+                <div v-if="!showingUntimed" class="lg:flex gap-4 justify-center">
                     <!-- VQ3 Leaderboard -->
                     <div v-show="mobilePhysics === 'both' || mobilePhysics === 'VQ3'" :style="{ order: cpmFirst ? 2 : 1 }" class="flex-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl border border-white/10 hover:border-white/20 transition-all duration-300">
                     <!-- VQ3 Header -->

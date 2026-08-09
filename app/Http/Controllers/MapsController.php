@@ -236,24 +236,22 @@ class MapsController extends Controller
      * Returns null when the map does have times to show, so the page keeps its
      * leaderboards and nothing else changes.
      */
-    private function untimedDemos($map, $cpmRecords, $vq3Records): ?\Illuminate\Support\Collection
+    private function untimedDemos($map): ?\Illuminate\Support\Collection
     {
-        // A freestyle map always gets the list: its demos are the content, and
-        // it can still hold a stray ranked row. Any other map gets it only when
-        // there is nothing to rank at all, so ordinary map pages are untouched.
-        $untimedMap = in_array($map->gametype, ['freestyle', 'unknown'], true);
-        $hasTimes = ($cpmRecords && $cpmRecords->total() > 0) || ($vq3Records && $vq3Records->total() > 0);
-
-        if (! $untimedMap && $hasTimes) {
-            return null;
-        }
-
+        // Everything on the map that is not a timed run: freestyle, and any
+        // demo with no time at all - a trick, a tutorial, a run that never
+        // finished. Neither can be ranked and neither belongs in a history of
+        // times, so without this list they are reachable from nowhere. 183 maps
+        // hold both these and real records (cos1_beta7b has 267 freestyle demos
+        // beside 21 records), which is why the page offers both.
+        //
         // Paginated per physics, 50 a page, the same as the leaderboards - a
         // freestyle map is not a handful of demos (csu1_a holds 1502 VQ3 and
         // 115 CPM) and a flat cap just hid the rest.
         $page = fn (string $base, string $pageName) => UploadedDemo::where('map_name', $map->name)
             ->whereIn('status', ['assigned', 'fallback-assigned', 'processed'])
             ->where(fn ($q) => $q->where('physics', $base)->orWhere('physics', 'LIKE', $base . '.%'))
+            ->where(fn ($q) => $q->whereIn('gametype', ['fs', 'mfs'])->orWhereNull('time_ms'))
             ->with(['renderedVideo', 'user', 'record.user'])
             ->orderByDesc('record_date')
             ->orderByDesc('created_at')
@@ -349,6 +347,13 @@ class MapsController extends Controller
      */
     private function scopeDemoFamily($query, ?string $family)
     {
+        // A history of times cannot hold a demo with no time. Tricks, tutorials
+        // and runs that never finished were listed at 00.000 among real
+        // attempts; they belong in the map's demo list, which is where they are
+        // now. Applied whatever the mode, so it also covers a trick recorded in
+        // a fastcap or a run slot.
+        $query->whereNotNull('time_ms');
+
         if ($family === null) {
             return $query;
         }
@@ -1041,7 +1046,7 @@ class MapsController extends Controller
 
         return Inertia::render('MapView')
             ->with('map', $map)
-            ->with('untimedDemos', $this->untimedDemos($map, $cpmRecords, $vq3Records))
+            ->with('untimedDemos', $this->untimedDemos($map))
             ->with('cpmRecords', $cpmRecords)
             ->with('vq3Records', $vq3Records)
             ->with('my_cpm_record', $my_cpm_record)
