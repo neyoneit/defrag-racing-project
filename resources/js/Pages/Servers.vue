@@ -564,7 +564,7 @@ const getFunctionName = (abbr) => {
                                  transparent so the image dissolves
                                  directly into the glass card body.
                                  No separate overlay slab needed. -->
-                            <a v-if="server.map" :href="`/maps/${server.map}`" class="block">
+                            <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`" class="block">
                                 <img :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top pointer-events-auto cursor-pointer" style="max-height: 450px; -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%); mask-image: linear-gradient(to bottom, black 65%, transparent 100%);" />
                             </a>
                             <img v-else :src="`/storage/${server.mapdata?.thumbnail}`" @error="$event.target.src='/images/unknown.jpg'" class="w-full object-contain object-top" style="max-height: 450px; -webkit-mask-image: linear-gradient(to bottom, black 65%, transparent 100%); mask-image: linear-gradient(to bottom, black 65%, transparent 100%);" />
@@ -606,8 +606,8 @@ const getFunctionName = (abbr) => {
                                     <div class="flex items-center justify-between gap-2">
                                         <div class="flex items-center gap-2">
                                             <div class="flex items-center gap-2" @mouseenter="hoveredMapServer = server.id" @mouseleave="hoveredMapServer = null">
-                                                <a :href="`/maps/${server.map}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</a>
-                                                <a :href="`/maps/${server.map}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="text-gray-300 text-base font-semibold hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">Map:</a>
+                                                <a :href="`/maps/${encodeURIComponent(server.map)}`" class="font-bold text-white text-lg hover:text-blue-400 transition-colors map-name-highlight" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                             </div>
                                             <!-- Copy map name -->
                                             <CopyButton :text="server.map" size="xs" />
@@ -782,7 +782,7 @@ const getFunctionName = (abbr) => {
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
                                         <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
-                                            <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`" class="hover:text-blue-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                         </div>
                                     </div>
                                 </div>
@@ -893,7 +893,7 @@ const getFunctionName = (abbr) => {
                                     <div class="inline-flex flex-col bg-black/40  px-2 py-1 rounded border border-white/20">
                                         <h3 class="text-base font-bold text-white transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8);" v-html="q3tohtml(server.name)"></h3>
                                         <div class="flex items-center gap-2 text-xs text-gray-300 transition-colors">
-                                            <a v-if="server.map" :href="`/maps/${server.map}`" class="hover:text-purple-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
+                                            <a v-if="server.map" :href="`/maps/${encodeURIComponent(server.map)}`" class="hover:text-purple-400 transition-colors" style="text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.8);">{{ server.map }}</a>
                                         </div>
                                     </div>
                                 </div>

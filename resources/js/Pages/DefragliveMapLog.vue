@@ -143,7 +143,7 @@ const byDay = computed(() => {
                             <div class="flex-1 p-4 min-w-0">
                                 <div class="flex items-start justify-between gap-3 mb-3">
                                     <div class="min-w-0">
-                                        <a :href="`/maps/${b.map}`"
+                                        <a :href="`/maps/${encodeURIComponent(b.map)}`"
                                             class="hidden sm:block font-bold text-white hover:text-[#a970ff] truncate transition-colors">{{ b.map }}</a>
                                         <div class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
                                             <span>{{ time(b.started_at) }}</span>

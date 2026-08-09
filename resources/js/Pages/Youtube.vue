@@ -213,7 +213,7 @@
                     </div>
                     <div class="flex items-center justify-between">
                         <div>
-                            <Link :href="`/maps/${currentlyRendering.map_name}`" class="text-lg font-bold text-white hover:text-blue-400 transition-colors">
+                            <Link :href="`/maps/${encodeURIComponent(currentlyRendering.map_name)}`" class="text-lg font-bold text-white hover:text-blue-400 transition-colors">
                                 {{ currentlyRendering.map_name }}
                             </Link>
                             <div class="text-sm text-gray-400 mt-0.5">
@@ -390,7 +390,7 @@
                         <div class="p-3">
                             <div class="flex items-center justify-between mb-1">
                                 <Link
-                                    :href="`/maps/${video.map_name}`"
+                                    :href="`/maps/${encodeURIComponent(video.map_name)}`"
                                     class="text-sm font-semibold text-white hover:text-blue-400 transition-colors truncate"
                                 >
                                     {{ video.map_name }}
