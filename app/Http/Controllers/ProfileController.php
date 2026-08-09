@@ -13,6 +13,7 @@ use App\Models\RenderedVideo;
 use App\Models\CommunityHelperScore;
 use App\Models\PlayerMapScore;
 use App\Models\PlayerRating;
+use App\Services\FreestyleDemoIndex;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -56,6 +57,7 @@ class ProfileController extends Controller {
                         'rank' => $score->rank,
                     ]);
                 })())
+                ->with('freestyleDemos', $this->freestyleDemos(['user:' . $user->id]))
                 ->with('playerRankings', []);
         }
 
@@ -270,6 +272,10 @@ class ProfileController extends Controller {
                 ->with('can_suggest_alias', $canSuggestAlias)
                 ->with('topDownloadedDemos', $topDownloadedDemos)
                 ->with('demoStats', $demoStats)
+                ->with('freestyleDemos', $this->freestyleDemos(array_filter([
+                    'user:' . $user->id,
+                    $user->mdd_id ? 'mdd:' . $user->mdd_id : null,
+                ])))
                 ->with('renderStats', $this->getRenderStats($user->id))
                 ->with('latestRenderedVideos', $this->getLatestRenderedVideos($user->id))
                 ->with('activity_data', $activityData)
@@ -279,6 +285,26 @@ class ProfileController extends Controller {
         }
 
         return $response;
+    }
+
+    /**
+     * The freestyle and trick demos this profile made. They hang off no record
+     * and carry no user id, so a nick becomes a person through the alias
+     * resolver, the same way the map page does it. Held per profile for an
+     * hour on top of the index's own cache, since the shape shown here is
+     * fixed.
+     */
+    private function freestyleDemos(array $profileKeys): array
+    {
+        if (! $profileKeys) {
+            return ['total' => 0, 'maps' => [], 'map_total' => 0];
+        }
+
+        return Cache::remember(
+            'profile:freestyle:' . FreestyleDemoIndex::generation() . ':' . md5(implode('|', $profileKeys)),
+            3600,
+            fn () => app(FreestyleDemoIndex::class)->forProfile($profileKeys)
+        );
     }
 
     public function mdd(Request $request, $userId) {
@@ -424,6 +450,7 @@ class ProfileController extends Controller {
             ->with('can_manage_aliases', false)
             ->with('user_maplists', [])
             ->with('topDownloadedDemos', [])
+            ->with('freestyleDemos', $this->freestyleDemos(['mdd:' . $userId]))
             ->with('activity_data', $activityData)
             ->with('activity_year', $activityYear)
             ->with('activity_years', $activityYears)

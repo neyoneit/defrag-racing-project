@@ -78,6 +78,10 @@
             type: Object,
             default: () => ({})
         },
+        freestyleDemos: {
+            type: Object,
+            default: () => ({ total: 0, maps: [], map_total: 0 })
+        },
         assignedDemoCounts: {
             type: Object,
             default: () => ({ offline: 0, online: 0 })
@@ -219,6 +223,7 @@
         { id: 'activity_history', visible: true },
         { id: 'records', visible: true },
         { id: 'rendered_videos', visible: true },
+        { id: 'freestyle_demos', visible: true },
         { id: 'similar_skill_rivals', visible: true },
         { id: 'competitor_comparison', visible: true },
         { id: 'known_aliases', visible: true },
@@ -476,6 +481,7 @@
         activity_history: 'Activity History',
         records: 'Records',
         rendered_videos: 'Rendered Videos',
+        freestyle_demos: 'Freestyle & Tricks',
         similar_skill_rivals: 'Similar Skill Rivals',
         competitor_comparison: 'Competitor Comparison',
         known_aliases: 'Known Aliases',
@@ -2224,6 +2230,62 @@
                     :isNew="isOwnProfile && isNewSection('activity_history')"
                     :customizeUrl="route('settings.show') + '?tab=customize'"
                 />
+            </div>
+
+            <!-- Freestyle & Tricks -->
+            <div v-if="showSection('freestyle_demos') && freestyleDemos && freestyleDemos.total > 0" class="bg-black/40 backdrop-blur-sm rounded-xl p-6 shadow-2xl border border-white/5 mb-6" :style="{ order: sectionOrder('freestyle_demos') }">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.63 8.41m5.96 5.96a14.926 14.926 0 0 1-5.84 2.58m0 0a6.003 6.003 0 0 0-7.38-5.84h4.8m2.58-5.96a6 6 0 0 0-7.38 5.84" />
+                        </svg>
+                        Freestyle &amp; Tricks
+                    </h3>
+                    <span class="text-xs text-gray-500">
+                        {{ freestyleDemos.total }} {{ freestyleDemos.total === 1 ? 'demo' : 'demos' }}
+                        on {{ freestyleDemos.map_total }} {{ freestyleDemos.map_total === 1 ? 'map' : 'maps' }}
+                    </span>
+                </div>
+
+                <p class="text-xs text-gray-500 mb-4">
+                    No time on these - tricks, tutorials, runs that were never finished. They hang off no
+                    record, so they are matched to this profile by the nick on the demo.
+                </p>
+
+                <div class="grid gap-2 sm:grid-cols-2">
+                    <Link
+                        v-for="map in freestyleDemos.maps"
+                        :key="map.map_name"
+                        :href="`/maps/${encodeURIComponent(map.map_name)}?freestyle`"
+                        class="block rounded-lg bg-black/30 border border-white/5 hover:border-teal-400/30 hover:bg-white/[0.03] transition-all p-3 group"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-sm font-semibold text-white truncate group-hover:text-teal-300 transition-colors">{{ map.map_name }}</span>
+                            <span class="shrink-0 text-xs font-bold text-teal-400 tabular-nums">{{ map.count }}</span>
+                        </div>
+                        <div class="mt-1 flex items-center gap-1.5 flex-wrap">
+                            <span
+                                v-for="physics in map.physics"
+                                :key="physics"
+                                class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border"
+                                :class="physics === 'CPM'
+                                    ? 'text-orange-300 bg-orange-500/10 border-orange-500/20'
+                                    : 'text-blue-300 bg-blue-500/10 border-blue-500/20'"
+                            >{{ physics }}</span>
+                            <span
+                                v-for="demo in map.demos.slice(0, 2)"
+                                :key="demo.id"
+                                v-show="demo.label"
+                                class="text-[10px] text-gray-500 truncate max-w-[9rem]"
+                            >{{ demo.label }}</span>
+                        </div>
+                    </Link>
+                </div>
+
+                <div v-if="freestyleDemos.map_total > freestyleDemos.maps.length" class="mt-3 text-xs text-gray-600">
+                    and {{ freestyleDemos.map_total - freestyleDemos.maps.length }} more
+                    {{ (freestyleDemos.map_total - freestyleDemos.maps.length) === 1 ? 'map' : 'maps' }}
+                </div>
             </div>
 
             <!-- Rendered Videos -->

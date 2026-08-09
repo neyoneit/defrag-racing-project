@@ -573,6 +573,10 @@ class DemosController extends Controller
             Cache::increment('demostop_gen:' . $demo->map_name);
         }
 
+        // The profile lists the same demos, off an index that resolves every
+        // untimed demo to a profile. Attribution changes who owns this one.
+        \App\Services\FreestyleDemoIndex::forget();
+
         return response()->json([
             'ok' => true,
             'demos_touched' => $touched,
