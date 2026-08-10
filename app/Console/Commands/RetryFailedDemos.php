@@ -84,7 +84,7 @@ class RetryFailedDemos extends Command
                 }
 
                 $workDir = storage_path('app/demos/temp/' . $demo->id);
-                $demoFile = $this->stage($source, $workDir, $demo->original_filename);
+                $demoFile = $this->stage($source, $workDir, $demo->original_filename, $demo->id);
 
                 if (! $demoFile) {
                     $noSource++;
@@ -92,7 +92,7 @@ class RetryFailedDemos extends Command
                     continue;
                 }
 
-                $metadata = $this->readMetadata($demoFile);
+                $metadata = $this->readMetadata($demoFile, $demo->id);
 
                 if (! $metadata) {
                     $stillUnreadable++;
@@ -181,7 +181,7 @@ class RetryFailedDemos extends Command
     /**
      * Put an uncompressed copy in the work directory and hand back its path.
      */
-    private function stage(string $source, string $workDir, string $originalFilename): ?string
+    private function stage(string $source, string $workDir, string $originalFilename, int $demoId): ?string
     {
         $this->cleanup($workDir);
 
@@ -197,7 +197,7 @@ class RetryFailedDemos extends Command
 
         $process = new Process(['7z', 'e', '-y', '-o' . $workDir, $source]);
 
-        if (! $this->runOrGiveUp($process, basename($source))) {
+        if (! $this->runOrGiveUp($process, basename($source), $demoId)) {
             return null;
         }
 
@@ -218,13 +218,13 @@ class RetryFailedDemos extends Command
      * What the current parser makes of the file, or null if it still cannot
      * read it.
      */
-    private function readMetadata(string $demoFile): ?array
+    private function readMetadata(string $demoFile, int $demoId): ?array
     {
         $script = base_path('app/Services/DemoProcessor/bin/process_single_demo.py');
 
         $process = new Process(['python3', $script, $demoFile, '--json']);
 
-        if (! $this->runOrGiveUp($process, basename($demoFile))) {
+        if (! $this->runOrGiveUp($process, basename($demoFile), $demoId)) {
             return null;
         }
 
@@ -244,7 +244,7 @@ class RetryFailedDemos extends Command
      * gitignored and only exists on dev boxes), so it is a good deal slower and
      * hits the ceiling on files a dev box gets through.
      */
-    private function runOrGiveUp(Process $process, string $what): bool
+    private function runOrGiveUp(Process $process, string $what, int $demoId): bool
     {
         $process->setTimeout(max(1, (int) $this->option('timeout')));
 
@@ -252,7 +252,9 @@ class RetryFailedDemos extends Command
             $process->run();
         } catch (\Throwable $e) {
             $this->tooSlow++;
-            $this->line('  gave up on ' . $what . ' after ' . $this->option('timeout') . 's');
+            // Id first, like every other line, so a second pass over just the
+            // slow ones can be built straight out of the log.
+            $this->line('  ' . $demoId . '  gave up after ' . $this->option('timeout') . 's on ' . $what);
 
             return false;
         }
