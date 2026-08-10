@@ -15,6 +15,17 @@ class Map extends Model
     use HasFactory;
     use Searchable;
 
+    /**
+     * Sent with every map so the download button knows which of the two
+     * reasons for having no pk3 applies - see App\Support\StockMaps.
+     */
+    protected $appends = ['is_stock'];
+
+    public function getIsStockAttribute(): bool
+    {
+        return \App\Support\StockMaps::has($this->name);
+    }
+
     protected static function boot()
     {
         parent::boot();
