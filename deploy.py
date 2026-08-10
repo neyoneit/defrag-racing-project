@@ -70,6 +70,18 @@ def pipeline_cmds(name):
         f"rm -rdf {PROJECT_PATH}/releases/{name}/storage",
         f"ln -s {PROJECT_PATH}/deploy/storage {PROJECT_PATH}/releases/{name}/storage",
         "./build-rust.sh",
+        # The huffman decoder the demo parser leans on, built from the C source
+        # that is in the repo. Only the compiled object is gitignored, so every
+        # release starts without it and huffman.py silently falls back to the
+        # pure-Python reader - correct, but several times slower, and on a big
+        # demo slow enough to run into the parser's own timeout. Nothing breaks
+        # if the build fails (that fallback is exactly what we had until now),
+        # so it must never stop a deploy - but say so in the log.
+        'echo "==> Building the demo parser huffman extension..."',
+        "cd app/Services/DemoProcessor/bin/demoparser "
+        "&& python3 setup.py build_ext --inplace "
+        "&& python3 -c \"import _q3huff; print('    huffman extension ready')\" "
+        "|| echo '!!! build failed - demos will be parsed in pure Python (slow but correct)'",
         "php artisan storage:link",
         "php artisan migrate --force",
         "php artisan filament:assets",
