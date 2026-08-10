@@ -197,8 +197,10 @@
                             <span class="text-[9px] font-semibold">Save</span>
                         </button>
 
-                        <!-- Download Button -->
+                        <!-- Download Button. Hidden for maps that ship with the
+                             game, which have no pk3 of their own to fetch. -->
                         <a
+                            v-if="map?.pk3"
                             @click.stop
                             target="_blank"
                             :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')"

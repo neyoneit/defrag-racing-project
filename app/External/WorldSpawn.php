@@ -5,6 +5,8 @@ namespace App\External;
 use \DOMDocument;
 use \DOMXPath;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class WorldSpawn {
     protected $url = "https://ws.q3df.org/maps/?show=50&page=";
@@ -135,7 +137,10 @@ class WorldSpawn {
     public function getMapDetails($map) {
         $result = [];
 
-        $xpath = $this->read_data($this->mapUrl . $map);
+        // Encoded, or a name like "#pgrun" cuts the URL short at the fragment
+        // and every map whose name starts with a hash comes back as the map
+        // list. The raw name is what goes into the result below.
+        $xpath = $this->read_data($this->mapUrl . rawurlencode($map));
 
         if (!($xpath instanceof DOMXPath)) {
             \Log::warning('WorldSpawn: Failed to fetch map details for ' . $map);
@@ -371,5 +376,34 @@ class WorldSpawn {
         }
 
         return '';
+    }
+
+    /**
+     * Pull a levelshot down to the public disk and return its stored path.
+     *
+     * Lives here rather than in a command so that everything importing a map -
+     * the nightly scrape and the backfill of maps it never reached - stores its
+     * thumbnails the same way.
+     */
+    public function downloadImage($url) {
+        $ch = curl_init($url);
+
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $data = curl_exec($ch);
+
+        curl_close($ch);
+
+        if ($data === false || $data === '') {
+            return null;
+        }
+
+        $extension = pathinfo($url, PATHINFO_EXTENSION);
+        $filename = 'thumbs/' . Str::random(20) . '.' . $extension;
+
+        Storage::disk('public')->put($filename, $data);
+
+        return $filename;
     }
 }
