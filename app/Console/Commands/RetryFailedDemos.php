@@ -30,9 +30,13 @@ class RetryFailedDemos extends Command
         {--limit=0 : Stop after this many demos (0 = all)}
         {--apply : Actually put them back through. Without this nothing is written}
         {--queue : Hand each demo to the queue instead of processing it here}
-        {--sleep=0 : Seconds to wait between demos}';
+        {--sleep=0 : Seconds to wait between demos}
+        {--timeout=120 : Seconds a single demo may take to unpack or parse}';
 
     protected $description = 'Retry demos the old parser could not read';
+
+    /** Demos that ran out of time rather than failing to parse. */
+    private int $tooSlow = 0;
 
     public function handle(DemoProcessorService $processor): int
     {
@@ -128,6 +132,11 @@ class RetryFailedDemos extends Command
         $this->line('  still unreadable: ' . $stillUnreadable);
         $this->line('  no file to read: ' . $noSource);
 
+        if ($this->tooSlow > 0) {
+            $this->line('  ran out of time: ' . $this->tooSlow
+                . ' (already counted above; raise --timeout to give them longer)');
+        }
+
         foreach ($outcomes as $status => $count) {
             $this->line('  ended as ' . $status . ': ' . $count);
         }
@@ -187,10 +196,8 @@ class RetryFailedDemos extends Command
         }
 
         $process = new Process(['7z', 'e', '-y', '-o' . $workDir, $source]);
-        $process->setTimeout(120);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if (! $this->runOrGiveUp($process, basename($source))) {
             return null;
         }
 
@@ -216,16 +223,41 @@ class RetryFailedDemos extends Command
         $script = base_path('app/Services/DemoProcessor/bin/process_single_demo.py');
 
         $process = new Process(['python3', $script, $demoFile, '--json']);
-        $process->setTimeout(120);
-        $process->run();
 
-        if (! $process->isSuccessful()) {
+        if (! $this->runOrGiveUp($process, basename($demoFile))) {
             return null;
         }
 
         $decoded = json_decode(trim($process->getOutput()), true);
 
         return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Run a child process and treat every way it can go wrong as "this one
+     * demo is not readable", never as a reason to stop.
+     *
+     * Symfony throws on timeout rather than reporting an unsuccessful exit, so
+     * without this a single slow demo aborted the whole pass - which is how a
+     * dry run over 3004 demos died on pdm02_yacek after a couple of hundred.
+     * Production parses demos in pure Python (the compiled huffman extension is
+     * gitignored and only exists on dev boxes), so it is a good deal slower and
+     * hits the ceiling on files a dev box gets through.
+     */
+    private function runOrGiveUp(Process $process, string $what): bool
+    {
+        $process->setTimeout(max(1, (int) $this->option('timeout')));
+
+        try {
+            $process->run();
+        } catch (\Throwable $e) {
+            $this->tooSlow++;
+            $this->line('  gave up on ' . $what . ' after ' . $this->option('timeout') . 's');
+
+            return false;
+        }
+
+        return $process->isSuccessful();
     }
 
     /**
