@@ -232,9 +232,11 @@ class ImportMissingMaps extends Command
         // size of the whole game, which is a statement of where the map comes
         // from rather than a file anyone can fetch. Left in, the download button
         // would point at dl.defrag.racing for a pk3 that was never there.
+        // Empty rather than null: the column does not take null, and the
+        // download button hides on either.
         if (stripos((string) ($details['pk3'] ?? ''), 'quake iii') !== false) {
-            $details['pk3'] = null;
-            $details['pk3_size'] = null;
+            $details['pk3'] = '';
+            $details['pk3_size'] = 0;
         }
 
         $map = new Map();
