@@ -596,7 +596,7 @@ class MaplistController extends Controller
     {
         $query = $request->get('q', '');
 
-        $maps = Map::search($query)
+        $maps = Map::searchByName($query)
             ->take(20)
             ->get()
             ->map(fn($map) => [

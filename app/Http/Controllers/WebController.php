@@ -63,6 +63,7 @@ class WebController extends Controller
                         'title' => $title,
                         'description' => $body,
                         'date' => $rawDate ? date('Y-m-d', strtotime($rawDate)) : null,
+                        'time' => $rawDate ? date('H:i', strtotime($rawDate)) : null,
                         'author' => $author,
                     ];
                 }
@@ -176,6 +177,7 @@ class WebController extends Controller
                     'title' => $title,
                     'description' => $body,
                     'date' => isset($parts[3]) ? date('Y-m-d', strtotime(trim($parts[3]))) : null,
+                    'time' => isset($parts[3]) ? date('H:i', strtotime(trim($parts[3]))) : null,
                 ];
             }
             return array_slice($commits, 0, 5);
@@ -286,6 +288,7 @@ class WebController extends Controller
                 $body = trim($body);
 
                 $date = isset($parts[3]) ? date('Y-m-d', strtotime(trim($parts[3]))) : null;
+                $time = isset($parts[3]) ? date('H:i', strtotime(trim($parts[3]))) : null;
                 $author = trim($parts[4] ?? '');
 
                 $commits[] = [
@@ -293,6 +296,7 @@ class WebController extends Controller
                     'title' => trim($parts[1]),
                     'description' => $body,
                     'date' => $date,
+                    'time' => $time,
                     'author' => $author,
                 ];
             }

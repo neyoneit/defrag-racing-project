@@ -101,7 +101,7 @@ const repoUrl = computed(() => REPOS[activeRepo.value]);
                                 >
                                     <span class="text-[10px] font-mono text-gray-500 w-5 text-right flex-shrink-0">{{ commitItems.length - index }}</span>
                                     <div class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></div>
-                                    <span class="text-[10px] font-mono text-gray-500 w-16 flex-shrink-0">{{ commit.date }}</span>
+                                    <span class="text-[10px] font-mono text-gray-500 w-28 flex-shrink-0 whitespace-nowrap">{{ commit.date }}<span v-if="commit.time" class="text-gray-600 ml-1">{{ commit.time }}</span></span>
                                     <span class="text-xs font-mono text-green-400/70">{{ commit.hash }}</span>
                                     <span class="text-xs text-gray-300 truncate flex-1">{{ commit.title }}</span>
                                     <span class="text-[10px] text-gray-500 flex-shrink-0">{{ commit.author }}</span>
