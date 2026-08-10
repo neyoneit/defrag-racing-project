@@ -84,20 +84,6 @@ class ScrapeMaps extends Command
     }
 
     public function downloadImage($url) {
-        $ch = curl_init($url);
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-        $data = curl_exec($ch);
-
-        curl_close($ch);
-
-        $extension = pathinfo($url, PATHINFO_EXTENSION);
-        $filename = "thumbs/" . Str::random(20) . '.' . $extension;
-
-        Storage::disk('public')->put($filename, $data);
-
-        return $filename;
+        return (new WorldSpawn())->downloadImage($url);
     }
 }
