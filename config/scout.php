@@ -191,6 +191,14 @@ return [
                             'type'  => 'string[]'
                         ],
                         [
+                            // The raw name alongside the suffix list in `name`,
+                            // so a search can tell the map that was typed out in
+                            // full from every map that merely ends with it.
+                            // Sorted on by Map::searchByName().
+                            'name' => 'name_exact',
+                            'type' => 'string',
+                        ],
+                        [
                             'name' => 'created_at',
                             'type' => 'int64',
                         ],
@@ -198,6 +206,9 @@ return [
                     'default_sorting_field' => 'created_at',
                     "token_separators"      => ["-", "_"]
                 ],
+                // Scout's Typesense engine reads only `query_by` out of this
+                // block and drops the rest, so anything else has to be passed
+                // per query - see Map::searchByName().
                 'search-parameters' => [
                     'query_by' => 'name',
                     'prefix'   => true,

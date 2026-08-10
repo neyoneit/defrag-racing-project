@@ -93,10 +93,39 @@ class Map extends Model
         return $result;
     }
 
+    /**
+     * Map search with the name the user typed pinned to the top.
+     *
+     * `name` is indexed as every suffix of the map name, so a search for
+     * "pgrun" scores "#pgrun" and "cos1_pgrun" exactly the same and the tie
+     * fell through to the default sorting field - newest map first - which
+     * buried the map that had been typed out in full. `name_exact` carries the
+     * raw name, so an exact hit can win the tie. Typesense caps sort_by at
+     * three criteria, hence text match, exact hit, recency and nothing else.
+     *
+     * The value is backtick-quoted because map names are full of characters
+     * the filter grammar would otherwise read as syntax (#, -, +, brackets).
+     */
+    public static function searchByName ($term) {
+        $term = trim((string) $term);
+        $builder = static::search($term);
+
+        if ($term === '') {
+            return $builder;
+        }
+
+        $exact = '`' . str_replace('`', '', mb_strtolower($term)) . '`';
+
+        return $builder->options([
+            'sort_by' => "_text_match:desc,_eval(name_exact:={$exact}):desc,created_at:desc",
+        ]);
+    }
+
     public function toSearchableArray () {
         return [
             'id' => (string) $this->id,
             'name' => $this->generateSubstrings($this->name),
+            'name_exact' => mb_strtolower((string) $this->name),
             'created_at' => $this->created_at->timestamp,
         ];
     }

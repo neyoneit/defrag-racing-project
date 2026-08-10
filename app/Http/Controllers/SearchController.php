@@ -22,7 +22,7 @@ class SearchController extends Controller
         $likeSearch = '%' . $rawSearch . '%';
 
         // Typesense search + DB fuzzy fallback for maps
-        $maps = Map::search($request->search)->paginate(25);
+        $maps = Map::searchByName($request->search)->paginate(25);
         if ($maps->isEmpty()) {
             $maps = Map::where('name', 'LIKE', $fuzzyPattern)
                 ->orderBy('date_added', 'DESC')
