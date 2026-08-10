@@ -84,8 +84,6 @@ def pipeline_cmds(name):
         "php artisan route:cache",
         "php artisan view:cache",
         "php artisan icons:cache",
-        "php artisan scout:import 'App\\Models\\Demo'",
-        "php artisan scout:import 'App\\Models\\Map'",
         # Link public assets from deploy directory
         f"rm -rf {PROJECT_PATH}/releases/{name}/public/baseq3",
         f"ln -s {PROJECT_PATH}/deploy/baseq3 {PROJECT_PATH}/releases/{name}/public/baseq3",
@@ -138,6 +136,15 @@ else
     fi
 fi
 exit 0""",
+        # Search indexing, and it has to be down here rather than up with the
+        # other cache rebuilds. SCOUT_QUEUE is on, so `scout:import` only
+        # dispatches jobs - and run before the restarts above, those jobs get
+        # picked up by the workers of the *previous* release, which build each
+        # document with the old toSearchableArray(). Any newly indexed field
+        # silently never lands, which is how the map search shipped without its
+        # name_exact and had to be re-imported by hand after the deploy.
+        "php artisan scout:import 'App\\Models\\Demo'",
+        "php artisan scout:import 'App\\Models\\Map'",
         # Warm the rest of the public-page caches by triggering the
         # Cache::remember blocks inside the controllers (homepage
         # totals, ranking prebuilt pages, records, community
