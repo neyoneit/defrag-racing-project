@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 
 class WorldSpawn {
     protected $url = "https://ws.q3df.org/maps/?show=50&page=";
+    protected $searchUrl = "https://ws.q3df.org/maps/?show=50&map=";
     protected $mapUrl = "https://ws.q3df.org/map/";
     protected $wsUrl = "https://ws.q3df.org";
     protected $xpath;
@@ -132,6 +133,34 @@ class WorldSpawn {
             'found' =>  $found,
             'maps'  =>  $maps
         ];
+    }
+
+    /**
+     * Map names Worldspawn lists for a search.
+     *
+     * Its pages are named after the release, which is usually but not always
+     * the name of the .bsp inside - "thirdperson" is published as
+     * "teamrun-thirdperson" - so a lookup by the name a demo recorded can miss
+     * a map that is very much there.
+     */
+    public function searchMaps($name) {
+        $xpath = $this->read_data($this->searchUrl . rawurlencode($name));
+
+        if (!($xpath instanceof DOMXPath)) {
+            return [];
+        }
+
+        $table = $xpath->query("//table[@id='maps_table']")->item(0);
+
+        if (! $table) {
+            return [];
+        }
+
+        try {
+            return $this->getMaps($table)['maps'];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     public function getMapDetails($map) {

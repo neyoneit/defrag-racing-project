@@ -30,7 +30,9 @@ class ImportMissingMaps extends Command
         {--apply : Actually add the maps. Without this nothing is written}
         {--limit=0 : Stop after this many maps (0 = all)}
         {--min-demos=1 : Skip maps carrying fewer demos than this}
-        {--sleep=1 : Seconds to wait between requests to Worldspawn}';
+        {--sleep=1 : Seconds to wait between requests to Worldspawn}
+        {--only=* : Only these map names, instead of everything missing}
+        {--via-search : Also import maps only a search could find, under the name the demos use}';
 
     protected $description = 'Add maps that demos reference but the maps table is missing';
 
@@ -42,6 +44,11 @@ class ImportMissingMaps extends Command
         $sleep = max(0, (int) $this->option('sleep'));
 
         $missing = $this->missing($minDemos);
+
+        if ($only = $this->option('only')) {
+            $wanted = array_map('mb_strtolower', $only);
+            $missing = $missing->filter(fn ($row) => in_array(mb_strtolower($row->map_name), $wanted, true))->values();
+        }
 
         if ($missing->isEmpty()) {
             $this->info('Every map a demo points at already has a row.');
@@ -62,6 +69,7 @@ class ImportMissingMaps extends Command
         $found = 0;
         $added = 0;
         $absent = [];
+        $candidates = [];
 
         foreach ($missing as $i => $row) {
             if ($i > 0 && $sleep > 0) {
@@ -69,11 +77,37 @@ class ImportMissingMaps extends Command
             }
 
             $details = $this->lookUp($ws, $row->map_name);
+            $viaSearch = null;
+
+            if (! $details) {
+                $viaSearch = $this->searchFor($ws, $row->map_name);
+
+                if ($viaSearch) {
+                    $details = $this->lookUp($ws, $viaSearch);
+                }
+            }
 
             if (! $details) {
                 $absent[] = $row->demos . "\t" . $row->map_name;
                 $this->line(sprintf('  %5d demos  %-34s not on Worldspawn', $row->demos, $row->map_name));
                 continue;
+            }
+
+            if ($viaSearch) {
+                // Published under a different name than the .bsp the demos
+                // recorded. The row has to carry the name the demos use or they
+                // still will not find it, so everything else comes from the
+                // release page while the name does not.
+                $candidates[] = $row->demos . "\t" . $row->map_name . "\t" . $viaSearch;
+                $details['name'] = $row->map_name;
+
+                if (! $this->option('via-search')) {
+                    $this->line(sprintf(
+                        '  %5d demos  %-34s only via search -> %s (skipped)',
+                        $row->demos, $row->map_name, $viaSearch
+                    ));
+                    continue;
+                }
             }
 
             $found++;
@@ -101,6 +135,15 @@ class ImportMissingMaps extends Command
 
         if ($apply) {
             $this->line('  rows added: ' . $added);
+        }
+
+        if ($candidates) {
+            $this->line('  found only by search: ' . count($candidates)
+                . ($this->option('via-search') ? ' (imported)' : ' (skipped, pass --via-search to take them)'));
+
+            $list = storage_path('logs/maps-found-by-search.txt');
+            file_put_contents($list, implode("\n", $candidates) . "\n");
+            $this->line('  listed in ' . $list . ' as demos, name used, name on Worldspawn');
         }
 
         if ($absent) {
@@ -152,6 +195,31 @@ class ImportMissingMaps extends Command
         }
 
         return is_array($details) && ! empty($details['name']) ? $details : null;
+    }
+
+    /**
+     * The one map a search turns up for a name, or null.
+     *
+     * Worldspawn names its pages after the release, which is usually but not
+     * always the .bsp inside - the demos on "thirdperson" belong to the map
+     * published as "teamrun-thirdperson". A search finds it, but a search also
+     * matches on substrings, so this only answers when exactly one result
+     * carries the name looked for. Anything less certain is left for a human.
+     */
+    private function searchFor(WorldSpawn $ws, string $name): ?string
+    {
+        try {
+            $hits = $ws->searchMaps($name);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        $hits = array_values(array_filter(
+            $hits,
+            fn ($hit) => str_contains(mb_strtolower($hit), mb_strtolower($name))
+        ));
+
+        return count($hits) === 1 ? $hits[0] : null;
     }
 
     private function store(WorldSpawn $ws, array $details): bool
