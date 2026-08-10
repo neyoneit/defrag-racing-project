@@ -91,12 +91,6 @@ def pipeline_cmds(name):
         f"rm {PROJECT_PATH}/current",
         f"ln -s {PROJECT_PATH}/releases/{name} {PROJECT_PATH}/current",
         "php artisan optimize:clear",
-        # Pre-warm the heaviest cache directly via the service (14s
-        # aggregate). Doing this before the octane restart means it
-        # runs against the still-current codebase, but the Redis key
-        # it writes survives the restart, so the freshly-restarted
-        # workers see a warm cache from request #1.
-        "php artisan mapstats:rebuild",
         'supervisorctl restart "defrag-racing-octane:*"',
         'supervisorctl restart "defrag-racing-worker:*"',
         "php artisan queue:restart",
@@ -145,10 +139,19 @@ exit 0""",
         # name_exact and had to be re-imported by hand after the deploy.
         "php artisan scout:import 'App\\Models\\Demo'",
         "php artisan scout:import 'App\\Models\\Map'",
+        # The heaviest cache on the site - aggregates over 15k maps, a bit
+        # over two minutes cold - which cache:clear above just wiped. It is
+        # only ever read by /maps/stats, so there is no reason for the whole
+        # deploy to sit and wait for it: detach it and let it finish on its
+        # own. Redis keeps the key across the octane restart, and the daily
+        # 04:00 schedule takes over from there. Whoever opens /maps/stats
+        # inside that window still pays for a cold build, same as before.
+        'echo "==> Rebuilding MapStats cache in the background (~2 min, see storage/logs/mapstats-rebuild.log)..."',
+        "nohup php artisan mapstats:rebuild >> storage/logs/mapstats-rebuild.log 2>&1 &",
         # Warm the rest of the public-page caches by triggering the
         # Cache::remember blocks inside the controllers (homepage
         # totals, ranking prebuilt pages, records, community
-        # leaderboard, server list, map stats endpoint). cache:clear
+        # leaderboard, server list). cache:clear
         # above wiped them and most have TTLs of 12h+, so the first
         # visitor would otherwise pay full DB cost.
         #
@@ -157,7 +160,10 @@ exit 0""",
         # gives no feedback, which made the warm-up indistinguishable
         # from "didn't run").
         'echo "==> Warming public-page caches..."',
-        'for url in / /ranking /records /community /servers /maps/stats; do '
+        # /maps/stats is deliberately not in this list - the background rebuild
+        # above is already building exactly that payload, and asking for the
+        # page here would just start a second cold build alongside it.
+        'for url in / /ranking /records /community /servers; do '
         'echo "  - https://defrag.racing$url"; '
         'curl -s -o /dev/null --max-time 30 -w "    HTTP %{http_code}  in %{time_total}s\\n" "https://defrag.racing$url" || echo "    (failed, continuing)"; '
         'done',
@@ -258,9 +264,10 @@ def deploy(force=False):
 
     for cmd in cmds:
         # Print the command we're about to run + flag non-zero exits
-        # so warm-up failures (like mapstats:rebuild blowing up
-        # silently) are visible in the deploy log instead of being
-        # swallowed.
+        # so failures (a warm-up curl, an import, a bundle rebuild) are
+        # visible in the deploy log instead of being swallowed. The one
+        # backgrounded step reports nothing here by definition - its
+        # output goes to storage/logs/mapstats-rebuild.log.
         print(f"\n>>> {cmd}", flush=True)
         result = subprocess.run(cmd, shell=True, cwd=f"{PROJECT_PATH}/releases/{name}")
         if result.returncode != 0:
