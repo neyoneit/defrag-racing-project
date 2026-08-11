@@ -12,6 +12,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted, nextTick, getCurrentInstance, watch } from 'vue';
 import axios from 'axios';
 import CopyButton from '@/Components/Basic/CopyButton.vue';
+import { t } from '@/utils/i18n';
 
 const props = defineProps({
     assignmentTasks: Array,
@@ -152,13 +153,13 @@ const completedTasks = computed(() => {
     return completedAssignments.value + completedVerifications.value + completedRatings.value + completedTags.value;
 });
 
-const difficultyLabels = [
-    { level: 1, label: 'Beginner', short: 'B', color: 'bg-green-600', bgSubtle: 'bg-green-500/10 text-green-400/70', hover: 'hover:bg-green-600/30', ring: 'ring-green-400', desc: 'Basic movement' },
-    { level: 2, label: 'Easy', short: 'E', color: 'bg-lime-600', bgSubtle: 'bg-lime-500/10 text-lime-400/70', hover: 'hover:bg-lime-600/30', ring: 'ring-lime-400', desc: 'Simple tricks' },
-    { level: 3, label: 'Medium', short: 'M', color: 'bg-yellow-600', bgSubtle: 'bg-yellow-500/10 text-yellow-400/70', hover: 'hover:bg-yellow-600/30', ring: 'ring-yellow-400', desc: 'Weapon boosts' },
-    { level: 4, label: 'Hard', short: 'H', color: 'bg-orange-600', bgSubtle: 'bg-orange-500/10 text-orange-400/70', hover: 'hover:bg-orange-600/30', ring: 'ring-orange-400', desc: 'Advanced combos' },
-    { level: 5, label: 'Extreme', short: 'X', color: 'bg-red-600', bgSubtle: 'bg-red-500/10 text-red-400/70', hover: 'hover:bg-red-600/30', ring: 'ring-red-400', desc: 'Top-level' },
-];
+const difficultyLabels = computed(() => [
+    { level: 1, label: t('Beginner'), short: 'B', color: 'bg-green-600', bgSubtle: 'bg-green-500/10 text-green-400/70', hover: 'hover:bg-green-600/30', ring: 'ring-green-400', desc: t('Basic movement') },
+    { level: 2, label: t('Easy'), short: 'E', color: 'bg-lime-600', bgSubtle: 'bg-lime-500/10 text-lime-400/70', hover: 'hover:bg-lime-600/30', ring: 'ring-lime-400', desc: t('Simple tricks') },
+    { level: 3, label: t('Medium'), short: 'M', color: 'bg-yellow-600', bgSubtle: 'bg-yellow-500/10 text-yellow-400/70', hover: 'hover:bg-yellow-600/30', ring: 'ring-yellow-400', desc: t('Weapon boosts') },
+    { level: 4, label: t('Hard'), short: 'H', color: 'bg-orange-600', bgSubtle: 'bg-orange-500/10 text-orange-400/70', hover: 'hover:bg-orange-600/30', ring: 'ring-orange-400', desc: t('Advanced combos') },
+    { level: 5, label: t('Extreme'), short: 'X', color: 'bg-red-600', bgSubtle: 'bg-red-500/10 text-red-400/70', hover: 'hover:bg-red-600/30', ring: 'ring-red-400', desc: t('Top-level') },
+]);
 
 // ─── Time formatting ───────────────────────────────────
 function formatTime(ms) {
@@ -909,7 +910,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Community Tasks" />
+    <Head :title="$t('Community Tasks')" />
 
     <!-- Confetti canvas overlay -->
     <canvas ref="confettiCanvas" class="fixed inset-0 pointer-events-none z-50" />
@@ -932,11 +933,11 @@ onUnmounted(() => {
             <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl md:text-3xl font-black text-gray-200">Community Tasks</h1>
-                        <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">Round {{ roundNumber }}</span>
+                        <h1 class="text-2xl md:text-3xl font-black text-gray-200">{{ $t('Community Tasks') }}</h1>
+                        <span v-if="roundNumber > 1" class="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">{{ $t('Round :n', { n: roundNumber }) }}</span>
                     </div>
                     <div class="flex items-center gap-3 mt-1">
-                        <p class="text-gray-500 text-sm">Assign demos, verify records, rate difficulty, tag maps. All actions earn session points (Tasks Leaderboard). Assigns and ratings also count towards <a :href="route('community')" class="text-gray-400 hover:text-white underline">Community Leaderboard</a>.</p>
+                        <p class="text-gray-500 text-sm">{{ $t('Assign demos, verify records, rate difficulty, tag maps. All actions earn session points (Tasks Leaderboard). Assigns and ratings also count towards') }} <a :href="route('community')" class="text-gray-400 hover:text-white underline">{{ $t('Community Leaderboard') }}</a>.</p>
                     </div>
                 </div>
 
@@ -949,24 +950,24 @@ onUnmounted(() => {
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-xs text-gray-400 whitespace-nowrap">
-                            {{ phase === 'assignment' ? 'Demo Assignment' : phase === 'verification' ? 'Verify Assignments' : phase === 'rating' ? 'Difficulty Rating' : phase === 'tagging' ? 'Map Tagging' : 'Complete' }}
+                            {{ phase === 'assignment' ? $t('Demo Assignment') : phase === 'verification' ? $t('Verify Assignments') : phase === 'rating' ? $t('Difficulty Rating') : phase === 'tagging' ? $t('Map Tagging') : $t('Complete') }}
                             <span class="text-gray-500 ml-1">{{ completedTasks }}/{{ totalTasks }}</span>
                         </span>
-                        <span v-if="phase === 'assignment'" class="text-xs text-blue-400 whitespace-nowrap ml-2">+3 pts per assign</span>
-                        <span v-else-if="phase === 'verification'" class="text-xs text-emerald-400 whitespace-nowrap ml-2">+3 pts better match</span>
-                        <span v-else-if="phase === 'rating'" class="text-xs text-purple-400 whitespace-nowrap ml-2">+{{ weights?.difficulty_ratings || 1 }} pt per rating</span>
-                        <span v-else-if="phase === 'tagging'" class="text-xs text-amber-400 whitespace-nowrap ml-2">+{{ weights?.tags_added || 1 }} pt per tag</span>
+                        <span v-if="phase === 'assignment'" class="text-xs text-blue-400 whitespace-nowrap ml-2">{{ $t('+3 pts per assign') }}</span>
+                        <span v-else-if="phase === 'verification'" class="text-xs text-emerald-400 whitespace-nowrap ml-2">{{ $t('+3 pts better match') }}</span>
+                        <span v-else-if="phase === 'rating'" class="text-xs text-purple-400 whitespace-nowrap ml-2">{{ $t('+:n pt per rating', { n: weights?.difficulty_ratings || 1 }) }}</span>
+                        <span v-else-if="phase === 'tagging'" class="text-xs text-amber-400 whitespace-nowrap ml-2">{{ $t('+:n pt per tag', { n: weights?.tags_added || 1 }) }}</span>
                     </div>
                     <div class="flex items-center gap-3 mt-1.5">
                         <button v-if="phase !== 'summary' && sessionPoints > 0" @click="endSession"
                             class="text-xs text-gray-400 hover:text-red-400 bg-gray-800/60 hover:bg-red-500/10 border border-gray-700 hover:border-red-500/40 px-3 py-1 rounded-lg transition-all font-medium">
-                            End Session
+                            {{ $t('End Session') }}
                         </button>
                         <!-- Tier progress -->
                         <div class="flex-1">
                             <div class="flex justify-between text-[10px] text-gray-500 mb-0.5">
                                 <span :style="currentTier ? { color: currentTier.color } : {}">
-                                    {{ currentTier?.name || 'Unranked' }}
+                                    {{ currentTier?.name || $t('Unranked') }}
                                 </span>
                                 <span v-if="nextTier" :style="{ color: nextTier.color }">{{ nextTier.name }}</span>
                             </div>
@@ -978,7 +979,7 @@ onUnmounted(() => {
                                     }" />
                             </div>
                             <div class="text-[10px] text-gray-600 mt-0.5 text-right tabular-nums">
-                                {{ Math.round(badgeScore) }} / {{ nextTier?.min_score || '--' }} pts
+                                {{ $t(':score / :goal pts', { score: Math.round(badgeScore), goal: nextTier?.min_score || '--' }) }}
                             </div>
                         </div>
                     </div>
@@ -1001,21 +1002,21 @@ onUnmounted(() => {
                         :class="sessionPoints > personalBest.best_points && sessionPoints > 0 ? 'border-yellow-500/30' : ''">
                         <div>
                             <div class="text-[10px] uppercase tracking-wider" :class="sessionPoints > personalBest.best_points && sessionPoints > 0 ? 'text-yellow-400' : 'text-gray-400'">
-                                {{ sessionPoints > personalBest.best_points && sessionPoints > 0 ? 'New PB!' : 'PB' }}
+                                {{ sessionPoints > personalBest.best_points && sessionPoints > 0 ? $t('New PB!') : $t('PB') }}
                             </div>
                             <div class="text-xl font-black tabular-nums transition-all" :class="sessionPoints > personalBest.best_points && sessionPoints > 0 ? 'text-yellow-300' : personalBest.best_points > 0 ? 'text-yellow-400' : 'text-gray-500'">
                                 {{ Math.max(personalBest.best_points, sessionPoints) }}
                             </div>
                         </div>
                         <div class="border-l border-white/10 pl-3 text-[10px] text-gray-300">
-                            <div>{{ personalBest.total_sessions }} runs</div>
-                            <div>{{ personalBest.total_points }} pts</div>
+                            <div>{{ $tc(':count run|:count runs', personalBest.total_sessions) }}</div>
+                            <div>{{ $t(':count pts', { count: personalBest.total_points }) }}</div>
                         </div>
                     </div>
 
                     <!-- Session score -->
                     <div class="bg-white/5 backdrop-blur-md rounded-lg px-3 py-2 border border-white/10">
-                        <div class="text-[10px] text-gray-400 uppercase tracking-wider">Session</div>
+                        <div class="text-[10px] text-gray-400 uppercase tracking-wider">{{ $t('Session') }}</div>
                         <div class="text-xl font-black tabular-nums"
                             :class="sessionPoints > personalBest.best_points && sessionPoints > 0 ? 'text-green-400' : sessionPoints > 0 ? 'text-white' : 'text-gray-500'">
                             {{ sessionPoints }}
@@ -1026,7 +1027,7 @@ onUnmounted(() => {
                     <div class="bg-white/5 backdrop-blur-md rounded-lg px-3 py-2 border border-white/10 cursor-pointer hover:border-white/20 transition-colors"
                         @click="openFullLeaderboard">
                         <div class="flex items-center gap-2 mb-1">
-                            <div class="text-[10px] text-gray-400 uppercase tracking-wider">Top</div>
+                            <div class="text-[10px] text-gray-400 uppercase tracking-wider">{{ $t('Top') }}</div>
                             <span class="text-[10px] text-gray-500 hover:text-white">&#x2192;</span>
                         </div>
                         <div v-if="leaderboardTop.length === 0" class="text-xs text-gray-400">-</div>
@@ -1050,7 +1051,7 @@ onUnmounted(() => {
         <div v-if="phase === 'assignment'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
 
             <div v-if="!currentTask" class="text-center py-16 text-gray-500">
-                {{ loadingMore ? 'Loading more tasks...' : 'No demos available for assignment right now.' }}
+                {{ loadingMore ? $t('Loading more tasks...') : $t('No demos available for assignment right now.') }}
             </div>
 
             <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id" class="flex gap-4 relative">
@@ -1065,21 +1066,21 @@ onUnmounted(() => {
                             : 'bg-gray-900 border-2 border-red-500/60'">
                             <div class="text-sm font-bold mb-4 text-center"
                                 :class="confirmingRecord.time_diff === 0 ? 'text-gray-300' : 'text-red-400'">
-                                Confirm Assignment
+                                {{ $t('Confirm Assignment') }}
                             </div>
 
                             <!-- TIME MISMATCH WARNING -->
                             <div v-if="confirmingRecord.time_diff !== 0"
                                 class="bg-red-500/20 border-2 border-red-500/60 rounded-xl p-4 mb-4 text-center">
-                                <div class="text-red-400 text-2xl font-black uppercase tracking-wide mb-1">TIME DOES NOT MATCH</div>
+                                <div class="text-red-400 text-2xl font-black uppercase tracking-wide mb-1">{{ $t('TIME DOES NOT MATCH') }}</div>
                                 <div class="text-red-300 text-sm font-bold">
-                                    {{ formatTimeDiff(confirmingRecord.time_diff) }} difference - are you absolutely sure this is correct?
+                                    {{ $t(':diff difference - are you absolutely sure this is correct?', { diff: formatTimeDiff(confirmingRecord.time_diff) }) }}
                                 </div>
                             </div>
 
                             <div class="bg-gray-800/80 rounded-lg p-3 mb-2">
-                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">Demo</div>
-                                <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">{{ $t('Demo') }}</div>
+                                <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || $t('Unknown'))"></div>
                                 <div class="text-white font-mono text-xl font-black mt-0.5">{{ formatTime(task.demo.time_ms) }}</div>
                                 <div class="text-gray-400 text-xs mt-0.5">{{ task.demo.map_name }} - {{ task.demo.physics }}</div>
                             </div>
@@ -1088,28 +1089,28 @@ onUnmounted(() => {
 
                             <div class="rounded-lg p-3 mb-3"
                                 :class="confirmingRecord.time_diff === 0 ? 'bg-gray-800/80' : 'bg-gray-800/80 ring-2 ring-red-500/40'">
-                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">Record #{{ confirmingRecord.rank }}</div>
-                                <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || 'Unknown')"></div>
+                                <div class="text-[10px] text-gray-500 uppercase tracking-wider">{{ $t('Record #:rank', { rank: confirmingRecord.rank }) }}</div>
+                                <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || $t('Unknown'))"></div>
                                 <div class="font-mono text-xl font-black mt-0.5" :class="confirmingRecord.time_diff === 0 ? 'text-green-400' : 'text-red-400'">{{ formatTime(confirmingRecord.time) }}</div>
                                 <div class="mt-1">
-                                    <span v-if="confirmingRecord.time_diff === 0" class="text-green-400 text-sm font-bold">EXACT MATCH</span>
-                                    <span v-else class="text-red-400 text-sm font-bold">{{ formatTimeDiff(confirmingRecord.time_diff) }} difference</span>
+                                    <span v-if="confirmingRecord.time_diff === 0" class="text-green-400 text-sm font-bold">{{ $t('EXACT MATCH') }}</span>
+                                    <span v-else class="text-red-400 text-sm font-bold">{{ $t(':diff difference', { diff: formatTimeDiff(confirmingRecord.time_diff) }) }}</span>
                                 </div>
                             </div>
 
                             <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-3 mb-4 text-xs text-yellow-100 space-y-1.5">
-                                <div class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider mb-1.5">Before confirming, check:</div>
+                                <div class="text-yellow-400 font-bold text-[11px] uppercase tracking-wider mb-1.5">{{ $t('Before confirming, check:') }}</div>
                                 <div class="flex items-start gap-1.5">
                                     <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                    <span>Are you sure this is the <strong class="text-yellow-300">same player</strong>?</span>
+                                    <span>{{ $t('Are you sure this is the') }} <strong class="text-yellow-300">{{ $t('same player') }}</strong>?</span>
                                 </div>
                                 <div class="flex items-start gap-1.5">
                                     <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                    <span>Do the times <strong class="text-yellow-300">match correctly</strong>? ±1ms rounding is very rare but possible.</span>
+                                    <span>{{ $t('Do the times') }} <strong class="text-yellow-300">{{ $t('match correctly') }}</strong>? {{ $t('±1ms rounding is very rare but possible.') }}</span>
                                 </div>
                                 <div class="flex items-start gap-1.5">
                                     <span class="text-yellow-500 mt-0.5">&#x2022;</span>
-                                    <span>If unsure, press <strong class="text-yellow-300">Cancel</strong> and use <strong class="text-yellow-300">Not Sure</strong>.</span>
+                                    <span>{{ $t('If unsure, press') }} <strong class="text-yellow-300">{{ $t('Cancel') }}</strong> {{ $t('and use') }} <strong class="text-yellow-300">{{ $t('Not Sure') }}</strong>.</span>
                                 </div>
                             </div>
 
@@ -1119,11 +1120,11 @@ onUnmounted(() => {
                                     :class="confirmingRecord.time_diff === 0
                                         ? 'bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:text-green-400 text-white'
                                         : 'bg-orange-600 hover:bg-orange-500 disabled:bg-orange-800 disabled:text-orange-400 text-white'">
-                                    {{ assigning ? 'Assigning...' : confirmingRecord.time_diff === 0 ? 'Confirm' : 'Confirm anyway' }}
+                                    {{ assigning ? $t('Assigning...') : confirmingRecord.time_diff === 0 ? $t('Confirm') : $t('Confirm anyway') }}
                                 </button>
                                 <button @click="cancelConfirm"
                                     class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
-                                    Cancel
+                                    {{ $t('Cancel') }}
                                 </button>
                             </div>
                     </div>
@@ -1134,31 +1135,31 @@ onUnmounted(() => {
                 <div v-if="showAssignmentHelp" class="w-72 flex-shrink-0 hidden lg:block">
                     <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-indigo-500/20 p-5 space-y-4">
                         <div class="flex items-center justify-between">
-                            <div class="text-indigo-300 font-bold text-sm uppercase tracking-wider">How it works</div>
-                            <button @click="showAssignmentHelp = false" class="text-gray-600 hover:text-gray-400 transition-colors p-0.5" title="Dismiss">
+                            <div class="text-indigo-300 font-bold text-sm uppercase tracking-wider">{{ $t('How it works') }}</div>
+                            <button @click="showAssignmentHelp = false" class="text-gray-600 hover:text-gray-400 transition-colors p-0.5" :title="$t('Dismiss')">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
                         <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4">
-                            <div class="text-indigo-300 font-bold text-xs uppercase tracking-wider mb-2">Your task</div>
+                            <div class="text-indigo-300 font-bold text-xs uppercase tracking-wider mb-2">{{ $t('Your task') }}</div>
                             <div class="text-sm text-gray-200 leading-relaxed">
-                                Link each demo file to its <strong class="text-white">leaderboard record</strong>. Compare the <strong class="text-white">player name</strong> and <strong class="text-white">time</strong> from the demo with the records list.
+                                {{ $t('Link each demo file to its') }} <strong class="text-white">{{ $t('leaderboard record') }}</strong>. {{ $t('Compare the') }} <strong class="text-white">{{ $t('player name') }}</strong> {{ $t('and') }} <strong class="text-white">{{ $t('time') }}</strong> {{ $t('from the demo with the records list.') }}
                             </div>
                         </div>
                         <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
                             <div class="flex items-start gap-2">
                                 <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                <p><strong class="text-white">Click a record</strong> on the right to select it, then press <strong class="text-green-400">Assign</strong>.</p>
+                                <p><strong class="text-white">{{ $t('Click a record') }}</strong> {{ $t('on the right to select it, then press') }} <strong class="text-green-400">{{ $t('Assign') }}</strong>.</p>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                <p>Player not listed? Use <strong class="text-red-400">No Match</strong>.</p>
+                                <p>{{ $t('Player not listed? Use') }} <strong class="text-red-400">{{ $t('No Match') }}</strong>.</p>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="text-indigo-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                <p>Not sure? Just <strong class="text-yellow-400">Skip</strong> — no points, but the same map won't come back to you for a week.</p>
+                                <p>{{ $t('Not sure? Just') }} <strong class="text-yellow-400">{{ $t('Skip') }}</strong> {{ $t("— no points, but the same map won't come back to you for a week.") }}</p>
                             </div>
                         </div>
                     </div>
@@ -1172,15 +1173,15 @@ onUnmounted(() => {
                     <!-- ── LEFT: Demo being matched ── -->
                     <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 overflow-hidden">
                         <div class="mx-2.5 mt-2.5 mb-1 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/25">
-                            <div class="text-[11px] text-amber-400 uppercase tracking-wider font-bold">Unassigned Demo</div>
-                            <div class="text-[11px] text-gray-300 mt-0.5">Match this player nick and time to a record on the right.</div>
+                            <div class="text-[11px] text-amber-400 uppercase tracking-wider font-bold">{{ $t('Unassigned Demo') }}</div>
+                            <div class="text-[11px] text-gray-300 mt-0.5">{{ $t('Match this player nick and time to a record on the right.') }}</div>
                         </div>
 
                         <!-- Map thumbnail -->
                         <div class="relative overflow-hidden mx-2.5 rounded-lg">
                             <img v-if="task.map_thumbnail" :src="'/storage/' + task.map_thumbnail" class="w-full aspect-[4/3] object-cover" :alt="task.demo.map_name" />
                             <div v-else class="w-full aspect-[4/3] bg-gray-700/50 flex items-center justify-center">
-                                <span class="text-gray-600 text-sm">No thumbnail</span>
+                                <span class="text-gray-600 text-sm">{{ $t('No thumbnail') }}</span>
                             </div>
                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent" />
                             <div class="absolute bottom-2 right-2 flex flex-col gap-1">
@@ -1206,13 +1207,13 @@ onUnmounted(() => {
 
                         <!-- Player + Time -->
                         <div class="px-3 py-3 text-center">
-                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mb-1">Player</div>
-                            <div class="text-xl font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
+                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mb-1">{{ $t('Player') }}</div>
+                            <div class="text-xl font-bold truncate" v-html="q3tohtml(task.demo.player_name || $t('Unknown'))"></div>
 
-                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mt-3 mb-1">Demo Time</div>
+                            <div class="text-[11px] text-amber-400/80 uppercase tracking-wider font-semibold mt-3 mb-1">{{ $t('Demo Time') }}</div>
                             <div class="flex items-center justify-center gap-2">
                                 <span class="text-white font-mono text-2xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
-                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo">
+                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" :title="$t('Download demo')">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                 </a>
                             </div>
@@ -1222,15 +1223,15 @@ onUnmounted(() => {
                     <!-- ── RIGHT: Records ── -->
                     <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 flex flex-col overflow-hidden">
                         <div class="mx-2.5 mt-2.5 mb-1 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/25">
-                            <div class="text-[11px] text-indigo-300 uppercase tracking-wider font-bold">Find the matching record</div>
-                            <div class="text-[11px] text-gray-300 mt-0.5">Click the record that belongs to the player on the left. Compare name and time.</div>
+                            <div class="text-[11px] text-indigo-300 uppercase tracking-wider font-bold">{{ $t('Find the matching record') }}</div>
+                            <div class="text-[11px] text-gray-300 mt-0.5">{{ $t('Click the record that belongs to the player on the left. Compare name and time.') }}</div>
                         </div>
 
                         <!-- Closest matches -->
                         <div class="px-2.5 pt-1.5 mx-1 mb-1 rounded-lg bg-yellow-500/5 border border-yellow-500/15 pb-2">
                             <div class="flex items-baseline gap-2 mb-1.5 pt-1.5">
-                                <div class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">Closest matches</div>
-                                <div class="text-[10px] text-gray-300">records with the most similar time</div>
+                                <div class="text-[11px] font-bold text-yellow-400 uppercase tracking-wider">{{ $t('Closest matches') }}</div>
+                                <div class="text-[10px] text-gray-300">{{ $t('records with the most similar time') }}</div>
                             </div>
                             <div class="max-h-52 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.closest_matches" :key="'c-' + record.id"
@@ -1248,10 +1249,10 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
-                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">alias matches <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
-                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">alias similar <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">{{ $t('alias matches') }} <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">{{ $t('alias similar') }} <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" :title="$t('Download demo')"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" :title="$t('Watch on YouTube')"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1271,8 +1272,8 @@ onUnmounted(() => {
                         <!-- All records -->
                         <div class="px-2.5 pb-2.5 pt-1 flex-1 flex flex-col min-h-0">
                             <div class="flex items-baseline gap-2 mb-1">
-                                <div class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Full map leaderboard ({{ task.all_records.length }})</div>
-                                <div class="text-[10px] text-gray-400">not found above? search here</div>
+                                <div class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">{{ $t('Full map leaderboard (:count)', { count: task.all_records.length }) }}</div>
+                                <div class="text-[10px] text-gray-400">{{ $t('not found above? search here') }}</div>
                             </div>
                             <div class="flex-1 max-h-36 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.all_records" :key="'a-' + record.id"
@@ -1290,10 +1291,10 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
-                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">alias matches <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
-                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">alias similar <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                                        <span v-if="record.alias_match_type === 'exact'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold">{{ $t('alias matches') }} <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <span v-else-if="record.alias_match_type === 'similar'" class="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400/60">{{ $t('alias similar') }} <span v-html="q3tohtml(record.matched_alias_colored || record.matched_alias)"></span></span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" :title="$t('Download demo')"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" :title="$t('Watch on YouTube')"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px]"
@@ -1322,7 +1323,7 @@ onUnmounted(() => {
                             <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                                 :class="selectedRecords[task.demo.id] ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black animate-pulse'">1</span>
                             <span class="text-[11px] font-semibold" :class="selectedRecords[task.demo.id] ? 'text-green-400' : 'text-yellow-400'">
-                                {{ selectedRecords[task.demo.id] ? 'Record selected' : 'Click a record above' }}
+                                {{ selectedRecords[task.demo.id] ? $t('Record selected') : $t('Click a record above') }}
                             </span>
                         </div>
                         <svg class="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -1330,7 +1331,7 @@ onUnmounted(() => {
                             <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                                 :class="selectedRecords[task.demo.id] ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/50 animate-pulse' : 'bg-gray-700 text-gray-500'">2</span>
                             <span class="text-[11px] font-semibold" :class="selectedRecords[task.demo.id] ? 'text-green-400' : 'text-gray-500'">
-                                Press Assign below
+                                {{ $t('Press Assign below') }}
                             </span>
                         </div>
                     </div>
@@ -1341,7 +1342,7 @@ onUnmounted(() => {
                         </div>
                     </Transition>
                     <div v-if="selectedRecords[task.demo.id]" class="text-[11px] text-blue-300 text-center mb-1.5 truncate">
-                        Selected: #{{ selectedRecords[task.demo.id].rank }}
+                        {{ $t('Selected: #:rank', { rank: selectedRecords[task.demo.id].rank }) }}
                         <span v-html="q3tohtml(selectedRecords[task.demo.id].player_name)"></span>
                         - {{ formatTime(selectedRecords[task.demo.id].time) }}
                     </div>
@@ -1351,19 +1352,19 @@ onUnmounted(() => {
                             :class="selectedRecords[task.demo.id]
                                 ? 'bg-green-600 hover:bg-green-500 text-white border border-green-400 shadow-[0_0_12px_rgba(34,197,94,0.4)] animate-pulse'
                                 : 'bg-gray-700/30 text-gray-600 border border-gray-700/30 cursor-not-allowed'">
-                            <span v-if="selectedRecords[task.demo.id]">Assign</span>
-                            <span v-else>Select a record first</span>
+                            <span v-if="selectedRecords[task.demo.id]">{{ $t('Assign') }}</span>
+                            <span v-else>{{ $t('Select a record first') }}</span>
                         </button>
                         <button @click="skipTask(task, 'not_sure')"
                             class="flex-1 py-1.5 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400/70 hover:text-yellow-400 rounded-lg text-xs transition-all">
-                            Not Sure
+                            {{ $t('Not Sure') }}
                         </button>
                         <button @click="skipTask(task, 'no_match')"
                             class="flex-1 py-1.5 rounded-lg text-xs transition-all"
                             :class="!hasExactMatch(task) && !selectedRecords[task.demo.id]
                                 ? 'bg-red-600/40 text-red-300 hover:bg-red-600/50 font-bold animate-pulse-soft'
                                 : 'bg-gray-700/50 hover:bg-gray-700/70 text-gray-500 hover:text-gray-400'">
-                            No Match
+                            {{ $t('No Match') }}
                         </button>
                     </div>
                 </div>
@@ -1374,7 +1375,7 @@ onUnmounted(() => {
         <!-- ═══ VERIFICATION PHASE ═══ -->
         <div v-if="phase === 'verification'" class="max-w-lg mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="!currentTask" class="text-center py-16 text-gray-500">
-                {{ loadingMore ? 'Loading more tasks...' : 'No demos to verify.' }}
+                {{ loadingMore ? $t('Loading more tasks...') : $t('No demos to verify.') }}
             </div>
 
             <div v-if="currentTask" v-for="task in [currentTask]" :key="task.demo.id">
@@ -1387,30 +1388,30 @@ onUnmounted(() => {
                         <Transition name="confirm-slide">
                             <div v-if="confirmingTask?.demo.id === task.demo.id"
                                 class="absolute inset-0 z-20 bg-gray-900 flex flex-col p-4 rounded-xl overflow-y-auto">
-                                <div class="text-sm font-bold text-gray-400 mb-3 text-center">Confirm Better Match</div>
+                                <div class="text-sm font-bold text-gray-400 mb-3 text-center">{{ $t('Confirm Better Match') }}</div>
 
                                 <div class="bg-gray-800/80 rounded-lg p-3 mb-2">
-                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">Demo</div>
-                                    <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></div>
+                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">{{ $t('Demo') }}</div>
+                                    <div class="text-lg font-bold" v-html="q3tohtml(task.demo.player_name || $t('Unknown'))"></div>
                                     <div class="text-white font-mono text-xl font-black mt-0.5">{{ formatTime(task.demo.time_ms) }}</div>
                                 </div>
 
                                 <div class="text-center text-gray-600 text-lg my-1">&#x2193;</div>
 
                                 <div class="bg-gray-800/80 rounded-lg p-3 mb-3">
-                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">New Record #{{ confirmingRecord.rank }}</div>
-                                    <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || 'Unknown')"></div>
+                                    <div class="text-[10px] text-gray-600 uppercase tracking-wider">{{ $t('New Record #:rank', { rank: confirmingRecord.rank }) }}</div>
+                                    <div class="text-lg font-bold" v-html="q3tohtml(confirmingRecord.player_name || $t('Unknown'))"></div>
                                     <div class="font-mono text-xl font-black mt-0.5" :class="confirmingRecord.time_diff === 0 ? 'text-green-400' : 'text-white'">{{ formatTime(confirmingRecord.time) }}</div>
                                 </div>
 
                                 <div class="flex gap-2 mt-auto">
                                     <button @click="confirmAssign" :disabled="assigning"
                                         class="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:bg-green-800 disabled:text-green-400 text-white rounded-lg font-bold text-sm transition-colors">
-                                        {{ assigning ? 'Saving...' : 'Confirm' }}
+                                        {{ assigning ? $t('Saving...') : $t('Confirm') }}
                                     </button>
                                     <button @click="cancelConfirm"
                                         class="flex-1 py-2.5 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-bold text-sm transition-colors">
-                                        Cancel
+                                        {{ $t('Cancel') }}
                                     </button>
                                 </div>
                             </div>
@@ -1418,7 +1419,7 @@ onUnmounted(() => {
 
                         <!-- Verification badge -->
                         <div class="absolute top-2 right-2 z-10 px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded-full border border-emerald-500/30">
-                            VERIFY
+                            {{ $t('VERIFY') }}
                         </div>
 
                         <!-- Map thumbnail -->
@@ -1428,7 +1429,7 @@ onUnmounted(() => {
                                 class="w-full h-full object-cover"
                                 :alt="task.demo.map_name" />
                             <div v-else class="w-full h-full bg-gray-700/50 flex items-center justify-center">
-                                <span class="text-gray-600 text-sm">No thumbnail</span>
+                                <span class="text-gray-600 text-sm">{{ $t('No thumbnail') }}</span>
                             </div>
                             <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/20 to-transparent" />
                             <!-- Items overlay -->
@@ -1455,16 +1456,16 @@ onUnmounted(() => {
 
                         <!-- Demo info -->
                         <div class="px-3 py-2.5 border-b border-gray-700/30 flex items-center justify-between">
-                            <span class="text-lg font-bold truncate" v-html="q3tohtml(task.demo.player_name || 'Unknown')"></span>
+                            <span class="text-lg font-bold truncate" v-html="q3tohtml(task.demo.player_name || $t('Unknown'))"></span>
                             <div class="flex items-center gap-2 flex-shrink-0 ml-2">
                                 <span class="text-white font-mono text-xl font-black">{{ formatTime(task.demo.time_ms) }}</span>
-                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                <a :href="'/demos/' + task.demo.id + '/download'" target="_blank" class="text-gray-500 hover:text-blue-400 transition-colors" :title="$t('Download demo')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
                             </div>
                         </div>
 
                         <!-- Current assignment highlight -->
                         <div v-if="task.current_record" class="px-3 py-2 bg-emerald-500/10 border-b border-emerald-500/20">
-                            <div class="text-[10px] text-emerald-400/70 uppercase tracking-wider mb-1">Currently assigned to</div>
+                            <div class="text-[10px] text-emerald-400/70 uppercase tracking-wider mb-1">{{ $t('Currently assigned to') }}</div>
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <span class="text-emerald-400 text-xs font-bold">#{{ task.current_record.rank }}</span>
@@ -1480,7 +1481,7 @@ onUnmounted(() => {
                                         {{ formatSignedDiff(task.current_record.time, task.demo.time_ms) }}
                                     </span>
                                     <span class="text-white font-mono text-sm font-bold">{{ formatTime(task.current_record.time) }}</span>
-                                    <a v-if="task.current_record.youtube_url" :href="task.current_record.youtube_url" target="_blank" class="text-gray-500 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                                    <a v-if="task.current_record.youtube_url" :href="task.current_record.youtube_url" target="_blank" class="text-gray-500 hover:text-red-400 transition-colors" :title="$t('Watch on YouTube')"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                 </div>
                             </div>
                         </div>
@@ -1488,7 +1489,7 @@ onUnmounted(() => {
                         <!-- Closest matches (for better match selection) -->
                         <div class="px-2.5 pt-2">
                             <div class="text-[10px] font-semibold text-yellow-500/80 uppercase tracking-wider mb-1">
-                                Closest matches
+                                {{ $t('Closest matches') }}
                             </div>
                             <div class="max-h-28 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.closest_matches" :key="'vc-' + record.id"
@@ -1504,9 +1505,9 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
-                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">{{ $t('MATCHED') }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" :title="$t('Download demo')"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" :title="$t('Watch on YouTube')"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px] px-1 rounded"
@@ -1529,7 +1530,7 @@ onUnmounted(() => {
                         <!-- All records -->
                         <div class="px-2.5 pb-2.5">
                             <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                                All records ({{ task.all_records.length }})
+                                {{ $t('All records (:count)', { count: task.all_records.length }) }}
                             </div>
                             <div class="max-h-44 overflow-y-auto custom-scrollbar">
                                 <button v-for="record in task.all_records" :key="'va-' + record.id"
@@ -1545,9 +1546,9 @@ onUnmounted(() => {
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-5 text-right flex-shrink-0" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-400' : task.current_record?.id === record.id ? 'text-emerald-400' : record.time_diff === 0 ? 'text-green-400' : 'text-gray-400'">#{{ record.rank }}</span>
                                         <span class="truncate transition-colors" :class="selectedRecords[task.demo.id]?.id === record.id ? 'text-blue-300' : task.current_record?.id === record.id ? 'text-emerald-300' : record.time_diff === 0 ? 'text-green-300' : 'text-gray-300 group-hover:text-white'" v-html="q3tohtml(record.player_name)"></span>
-                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">MATCHED</span>
-                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" title="Download demo"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
-                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" title="Watch on YouTube"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                                        <span v-if="task.current_record?.id === record.id" class="text-[8px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-bold flex-shrink-0">{{ $t('MATCHED') }}</span>
+                                        <a v-if="record.demo_id" :href="'/demos/' + record.demo_id + '/download'" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-blue-400 transition-colors" :title="$t('Download demo')"><svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>
+                                        <a v-if="record.youtube_url" :href="record.youtube_url" @click.stop target="_blank" class="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors" :title="$t('Watch on YouTube')"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
                                         <span class="text-[9px]"
@@ -1572,25 +1573,25 @@ onUnmounted(() => {
                                 </div>
                             </Transition>
                             <div v-if="selectedRecords[task.demo.id]" class="text-[10px] text-blue-400/70 text-center mb-1.5 truncate">
-                                Selected: #{{ selectedRecords[task.demo.id].rank }}
+                                {{ $t('Selected: #:rank', { rank: selectedRecords[task.demo.id].rank }) }}
                                 <span v-html="q3tohtml(selectedRecords[task.demo.id].player_name)"></span>
                                 - {{ formatTime(selectedRecords[task.demo.id].time) }}
                             </div>
                             <div class="flex gap-1.5">
                                 <button @click="confirmCorrect(task)"
                                     class="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all">
-                                    Correct
+                                    {{ $t('Correct') }}
                                 </button>
                                 <button @click="voteUnassign(task)"
                                     class="flex-1 py-1.5 bg-red-600/30 hover:bg-red-600/40 text-red-400/80 hover:text-red-400 rounded-lg text-xs font-bold transition-all">
-                                    Unassign
+                                    {{ $t('Unassign') }}
                                 </button>
                                 <button @click="tryBetterMatch(task)"
                                     class="flex-1 py-1.5 rounded-lg text-xs font-bold transition-all"
                                     :class="selectedRecords[task.demo.id]
                                         ? 'bg-blue-600 hover:bg-blue-500 text-white'
                                         : 'bg-blue-600/30 text-blue-400/60 hover:bg-blue-600/40'">
-                                    Better Match
+                                    {{ $t('Better Match') }}
                                 </button>
                             </div>
                         </div>
@@ -1601,38 +1602,38 @@ onUnmounted(() => {
         <!-- ═══ RATING PHASE ═══ -->
         <div v-if="phase === 'rating'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="!currentRating" class="text-center py-16 text-gray-500">
-                {{ loadingMore ? 'Loading more tasks...' : 'No maps available for rating.' }}
+                {{ loadingMore ? $t('Loading more tasks...') : $t('No maps available for rating.') }}
             </div>
 
             <div v-if="currentRating" v-for="map in [currentRating]" :key="map.id" class="flex gap-4">
                     <!-- Left: Tips -->
                     <div class="w-80 flex-shrink-0">
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-purple-500/20 p-5 space-y-4">
-                            <div class="text-purple-300 font-bold text-sm uppercase tracking-wider">How to rate difficulty</div>
+                            <div class="text-purple-300 font-bold text-sm uppercase tracking-wider">{{ $t('How to rate difficulty') }}</div>
 
                             <div class="bg-yellow-500/15 border border-yellow-500/30 rounded-lg p-4">
-                                <div class="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-2">Most important</div>
+                                <div class="text-yellow-400 font-bold text-xs uppercase tracking-wider mb-2">{{ $t('Most important') }}</div>
                                 <div class="text-sm text-gray-200 leading-relaxed">
-                                    Rate based on the <strong class="text-yellow-300">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.
+                                    {{ $t('Rate based on the') }} <strong class="text-yellow-300">{{ $t('lowest skill needed to complete') }}</strong> {{ $t('the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.') }}
                                 </div>
                             </div>
 
                             <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>Rate based on <strong class="text-white">your experience</strong> playing the map, not just how it looks.</p>
+                                    <p>{{ $t('Rate based on') }} <strong class="text-white">{{ $t('your experience') }}</strong> {{ $t('playing the map, not just how it looks.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>Not sure? Check the <strong class="text-white">YouTube video</strong> on the right to see actual gameplay and judge the difficulty.</p>
+                                    <p>{{ $t('Not sure? Check the') }} <strong class="text-white">{{ $t('YouTube video') }}</strong> {{ $t('on the right to see actual gameplay and judge the difficulty.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>No video? Use <strong class="text-white">Skip + Request Render</strong> to queue a render. The next person will have a video to help decide.</p>
+                                    <p>{{ $t('No video? Use') }} <strong class="text-white">{{ $t('Skip + Request Render') }}</strong> {{ $t('to queue a render. The next person will have a video to help decide.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-purple-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine — no points, but it still helps. The same map won't come back for a week.</p>
+                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine — no points, but it still helps. The same map won't come back for a week.") }}</p>
                                 </div>
                             </div>
                         </div>
@@ -1649,7 +1650,7 @@ onUnmounted(() => {
                                 class="w-full aspect-[4/3] object-cover bg-black"
                                 :alt="map.name" />
                             <div v-else class="w-full aspect-[4/3] bg-gray-700/50 flex items-center justify-center">
-                                <span class="text-gray-600 text-sm">No image</span>
+                                <span class="text-gray-600 text-sm">{{ $t('No image') }}</span>
                             </div>
                             <!-- Items overlay -->
                             <div class="absolute bottom-2 right-2 flex flex-col gap-1">
@@ -1687,21 +1688,21 @@ onUnmounted(() => {
                                     </button>
                                     <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-3 py-2 bg-gray-900 border border-yellow-500/30 rounded-lg text-[11px] shadow-2xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-[100] w-52">
                                         <div class="font-bold text-yellow-400 text-xs">{{ d.desc }}</div>
-                                        <div class="text-gray-300 mt-1">Rate based on the <strong class="text-white">lowest skill needed to complete</strong> the map, not the WR time.</div>
+                                        <div class="text-gray-300 mt-1">{{ $t('Rate based on the') }} <strong class="text-white">{{ $t('lowest skill needed to complete') }}</strong> {{ $t('the map, not the WR time.') }}</div>
                                     </div>
                                 </div>
                             </div>
                             <button v-if="!ratedMapIds.has(map.id)"
                                 @click="skipRating(map)"
                                 class="w-full mt-1.5 py-1.5 bg-gray-700/50 hover:bg-gray-700/70 text-gray-400 hover:text-gray-300 rounded text-xs font-medium transition-all border border-gray-600/30">
-                                Skip
+                                {{ $t('Skip') }}
                             </button>
                             <button v-if="!ratedMapIds.has(map.id) && !(map.videos?.vq3?.length || map.videos?.cpm?.length) && map.has_demos"
                                 @click="requestRenderAndSkip(map)"
                                 :disabled="renderRequesting === map.id"
                                 class="w-full mt-1.5 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-                                {{ renderRequesting === map.id ? 'Requesting...' : 'Skip + Request Render' }}
+                                {{ renderRequesting === map.id ? $t('Requesting...') : $t('Skip + Request Render') }}
                             </button>
                         </div>
                     </div>
@@ -1713,7 +1714,7 @@ onUnmounted(() => {
                             <template v-for="phys in ['vq3', 'cpm']" :key="phys">
                                 <div v-if="map.videos[phys]?.length" class="space-y-2">
                                     <div class="text-xs font-bold uppercase tracking-wider"
-                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ phys.toUpperCase() }} Videos</div>
+                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ $t(':physics Videos', { physics: phys.toUpperCase() }) }}</div>
                                     <div v-for="(vid, idx) in map.videos[phys]" :key="idx" class="rounded-lg overflow-hidden border border-gray-700/40">
                                         <iframe v-if="vid.youtube_video_id"
                                             :src="`https://www.youtube.com/embed/${vid.youtube_video_id}`"
@@ -1722,7 +1723,7 @@ onUnmounted(() => {
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                             allowfullscreen></iframe>
                                         <div class="bg-gray-800/80 px-2 py-1 text-[10px] text-gray-400">
-                                            {{ vid.player_name || 'Unknown' }} - {{ formatTime(vid.time_ms) }}
+                                            {{ vid.player_name || $t('Unknown') }} - {{ formatTime(vid.time_ms) }}
                                             <span v-if="vid.gametype && vid.gametype !== 'run'" class="text-yellow-500/70 ml-1">{{ vid.gametype }}</span>
                                         </div>
                                     </div>
@@ -1731,8 +1732,8 @@ onUnmounted(() => {
                         </template>
                         <div v-else class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 p-4 text-center">
                             <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-                            <div class="text-xs text-gray-500 mb-2">No videos available for this map</div>
-                            <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future ratings</div>
+                            <div class="text-xs text-gray-500 mb-2">{{ $t('No videos available for this map') }}</div>
+                            <div class="text-[10px] text-gray-600">{{ $t('Use "Skip + Request Render" to queue a video for future ratings') }}</div>
                         </div>
                     </div>
             </div>
@@ -1741,7 +1742,7 @@ onUnmounted(() => {
         <!-- ═══ TAGGING PHASE ═══ -->
         <div v-if="phase === 'tagging'" class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pb-8">
             <div v-if="!currentTagMap" class="text-center py-16 text-gray-500">
-                {{ loadingMore ? 'Loading more tasks...' : 'No maps available for tagging.' }}
+                {{ loadingMore ? $t('Loading more tasks...') : $t('No maps available for tagging.') }}
             </div>
 
             <div v-if="currentTagMap" :key="currentTagMap.id">
@@ -1749,33 +1750,33 @@ onUnmounted(() => {
                     <!-- Tips (left sidebar) -->
                     <div class="w-80 flex-shrink-0">
                         <div class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-amber-500/20 p-5 space-y-4">
-                            <div class="text-amber-300 font-bold text-sm uppercase tracking-wider">How to tag maps</div>
+                            <div class="text-amber-300 font-bold text-sm uppercase tracking-wider">{{ $t('How to tag maps') }}</div>
                             <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                                <div class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-2">Your task</div>
+                                <div class="text-amber-400 font-bold text-xs uppercase tracking-wider mb-2">{{ $t('Your task') }}</div>
                                 <div class="text-sm text-gray-200 leading-relaxed">
-                                    Add tags that describe the map's <strong class="text-white">gameplay style</strong>, mechanics, and theme.
+                                    {{ $t("Add tags that describe the map's") }} <strong class="text-white">{{ $t('gameplay style') }}</strong>{{ $t(', mechanics, and theme.') }}
                                 </div>
                             </div>
                             <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>Not sure? Check the <strong class="text-white">YouTube video</strong> on the right to see actual gameplay.</p>
+                                    <p>{{ $t('Not sure? Check the') }} <strong class="text-white">{{ $t('YouTube video') }}</strong> {{ $t('on the right to see actual gameplay.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>Misclicked? The tags you just added have an <strong class="text-white">&times;</strong> on them. Taking one back takes its point back too.</p>
+                                    <p>{{ $t('Misclicked? The tags you just added have an') }} <strong class="text-white">&times;</strong> {{ $t('on them. Taking one back takes its point back too.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>No video? Use <strong class="text-white">Skip + Request Render</strong> to queue a render for future taggers.</p>
+                                    <p>{{ $t('No video? Use') }} <strong class="text-white">{{ $t('Skip + Request Render') }}</strong> {{ $t('to queue a render for future taggers.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>Look at <strong class="text-white">weapons and items</strong> on the thumbnail for clues about mechanics.</p>
+                                    <p>{{ $t('Look at') }} <strong class="text-white">{{ $t('weapons and items') }}</strong> {{ $t('on the thumbnail for clues about mechanics.') }}</p>
                                 </div>
                                 <div class="flex items-start gap-2">
                                     <span class="text-amber-400 mt-0.5 flex-shrink-0">&#x2022;</span>
-                                    <p>When in doubt, <strong class="text-white">Skip</strong> is always fine — no points, but it still helps. The same map won't come back for a week.</p>
+                                    <p>{{ $t('When in doubt,') }} <strong class="text-white">{{ $t('Skip') }}</strong> {{ $t("is always fine — no points, but it still helps. The same map won't come back for a week.") }}</p>
                                 </div>
                             </div>
                         </div>
@@ -1792,7 +1793,7 @@ onUnmounted(() => {
                                     class="w-full aspect-[16/9] object-cover bg-black"
                                     :alt="currentTagMap.name" />
                                 <div v-else class="w-full aspect-[16/9] bg-gray-700/50 flex items-center justify-center">
-                                    <span class="text-gray-600 text-sm">No image</span>
+                                    <span class="text-gray-600 text-sm">{{ $t('No image') }}</span>
                                 </div>
                                 <div class="absolute bottom-2 right-2 flex flex-col gap-1">
                                     <div v-if="currentTagMap.weapons" class="flex flex-wrap justify-end gap-1 bg-black/70 rounded px-1.5 py-1">
@@ -1819,7 +1820,7 @@ onUnmounted(() => {
                                         :class="taggedCurrentMap
                                             ? 'bg-green-600 hover:bg-green-500 text-white'
                                             : 'bg-gray-700 hover:bg-gray-600 text-gray-300 border border-gray-600'">
-                                        {{ taggedCurrentMap ? 'Next Map' : 'Skip' }}
+                                        {{ taggedCurrentMap ? $t('Next Map') : $t('Skip') }}
                                     </button>
                                 </div>
                                 <div v-if="currentTagMap.tags.length > 0" class="flex flex-wrap gap-1.5">
@@ -1835,21 +1836,21 @@ onUnmounted(() => {
                                             @click="undoTag(tag)"
                                             :disabled="removingTag === tag.id"
                                             class="-mr-0.5 w-4 h-4 rounded-full flex items-center justify-center text-amber-300/70 hover:text-white hover:bg-red-500/60 disabled:opacity-40 transition-colors"
-                                            :title="'Remove ' + tag.display_name + ' again'">
+                                            :title="$t('Remove :tag again', { tag: tag.display_name })">
                                             <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                                             </svg>
                                         </button>
                                     </span>
                                 </div>
-                                <div v-else class="text-xs text-gray-600">No tags yet - be the first!</div>
+                                <div v-else class="text-xs text-gray-600">{{ $t('No tags yet - be the first!') }}</div>
                                 <!-- Request render button when no videos -->
                                 <button v-if="!(currentTagMap.videos?.vq3?.length || currentTagMap.videos?.cpm?.length) && currentTagMap.has_demos"
                                     @click="requestTagRenderAndSkip(currentTagMap)"
                                     :disabled="renderRequesting === currentTagMap.id"
                                     class="w-full mt-2 py-2 bg-red-600/30 hover:bg-red-600/50 text-red-300 hover:text-red-200 rounded text-xs font-bold transition-all border border-red-500/30 flex items-center justify-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-                                    {{ renderRequesting === currentTagMap.id ? 'Requesting...' : 'Skip + Request Render' }}
+                                    {{ renderRequesting === currentTagMap.id ? $t('Requesting...') : $t('Skip + Request Render') }}
                                 </button>
                             </div>
                         </div>
@@ -1860,11 +1861,11 @@ onUnmounted(() => {
                                 @input="filterTagSuggestions"
                                 @keydown.enter.prevent="tagInput.trim() && addTagToMap(tagInput.trim())"
                                 class="flex-1 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-sm text-white placeholder-gray-500 focus:border-amber-500/50 focus:outline-none"
-                                placeholder="Search tags or type new tag name..." />
+                                :placeholder="$t('Search tags or type new tag name...')" />
                             <button @click="tagInput.trim() && addTagToMap(tagInput.trim())"
                                 :disabled="!tagInput.trim() || addingTag"
                                 class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold rounded-lg text-sm transition-colors flex-shrink-0">
-                                Add
+                                {{ $t('Add') }}
                             </button>
                         </div>
                     </div>
@@ -1875,7 +1876,7 @@ onUnmounted(() => {
                             <template v-for="phys in ['vq3', 'cpm']" :key="phys">
                                 <div v-if="currentTagMap.videos[phys]?.length" class="space-y-2">
                                     <div class="text-xs font-bold uppercase tracking-wider"
-                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ phys.toUpperCase() }} Videos</div>
+                                        :class="phys === 'cpm' ? 'text-purple-400' : 'text-blue-400'">{{ $t(':physics Videos', { physics: phys.toUpperCase() }) }}</div>
                                     <div v-for="(vid, idx) in currentTagMap.videos[phys]" :key="idx" class="rounded-lg overflow-hidden border border-gray-700/40">
                                         <iframe v-if="vid.youtube_video_id"
                                             :src="`https://www.youtube.com/embed/${vid.youtube_video_id}`"
@@ -1884,7 +1885,7 @@ onUnmounted(() => {
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                             allowfullscreen></iframe>
                                         <div class="bg-gray-800/80 px-2 py-1 text-[10px] text-gray-400">
-                                            {{ vid.player_name || 'Unknown' }} - {{ formatTime(vid.time_ms) }}
+                                            {{ vid.player_name || $t('Unknown') }} - {{ formatTime(vid.time_ms) }}
                                             <span v-if="vid.gametype && vid.gametype !== 'run'" class="text-yellow-500/70 ml-1">{{ vid.gametype }}</span>
                                         </div>
                                     </div>
@@ -1893,8 +1894,8 @@ onUnmounted(() => {
                         </template>
                         <div v-else class="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/40 p-4 text-center">
                             <svg class="w-8 h-8 text-gray-600 mx-auto mb-2" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.8 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.8-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
-                            <div class="text-xs text-gray-500 mb-2">No videos available for this map</div>
-                            <div class="text-[10px] text-gray-600">Use "Skip + Request Render" to queue a video for future taggers</div>
+                            <div class="text-xs text-gray-500 mb-2">{{ $t('No videos available for this map') }}</div>
+                            <div class="text-[10px] text-gray-600">{{ $t('Use "Skip + Request Render" to queue a video for future taggers') }}</div>
                         </div>
                     </div>
                     </div>
@@ -1908,8 +1909,8 @@ onUnmounted(() => {
                         class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-800/60 text-gray-300 border border-gray-700/40 hover:bg-amber-500/20 hover:text-amber-300 hover:border-amber-500/40 transition-all cursor-pointer">
                         {{ tag.display_name }}
                     </button>
-                    <div v-if="tagSuggestions.length === 0 && allTags.length > 0" class="text-sm text-gray-600">No matching tags. Press Enter to create "{{ tagInput }}"</div>
-                    <div v-if="allTags.length === 0" class="text-sm text-gray-600">Loading tags...</div>
+                    <div v-if="tagSuggestions.length === 0 && allTags.length > 0" class="text-sm text-gray-600">{{ $t('No matching tags. Press Enter to create ":tag"', { tag: tagInput }) }}</div>
+                    <div v-if="allTags.length === 0" class="text-sm text-gray-600">{{ $t('Loading tags...') }}</div>
                 </div>
             </div>
         </div>
@@ -1918,18 +1919,18 @@ onUnmounted(() => {
         <div v-if="phase === 'summary'" class="max-w-lg mx-auto px-4 py-16 text-center">
             <div class="bg-gray-800/40 backdrop-blur-sm rounded-2xl border border-gray-700/30 p-8">
                 <div class="text-5xl mb-4" style="animation: pointPop 0.8s ease-out">&#x1F389;</div>
-                <h2 class="text-3xl font-black text-white mb-2">Session Complete!</h2>
+                <h2 class="text-3xl font-black text-white mb-2">{{ $t('Session Complete!') }}</h2>
                 <div class="text-5xl font-black text-yellow-400 mb-3 tabular-nums"
                     style="animation: pointPop 1s ease-out 0.3s both">
-                    +{{ sessionPoints }} pts
+                    {{ $t('+:count pts', { count: sessionPoints }) }}
                 </div>
                 <div class="text-gray-500 text-sm mb-6">
-                    {{ completedAssignments }} assigned - {{ completedVerifications }} verified - {{ completedRatings }} rated - {{ completedTags }} tagged
+                    {{ $t(':assigned assigned - :verified verified - :rated rated - :tagged tagged', { assigned: completedAssignments, verified: completedVerifications, rated: completedRatings, tagged: completedTags }) }}
                 </div>
 
                 <!-- Tier display -->
                 <div v-if="currentTier" class="mb-6">
-                    <div class="text-xs text-gray-600 uppercase tracking-wider mb-1">Current Tier</div>
+                    <div class="text-xs text-gray-600 uppercase tracking-wider mb-1">{{ $t('Current Tier') }}</div>
                     <div class="text-lg font-bold" :style="{ color: currentTier.color }">
                         {{ currentTier.key.charAt(0).toUpperCase() + currentTier.key.slice(1) }} {{ currentTier.name }}
                     </div>
@@ -1939,7 +1940,7 @@ onUnmounted(() => {
                                 :style="{ width: tierProgress + '%', background: currentTier.color }" />
                         </div>
                         <div class="text-[10px] text-gray-600 mt-1">
-                            {{ Math.round(nextTier.min_score - badgeScore) }} pts to
+                            {{ $t(':count pts to', { count: Math.round(nextTier.min_score - badgeScore) }) }}
                             <span :style="{ color: nextTier.color }">{{ nextTier.key.charAt(0).toUpperCase() + nextTier.key.slice(1) }}</span>
                         </div>
                     </div>
@@ -1948,11 +1949,11 @@ onUnmounted(() => {
                 <div class="flex gap-3 justify-center">
                     <button @click="startNewSession"
                         class="px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-xl transition-colors text-sm">
-                        Play Again
+                        {{ $t('Play Again') }}
                     </button>
                     <Link :href="route('community')"
                         class="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors text-sm">
-                        Leaderboard
+                        {{ $t('Leaderboard') }}
                     </Link>
                 </div>
             </div>
@@ -1967,15 +1968,15 @@ onUnmounted(() => {
             <div class="relative bg-gray-900 border border-gray-700/50 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl">
                 <!-- Modal header -->
                 <div class="flex items-center justify-between px-5 py-4 border-b border-gray-700/30">
-                    <h3 class="text-lg font-bold text-white">Tasks Leaderboard</h3>
+                    <h3 class="text-lg font-bold text-white">{{ $t('Tasks Leaderboard') }}</h3>
                     <button @click="showLeaderboardModal = false"
                         class="text-gray-500 hover:text-white transition-colors text-xl leading-none">&times;</button>
                 </div>
 
                 <!-- Scrollable content -->
                 <div class="flex-1 overflow-y-auto custom-scrollbar px-5 py-3">
-                    <div v-if="loadingLeaderboard" class="text-center py-8 text-gray-500">Loading...</div>
-                    <div v-else-if="fullLeaderboard.length === 0" class="text-center py-8 text-gray-600">No sessions recorded yet.</div>
+                    <div v-if="loadingLeaderboard" class="text-center py-8 text-gray-500">{{ $t('Loading...') }}</div>
+                    <div v-else-if="fullLeaderboard.length === 0" class="text-center py-8 text-gray-600">{{ $t('No sessions recorded yet.') }}</div>
                     <div v-else class="space-y-1">
                         <div v-for="entry in fullLeaderboard" :key="entry.user_id"
                             class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
@@ -1994,15 +1995,15 @@ onUnmounted(() => {
                             <div class="flex items-center gap-3 flex-shrink-0">
                                 <div class="text-right">
                                     <div class="text-sm font-black text-yellow-400 tabular-nums">{{ entry.best_points }}</div>
-                                    <div class="text-[9px] text-gray-600">best</div>
+                                    <div class="text-[9px] text-gray-600">{{ $t('best') }}</div>
                                 </div>
                                 <div class="text-right">
                                     <div class="text-xs text-gray-400 tabular-nums">{{ entry.total_points }}</div>
-                                    <div class="text-[9px] text-gray-600">total</div>
+                                    <div class="text-[9px] text-gray-600">{{ $t('total') }}</div>
                                 </div>
                                 <div class="text-right">
                                     <div class="text-xs text-gray-500 tabular-nums">{{ entry.total_sessions }}</div>
-                                    <div class="text-[9px] text-gray-600">runs</div>
+                                    <div class="text-[9px] text-gray-600">{{ $t('runs') }}</div>
                                 </div>
                             </div>
                         </div>
