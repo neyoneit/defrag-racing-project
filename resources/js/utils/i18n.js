@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import moment from 'moment';
 
 /**
  * Translation, with the English sentence as its own key.
@@ -20,6 +21,17 @@ import { ref } from 'vue';
 // Only the file for the locale being read is ever fetched - Vite gives each
 // one its own chunk, so a third language costs returning readers nothing.
 const files = import.meta.glob('../../../lang/*.json');
+
+/**
+ * Relative dates ("2 days ago") are printed by moment, not by us, and moment
+ * has its own translations - but it ships one file per language and loads
+ * none of them by default. A new language needs its line here, or its readers
+ * get a fully translated page with English dates in it. English is moment's
+ * built-in and needs no entry.
+ */
+const MOMENT_LOCALES = {
+    cs: () => import('moment/dist/locale/cs'),
+};
 
 const messages = ref({});
 
@@ -51,6 +63,18 @@ export const setLocale = async (next) => {
     }
 
     const loaded = target === 'en' ? {} : await read(target);
+
+    const momentLocale = MOMENT_LOCALES[target];
+
+    if (momentLocale) {
+        try {
+            await momentLocale();
+        } catch (e) {
+            // Dates in English beat a page that does not render.
+        }
+    }
+
+    moment.locale(target);
 
     locale.value = target;
     messages.value = loaded;
