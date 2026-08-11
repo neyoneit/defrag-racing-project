@@ -112,6 +112,32 @@
         });
     };
 
+    // The whole row opens what the notification is about and marks it read on
+    // the way out. Reading one is the same gesture as acting on it, and the
+    // headline alone was a two-word target; the toggle keeps its own button so
+    // a row can still be flipped back without opening anything.
+    const markSystemRead = (notification) => {
+        if (!notification.read) {
+            toggleSystemNotificationRead(notification.id);
+        }
+    };
+
+    const openSystemNotification = (notification) => {
+        markSystemRead(notification);
+
+        if (!notification.url) {
+            return;
+        }
+
+        // render_completed points at YouTube, everything else at one of our
+        // own pages.
+        if (/^https?:\/\//i.test(notification.url)) {
+            window.open(notification.url, '_blank', 'noopener');
+        } else {
+            router.visit(notification.url);
+        }
+    };
+
     const markAllSystemAsRead = () => {
         axios.post(route('notifications.system.clear')).then(() => {
             props.systemNotificationsPage.data.forEach(n => n.read = true);
@@ -482,11 +508,14 @@
 
                                 <!-- Read/Unread Toggle -->
                                 <button @click.stop="toggleNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
-                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-green-400">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    <!-- A sealed envelope is unread and asks to be opened; an opened one
+                                         is read. The old check mark read as "approve" and the crossed-out
+                                         bell as "mute", neither of which is what this button does. -->
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                                     </svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-500">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.98V19.5Z" />
                                     </svg>
                                 </button>
                             </div>
@@ -671,7 +700,7 @@
 
                     <!-- Filtered Notifications -->
                     <div class="divide-y divide-white/5">
-                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="toggleSystemNotificationRead(notification.id)" class="group px-2 py-1 hover:bg-white/10 hover:!opacity-100 transition-all cursor-pointer" :class="{'opacity-40': notification.read && highlightId !== notification.id, 'ring-2 ring-blue-500/50 bg-blue-500/10 rounded-lg': highlightId === notification.id}">
+                        <div v-for="notification in filteredSystemNotifications" :key="notification.id" :id="'notification-' + notification.id" @click="openSystemNotification(notification)" class="group px-2 py-1 hover:bg-white/10 hover:!opacity-100 transition-all cursor-pointer" :class="{'opacity-40': notification.read && highlightId !== notification.id, 'ring-2 ring-blue-500/50 bg-blue-500/10 rounded-lg': highlightId === notification.id}">
                             <div class="flex items-center gap-2">
                                 <!-- Icon -->
                                 <div class="shrink-0">
@@ -686,11 +715,11 @@
                                 <div class="flex-1 min-w-0 text-sm text-gray-300">
                                     <template v-if="notification.type === 'announcement'">
                                         <span class="text-gray-400">Announcement:</span>
-                                        <Link @click.stop class="ml-1.5 text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span class="ml-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
                                     </template>
                                     <template v-else-if="notification.type === 'render_completed'">
                                         <span class="text-gray-400">Render:</span>
-                                        <Link v-if="notification.subheadline" @click.stop class="ml-1.5 inline-flex items-center gap-1 align-middle text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline">
+                                        <Link v-if="notification.subheadline" @click.stop="markSystemRead(notification)" class="ml-1.5 inline-flex items-center gap-1 align-middle text-emerald-300 hover:text-emerald-200 hover:underline font-bold transition-colors" :href="notification.subheadline">
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
                                             </svg>
@@ -698,7 +727,7 @@
                                         </Link>
                                         <span v-else class="ml-1.5" v-html="q3tohtml(notification.before)"></span>
                                         <span class="mx-1.5 text-gray-500">-</span>
-                                        <a @click.stop class="inline-flex items-center gap-1 align-middle text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" target="_blank" rel="noopener noreferrer">
+                                        <a @click.stop="markSystemRead(notification)" class="inline-flex items-center gap-1 align-middle text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" target="_blank" rel="noopener noreferrer">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0 text-red-500">
                                                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                                             </svg>
@@ -708,10 +737,10 @@
                                     <template v-else>
                                         <span v-if="getNotificationPrefix(notification.type)" class="text-gray-400 mr-1.5">{{ getNotificationPrefix(notification.type) }}</span>
                                         <span v-if="notification.before" class="text-gray-400" v-html="q3tohtml(notification.before)"></span>
-                                        <Link @click.stop class="mx-1.5 text-blue-400 hover:text-blue-300 hover:underline font-bold transition-colors" :href="notification.url" v-html="q3tohtml(notification.headline)"></Link>
+                                        <span class="mx-1.5 text-blue-400 group-hover:text-blue-300 group-hover:underline font-bold transition-colors" v-html="q3tohtml(notification.headline)"></span>
                                         <span v-if="notification.after" class="text-gray-400" v-html="q3tohtml(notification.after)"></span>
                                         <template v-if="notification.type === 'alias_suggestion'">
-                                            <Link @click.stop class="ml-1.5 inline-flex items-center gap-1 align-middle text-yellow-400 hover:text-yellow-300 hover:underline transition-colors" :href="notification.url">
+                                            <Link @click.stop="markSystemRead(notification)" class="ml-1.5 inline-flex items-center gap-1 align-middle text-yellow-400 hover:text-yellow-300 hover:underline transition-colors" :href="notification.url">
                                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 shrink-0">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                                 </svg>
@@ -723,11 +752,14 @@
 
                                 <!-- Read/Unread Toggle -->
                                 <button @click.stop="toggleSystemNotificationRead(notification.id)" class="shrink-0 p-1 rounded hover:bg-white/5 transition-all" :title="notification.read ? 'Mark as unread' : 'Mark as read'">
-                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-green-400">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    <!-- A sealed envelope is unread and asks to be opened; an opened one
+                                         is read. The old check mark read as "approve" and the crossed-out
+                                         bell as "mute", neither of which is what this button does. -->
+                                    <svg v-if="!notification.read" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-blue-400">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                                     </svg>
-                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-yellow-400">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.143 17.082a24.248 24.248 0 0 0 3.844.148m-3.844-.148a23.856 23.856 0 0 1-5.455-1.31 8.964 8.964 0 0 0 2.3-5.542m3.155 6.852a3 3 0 0 0 5.667 1.97m1.965-2.277L21 21m-4.225-4.225a23.81 23.81 0 0 0 3.536-1.003A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6.53 6.53m10.245 10.245L6.53 6.53M3 3l3.53 3.53" />
+                                    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 text-gray-500">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.98V19.5Z" />
                                     </svg>
                                 </button>
                             </div>

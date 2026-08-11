@@ -53,12 +53,12 @@ class ScrapeMaps extends Command
             }
         }
 
-        // One notification for the whole run, not one per map - Worldspawn
-        // publishes in bursts and the scrape above picks a burst up whole.
+        // One notification per map per recipient, so every one of them can name
+        // and link the map it is about.
         if ($inserted->isNotEmpty()) {
             $sent = app(NewMapNotifier::class)->notify($inserted);
 
-            $this->info("Notified {$sent} users about {$inserted->count()} new map(s)");
+            $this->info("Wrote {$sent} notification(s) for {$inserted->count()} new map(s)");
         }
     }
 

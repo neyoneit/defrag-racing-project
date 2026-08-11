@@ -402,8 +402,22 @@
 
         // Mark as read via API, then navigate if requested
         axios.post(route('notifications.system.toggle', notification.id)).finally(() => {
-            if (navigate) {
+            if (!navigate) {
+                return;
+            }
+
+            // Straight to what the banner is about - the map, the announcement,
+            // the video. It used to drop the user on the notification list with
+            // the row highlighted, so the thing itself was still a click away
+            // and the banner for a new map led everywhere except to the map.
+            const url = notification.url;
+
+            if (!url) {
                 router.visit(route('notifications.system.index', { highlight: notification.id }));
+            } else if (/^https?:\/\//i.test(url)) {
+                window.open(url, '_blank', 'noopener');
+            } else {
+                router.visit(url);
             }
         });
     };
