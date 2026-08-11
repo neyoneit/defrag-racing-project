@@ -128,9 +128,10 @@ class VideoMetadataService
         }
 
         $desc .= "\n";
-        if ($video->demo_id) {
-            $desc .= "Demo download: https://defrag.racing/demos/{$video->demo_id}/download\n";
-        }
+        // No link to the demo file. A URL ending in /download next to an id is
+        // what a spam or malware post looks like to YouTube's classifier, and it
+        // started hiding these videos and putting the channel at risk. The map
+        // page below carries the same demo, one click further in.
         // Skip the map-page URL when the map name itself contains a blocked
         // term — surfacing the raw name as a clickable URL would defeat the
         // censoring above.
