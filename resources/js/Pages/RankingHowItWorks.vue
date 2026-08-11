@@ -359,7 +359,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     </div>
                 </div>
 
-                <p class="mb-3 text-sm">For VQ3 Overall (median = {{ exampleMedian }} players, so k = {{ fmt(exampleK, 1) }}):</p>
+                <p class="mb-3 text-sm">{{ $t('For VQ3 Overall (median = :median players, so k = :k):', { median: exampleMedian, k: fmt(exampleK, 1) }) }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="space-y-3">
                         <div>
@@ -373,7 +373,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>7 players (k ≈ {{ fmt(exampleK, 1) }})</span>
+                                <span>{{ $tc(':count player|:count players', 7) }} (k ≈ {{ fmt(exampleK, 1) }})</span>
                                 <span class="font-mono text-yellow-400 font-bold">{{ (calcMultiplier(7, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
@@ -382,7 +382,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>{{ exampleMedian }} players (median)</span>
+                                <span>{{ $tc(':count player|:count players', exampleMedian) }} {{ $t('(median)') }}</span>
                                 <span class="font-mono text-lime-400 font-bold">{{ (calcMultiplier(exampleMedian, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
@@ -417,7 +417,7 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div v-if="hasCategoryStats" class="mt-6 bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                         <div class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ $t('Median players per ranked map (live)') }}</div>
-                        <div v-if="categoryStatsAsOf" class="text-[10px] text-gray-600">as of {{ formatAsOf(categoryStatsAsOf) }}</div>
+                        <div v-if="categoryStatsAsOf" class="text-[10px] text-gray-600">{{ $t('as of :date', { date: formatAsOf(categoryStatsAsOf) }) }}</div>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">{{ $t('Each cell shows') }} <span class="font-mono text-gray-400">median</span> {{ $t('(and') }} <span class="font-mono text-gray-400">k = median / 2</span>{{ $t(') for that game type / physics / category combo. Updated by the nightly full recalculation.') }}</p>
 
@@ -519,7 +519,7 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Example: 50 players on a map') }}</div>
                     <div class="space-y-2">
-                        <div v-for="[rank, label] in [[1, 'Rank #1 (WR)'], [5, 'Rank #5'], [25, 'Rank #25'], [50, 'Rank #50 (last)']]" :key="rank">
+                        <div v-for="[rank, label] in [[1, $t('Rank #1 (WR)')], [5, $t('Rank #5')], [25, $t('Rank #25')], [50, $t('Rank #50 (last)')]]" :key="rank">
                             <div class="flex justify-between items-center text-sm mb-1">
                                 <span>{{ label }}</span>
                                 <span class="font-mono font-bold" :class="calcRankMultiplier(50, rank) > 0.8 ? 'text-green-400' : calcRankMultiplier(50, rank) > 0.5 ? 'text-yellow-400' : 'text-red-400'">{{ (calcRankMultiplier(50, rank) * 100).toFixed(1) }}%</span>
@@ -545,13 +545,13 @@ const top200Share = computed(() => topNWeightShare(200));
                     final_score = base_score * map_multiplier * rank_multiplier
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, rank #3, VQ3 overall median = {{ exampleMedian }})</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Example (25 players, rank #3, VQ3 overall median = :median)', { median: exampleMedian }) }}</div>
                     <div class="text-sm space-y-1">
                         <div>{{ $t('Your reltime:') }} <span class="text-white font-mono">{{ exampleReltime.toFixed(4) }}</span></div>
                         <div>{{ $t('Base score:') }} <span class="text-white font-mono">{{ exampleBaseScore.toFixed(1) }}</span></div>
                         <div>{{ $t('Map multiplier (25 players):') }} <span class="text-white font-mono">{{ exampleMultiplier.toFixed(4) }}</span> ({{ (exampleMultiplier * 100).toFixed(1) }}%)</div>
                         <div>{{ $t('Rank multiplier (rank #3 of 25):') }} <span class="text-white font-mono">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span> ({{ (calcRankMultiplier(25, 3) * 100).toFixed(1) }}%)</div>
-                        <div class="pt-1 border-t border-gray-800">Final score: {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleBaseScore * exampleMultiplier * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
+                        <div class="pt-1 border-t border-gray-800">{{ $t('Final score:') }} {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleBaseScore * exampleMultiplier * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
                     </div>
                 </div>
             </section>
@@ -632,7 +632,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <div class="text-sm">
                         {{ $t('Example: same top 3 scores (850, 780, 720) but only 3 records:') }}
                         <span class="text-red-400 font-mono font-bold ml-1">{{ exampleFewRating.toFixed(1) }}</span>
-                        <span class="text-gray-500"> vs {{ exampleRating.toFixed(1) }} with 12 records</span>
+                        <span class="text-gray-500"> {{ $t('vs :rating with 12 records', { rating: exampleRating.toFixed(1) }) }}</span>
                     </div>
                     <div class="text-xs text-gray-500 mt-1">{{ $t('This prevents players from cherry-picking only a few easy maps to inflate their rating.') }}</div>
                 </div>
@@ -783,7 +783,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                         <div class="text-sm font-bold text-red-400 mb-2">{{ $t('Step 6: Combine into player rating') }}</div>
                         <div class="text-xs text-gray-400">
-                            <div>This score ({{ (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }}) joins all your other map scores from the given category.</div>
+                            <div>{{ $t('This score (:score) joins all your other map scores from the given category.', { score: (exampleFinalScore * calcRankMultiplier(25, 3)).toFixed(1) }) }}</div>
                             <div>{{ $t('They are sorted, exponentially weighted, and averaged into your final rating.') }}</div>
                             <div>{{ $t('If you have fewer than 10 records, a penalty is applied.') }}</div>
                         </div>
