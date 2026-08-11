@@ -9,6 +9,8 @@ use App\Models\MddProfile;
 use App\Models\OnlinePlayer;
 use App\Models\Server;
 use App\Models\User;
+use App\Models\UserAlias;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -35,6 +37,14 @@ class DefragliveWatchService
      * affects credited time.
      */
     public const LIVE_WINDOW = 600;
+
+    /**
+     * How often an account must have played under an alias before that alias may
+     * stand in for a login. Above it the name is one the player is known by;
+     * below it, it is a name they wore once - frog's "suburb" was used exactly
+     * once and cost frog his leaderboard row.
+     */
+    public const ALIAS_MIN_USES = 10;
 
     /**
      * Safety net only: a session open longer than this with no update is treated
@@ -256,7 +266,7 @@ class DefragliveWatchService
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $cutoffs = $this->exclusionCutoffs();
-        $known = $this->mddByCleanName($rows);
+        $known = $this->identityByCleanName($rows);
 
         $groups = [];
         foreach ($rows as $r) {
@@ -344,7 +354,7 @@ class DefragliveWatchService
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $cutoffs = $this->exclusionCutoffs();
-        $known = $this->mddByCleanName($rows);
+        $known = $this->identityByCleanName($rows);
 
         $groups = [];
         foreach ($rows as $r) {
@@ -514,6 +524,21 @@ class DefragliveWatchService
     }
 
     /**
+     * Which account each watched nick belongs to.
+     *
+     * A login the game reported is the only thing that decides, so it is asked
+     * first, and a nick it has answered for is never overruled. What is left
+     * over - a nick nobody was ever logged in behind - falls to the alias list,
+     * under the conditions in mddByEstablishedAlias().
+     */
+    private function identityByCleanName($rows): array
+    {
+        $known = $this->mddByCleanName($rows);
+
+        return $known + $this->mddByEstablishedAlias($rows, $known);
+    }
+
+    /**
      * Which account each nick belongs to, learned from the sessions themselves.
      *
      * A session is resolved to an mdd_id at the moment it is recorded, from the
@@ -549,6 +574,80 @@ class DefragliveWatchService
         }
 
         return $known;
+    }
+
+    /**
+     * Accounts for nicks no login ever answered for, from the alias list.
+     *
+     * An alias on its own is a bad witness - it says an account once used a
+     * name, not that whoever is using it now is them, and crediting frog for an
+     * evening watched by a suburb who was logged in as nobody is exactly what
+     * came of trusting it. Two conditions make it worth listening to anyway:
+     * the account has to have played under that name more than a handful of
+     * times, so it is a name of theirs rather than one evening's joke (suburb
+     * was used once), and no second account may have ever used it, because then
+     * there is demonstrably more than one person answering to it.
+     *
+     * This is deliberately worked out at read time and never written onto a
+     * session. What the session stores stays what the game said: a login, or
+     * nothing.
+     */
+    private function mddByEstablishedAlias($rows, array $known): array
+    {
+        $wanted = [];
+
+        foreach ($rows as $r) {
+            $clean = (string) $r->player_name_clean;
+            if (! $r->mdd_id && $clean !== '' && ! isset($known[$clean])) {
+                $wanted[$clean] = true;
+            }
+        }
+
+        if (! $wanted) {
+            return [];
+        }
+
+        return array_intersect_key($this->establishedAliases(), $wanted);
+    }
+
+    /**
+     * Every nick the alias list is allowed to speak for, as clean nick => account.
+     *
+     * Cached for an hour: this walks all 23k aliases, the leaderboard is public,
+     * and an alias added on a profile is in no hurry.
+     */
+    private function establishedAliases(): array
+    {
+        return Cache::remember('defraglive:established-aliases', 3600, function () {
+            $claims = [];
+
+            foreach (UserAlias::whereNotNull('mdd_id')->get(['mdd_id', 'alias', 'usage_count']) as $alias) {
+                $clean = $this->cleanName((string) $alias->alias);
+
+                if ($clean === '' || $this->isDefaultName($clean)) {
+                    continue;
+                }
+
+                $mddId = (int) $alias->mdd_id;
+                $claims[$clean][$mddId] = max($claims[$clean][$mddId] ?? 0, (int) $alias->usage_count);
+            }
+
+            $map = [];
+
+            foreach ($claims as $clean => $accounts) {
+                if (count($accounts) !== 1) {
+                    continue;
+                }
+
+                $mddId = array_key_first($accounts);
+
+                if ($accounts[$mddId] > self::ALIAS_MIN_USES) {
+                    $map[$clean] = (int) $mddId;
+                }
+            }
+
+            return $map;
+        });
     }
 
     /**
