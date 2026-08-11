@@ -39,6 +39,7 @@ class UnclaimAliasWatchSessions extends Command
     protected $signature = 'defraglive:unclaim-alias-sessions
         {--nick=* : Clean nick to hand back, repeatable. Without any, this only lists}
         {--mdd= : Only the given account, for a nick two accounts both claim}
+        {--max-uses= : Take every nick whose alias the account used at most this often}
         {--apply : Actually clear the identity. Without this nothing is written}';
 
     protected $description = 'Drop the account an alias (not a login) put on watch sessions';
@@ -57,17 +58,20 @@ class UnclaimAliasWatchSessions extends Command
             return self::SUCCESS;
         }
 
-        if (! $wanted) {
+        $maxUses = $this->option('max-uses') === null ? null : (int) $this->option('max-uses');
+
+        if (! $wanted && $maxUses === null) {
             $this->listCandidates($watch, $groups);
 
             return self::SUCCESS;
         }
 
-        $picked = array_filter($groups, fn ($g) => in_array($g['nick'], $wanted, true)
+        $picked = array_filter($groups, fn ($g) => (in_array($g['nick'], $wanted, true)
+                || ($maxUses !== null && $g['uses'] <= $maxUses))
             && ($onlyMdd === null || $g['mdd_id'] === $onlyMdd));
 
         if (! $picked) {
-            $this->error('None of those nicks is on an account through an alias.');
+            $this->error('Nothing matches. No such nick is on an account through an alias.');
 
             return self::FAILURE;
         }
@@ -113,8 +117,10 @@ class UnclaimAliasWatchSessions extends Command
         // claimed sessions just the same.
         $claims = [];
 
-        foreach (UserAlias::whereNotNull('mdd_id')->get(['mdd_id', 'alias']) as $alias) {
-            $claims[$watch->cleanName((string) $alias->alias)][] = (int) $alias->mdd_id;
+        foreach (UserAlias::whereNotNull('mdd_id')->get(['mdd_id', 'alias', 'usage_count']) as $alias) {
+            $clean = $watch->cleanName((string) $alias->alias);
+            $mddId = (int) $alias->mdd_id;
+            $claims[$clean][$mddId] = max($claims[$clean][$mddId] ?? 0, (int) $alias->usage_count);
         }
 
         $groups = [];
@@ -126,7 +132,7 @@ class UnclaimAliasWatchSessions extends Command
             $nick = (string) $s->player_name_clean;
             $mddId = (int) $s->mdd_id;
 
-            if (! in_array($mddId, $claims[$nick] ?? [], true)) {
+            if (! isset($claims[$nick][$mddId])) {
                 continue;
             }
 
@@ -135,7 +141,14 @@ class UnclaimAliasWatchSessions extends Command
             }
 
             $key = $nick.'|'.$mddId;
-            $groups[$key] = $groups[$key] ?? ['nick' => $nick, 'mdd_id' => $mddId, 'ids' => [], 'seconds' => 0];
+            $groups[$key] = $groups[$key] ?? [
+                'nick' => $nick,
+                'mdd_id' => $mddId,
+                'uses' => $claims[$nick][$mddId],
+                'shared' => count($claims[$nick]) > 1,
+                'ids' => [],
+                'seconds' => 0,
+            ];
             $groups[$key]['ids'][] = (int) $s->id;
             $groups[$key]['seconds'] += (int) $s->seconds;
         }
@@ -151,13 +164,15 @@ class UnclaimAliasWatchSessions extends Command
 
         $this->info($sessions.' session(s) across '.count($groups)
             .' nick(s) sit on an account an alias also covers.');
-        $this->comment('Most of them are that player, logged in. Pass --nick for the ones that are not.');
+        $this->comment('Most of them are that player, logged in. Use --nick, or --max-uses'
+            .' to take the names an account barely ever played under.');
         $this->newLine();
 
         foreach ($groups as $g) {
             $profile = $watch->cleanName((string) MddProfile::where('id', $g['mdd_id'])->value('name'));
             $this->line('  '.str_pad(mb_substr($g['nick'], 0, 24), 26)
                 .' credited to '.str_pad((string) $g['mdd_id'], 7).str_pad($profile, 20)
+                .'used '.str_pad($g['uses'].'x', 8).($g['shared'] ? 'shared  ' : '        ')
                 .count($g['ids']).' sessions, '.round($g['seconds'] / 60).' min');
         }
     }
