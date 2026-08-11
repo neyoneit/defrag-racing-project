@@ -212,13 +212,18 @@ class DefragliveWatchService
             }
         }
 
-        // 2) Clean-name match against the live player map.
-        if (! $mddId && $clean !== '') {
-            $op = OnlinePlayer::whereNotNull('mdd_id')
+        // 2) Clean-name match against the live player map, and only when the
+        //    whole map answers with one account. Nicks are not unique - two
+        //    people playing as "kali" at the same time is not hypothetical -
+        //    and the second-best guess is somebody else's watch time.
+        if (! $mddId && $clean !== '' && ! $this->isDefaultName($clean)) {
+            $live = OnlinePlayer::whereNotNull('mdd_id')
                 ->get(['name', 'mdd_id'])
-                ->first(fn ($p) => $this->cleanName((string) $p->name) === $clean);
-            if ($op && $op->mdd_id) {
-                $mddId = (int) $op->mdd_id;
+                ->filter(fn ($p) => $this->cleanName((string) $p->name) === $clean)
+                ->pluck('mdd_id')
+                ->unique();
+            if ($live->count() === 1) {
+                $mddId = (int) $live->first();
             }
         }
 
@@ -517,18 +522,42 @@ class DefragliveWatchService
      * is stored with no id at all, and then counts as a separate contestant with
      * their own row. Reading the answer back off the sessions that did resolve
      * repairs the rest without asking anything else.
+     *
+     * Only a nick the game has answered the same way every time is used. Twelve
+     * of the nicks watched so far have been reported as two different accounts -
+     * two people really do play as "kali" - and there is no way to tell which of
+     * them the unresolved session belongs to, so it stays its own contestant.
+     * The engine default is skipped outright: nearly two hundred accounts have
+     * been seen as UnnamedPlayer, so it identifies nobody.
      */
     private function mddByCleanName($rows): array
     {
-        $known = [];
+        $seen = [];
 
         foreach ($rows as $r) {
-            if ($r->mdd_id && $r->player_name_clean) {
-                $known[$r->player_name_clean] = (int) $r->mdd_id;
+            if ($r->mdd_id && $r->player_name_clean && ! $this->isDefaultName($r->player_name_clean)) {
+                $seen[$r->player_name_clean][(int) $r->mdd_id] = true;
+            }
+        }
+
+        $known = [];
+
+        foreach ($seen as $clean => $accounts) {
+            if (count($accounts) === 1) {
+                $known[$clean] = (int) array_key_first($accounts);
             }
         }
 
         return $known;
+    }
+
+    /**
+     * A name the engine hands out rather than one a player chose, so it says
+     * nothing about who is behind it.
+     */
+    private function isDefaultName(string $clean): bool
+    {
+        return in_array($clean, ['unnamedplayer', 'player', 'unknownplayer'], true);
     }
 
     /**
