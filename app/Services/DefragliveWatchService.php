@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DefragliveContest;
 use App\Models\DefragliveWatchExclusion;
 use App\Models\DefragliveWatchSession;
+use App\Models\MddProfile;
 use App\Models\OnlinePlayer;
 use App\Models\Server;
 use App\Models\User;
@@ -253,13 +254,15 @@ class DefragliveWatchService
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $cutoffs = $this->exclusionCutoffs();
+        $known = $this->mddByCleanName($rows);
 
         $groups = [];
         foreach ($rows as $r) {
-            $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
+            $mddId = $r->mdd_id ?: ($known[$r->player_name_clean] ?? null);
+            $key = $this->keyFor($mddId, $r->player_name_clean);
             if (! isset($groups[$key])) {
                 $groups[$key] = [
-                    'mdd_id' => $r->mdd_id ? (int) $r->mdd_id : null,
+                    'mdd_id' => $mddId ? (int) $mddId : null,
                     'user_id' => $r->user_id ? (int) $r->user_id : null,
                     'name' => $r->player_name,
                     'name_clean' => $r->player_name_clean,
@@ -274,7 +277,7 @@ class DefragliveWatchService
                 : $r->started_at;
             // Admin exclusion: anything watched before the ban moment does not
             // count (the effective window start moves up to the cutoff).
-            $cutoff = $this->cutoffFor($cutoffs, $r->mdd_id, $r->player_name_clean);
+            $cutoff = $this->cutoffFor($cutoffs, $mddId, $r->player_name_clean);
             if ($cutoff && $cutoff->greaterThan($sessionStart)) {
                 $sessionStart = $cutoff;
             }
@@ -289,10 +292,12 @@ class DefragliveWatchService
             if ($sessionStart->lessThan($sessionEnd)) {
                 $groups[$key]['seconds'] += $this->span($sessionStart, $sessionEnd);
             }
-            // Keep the latest seen colored name / resolved identity.
+            // Keep the latest seen colored name / resolved identity. For an
+            // account this is only a fallback - accountNames() overrides it
+            // below, so a change of nick does not rename the whole record.
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
-            if ($r->mdd_id) {
-                $groups[$key]['mdd_id'] = (int) $r->mdd_id;
+            if ($mddId) {
+                $groups[$key]['mdd_id'] = (int) $mddId;
             }
             if ($r->user_id) {
                 $groups[$key]['user_id'] = (int) $r->user_id;
@@ -314,9 +319,12 @@ class DefragliveWatchService
                 ->keyBy('id')
             : collect();
 
+        $accountNames = $this->accountNames($entries);
+
         foreach ($entries as &$e) {
             $e['tickets'] = intdiv($e['seconds'], self::SECONDS_PER_TICKET);
             $e['user'] = $e['user_id'] ? $users->get($e['user_id']) : null;
+            $e['name'] = $accountNames[$e['mdd_id']] ?? $e['name'];
         }
 
         return $entries;
@@ -334,13 +342,15 @@ class DefragliveWatchService
             ->get(['mdd_id', 'user_id', 'player_name', 'player_name_clean', 'seconds', 'started_at', 'ended_at']);
 
         $cutoffs = $this->exclusionCutoffs();
+        $known = $this->mddByCleanName($rows);
 
         $groups = [];
         foreach ($rows as $r) {
-            $key = $this->keyFor($r->mdd_id, $r->player_name_clean);
+            $mddId = $r->mdd_id ?: ($known[$r->player_name_clean] ?? null);
+            $key = $this->keyFor($mddId, $r->player_name_clean);
             if (! isset($groups[$key])) {
                 $groups[$key] = [
-                    'mdd_id' => $r->mdd_id ? (int) $r->mdd_id : null,
+                    'mdd_id' => $mddId ? (int) $mddId : null,
                     'user_id' => $r->user_id ? (int) $r->user_id : null,
                     'name' => $r->player_name,
                     'seconds' => 0,
@@ -349,7 +359,7 @@ class DefragliveWatchService
             }
             // Admin exclusion: drop the part of the session before the ban
             // moment (whole session when it ended before the ban).
-            $cutoff = $this->cutoffFor($cutoffs, $r->mdd_id, $r->player_name_clean);
+            $cutoff = $this->cutoffFor($cutoffs, $mddId, $r->player_name_clean);
             $start = ($cutoff && $cutoff->greaterThan($r->started_at)) ? $cutoff : $r->started_at;
             $end = $r->ended_at ?? now();
             // An open session is being watched right now - count it live. A
@@ -362,8 +372,8 @@ class DefragliveWatchService
             }
             $groups[$key]['sessions']++;
             $groups[$key]['name'] = $r->player_name ?: $groups[$key]['name'];
-            if ($r->mdd_id) {
-                $groups[$key]['mdd_id'] = (int) $r->mdd_id;
+            if ($mddId) {
+                $groups[$key]['mdd_id'] = (int) $mddId;
             }
             if ($r->user_id) {
                 $groups[$key]['user_id'] = (int) $r->user_id;
@@ -384,6 +394,8 @@ class DefragliveWatchService
                 ->keyBy('id')
             : collect();
 
+        $accountNames = $this->accountNames($entries);
+
         foreach ($entries as &$e) {
             $u = $e['user_id'] ? $users->get($e['user_id']) : null;
             $e['user'] = $u ? [
@@ -391,6 +403,7 @@ class DefragliveWatchService
                 'profile_photo_path' => $u->profile_photo_path,
                 'country' => $u->country,
             ] : null;
+            $e['name'] = $accountNames[$e['mdd_id']] ?? $e['name'];
         }
 
         return $entries;
@@ -496,6 +509,59 @@ class DefragliveWatchService
     private function keyFor($mddId, ?string $clean): string
     {
         return $mddId ? 'mdd:'.(int) $mddId : 'name:'.(string) $clean;
+    }
+
+    /**
+     * Which account each nick belongs to, learned from the sessions themselves.
+     *
+     * A session is resolved to an mdd_id at the moment it is recorded, from the
+     * live player list, and that only works while the player is connected and
+     * logged in. The same person watched under the same nick outside that window
+     * is stored with no id at all, and then counts as a separate contestant with
+     * their own row. Reading the answer back off the sessions that did resolve
+     * repairs the rest without asking anything else.
+     */
+    private function mddByCleanName($rows): array
+    {
+        $known = [];
+
+        foreach ($rows as $r) {
+            if ($r->mdd_id && $r->player_name_clean) {
+                $known[$r->player_name_clean] = (int) $r->mdd_id;
+            }
+        }
+
+        return $known;
+    }
+
+    /**
+     * The name an account goes by, for every mdd_id in the given entries.
+     *
+     * Without this the leaderboard shows whichever nick was seen last, so a
+     * player who spent one evening under a different name is renamed for good,
+     * watch time and all - which is how frog turned into suburb. The account's
+     * own name is the stable answer; a player nobody has an account for keeps
+     * the nick their sessions carry.
+     */
+    private function accountNames(array $entries): array
+    {
+        $mddIds = array_values(array_filter(array_column($entries, 'mdd_id')));
+
+        if (! $mddIds) {
+            return [];
+        }
+
+        $names = MddProfile::whereIn('id', $mddIds)->pluck('name', 'id')->all();
+
+        // A site account outranks the mdd profile: it is the name the player
+        // chose here, and the one the rest of the site shows.
+        foreach (User::whereIn('mdd_id', $mddIds)->get(['mdd_id', 'name']) as $user) {
+            if ($user->name) {
+                $names[(int) $user->mdd_id] = $user->name;
+            }
+        }
+
+        return $names;
     }
 
     /** Is the "current player" actually the bot self-spectating (idle)? */
