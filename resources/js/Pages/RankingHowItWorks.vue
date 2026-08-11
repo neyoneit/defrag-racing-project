@@ -143,7 +143,7 @@ const top200Share = computed(() => topNWeightShare(200));
 </script>
 
 <template>
-    <Head title="How Rankings Work" />
+    <Head :title="$t('How Rankings Work')" />
 
     <div class="min-h-screen bg-gray-950 text-gray-300">
         <div class="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-10">
@@ -152,66 +152,66 @@ const top200Share = computed(() => topNWeightShare(200));
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
-                Back to Rankings
+                {{ $t('Back to Rankings') }}
             </Link>
 
             <!-- WIP Banner -->
             <div class="bg-red-600 border-4 border-red-800 rounded-xl px-4 py-4 text-center mb-8">
                 <div class="flex items-center justify-center gap-3 mb-1">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
-                    <span class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">Work in Progress</span>
+                    <span class="text-white font-black text-lg sm:text-xl uppercase tracking-wide">{{ $t('Work in Progress') }}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7 text-white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
                 </div>
-                <p class="text-white/90 text-sm sm:text-base font-semibold">The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.</p>
+                <p class="text-white/90 text-sm sm:text-base font-semibold">{{ $t('The ranking system is still under active development. Parameters are being tuned and formulas may change. Please give us time until the system is finalized.') }}</p>
             </div>
 
-            <h1 class="text-2xl md:text-3xl font-black text-gray-200 mb-2">How Rankings Work</h1>
-            <p class="text-gray-500 text-sm mb-10">A complete breakdown of the ranking algorithm, step by step.</p>
+            <h1 class="text-2xl md:text-3xl font-black text-gray-200 mb-2">{{ $t('How Rankings Work') }}</h1>
+            <p class="text-gray-500 text-sm mb-10">{{ $t('A complete breakdown of the ranking algorithm, step by step.') }}</p>
 
             <!-- Table of contents -->
             <div class="bg-gray-900/50 border border-gray-800 rounded-xl p-4 mb-10">
-                <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Contents</div>
+                <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Contents') }}</div>
                 <div class="grid grid-cols-2 gap-1 text-sm">
-                    <a href="#overview" class="text-blue-400 hover:text-blue-300">1. Overview</a>
-                    <a href="#map-eligibility" class="text-blue-400 hover:text-blue-300">2. Map Eligibility</a>
-                    <a href="#reltime" class="text-blue-400 hover:text-blue-300">3. Relative Time (reltime)</a>
-                    <a href="#base-score" class="text-blue-400 hover:text-blue-300">4. Base Map Score</a>
-                    <a href="#multiplier" class="text-blue-400 hover:text-blue-300">5. Map Multiplier</a>
-                    <a href="#rank-multiplier" class="text-blue-400 hover:text-blue-300">6. Rank Multiplier</a>
-                    <a href="#final-score" class="text-blue-400 hover:text-blue-300">7. Final Map Score</a>
-                    <a href="#player-rating" class="text-blue-400 hover:text-blue-300">8. Player Rating</a>
-                    <a href="#categories" class="text-blue-400 hover:text-blue-300">9. Categories</a>
-                    <a href="#updates" class="text-blue-400 hover:text-blue-300">10. Real-time Updates</a>
-                    <a href="#full-example" class="text-blue-400 hover:text-blue-300">11. Full Example</a>
+                    <a href="#overview" class="text-blue-400 hover:text-blue-300">{{ $t('1. Overview') }}</a>
+                    <a href="#map-eligibility" class="text-blue-400 hover:text-blue-300">{{ $t('2. Map Eligibility') }}</a>
+                    <a href="#reltime" class="text-blue-400 hover:text-blue-300">{{ $t('3. Relative Time (reltime)') }}</a>
+                    <a href="#base-score" class="text-blue-400 hover:text-blue-300">{{ $t('4. Base Map Score') }}</a>
+                    <a href="#multiplier" class="text-blue-400 hover:text-blue-300">{{ $t('5. Map Multiplier') }}</a>
+                    <a href="#rank-multiplier" class="text-blue-400 hover:text-blue-300">{{ $t('6. Rank Multiplier') }}</a>
+                    <a href="#final-score" class="text-blue-400 hover:text-blue-300">{{ $t('7. Final Map Score') }}</a>
+                    <a href="#player-rating" class="text-blue-400 hover:text-blue-300">{{ $t('8. Player Rating') }}</a>
+                    <a href="#categories" class="text-blue-400 hover:text-blue-300">{{ $t('9. Categories') }}</a>
+                    <a href="#updates" class="text-blue-400 hover:text-blue-300">{{ $t('10. Real-time Updates') }}</a>
+                    <a href="#full-example" class="text-blue-400 hover:text-blue-300">{{ $t('11. Full Example') }}</a>
                 </div>
             </div>
 
             <!-- 1. Overview -->
             <section id="overview" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">1.</span> Overview
+                    <span class="text-blue-400 text-lg font-mono">1.</span> {{ $t('Overview') }}
                 </h2>
-                <p class="mb-3">The ranking system measures how well a player performs across all maps they have records on. The process works in 5 stages:</p>
+                <p class="mb-3">{{ $t('The ranking system measures how well a player performs across all maps they have records on. The process works in 5 stages:') }}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-green-400 mb-1">1. Relative Time</div>
-                        <div class="text-xs text-gray-400">Your time is compared to the fastest time by another player to get a ratio (reltime).</div>
+                        <div class="text-sm font-bold text-green-400 mb-1">{{ $t('1. Relative Time') }}</div>
+                        <div class="text-xs text-gray-400">{{ $t('Your time is compared to the fastest time by another player to get a ratio (reltime).') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-yellow-400 mb-1">2. Base Score</div>
-                        <div class="text-xs text-gray-400">The reltime is fed into a logistic curve to produce a score (0-1000).</div>
+                        <div class="text-sm font-bold text-yellow-400 mb-1">{{ $t('2. Base Score') }}</div>
+                        <div class="text-xs text-gray-400">{{ $t('The reltime is fed into a logistic curve to produce a score (0-1000).') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-purple-400 mb-1">3. Map Multiplier</div>
-                        <div class="text-xs text-gray-400">Score is scaled by how many players the map has (popular maps count more).</div>
+                        <div class="text-sm font-bold text-purple-400 mb-1">{{ $t('3. Map Multiplier') }}</div>
+                        <div class="text-xs text-gray-400">{{ $t('Score is scaled by how many players the map has (popular maps count more).') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3">
-                        <div class="text-sm font-bold text-pink-400 mb-1">4. Rank Multiplier</div>
-                        <div class="text-xs text-gray-400">Score is further scaled by your rank on the map (beating more players counts more).</div>
+                        <div class="text-sm font-bold text-pink-400 mb-1">{{ $t('4. Rank Multiplier') }}</div>
+                        <div class="text-xs text-gray-400">{{ $t('Score is further scaled by your rank on the map (beating more players counts more).') }}</div>
                     </div>
                     <div class="bg-gray-900/60 border border-gray-800 rounded-lg p-3 sm:col-span-2">
-                        <div class="text-sm font-bold text-red-400 mb-1">5. Player Rating</div>
-                        <div class="text-xs text-gray-400">All map scores are combined with exponential weighting into a single rating.</div>
+                        <div class="text-sm font-bold text-red-400 mb-1">{{ $t('5. Player Rating') }}</div>
+                        <div class="text-xs text-gray-400">{{ $t('All map scores are combined with exponential weighting into a single rating.') }}</div>
                     </div>
                 </div>
             </section>
@@ -219,138 +219,138 @@ const top200Share = computed(() => topNWeightShare(200));
             <!-- 2. Map Eligibility -->
             <section id="map-eligibility" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">2.</span> Map Eligibility
+                    <span class="text-blue-400 text-lg font-mono">2.</span> {{ $t('Map Eligibility') }}
                 </h2>
-                <p class="mb-3">Not all maps are included in rankings. A map must meet these criteria:</p>
+                <p class="mb-3">{{ $t('Not all maps are included in rankings. A map must meet these criteria:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 space-y-2">
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>At least <strong class="text-white">{{ s.min_map_players }} unique players</strong> must have a record on the map for the given physics (VQ3 and CPM are counted separately)</span>
+                        <span>{{ $t('At least') }} <strong class="text-white">{{ $tc(':count unique player|:count unique players', s.min_map_players) }}</strong> {{ $t('must have a record on the map for the given physics (VQ3 and CPM are counted separately)') }}</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>The fastest time must be at least <strong class="text-white">{{ s.min_top1_time }}ms</strong> ({{ (s.min_top1_time / 1000).toFixed(1) }} seconds) - eliminates bugged/trivial maps</span>
+                        <span>{{ $t('The fastest time must be at least') }} <strong class="text-white">{{ s.min_top1_time }}ms</strong> {{ $t('(:seconds seconds) - eliminates bugged/trivial maps', { seconds: (s.min_top1_time / 1000).toFixed(1) }) }}</span>
                     </div>
                     <div class="flex items-start gap-2">
                         <span class="text-green-400 mt-0.5 font-bold">&#x2713;</span>
-                        <span>No more than <strong class="text-white">{{ s.max_tied_wr_players }} players</strong> can share the exact same WR time - if {{ s.max_tied_wr_players + 1 }}+ players have identical best times, the map is considered "free WR" and is excluded</span>
+                        <span>{{ $t('No more than') }} <strong class="text-white">{{ $tc(':count player|:count players', s.max_tied_wr_players) }}</strong> {{ $t('can share the exact same WR time - if :count+ players have identical best times, the map is considered "free WR" and is excluded', { count: s.max_tied_wr_players + 1 }) }}</span>
                     </div>
                 </div>
                 <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300">
-                    <strong>Why?</strong> Maps with very few players or trivially short times don't provide meaningful competitive data. Free WR maps (where many players easily reach the same ceiling) don't differentiate skill.
+                    <strong>{{ $t('Why?') }}</strong> {{ $t("Maps with very few players or trivially short times don't provide meaningful competitive data. Free WR maps (where many players easily reach the same ceiling) don't differentiate skill.") }}
                 </div>
             </section>
 
             <!-- 3. Reltime -->
             <section id="reltime" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">3.</span> Relative Time (reltime)
+                    <span class="text-blue-400 text-lg font-mono">3.</span> {{ $t('Relative Time (reltime)') }}
                 </h2>
-                <p class="mb-3">Reltime is the ratio of your time to the <strong class="text-white">fastest time set by someone else</strong>:</p>
+                <p class="mb-3">{{ $t('Reltime is the ratio of your time to the') }} <strong class="text-white">{{ $t('fastest time set by someone else') }}</strong>:</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3">
                     reltime = your_time / fastest_other_time
                 </div>
                 <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300 mb-4">
-                    <strong>Key detail:</strong> You are always compared to the best time by a <em>different player</em>. If you hold the WR, your reltime is calculated against the 2nd place time - you are never compared to yourself.
+                    <strong>{{ $t('Key detail:') }}</strong> {{ $t('You are always compared to the best time by a') }} <em>{{ $t('different player') }}</em>. {{ $t('If you hold the WR, your reltime is calculated against the 2nd place time - you are never compared to yourself.') }}
                 </div>
                 <div class="space-y-2 text-sm">
                     <div class="flex items-center gap-3">
                         <span class="bg-green-600/20 text-green-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">&lt; 1.000</span>
-                        <span>You are faster than the best time by anyone else (you hold WR)</span>
+                        <span>{{ $t('You are faster than the best time by anyone else (you hold WR)') }}</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-green-600/20 text-green-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">1.000</span>
-                        <span>You matched the fastest other player exactly</span>
+                        <span>{{ $t('You matched the fastest other player exactly') }}</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-yellow-600/20 text-yellow-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">1.233</span>
-                        <span>Your time is 23.3% slower than the fastest other time</span>
+                        <span>{{ $t('Your time is 23.3% slower than the fastest other time') }}</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="bg-red-600/20 text-red-400 px-2 py-0.5 rounded font-mono text-xs w-24 text-center">2.500</span>
-                        <span>Your time is 2.5x the fastest other time</span>
+                        <span>{{ $t('Your time is 2.5x the fastest other time') }}</span>
                     </div>
                 </div>
 
                 <div class="mt-4 bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (non-WR player)</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Example (non-WR player)') }}</div>
                     <div class="text-sm space-y-1">
-                        <div>WR time (other player): <span class="text-white font-mono">{{ (exampleWR / 1000).toFixed(3) }}s</span></div>
-                        <div>Your time: <span class="text-white font-mono">{{ (exampleTime / 1000).toFixed(3) }}s</span></div>
+                        <div>{{ $t('WR time (other player):') }} <span class="text-white font-mono">{{ (exampleWR / 1000).toFixed(3) }}s</span></div>
+                        <div>{{ $t('Your time:') }} <span class="text-white font-mono">{{ (exampleTime / 1000).toFixed(3) }}s</span></div>
                         <div>reltime = {{ (exampleTime / 1000).toFixed(3) }} / {{ (exampleWR / 1000).toFixed(3) }} = <span class="text-yellow-400 font-mono font-bold">{{ exampleReltime.toFixed(4) }}</span></div>
                     </div>
                 </div>
 
                 <div class="mt-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-xs text-yellow-300">
-                    <strong>Note:</strong> The lower the reltime, the better. A reltime below 1.0 means you are the WR holder and faster than everyone else.
+                    <strong>{{ $t('Note:') }}</strong> {{ $t('The lower the reltime, the better. A reltime below 1.0 means you are the WR holder and faster than everyone else.') }}
                 </div>
             </section>
 
             <!-- 4. Base Score -->
             <section id="base-score" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">4.</span> Base Map Score (Logistic Curve)
+                    <span class="text-blue-400 text-lg font-mono">4.</span> {{ $t('Base Map Score (Logistic Curve)') }}
                 </h2>
-                <p class="mb-3">The reltime is converted into a score using a generalized logistic function. This creates a smooth S-curve where:</p>
+                <p class="mb-3">{{ $t('The reltime is converted into a score using a generalized logistic function. This creates a smooth S-curve where:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
                     score = 1000 * (A + (-A / (1 + Q * exp(-B * (reltime - M)))^(1/V)))
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">A = {{ fmt(s.cfg_a) }}</span> <span class="text-gray-500">— amplitude</span></div>
-                        <div><span class="text-white font-mono">B = {{ fmt(s.cfg_b) }}</span> <span class="text-gray-500">— steepness</span></div>
-                        <div><span class="text-white font-mono">M = {{ fmt(s.cfg_m) }}</span> <span class="text-gray-500">— midpoint shift</span></div>
-                        <div><span class="text-white font-mono">V = {{ fmt(s.cfg_v) }}</span> <span class="text-gray-500">— curve shape</span></div>
-                        <div><span class="text-white font-mono">Q = {{ fmt(s.cfg_q) }}</span> <span class="text-gray-500">— initial value</span></div>
+                        <div><span class="text-white font-mono">A = {{ fmt(s.cfg_a) }}</span> <span class="text-gray-500">— {{ $t('amplitude') }}</span></div>
+                        <div><span class="text-white font-mono">B = {{ fmt(s.cfg_b) }}</span> <span class="text-gray-500">— {{ $t('steepness') }}</span></div>
+                        <div><span class="text-white font-mono">M = {{ fmt(s.cfg_m) }}</span> <span class="text-gray-500">— {{ $t('midpoint shift') }}</span></div>
+                        <div><span class="text-white font-mono">V = {{ fmt(s.cfg_v) }}</span> <span class="text-gray-500">— {{ $t('curve shape') }}</span></div>
+                        <div><span class="text-white font-mono">Q = {{ fmt(s.cfg_q) }}</span> <span class="text-gray-500">— {{ $t('initial value') }}</span></div>
                     </div>
                 </div>
 
-                <p class="mb-3 text-sm">In practice, this means:</p>
+                <p class="mb-3 text-sm">{{ $t('In practice, this means:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between items-center">
-                            <span>WR holder (reltime = 1.00)</span>
+                            <span>{{ $t('WR holder (reltime = 1.00)') }}</span>
                             <span class="font-mono text-green-400 font-bold">{{ calcMapScore(1.0).toFixed(1) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>10% slower (reltime = 1.10)</span>
+                            <span>{{ $t('10% slower (reltime = 1.10)') }}</span>
                             <span class="font-mono text-lime-400 font-bold">{{ calcMapScore(1.1).toFixed(1) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>25% slower (reltime = 1.25)</span>
+                            <span>{{ $t('25% slower (reltime = 1.25)') }}</span>
                             <span class="font-mono text-yellow-400 font-bold">{{ calcMapScore(1.25).toFixed(1) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>50% slower (reltime = 1.50)</span>
+                            <span>{{ $t('50% slower (reltime = 1.50)') }}</span>
                             <span class="font-mono text-orange-400 font-bold">{{ calcMapScore(1.5).toFixed(1) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>2x slower (reltime = 2.00)</span>
+                            <span>{{ $t('2x slower (reltime = 2.00)') }}</span>
                             <span class="font-mono text-red-400 font-bold">{{ calcMapScore(2.0).toFixed(1) }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span>5x slower (reltime = 5.00)</span>
+                            <span>{{ $t('5x slower (reltime = 5.00)') }}</span>
                             <span class="font-mono text-red-600 font-bold">{{ calcMapScore(5.0).toFixed(1) }}</span>
                         </div>
                     </div>
                 </div>
                 <div class="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-xs text-blue-300">
-                    <strong>Key insight:</strong> The logistic curve rewards being close to WR exponentially. Going from 1.5x to 1.25x WR is a much bigger score jump than going from 3.0x to 2.75x.
+                    <strong>{{ $t('Key insight:') }}</strong> {{ $t('The logistic curve rewards being close to WR exponentially. Going from 1.5x to 1.25x WR is a much bigger score jump than going from 3.0x to 2.75x.') }}
                 </div>
             </section>
 
             <!-- 5. Map Multiplier -->
             <section id="multiplier" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">5.</span> Map Multiplier (Hill Function)
+                    <span class="text-blue-400 text-lg font-mono">5.</span> {{ $t('Map Multiplier (Hill Function)') }}
                 </h2>
-                <p class="mb-3">Not all maps carry the same weight. Maps with more active players are considered more competitive and get a higher multiplier. This uses a Hill/logistic function:</p>
+                <p class="mb-3">{{ $t('Not all maps carry the same weight. Maps with more active players are considered more competitive and get a higher multiplier. This uses a Hill/logistic function:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3">
                     multiplier = (L * x^n) / (k^n + x^n)
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— number of unique players on the map</span></div>
                         <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— median(players per map in category) / 2 (the halfway point)</span></div>
@@ -507,7 +507,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     Generalized stretched exponential with a position-dependent exponent. WR (t = 0) always gets exactly 1.0; the worst rank on the map (t = 1) gets exactly <span class="font-mono">k</span>.
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— number of unique players on the map</span></div>
                         <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— your position on the map leaderboard (1 = WR)</span></div>
@@ -578,7 +578,7 @@ const top200Share = computed(() => topNWeightShare(200));
                 </div>
 
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Parameters</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
                         <div><span class="text-white font-mono">i</span> <span class="text-gray-500">— rank position in your sorted map scores (1 = your best map)</span></div>
                         <div><span class="text-white font-mono">score_i</span> <span class="text-gray-500">— the final map score (after multipliers) on your i-th best map</span></div>
@@ -744,7 +744,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                         <div class="text-sm font-bold text-yellow-400 mb-2">Step 2: Calculate reltime</div>
                         <div class="text-xs text-gray-400">
-                            <div>Your time: <span class="text-white">18.500s</span></div>
+                            <div>{{ $t('Your time:') }} <span class="text-white">18.500s</span></div>
                             <div>reltime = 18.500 / 15.000 = <span class="text-yellow-400 font-mono font-bold">{{ exampleReltime.toFixed(4) }}</span></div>
                         </div>
                     </div>
