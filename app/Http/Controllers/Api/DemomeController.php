@@ -1127,8 +1127,16 @@ class DemomeController extends Controller
         $videos = RenderedVideo::where('status', 'completed')
             ->whereNotNull('youtube_video_id')
             ->whereNotNull('youtube_url')
-            ->where('id', '>', $lastId)
-            ->orderBy('id', 'asc')
+            // Newest first when before_id is given (0 = start at the newest).
+            // A backfill costs API quota per video and there are ten thousand
+            // of them, so it has to reach the ones people actually watch first;
+            // walking up from id 1 spends days on videos nobody opens.
+            ->when($request->has('before_id'), function ($query) use ($request) {
+                $beforeId = (int) $request->input('before_id');
+
+                return $query->when($beforeId > 0, fn ($q) => $q->where('id', '<', $beforeId))
+                    ->orderBy('id', 'desc');
+            }, fn ($query) => $query->where('id', '>', $lastId)->orderBy('id', 'asc'))
             ->limit($limit)
             ->get()
             ->map(function ($video) {
