@@ -9,7 +9,6 @@ use App\Models\MddProfile;
 use App\Models\OnlinePlayer;
 use App\Models\Server;
 use App\Models\User;
-use App\Models\UserAlias;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,10 +19,11 @@ use Illuminate\Support\Facades\DB;
  * accrue that history here into continuous watch sessions, then a contest is a
  * window over those sessions and the winner is a watch-time-weighted raffle.
  *
- * Identity: the bot payload carries no mdd_id (svinfo doesn't expose it), so we
- * resolve the watched player to a defrag account by the live OnlinePlayer map
- * (precise client_id match, then clean-name), then UserAlias, falling back to
- * the bare name (still tracked; payout handled manually).
+ * Identity: the bot payload carries no mdd_id (svinfo doesn't expose it), so the
+ * watched player is matched against the live player list, which carries an
+ * mdd_id only for someone actually logged in (precise client_id match on the
+ * server first, then by clean name). No login behind that nick means no account:
+ * the session is kept under the bare name and counts as its own contestant.
  */
 class DefragliveWatchService
 {
@@ -181,8 +181,16 @@ class DefragliveWatchService
 
     /**
      * Resolve a watched player to [mdd_id, user_id]. Best effort, never throws.
-     * Order: precise live client_id on this server -> clean-name OnlinePlayer ->
-     * UserAlias -> unresolved (name only).
+     * Order: precise live client_id on this server -> clean-name against the live
+     * player list -> unresolved (name only).
+     *
+     * Both steps read the same thing: an mdd_id the game itself reported for a
+     * player who is logged in right now. A declared alias is NOT that. An alias
+     * is a nick a player wrote on their profile, and somebody else can be sitting
+     * behind it - frog has "suburb" as an alias, but the suburb the bot spectated
+     * was not logged in as frog, so that watch time was never frog's. With no
+     * login for the nick the session stays unresolved and counts as its own
+     * contestant.
      */
     public function resolve(array $current, ?string $ip): array
     {
@@ -211,17 +219,6 @@ class DefragliveWatchService
                 ->first(fn ($p) => $this->cleanName((string) $p->name) === $clean);
             if ($op && $op->mdd_id) {
                 $mddId = (int) $op->mdd_id;
-            }
-        }
-
-        // 3) Approved alias history.
-        if (! $mddId && $clean !== '') {
-            $alias = UserAlias::query()
-                ->whereNotNull('mdd_id')
-                ->get(['mdd_id', 'alias'])
-                ->first(fn ($a) => $this->cleanName((string) $a->alias) === $clean);
-            if ($alias && $alias->mdd_id) {
-                $mddId = (int) $alias->mdd_id;
             }
         }
 
