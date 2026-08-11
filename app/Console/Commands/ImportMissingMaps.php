@@ -32,7 +32,8 @@ class ImportMissingMaps extends Command
         {--min-demos=1 : Skip maps carrying fewer demos than this}
         {--sleep=1 : Seconds to wait between requests to Worldspawn}
         {--only=* : Only these map names, instead of everything missing}
-        {--via-search : Also import maps only a search could find, under the name the demos use}';
+        {--via-search : Also import maps only a search could find, under the name the demos use}
+        {--stub : Do not ask Worldspawn at all, just give what is left a bare row}';
 
     protected $description = 'Add maps that demos reference but the maps table is missing';
 
@@ -58,6 +59,10 @@ class ImportMissingMaps extends Command
 
         if ($limit > 0) {
             $missing = $missing->take($limit);
+        }
+
+        if ($this->option('stub')) {
+            return $this->stubs($missing, $apply);
         }
 
         $this->info(($apply ? 'Importing ' : 'Dry run over ') . $missing->count() . ' map(s), '
@@ -155,6 +160,80 @@ class ImportMissingMaps extends Command
         if (! $apply && $found > 0) {
             $this->newLine();
             $this->comment('Nothing was written. Add --apply to import these.');
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * A bare row for every map left over - the ones nobody has a pk3 of any
+     * more, so Worldspawn has nothing to say about them and neither do we.
+     *
+     * The point is not the row, it is the page: without one the map 404s and
+     * the demos recorded on it cannot be reached at all. What the page then
+     * says is that the file could not be found and to send it in if you have
+     * it, which is how any of these ever gets filled in properly.
+     *
+     * Every column on the table is NOT NULL, so everything unknown is written
+     * empty - except date_added, which takes the date of the earliest demo on
+     * the map. That is a real fact rather than an invention, and it keeps 860
+     * blank maps off the "latest maps" panel, which sorts on exactly that.
+     */
+    private function stubs($missing, bool $apply): int
+    {
+        $firstSeen = UploadedDemo::query()
+            ->whereNotNull('map_name')
+            ->where('map_name', '!=', '')
+            ->select('map_name', DB::raw('MIN(COALESCE(record_date, created_at)) as first_seen'))
+            ->groupBy('map_name')
+            ->pluck('first_seen', 'map_name');
+
+        $this->info(($apply ? 'Adding ' : 'Dry run over ') . $missing->count()
+            . ' bare row(s), ' . $missing->sum('demos') . ' demo(s) between them.');
+        $this->line('Worldspawn is not asked - whatever is still missing at this point is not there.');
+        $this->newLine();
+
+        $added = 0;
+
+        foreach ($missing as $row) {
+            $date = $firstSeen[$row->map_name] ?? now();
+
+            if (! $apply) {
+                $this->line(sprintf('  %5d demos  %-34s first seen %s', $row->demos, $row->map_name, $date));
+                continue;
+            }
+
+            if (Map::where('name', $row->map_name)->exists()) {
+                continue;
+            }
+
+            $map = new Map();
+            $map->fill([
+                'name' => $row->map_name,
+                'description' => '',
+                'author' => '',
+                'pk3' => '',
+                'pk3_size' => 0,
+                'physics' => '',
+                'gametype' => '',
+                'mod' => '',
+                'weapons' => '',
+                'items' => '',
+                'functions' => '',
+                'date_added' => $date,
+            ]);
+            $map->thumbnail = '';
+            $map->visible = true;
+            $map->save();
+
+            $added++;
+        }
+
+        $this->newLine();
+        $this->info(($apply ? 'Added ' : 'Would add ') . ($apply ? $added : $missing->count()) . ' bare row(s).');
+
+        if (! $apply) {
+            $this->comment('Nothing was written. Add --apply.');
         }
 
         return self::SUCCESS;
