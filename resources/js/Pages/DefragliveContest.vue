@@ -197,7 +197,7 @@ const statusColor = (s) => ({
                          twice is what made this column a wall. -->
                     <div class="text-gray-400 mt-3 text-sm space-y-2 leading-relaxed">
                         <p>
-                            <span class="text-gray-200 font-semibold">DefragLive</span> {{ $t('streams defrag to Twitch around the clock, so anyone can watch from anywhere with no install and no setup. The players it spectates are the ones putting on that show, and this contest is') }} <span class="text-gray-200 font-semibold">{{ $t('their reward for it') }}</span>.
+                            <span class="text-gray-200 font-semibold">{{ $t('DefragLive') }}</span> {{ $t('streams defrag to Twitch around the clock, so anyone can watch from anywhere with no install and no setup. The players it spectates are the ones putting on that show, and this contest is') }} <span class="text-gray-200 font-semibold">{{ $t('their reward for it') }}</span>.
                         </p>
                         <p>
                             {{ $t('Let the bot watch you and you are in. There is nothing to sign up for and nothing to play differently.') }}
@@ -263,7 +263,7 @@ const statusColor = (s) => ({
                                 <div class="text-xs text-purple-200 mt-1">{{ $t('Watched for :time', { time: fmtWatch(currentWatchSeconds) }) }}</div>
                             </template>
                             <template v-else>
-                                <div class="text-xl font-black text-white">DefragLive</div>
+                                <div class="text-xl font-black text-white">{{ $t('DefragLive') }}</div>
                                 <div class="text-sm text-gray-300">{{ $t('streaming defrag 24/7') }}</div>
                             </template>
                         </div>
