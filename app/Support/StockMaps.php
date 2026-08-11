@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Support;
+
+/**
+ * The maps that come with Quake III Arena itself.
+ *
+ * Read off the .bsp files in pak0 through pak8 of a stock install - pak0 holds
+ * the game's own maps, pak2 adds q3tourney6_ctf, and pak6 the four pro- recuts
+ * from the 1.32 point release. Fixed since 2001, so a list rather than
+ * something to detect at runtime.
+ *
+ * These have no pk3 of their own to offer: Worldspawn describes them as
+ * "Quake III: Arena.pk3" at the size of the whole game, which says where the
+ * map comes from rather than naming a file anyone can download. Telling them
+ * apart from a map that is simply lost matters, because the two deserve very
+ * different things said about them.
+ */
+class StockMaps
+{
+    public const NAMES = [
+        'pro-q3dm13', 'pro-q3dm6', 'pro-q3tourney2', 'pro-q3tourney4',
+        'q3ctf1', 'q3ctf2', 'q3ctf3', 'q3ctf4',
+        'q3dm0', 'q3dm1', 'q3dm2', 'q3dm3', 'q3dm4', 'q3dm5', 'q3dm6', 'q3dm7',
+        'q3dm8', 'q3dm9', 'q3dm10', 'q3dm11', 'q3dm12', 'q3dm13', 'q3dm14',
+        'q3dm15', 'q3dm16', 'q3dm17', 'q3dm18', 'q3dm19',
+        'q3tourney1', 'q3tourney2', 'q3tourney3', 'q3tourney4', 'q3tourney5',
+        'q3tourney6', 'q3tourney6_ctf',
+        'test_bigbox',
+    ];
+
+    public static function has(?string $name): bool
+    {
+        return $name !== null && in_array(mb_strtolower($name), self::NAMES, true);
+    }
+}

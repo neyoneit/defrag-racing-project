@@ -153,7 +153,19 @@
                     <div v-for="func in functionsList" :title="func" :class="`sprite-items sprite-${func} w-5 h-5 mr-1 flex-shrink-0 mb-1`"></div>
                 </div>
     
-                <a target="_blank" :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')">
+                <!-- A map with no pk3 is either one of the maps Quake III ships
+                     with, which has nothing to download, or one whose file we
+                     could not find anywhere and would like back. -->
+                <div v-if="!map?.pk3 && map?.is_stock" class="flex justify-center text-gray-500 bg-blackop-50 py-1 px-2 rounded-md text-sm">
+                    Comes with Quake III Arena
+                </div>
+
+                <div v-else-if="!map?.pk3" class="text-gray-500 bg-blackop-50 py-1 px-2 rounded-md text-sm text-center">
+                    This map's pk3 could not be found anywhere.<br>
+                    If you have it, send it to <span class="text-gray-400">neyo</span> and it will be added.
+                </div>
+
+                <a v-else target="_blank" :href="'https://dl.defrag.racing/downloads/maps/' + encodeURIComponent(map?.pk3?.split('/').pop() ?? '')">
                     <div class="flex justify-center text-gray-400 bg-blackop-50 hover:bg-blackop-80 py-1 px-2 rounded-md cursor-pointer" title="Download">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
