@@ -45,6 +45,10 @@ const appName = import.meta.env.VITE_APP_NAME || 'Defrag Racing';
 // on it.
 import { formatTime, setTimeFormat } from './utils/time';
 
+// Translation. English strings stay written in the templates and a language
+// file overrides the ones it has - see utils/i18n.js.
+import { t, tChoice, setLocale } from './utils/i18n';
+
 const q3tohtml = (name) => {
     if (!name) return '';
     let result = '';
@@ -158,7 +162,11 @@ window.addEventListener('unhandledrejection', (event) => {
     });
 });
 
-createInertiaApp({
+// The language file has to be in memory before the first render, or every
+// page would flash English and then re-render. `<html lang>` is written
+// server-side by the root template, so the locale is known here without
+// waiting for Inertia's props.
+setLocale(document.documentElement.lang || 'en').then(() => createInertiaApp({
     title: (title) => `${title} - Defrag Racing`,
     resolve: async (name) => {
         const page = await resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue'))
@@ -175,7 +183,13 @@ createInertiaApp({
         // saving the preference comes back as an ordinary Inertia response
         // carrying the new shared props.
         setTimeFormat(props.initialPage.props.timeFormat);
-        router.on('success', (event) => setTimeFormat(event.detail.page.props.timeFormat));
+        router.on('success', (event) => {
+            setTimeFormat(event.detail.page.props.timeFormat);
+            // Switching the language comes back as an ordinary Inertia
+            // response too. `messages` is a ref, so the swap re-renders what
+            // is on screen instead of waiting for a full page load.
+            setLocale(event.detail.page.props.locale);
+        });
 
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
@@ -189,6 +203,10 @@ createInertiaApp({
         app.config.globalProperties.q3tohtml = q3tohtml
 
         app.config.globalProperties.timeSince = timeSince
+
+        app.config.globalProperties.$t = t
+
+        app.config.globalProperties.$tc = tChoice
 
         app.config.globalProperties.$state = reactive({
             globalBackgroundImage: '/images/bg-image.png'
@@ -225,4 +243,4 @@ createInertiaApp({
     progress: {
         color: '#2d85ff'
     },
-});
+}));

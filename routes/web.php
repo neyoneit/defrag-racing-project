@@ -51,6 +51,10 @@ Route::get('/getting-started', [WebController::class, 'gettingstarted'])->name('
 
 Route::post('/search', [SearchController::class, 'search'])->name('search');
 
+// Open to guests on purpose - somebody who cannot read the site yet is
+// exactly the person who needs to change its language.
+Route::post('/locale', [\App\Http\Controllers\LocaleController::class, 'update'])->name('locale.update');
+
 Route::get('/servers', [ServersController::class, 'index'])->name('servers');
 Route::get('/api/servers/live', [ServersController::class, 'apiServers'])->name('servers.api');
 Route::get('/servers/json', [EndpointController::class, 'index'])->name('servers.json');

@@ -36,6 +36,9 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // Before Inertia shares anything, so the locale it shares and the
+            // `lang` attribute on <html> are the one the page is rendered in.
+            \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Laravel\Jetstream\Http\Middleware\ShareInertiaData::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,

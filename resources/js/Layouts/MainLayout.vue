@@ -4,6 +4,7 @@
     import axios from 'axios';
     import ApplicationMark from '@/Components/Laravel/ApplicationMark.vue';
     import Dropdown from '@/Components/Laravel/Dropdown.vue';
+    import LanguageSwitcher from '@/Components/LanguageSwitcher.vue';
     import DropdownLink from '@/Components/Laravel/DropdownLink.vue';
     import NavLink from '@/Components/Laravel/NavLink.vue';
     import TextInput from '@/Components/Laravel/TextInput.vue';
@@ -732,6 +733,10 @@
                                 </div>
                             </div>
 
+                            <!-- Sits outside the auth branch: a guest is the
+                                 likeliest person to need it. -->
+                            <LanguageSwitcher />
+
                             <!-- Profile Dropdown (Avatar always visible) -->
                             <div v-if="$page.props.auth.user">
                                 <Dropdown align="right" width="56">
@@ -749,41 +754,41 @@
 
                                     <template #content>
                                         <DropdownLink :href="route('profile.index', $page.props.auth.user.id)">
-                                            My Profile
+                                            {{ $t('My Profile') }}
                                         </DropdownLink>
                                         <template v-if="$page.props.auth.user.email_verified_at">
                                             <DropdownLink :href="route('notifications.index')">
-                                                Notification Center
+                                                {{ $t('Notification Center') }}
                                             </DropdownLink>
                                             <DropdownLink :href="route('maplists.index') + '?user=' + $page.props.auth.user.id">
-                                                Play Later
+                                                {{ $t('Play Later') }}
                                             </DropdownLink>
                                         </template>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <DropdownLink :href="route('settings.show')">
-                                            Settings
+                                            {{ $t('Settings') }}
                                         </DropdownLink>
                                         <div class="pl-7 pr-3 pb-2 -mt-1 space-y-px">
-                                            <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Profile</Link>
+                                            <Link :href="route('settings.show')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Profile') }}</Link>
                                             <template v-if="$page.props.auth.user.email_verified_at">
-                                                <Link :href="route('settings.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Creator</Link>
-                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">Customize</Link>
-                                                <Link :href="route('settings.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Global Customize</Link>
-                                                <Link :href="route('settings.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Marketplace</Link>
-                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Notifications pref.</Link>
+                                                <Link :href="route('settings.show') + '?tab=creator'" class="block text-sm text-gray-500 hover:text-yellow-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">{{ $t('Creator') }}</Link>
+                                                <Link :href="route('settings.show') + '?tab=customize'" class="block text-sm text-gray-500 hover:text-purple-400 py-0.5 px-2 rounded hover:bg-white/5 transition-all ml-3 border-l border-white/10 pl-3">{{ $t('Customize') }}</Link>
+                                                <Link :href="route('settings.show') + '?tab=global-customize'" class="block text-sm text-gray-400 hover:text-teal-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Global Customize') }}</Link>
+                                                <Link :href="route('settings.show') + '?tab=marketplace'" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Marketplace') }}</Link>
+                                                <Link :href="route('settings.show') + '?tab=notifications'" class="block text-sm text-gray-400 hover:text-orange-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Notifications pref.') }}</Link>
                                             </template>
-                                            <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Security</Link>
-                                            <Link :href="route('server-hosting.index')" class="block text-sm text-gray-400 hover:text-emerald-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Server hosting</Link>
-                                            <Link :href="route('serverdemo-validators.index')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Serverdemo validators</Link>
-                                            <Link :href="route('amnesty.index')" class="block text-sm text-gray-400 hover:text-amber-400 py-1 px-2 rounded hover:bg-white/5 transition-all">Amnesty - self report</Link>
+                                            <Link :href="route('settings.show') + '?tab=security'" class="block text-sm text-gray-400 hover:text-red-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Security') }}</Link>
+                                            <Link :href="route('server-hosting.index')" class="block text-sm text-gray-400 hover:text-emerald-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Server hosting') }}</Link>
+                                            <Link :href="route('serverdemo-validators.index')" class="block text-sm text-gray-400 hover:text-blue-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Serverdemo validators') }}</Link>
+                                            <Link :href="route('amnesty.index')" class="block text-sm text-gray-400 hover:text-amber-400 py-1 px-2 rounded hover:bg-white/5 transition-all">{{ $t('Amnesty - self report') }}</Link>
                                         </div>
                                         <a v-if="$page.props.auth.user.admin || $page.props.auth.user.is_moderator" href="/defraghq" target="_blank" class="block w-full px-4 py-2 text-sm leading-5 text-emerald-400 hover:bg-white/5 transition-all font-semibold">
-                                            Admin Panel
+                                            {{ $t('Admin Panel') }}
                                         </a>
                                         <div class="mx-3 border-t border-white/10 my-1" />
                                         <form @submit.prevent="logout">
                                             <DropdownLink as="button">
-                                                <span class="text-red-400">Log Out</span>
+                                                <span class="text-red-400">{{ $t('Log Out') }}</span>
                                             </DropdownLink>
                                         </form>
                                     </template>
@@ -794,12 +799,12 @@
                             <div v-else class="flex items-center gap-2">
                                 <Link :href="route('login')">
                                     <button class="px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-all">
-                                        Login
+                                        {{ $t('Login') }}
                                     </button>
                                 </Link>
                                 <Link :href="route('register')">
                                     <button class="px-3 py-1.5 text-sm font-medium bg-white/10 hover:bg-white/15 text-white rounded-lg transition-all">
-                                        Register
+                                        {{ $t('Register') }}
                                     </button>
                                 </Link>
                             </div>
@@ -811,19 +816,19 @@
 
                         <!-- 0. Home - always visible -->
                         <NavLink :href="route('home')" :active="navActive.home">
-                            Home
+                            {{ $t('Home') }}
                         </NavLink>
 
                         <!-- 1. Servers - always visible -->
                         <NavLink :href="route('servers')" :active="navActive.servers">
-                            Servers
+                            {{ $t('Servers') }}
                         </NavLink>
 
                         <!-- 2. Wishlist - always visible. Third on purpose:
                              a suggestion box nobody walks past is a suggestion
                              box nobody writes in. -->
                         <NavLink :href="route('wishlist.index')" :active="navActive.wishlist">
-                            Wishlist
+                            {{ $t('Wishlist') }}
                         </NavLink>
 
                         <!-- 3. Players - visible from md -->
@@ -832,13 +837,13 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="navActive.players ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>Players</span>
+                                        <span>{{ $t('Players') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
-                                    <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
-                                    <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
+                                    <DropdownLink :href="route('records')" :active="navActive.records">{{ $t('Records') }}</DropdownLink>
+                                    <DropdownLink :href="route('clans.index')" :active="navActive.clans">{{ $t('Clans') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -849,13 +854,13 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="navActive.rankings ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>Rankings</span>
+                                        <span>{{ $t('Rankings') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
-                                    <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
-                                    <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
+                                    <DropdownLink :href="route('ranking')" :active="navActive.ranking">{{ $t('Player Ranking') }}</DropdownLink>
+                                    <DropdownLink :href="route('community')" :active="navActive.community">{{ $t('Community Leaderboard') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -866,14 +871,14 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="navActive.mapsmodels ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>Maps & Models</span>
+                                        <span>{{ $t('Maps & Models') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
-                                    <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
-                                    <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">Map Statistics</DropdownLink>
-                                    <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
+                                    <DropdownLink :href="route('maps')" :active="navActive.maps">{{ $t('Maps') }}</DropdownLink>
+                                    <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">{{ $t('Map Statistics') }}</DropdownLink>
+                                    <DropdownLink href="/models" :active="navActive.models">{{ $t('Models') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -882,7 +887,7 @@
                         <Link :href="route('maplists.index')"
                             class="hidden xl:inline-flex items-center px-3 py-2 text-sm font-medium transition-all rounded-lg"
                             :class="navActive.maplists ? 'text-white bg-blue-600/30 border border-blue-500/40' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                            Maplists
+                            {{ $t('Maplists') }}
                         </Link>
 
                         <!-- 6. Demos - visible from md -->
@@ -891,13 +896,13 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="navActive.demos ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>Demos</span>
+                                        <span>{{ $t('Demos') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
-                                    <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
-                                    <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
+                                    <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">{{ $t('Upload & Browse') }}</DropdownLink>
+                                    <DropdownLink :href="route('youtube')" :active="navActive.youtube">{{ $t('Rendered Demos') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -908,15 +913,15 @@
                                 <template #trigger="{ open }">
                                     <button class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium transition-all rounded-lg"
                                         :class="navActive.challenges ? 'text-white bg-blue-600/30 border border-blue-500/40' : open ? 'text-white bg-white/10 border border-white/10' : 'text-white hover:text-white hover:bg-white/10 border border-transparent'">
-                                        <span>Challenges</span>
+                                        <span>{{ $t('Challenges') }}</span>
                                         <svg class="h-3.5 w-3.5 opacity-70 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </template>
                                 <template #content>
-                                    <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
-                                    <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
-                                    <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
-                                    <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">DefragLive Contest</DropdownLink>
+                                    <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">{{ $t('Headhunter') }}</DropdownLink>
+                                    <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">{{ $t('Marketplace') }}</DropdownLink>
+                                    <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">{{ $t('Community Tasks') }}</DropdownLink>
+                                    <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">{{ $t('DefragLive Contest') }}</DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -924,14 +929,14 @@
                         <!-- 8. Tournaments - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('tournaments.index')" :active="navActive.tournaments">
-                                Tournaments
+                                {{ $t('Tournaments') }}
                             </NavLink>
                         </div>
 
                         <!-- 9. Wiki - visible from xl -->
                         <div class="hidden xl:inline-flex">
                             <NavLink :href="route('wiki.index')" :active="navActive.wiki">
-                                Wiki
+                                {{ $t('Wiki') }}
                             </NavLink>
                         </div>
 
@@ -963,27 +968,27 @@
                                     <!-- Items hidden below md (Players, Maps, Demos) -->
                                     <div class="md:hidden">
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Players</div>
-                                        <DropdownLink :href="route('records')" :active="navActive.records">Records</DropdownLink>
-                                        <DropdownLink :href="route('clans.index')" :active="navActive.clans">Clans</DropdownLink>
+                                        <DropdownLink :href="route('records')" :active="navActive.records">{{ $t('Records') }}</DropdownLink>
+                                        <DropdownLink :href="route('clans.index')" :active="navActive.clans">{{ $t('Clans') }}</DropdownLink>
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Maps & Models</div>
-                                        <DropdownLink :href="route('maps')" :active="navActive.maps">Maps</DropdownLink>
-                                        <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">Map Statistics</DropdownLink>
-                                        <DropdownLink href="/models" :active="navActive.models">Models</DropdownLink>
+                                        <DropdownLink :href="route('maps')" :active="navActive.maps">{{ $t('Maps') }}</DropdownLink>
+                                        <DropdownLink :href="route('maps.stats')" :active="navActive.mapsStats">{{ $t('Map Statistics') }}</DropdownLink>
+                                        <DropdownLink href="/models" :active="navActive.models">{{ $t('Models') }}</DropdownLink>
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Demos</div>
-                                        <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">Upload & Browse</DropdownLink>
-                                        <DropdownLink :href="route('youtube')" :active="navActive.youtube">Rendered Demos</DropdownLink>
+                                        <DropdownLink :href="route('demos.index')" :active="navActive.demosIndex">{{ $t('Upload & Browse') }}</DropdownLink>
+                                        <DropdownLink :href="route('youtube')" :active="navActive.youtube">{{ $t('Rendered Demos') }}</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items hidden below lg (Rankings, Challenges) -->
                                     <div class="lg:hidden">
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Rankings</div>
-                                        <DropdownLink :href="route('ranking')" :active="navActive.ranking">Player Ranking</DropdownLink>
-                                        <DropdownLink :href="route('community')" :active="navActive.community">Community Leaderboard</DropdownLink>
+                                        <DropdownLink :href="route('ranking')" :active="navActive.ranking">{{ $t('Player Ranking') }}</DropdownLink>
+                                        <DropdownLink :href="route('community')" :active="navActive.community">{{ $t('Community Leaderboard') }}</DropdownLink>
                                         <div class="px-3 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mt-1">Challenges</div>
-                                        <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">Headhunter</DropdownLink>
-                                        <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">Marketplace</DropdownLink>
-                                        <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">Community Tasks</DropdownLink>
-                                        <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">DefragLive Contest</DropdownLink>
+                                        <DropdownLink :href="route('headhunter.index')" :active="navActive.headhunter">{{ $t('Headhunter') }}</DropdownLink>
+                                        <DropdownLink :href="route('marketplace.index')" :active="navActive.marketplace">{{ $t('Marketplace') }}</DropdownLink>
+                                        <DropdownLink :href="route('community.tasks')" :active="navActive.communityTasks">{{ $t('Community Tasks') }}</DropdownLink>
+                                        <DropdownLink :href="route('defraglive.contest')" :active="navActive.defragliveContest">{{ $t('DefragLive Contest') }}</DropdownLink>
                                         <div class="border-t border-white/10 my-1.5"></div>
                                     </div>
                                     <!-- Items always in More (hidden inline below xl) -->
