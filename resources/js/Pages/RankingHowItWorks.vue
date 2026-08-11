@@ -352,10 +352,10 @@ const top200Share = computed(() => topNWeightShare(200));
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— number of unique players on the map</span></div>
-                        <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— median(players per map in category) / 2 (the halfway point)</span></div>
-                        <div><span class="text-white font-mono">L = {{ fmt(s.mult_l) }}</span> <span class="text-gray-500">— maximum multiplier (100%)</span></div>
-                        <div><span class="text-white font-mono">n = {{ fmt(s.mult_n) }}</span> <span class="text-gray-500">— steepness of the curve</span></div>
+                        <div><span class="text-white font-mono">x</span> <span class="text-gray-500">— {{ $t('number of unique players on the map') }}</span></div>
+                        <div><span class="text-white font-mono">k</span> <span class="text-gray-500">— {{ $t('median(players per map in category) / 2 (the halfway point)') }}</span></div>
+                        <div><span class="text-white font-mono">L = {{ fmt(s.mult_l) }}</span> <span class="text-gray-500">— {{ $t('maximum multiplier (100%)') }}</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.mult_n) }}</span> <span class="text-gray-500">— {{ $t('steepness of the curve') }}</span></div>
                     </div>
                 </div>
 
@@ -364,7 +364,7 @@ const top200Share = computed(() => topNWeightShare(200));
                     <div class="space-y-3">
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>4 players (small map)</span>
+                                <span>{{ $t('4 players (small map)') }}</span>
                                 <span class="font-mono text-red-400 font-bold">{{ (calcMultiplier(4, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
@@ -391,7 +391,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>25 players</span>
+                                <span>{{ $t('25 players') }}</span>
                                 <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(25, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
@@ -400,7 +400,7 @@ const top200Share = computed(() => topNWeightShare(200));
                         </div>
                         <div>
                             <div class="flex justify-between items-center text-sm mb-1">
-                                <span>50 players (popular map)</span>
+                                <span>{{ $t('50 players (popular map)') }}</span>
                                 <span class="font-mono text-green-400 font-bold">{{ (calcMultiplier(50, exampleMedian) * 100).toFixed(1) }}%</span>
                             </div>
                             <div class="w-full bg-gray-800 rounded-full h-2">
@@ -410,27 +410,27 @@ const top200Share = computed(() => topNWeightShare(200));
                     </div>
                 </div>
                 <div class="mt-3 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
-                    <strong>Why?</strong> A WR on a map with 4 players is less impressive than a WR on a map with 50 active competitors. The multiplier ensures that popular, competitive maps carry more weight.
+                    <strong>{{ $t('Why?') }}</strong> {{ $t('A WR on a map with 4 players is less impressive than a WR on a map with 50 active competitors. The multiplier ensures that popular, competitive maps carry more weight.') }}
                 </div>
 
                 <!-- Live category medians (drives k for each game type / physics) -->
                 <div v-if="hasCategoryStats" class="mt-6 bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider">Median players per ranked map (live)</div>
+                        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider">{{ $t('Median players per ranked map (live)') }}</div>
                         <div v-if="categoryStatsAsOf" class="text-[10px] text-gray-600">as of {{ formatAsOf(categoryStatsAsOf) }}</div>
                     </div>
-                    <p class="text-xs text-gray-500 mb-3">Each cell shows <span class="font-mono text-gray-400">median</span> (and <span class="font-mono text-gray-400">k = median / 2</span>) for that game type / physics / category combo. Updated by the nightly full recalculation.</p>
+                    <p class="text-xs text-gray-500 mb-3">{{ $t('Each cell shows') }} <span class="font-mono text-gray-400">median</span> {{ $t('(and') }} <span class="font-mono text-gray-400">k = median / 2</span>{{ $t(') for that game type / physics / category combo. Updated by the nightly full recalculation.') }}</p>
 
                     <!-- Run mode: matrix of categories × physics -->
                     <div v-if="runCategoriesWithData.length > 0" class="mb-5">
-                        <div class="text-xs font-semibold text-gray-400 mb-2">Run</div>
+                        <div class="text-xs font-semibold text-gray-400 mb-2">{{ $t('Run') }}</div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-xs">
                                 <thead>
                                     <tr class="text-gray-500 border-b border-gray-800">
-                                        <th class="text-left font-semibold py-2 pr-3">Category</th>
-                                        <th class="text-right font-semibold py-2 px-3">VQ3 median <span class="text-gray-600 font-normal">(k)</span></th>
-                                        <th class="text-right font-semibold py-2 pl-3">CPM median <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-left font-semibold py-2 pr-3">{{ $t('Category') }}</th>
+                                        <th class="text-right font-semibold py-2 px-3">{{ $t('VQ3 median') }} <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-right font-semibold py-2 pl-3">{{ $t('CPM median') }} <span class="text-gray-600 font-normal">(k)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -458,14 +458,14 @@ const top200Share = computed(() => topNWeightShare(200));
 
                     <!-- CTF modes: only overall is computed -->
                     <div v-if="ctfModesWithData.length > 0">
-                        <div class="text-xs font-semibold text-gray-400 mb-2">CTF (overall only)</div>
+                        <div class="text-xs font-semibold text-gray-400 mb-2">{{ $t('CTF (overall only)') }}</div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-xs">
                                 <thead>
                                     <tr class="text-gray-500 border-b border-gray-800">
-                                        <th class="text-left font-semibold py-2 pr-3">Mode</th>
-                                        <th class="text-right font-semibold py-2 px-3">VQ3 median <span class="text-gray-600 font-normal">(k)</span></th>
-                                        <th class="text-right font-semibold py-2 pl-3">CPM median <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-left font-semibold py-2 pr-3">{{ $t('Mode') }}</th>
+                                        <th class="text-right font-semibold py-2 px-3">{{ $t('VQ3 median') }} <span class="text-gray-600 font-normal">(k)</span></th>
+                                        <th class="text-right font-semibold py-2 pl-3">{{ $t('CPM median') }} <span class="text-gray-600 font-normal">(k)</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -496,28 +496,28 @@ const top200Share = computed(() => topNWeightShare(200));
             <!-- 6. Rank Multiplier -->
             <section id="rank-multiplier" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">6.</span> Rank Multiplier
+                    <span class="text-blue-400 text-lg font-mono">6.</span> {{ $t('Rank Multiplier') }}
                 </h2>
-                <p class="mb-3">Your rank on each map further scales your score. Higher ranks earn a bigger multiplier:</p>
+                <p class="mb-3">{{ $t('Your rank on each map further scales your score. Higher ranks earn a bigger multiplier:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3 overflow-x-auto">
                     t = (your_rank - 1) / (total_players - 1)<br>
                     rank_mult = k ^ (t ^ (n + p * (1 - t)))
                 </div>
                 <div class="text-xs text-gray-500 mb-3">
-                    Generalized stretched exponential with a position-dependent exponent. WR (t = 0) always gets exactly 1.0; the worst rank on the map (t = 1) gets exactly <span class="font-mono">k</span>.
+                    {{ $t('Generalized stretched exponential with a position-dependent exponent. WR (t = 0) always gets exactly 1.0; the worst rank on the map (t = 1) gets exactly') }} <span class="font-mono">k</span>.
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 mb-3">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Parameters') }}</div>
                     <div class="space-y-1 text-xs">
-                        <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— number of unique players on the map</span></div>
-                        <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— your position on the map leaderboard (1 = WR)</span></div>
-                        <div><span class="text-white font-mono">k = {{ fmt(s.rank_k) }}</span> <span class="text-gray-500">— rank_mult value for the worst-ranked record on the map</span></div>
-                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— overall curve steepness</span></div>
-                        <div><span class="text-white font-mono">p = {{ fmt(s.rank_p) }}</span> <span class="text-gray-500">— position of the steep section along the curve</span></div>
+                        <div><span class="text-white font-mono">total_players</span> <span class="text-gray-500">— {{ $t('number of unique players on the map') }}</span></div>
+                        <div><span class="text-white font-mono">your_rank</span> <span class="text-gray-500">— {{ $t('your position on the map leaderboard (1 = WR)') }}</span></div>
+                        <div><span class="text-white font-mono">k = {{ fmt(s.rank_k) }}</span> <span class="text-gray-500">— {{ $t('rank_mult value for the worst-ranked record on the map') }}</span></div>
+                        <div><span class="text-white font-mono">n = {{ fmt(s.rank_n) }}</span> <span class="text-gray-500">— {{ $t('overall curve steepness') }}</span></div>
+                        <div><span class="text-white font-mono">p = {{ fmt(s.rank_p) }}</span> <span class="text-gray-500">— {{ $t('position of the steep section along the curve') }}</span></div>
                     </div>
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
-                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example: 50 players on a map</div>
+                    <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{{ $t('Example: 50 players on a map') }}</div>
                     <div class="space-y-2">
                         <div v-for="[rank, label] in [[1, 'Rank #1 (WR)'], [5, 'Rank #5'], [25, 'Rank #25'], [50, 'Rank #50 (last)']]" :key="rank">
                             <div class="flex justify-between items-center text-sm mb-1">
@@ -531,26 +531,26 @@ const top200Share = computed(() => topNWeightShare(200));
                     </div>
                 </div>
                 <div class="mt-3 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
-                    <strong>Why?</strong> Two players on the same map with similar times could have very different ranks. The rank multiplier ensures that actually beating more players gives a bigger reward, not just having a fast time.
+                    <strong>{{ $t('Why?') }}</strong> {{ $t('Two players on the same map with similar times could have very different ranks. The rank multiplier ensures that actually beating more players gives a bigger reward, not just having a fast time.') }}
                 </div>
             </section>
 
             <!-- 7. Final Score -->
             <section id="final-score" class="mb-12">
                 <h2 class="text-2xl font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <span class="text-blue-400 text-lg font-mono">7.</span> Final Map Score
+                    <span class="text-blue-400 text-lg font-mono">7.</span> {{ $t('Final Map Score') }}
                 </h2>
-                <p class="mb-3">The final score for each record combines all multipliers:</p>
+                <p class="mb-3">{{ $t('The final score for each record combines all multipliers:') }}</p>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4 font-mono text-center text-sm text-white mb-3">
                     final_score = base_score * map_multiplier * rank_multiplier
                 </div>
                 <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-4">
                     <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Example (25 players, rank #3, VQ3 overall median = {{ exampleMedian }})</div>
                     <div class="text-sm space-y-1">
-                        <div>Your reltime: <span class="text-white font-mono">{{ exampleReltime.toFixed(4) }}</span></div>
-                        <div>Base score: <span class="text-white font-mono">{{ exampleBaseScore.toFixed(1) }}</span></div>
-                        <div>Map multiplier (25 players): <span class="text-white font-mono">{{ exampleMultiplier.toFixed(4) }}</span> ({{ (exampleMultiplier * 100).toFixed(1) }}%)</div>
-                        <div>Rank multiplier (rank #3 of 25): <span class="text-white font-mono">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span> ({{ (calcRankMultiplier(25, 3) * 100).toFixed(1) }}%)</div>
+                        <div>{{ $t('Your reltime:') }} <span class="text-white font-mono">{{ exampleReltime.toFixed(4) }}</span></div>
+                        <div>{{ $t('Base score:') }} <span class="text-white font-mono">{{ exampleBaseScore.toFixed(1) }}</span></div>
+                        <div>{{ $t('Map multiplier (25 players):') }} <span class="text-white font-mono">{{ exampleMultiplier.toFixed(4) }}</span> ({{ (exampleMultiplier * 100).toFixed(1) }}%)</div>
+                        <div>{{ $t('Rank multiplier (rank #3 of 25):') }} <span class="text-white font-mono">{{ calcRankMultiplier(25, 3).toFixed(4) }}</span> ({{ (calcRankMultiplier(25, 3) * 100).toFixed(1) }}%)</div>
                         <div class="pt-1 border-t border-gray-800">Final score: {{ exampleBaseScore.toFixed(1) }} * {{ exampleMultiplier.toFixed(4) }} * {{ calcRankMultiplier(25, 3).toFixed(4) }} = <span class="text-green-400 font-mono font-bold">{{ (exampleBaseScore * exampleMultiplier * calcRankMultiplier(25, 3)).toFixed(1) }}</span></div>
                     </div>
                 </div>
