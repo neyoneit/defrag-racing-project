@@ -69,7 +69,7 @@ const timeAgo = (date) => {
 
             <div class="text-right flex-shrink-0">
                 <div class="flex items-center justify-end gap-1.5 text-sm text-gray-400">
-                    <span>by</span>
+                    <span>{{ $t('by') }}</span>
                     <span v-if="listing.user" class="flex items-center gap-1.5">
                         <img
                             :src="listing.user?.profile_photo_path ? '/storage/' + listing.user.profile_photo_path : '/images/null.jpg'"

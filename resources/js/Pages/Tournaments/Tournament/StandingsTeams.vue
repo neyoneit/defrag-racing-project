@@ -12,7 +12,7 @@
 <template>
     <Tournament :tournament="tournament" tab="Standings">
         <div class="flex justify-between items-center">
-            <h1 class="font-black text-2xl md:text-3xl text-white mb-3">Standings</h1>
+            <h1 class="font-black text-2xl md:text-3xl text-white mb-3">{{ $t('Standings') }}</h1>
         </div>
     
         <div class="tech-line-overview"></div>
@@ -23,7 +23,7 @@
             <div class="w-full">
                 <!-- Heading -->
                 <div class="w-full flex items-center bg-gray-700 rounded-tl-md dark:bg-opacity-25 bg-opacity-15 p-2 shadow-md">
-                    <div class="uppercase font-black text-2xl dark:text-gray-200 text-center w-full">Team</div>
+                    <div class="uppercase font-black text-2xl dark:text-gray-200 text-center w-full">{{ $t('Team') }}</div>
                 </div>
             </div>
     

@@ -114,7 +114,7 @@
             class="w-full bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 rounded-lg px-4 py-2.5 transition-all"
             v-model="search"
             @input="filterOptions"
-            placeholder="Search player..."
+            :placeholder="$t('Search player...')"
             autocomplete="off"
         />
 

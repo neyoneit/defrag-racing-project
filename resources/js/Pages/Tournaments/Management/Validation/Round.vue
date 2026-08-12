@@ -33,7 +33,7 @@
                 <DemoValidationEntry v-for="demo in vq3_demos" :demo="demo" :round="round" :tournament="tournament" :key="demo.id" />
 
                 <div v-if="vq3_demos?.length == 0">
-                    <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                    <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
                 </div>
             </div>
 
@@ -48,7 +48,7 @@
                 <DemoValidationEntry v-for="demo in cpm_demos" :demo="demo" :round="round" :tournament="tournament" :key="demo.id" />
 
                 <div v-if="cpm_demos?.length == 0">
-                    <div class="text-xl text-white mt-5 text-center">No Demos Submitted</div>
+                    <div class="text-xl text-white mt-5 text-center">{{ $t('No Demos Submitted') }}</div>
                 </div>
             </div>
         </div>

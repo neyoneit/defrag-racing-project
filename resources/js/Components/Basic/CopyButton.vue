@@ -49,7 +49,7 @@
             <svg :class="iconSizes[size]" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
-            <span :class="textSizes[size]" class="font-bold">Copied!</span>
+            <span :class="textSizes[size]" class="font-bold">{{ $t('Copied!') }}</span>
         </template>
         <template v-else>
             <svg :class="iconSizes[size]" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

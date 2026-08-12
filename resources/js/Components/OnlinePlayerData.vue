@@ -52,7 +52,7 @@
     
                     <div>
                         <div class="text-gray-500">
-                            Logged in as
+                            {{ $t('Logged in as') }}
                         </div>
     
                         <img onerror="this.src='/images/flags/_404.png'" :src="`/images/flags/${player.profile.country}.png`" class="w-6 inline mr-2 mb-0.5">
