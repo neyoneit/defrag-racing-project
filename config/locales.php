@@ -23,6 +23,7 @@ return [
     'supported' => [
         'en' => 'English',
         'cs' => 'Čeština',
+        'ru' => 'Русский',
     ],
 
 ];

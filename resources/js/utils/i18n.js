@@ -31,6 +31,7 @@ const files = import.meta.glob('../../../lang/*.json');
  */
 const MOMENT_LOCALES = {
     cs: () => import('moment/dist/locale/cs'),
+    ru: () => import('moment/dist/locale/ru'),
 };
 
 const messages = ref({});
