@@ -24,6 +24,7 @@ return [
         'en' => 'English',
         'cs' => 'Čeština',
         'ru' => 'Русский',
+        'pl' => 'Polski',
     ],
 
 ];
