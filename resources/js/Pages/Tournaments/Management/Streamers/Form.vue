@@ -52,11 +52,11 @@
     <div>
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div>Streamer Details</div>
+                <div>{{ $t('Streamer Details') }}</div>
             </template>
     
             <template #description>
-                <div>Add the details of the new streamer</div>
+                <div>{{ $t('Add the details of the new streamer') }}</div>
             </template>
     
             <template #form>
@@ -89,7 +89,7 @@
     
             <template #actions>
                 <div class="flex justify-between w-full">
-                    <PrimaryButton>Submit</PrimaryButton>
+                    <PrimaryButton>{{ $t('Submit') }}</PrimaryButton>
                 </div>
             </template>
         </FormSection>

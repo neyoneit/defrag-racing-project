@@ -31,11 +31,11 @@
 <template>
     <Tournament :tournament="tournament" tab="Delete Tournament">
         <div class="text-center text-red-600 text-xl">
-            Deleting a tournament is permanent and cannot be undone. Are you sure you want to delete this tournament?
+            {{ $t('Deleting a tournament is permanent and cannot be undone. Are you sure you want to delete this tournament?') }}
         </div>
 
         <div class="mt-10">
-            <div class="text-gray-400">Type the tournament name: <span class="font-bold font-italic text-white">{{ tournament.name }}</span></div>
+            <div class="text-gray-400">{{ $t('Type the tournament name:') }} <span class="font-bold font-italic text-white">{{ tournament.name }}</span></div>
 
             <TextInput
                 id="name"
@@ -50,7 +50,7 @@
 
             <div class="flex justify-center mt-5">
                 <PrimaryButton @click="deleteTournament" class="bg-red-600 hover:bg-red-500">
-                    Delete Tournament
+                    {{ $t('Delete Tournament') }}
                 </PrimaryButton>
             </div>
         </div>
