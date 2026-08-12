@@ -1,6 +1,7 @@
 <script setup>
     import { ref, watch, computed } from 'vue';
     import axios from 'axios';
+    import { t } from '@/utils/i18n';
 
     // Attributing a freestyle or trick demo to an account. Those demos hang off
     // no record, so nothing else on the site can say whose they are, and the
@@ -38,8 +39,8 @@
                 results.value = data;
             } catch (e) {
                 error.value = e.response?.status === 403
-                    ? 'Only staff can do this.'
-                    : 'Could not search accounts.';
+                    ? t('Only staff can do this.')
+                    : t('Could not search accounts.');
             } finally {
                 searching.value = false;
             }
@@ -69,7 +70,7 @@
             emit('assigned', data);
             emit('close');
         } catch (e) {
-            error.value = e.response?.data?.message || 'Could not save that.';
+            error.value = e.response?.data?.message || t('Could not save that.');
         } finally {
             saving.value = false;
         }
@@ -82,10 +83,10 @@
 
         <div class="relative w-full max-w-md bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
             <div class="px-4 py-3 border-b border-white/10">
-                <h3 class="font-bold text-white">Attribute this demo to an account</h3>
+                <h3 class="font-bold text-white">{{ $t('Attribute this demo to an account') }}</h3>
                 <p class="text-xs text-gray-400 mt-1">
                     <span class="text-gray-300">{{ demo?.demo_label || demo?.demo?.original_filename }}</span>
-                    <span v-if="nick"> - recorded as <span class="text-gray-300">{{ nick }}</span></span>
+                    <span v-if="nick"> {{ $t('- recorded as') }} <span class="text-gray-300">{{ nick }}</span></span>
                 </p>
             </div>
 
@@ -93,7 +94,7 @@
                 <input
                     v-model="query"
                     type="text"
-                    placeholder="Search accounts by name..."
+                    :placeholder="$t('Search accounts by name...')"
                     class="w-full bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:ring-0"
                     autofocus
                 />
@@ -101,13 +102,13 @@
                 <label v-if="nick" class="flex items-start gap-2 text-xs text-gray-300 cursor-pointer">
                     <input v-model="applyToNick" type="checkbox" class="mt-0.5 rounded bg-gray-800 border-white/20 text-teal-500 focus:ring-0" />
                     <span>
-                        Do the same for every other demo recorded as <span class="font-semibold text-white">{{ nick }}</span>.
-                        <span class="text-gray-500">Exact nick only, so it never picks up a similar one.</span>
+                        {{ $t('Do the same for every other demo recorded as') }} <span class="font-semibold text-white">{{ nick }}</span>.
+                        <span class="text-gray-500">{{ $t('Exact nick only, so it never picks up a similar one.') }}</span>
                     </span>
                 </label>
 
                 <div v-if="error" class="text-xs text-red-400">{{ error }}</div>
-                <div v-if="searching" class="text-xs text-gray-500">Searching...</div>
+                <div v-if="searching" class="text-xs text-gray-500">{{ $t('Searching...') }}</div>
 
                 <div v-if="results.length" class="max-h-64 overflow-y-auto divide-y divide-white/[0.04] border border-white/10 rounded-lg">
                     <button
@@ -127,7 +128,7 @@
                     </button>
                 </div>
 
-                <div v-else-if="query.trim().length >= 2 && ! searching" class="text-xs text-gray-500">No account matches that.</div>
+                <div v-else-if="query.trim().length >= 2 && ! searching" class="text-xs text-gray-500">{{ $t('No account matches that.') }}</div>
             </div>
 
             <div class="px-4 py-3 border-t border-white/10 flex items-center justify-between gap-2">
@@ -136,9 +137,9 @@
                     @click="assign(null)"
                     :disabled="saving"
                     class="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
-                >Remove the current assignment</button>
+                >{{ $t('Remove the current assignment') }}</button>
                 <span v-else></span>
-                <button @click="emit('close')" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-300 hover:bg-gray-700">Cancel</button>
+                <button @click="emit('close')" class="px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-300 hover:bg-gray-700">{{ $t('Cancel') }}</button>
             </div>
         </div>
     </div>
