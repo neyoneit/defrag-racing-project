@@ -2,6 +2,7 @@
     import { ref, computed, onMounted } from 'vue';
     import axios from 'axios';
     import MapRecord from '@/Components/MapRecord.vue';
+    import { t } from '@/utils/i18n';
 
     // Drawer-only component. The trigger icon lives in MapRecord's chip row
     // and the parent (MapView) renders this only when the row is expanded.
@@ -46,7 +47,7 @@
             signals.value = data.signals || 0;
             loaded.value = true;
         } catch (e) {
-            error.value = e.response?.data?.error || 'Failed to load time history';
+            error.value = e.response?.data?.error || t('Failed to load time history');
         } finally {
             loading.value = false;
         }
@@ -64,7 +65,7 @@
             <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
-            <span class="font-bold text-white uppercase tracking-wider">Time History</span>
+            <span class="font-bold text-white uppercase tracking-wider">{{ $t('Time History') }}</span>
 
             <!-- Match source badge + description are only meaningful once
                  the API response is in — initial prop values can disagree
@@ -75,30 +76,30 @@
                 <span
                     v-if="signalBadge"
                     :class="['px-1 py-[1px] rounded text-[9px] font-bold', signalBadge.color]"
-                    title="On-demo field matches"
+                    :title="$t('On-demo field matches')"
                 >{{ signalBadge.label }}</span>
                 <span
                     v-else
                     class="px-1 py-[1px] rounded text-[9px] font-bold bg-teal-500/20 text-teal-300"
-                    title="Linked only via approved profile aliases"
-                >ALIAS</span>
+                    :title="$t('Linked only via approved profile aliases')"
+                >{{ $t('ALIAS') }}</span>
 
                 <span v-if="history.length" class="text-gray-500">
-                    · {{ history.length }} demo{{ history.length === 1 ? '' : 's' }}
+                    · {{ $tc(':count demo|:count demos', history.length) }}
                 </span>
 
                 <span class="text-gray-500 ml-auto leading-snug max-w-[60%] text-right">
                     <template v-if="signals >= 3">
-                        All three on-demo fields (player name + q3df colored + q3df plain) match.
+                        {{ $t('All three on-demo fields (player name + q3df colored + q3df plain) match.') }}
                     </template>
                     <template v-else-if="signals === 2">
-                        Two of three on-demo fields match; the rest uses approved aliases.
+                        {{ $t('Two of three on-demo fields match; the rest uses approved aliases.') }}
                     </template>
                     <template v-else-if="signals === 1">
-                        One on-demo field matches; the rest uses approved aliases.
+                        {{ $t('One on-demo field matches; the rest uses approved aliases.') }}
                     </template>
                     <template v-else>
-                        Grouped via approved profile aliases on defrag.racing.
+                        {{ $t('Grouped via approved profile aliases on defrag.racing.') }}
                     </template>
                 </span>
             </template>
@@ -111,12 +112,12 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Loading
+                {{ $t('Loading') }}
             </div>
 
             <div v-else-if="error" class="h-[24px] flex items-center justify-center text-[10px] text-red-400">{{ error }}</div>
 
-            <div v-else-if="!history.length" class="h-[24px] flex items-center justify-center text-[10px] text-gray-500">No matching demos found</div>
+            <div v-else-if="!history.length" class="h-[24px] flex items-center justify-center text-[10px] text-gray-500">{{ $t('No matching demos found') }}</div>
 
             <div v-else>
                 <div

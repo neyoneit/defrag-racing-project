@@ -100,7 +100,7 @@
                 <div class="mt-4 text-center">
                     <div class="font-bold text-lg text-white">{{ round.mapname }}</div>
                     <div class="text-sm text-gray-400 mt-1">
-                        By <Link :href="route('maps.filters', { author: round.author })" class="text-blue-400 hover:text-blue-300 transition" v-html="q3tohtml(round.author)"></Link>
+                        {{ $t('By') }} <Link :href="route('maps.filters', { author: round.author })" class="text-blue-400 hover:text-blue-300 transition" v-html="q3tohtml(round.author)"></Link>
                     </div>
                 </div>
             </div>
@@ -110,24 +110,24 @@
                 <!-- Countdown Timer -->
                 <div v-if="showCountdown" class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 mb-4">
                     <div class="text-center mb-4">
-                        <div class="font-bold text-sm text-blue-300 uppercase tracking-wider">Finishes In</div>
+                        <div class="font-bold text-sm text-blue-300 uppercase tracking-wider">{{ $t('Finishes In') }}</div>
                     </div>
                     <div class="grid grid-cols-4 gap-4 text-center">
                         <div class="flex flex-col">
                             <span class="font-mono text-4xl font-black text-white">{{ countdownData.days }}</span>
-                            <span class="text-xs text-gray-400 mt-1">DAYS</span>
+                            <span class="text-xs text-gray-400 mt-1">{{ $t('DAYS') }}</span>
                         </div>
                         <div class="flex flex-col">
                             <span class="font-mono text-4xl font-black text-white">{{ countdownData.hours }}</span>
-                            <span class="text-xs text-gray-400 mt-1">HOURS</span>
+                            <span class="text-xs text-gray-400 mt-1">{{ $t('HOURS') }}</span>
                         </div>
                         <div class="flex flex-col">
                             <span class="font-mono text-4xl font-black text-white">{{ countdownData.minutes }}</span>
-                            <span class="text-xs text-gray-400 mt-1">MIN</span>
+                            <span class="text-xs text-gray-400 mt-1">{{ $t('MIN') }}</span>
                         </div>
                         <div class="flex flex-col">
                             <span class="font-mono text-4xl font-black text-white">{{ countdownData.seconds }}</span>
-                            <span class="text-xs text-gray-400 mt-1">SEC</span>
+                            <span class="text-xs text-gray-400 mt-1">{{ $t('SEC') }}</span>
                         </div>
                     </div>
                 </div>
@@ -136,37 +136,37 @@
                 <div class="space-y-3">
                     <!-- Start Time -->
                     <div class="flex items-center justify-between py-3 border-b border-white/10">
-                        <div class="font-medium text-gray-400">Start</div>
+                        <div class="font-medium text-gray-400">{{ $t('Start') }}</div>
                         <div class="flex items-center gap-2 text-white">
                             <span>{{ getDate(round.start_date) }}</span>
                             <div class="h-3 w-3 rounded-full bg-blue-600"></div>
                             <span @click="changeDisplayTime" class="px-2 py-1 text-sm rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition">
-                                {{ displayTime }}
+                                {{ displayTime === 'Local' ? $t('Local') : 'UTC' }}
                             </span>
                         </div>
                     </div>
 
                     <!-- Finish Time -->
                     <div class="flex items-center justify-between py-3 border-b border-white/10">
-                        <div class="font-medium text-gray-400">Finish</div>
+                        <div class="font-medium text-gray-400">{{ $t('Finish') }}</div>
                         <div class="flex items-center gap-2 text-white">
                             <span>{{ getDate(round.end_date) }}</span>
                             <div class="h-3 w-3 rounded-full bg-blue-600"></div>
                             <span @click="changeDisplayTime" class="px-2 py-1 text-sm rounded-lg text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer transition">
-                                {{ displayTime }}
+                                {{ displayTime === 'Local' ? $t('Local') : 'UTC' }}
                             </span>
                         </div>
                     </div>
 
                     <!-- Type -->
                     <div class="flex items-center justify-between py-3 border-b border-white/10">
-                        <div class="font-medium text-gray-400">Type</div>
-                        <div class="text-white">{{ round.category }} Map</div>
+                        <div class="font-medium text-gray-400">{{ $t('Type') }}</div>
+                        <div class="text-white">{{ $t(':category Map', { category: round.category }) }}</div>
                     </div>
 
                     <!-- Download -->
                     <div class="flex items-start justify-between py-3 border-b border-white/10">
-                        <div class="font-medium text-gray-400">Download</div>
+                        <div class="font-medium text-gray-400">{{ $t('Download') }}</div>
                         <div class="flex flex-wrap gap-2 justify-end">
                             <div v-for="pk3 in round.maps" :key="pk3.id">
                                 <div v-if="pk3.external" class="flex items-center gap-2">
@@ -188,7 +188,7 @@
 
                     <!-- Details -->
                     <div class="flex items-start justify-between py-3 border-b border-white/10">
-                        <div class="font-medium text-gray-400">Details</div>
+                        <div class="font-medium text-gray-400">{{ $t('Details') }}</div>
                         <div class="flex flex-wrap gap-2 justify-end">
                             <div v-if="round.weapons.length > 0" class="flex flex-wrap gap-1">
                                 <div v-for="item in round.weapons.split(',')" :key="item" :class="`sprite-items sprite-${item} w-5 h-5`" :title="item"></div>
