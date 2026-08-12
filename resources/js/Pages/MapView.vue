@@ -16,6 +16,7 @@
     import { watchEffect, watch, ref, onMounted, onUnmounted, computed } from 'vue';
     import { useClipboard } from '@/Composables/useClipboard';
     import axios from 'axios';
+    import { t } from '@/utils/i18n';
 
     const { copy, copyState } = useClipboard();
     const showAddToMaplistModal = ref(false);
@@ -353,13 +354,13 @@
     // Difficulty rating
     const difficultyData = ref({ ...props.difficultyRating });
     const submittingDifficulty = ref(false);
-    const difficultyLabels = [
-        { level: 1, label: 'Beginner', color: 'bg-green-600', hoverColor: 'hover:bg-green-500', borderColor: 'border-green-400', activeRing: 'ring-green-400', desc: 'Basic movement, no special techniques needed' },
-        { level: 2, label: 'Easy', color: 'bg-lime-600', hoverColor: 'hover:bg-lime-500', borderColor: 'border-lime-400', activeRing: 'ring-lime-400', desc: 'Simple tricks like circle jumps or ramp jumps' },
-        { level: 3, label: 'Medium', color: 'bg-yellow-600', hoverColor: 'hover:bg-yellow-500', borderColor: 'border-yellow-400', activeRing: 'ring-yellow-400', desc: 'Weapon boosts or precise strafing required' },
-        { level: 4, label: 'Hard', color: 'bg-orange-600', hoverColor: 'hover:bg-orange-500', borderColor: 'border-orange-400', activeRing: 'ring-orange-400', desc: 'Advanced technique combinations, requires practice' },
-        { level: 5, label: 'Extreme', color: 'bg-red-600', hoverColor: 'hover:bg-red-500', borderColor: 'border-red-400', activeRing: 'ring-red-400', desc: 'Top-level techniques, very few can finish' },
-    ];
+    const difficultyLabels = computed(() => [
+        { level: 1, label: t('Beginner'), color: 'bg-green-600', hoverColor: 'hover:bg-green-500', borderColor: 'border-green-400', activeRing: 'ring-green-400', desc: t('Basic movement, no special techniques needed') },
+        { level: 2, label: t('Easy'), color: 'bg-lime-600', hoverColor: 'hover:bg-lime-500', borderColor: 'border-lime-400', activeRing: 'ring-lime-400', desc: t('Simple tricks like circle jumps or ramp jumps') },
+        { level: 3, label: t('Medium'), color: 'bg-yellow-600', hoverColor: 'hover:bg-yellow-500', borderColor: 'border-yellow-400', activeRing: 'ring-yellow-400', desc: t('Weapon boosts or precise strafing required') },
+        { level: 4, label: t('Hard'), color: 'bg-orange-600', hoverColor: 'hover:bg-orange-500', borderColor: 'border-orange-400', activeRing: 'ring-orange-400', desc: t('Advanced technique combinations, requires practice') },
+        { level: 5, label: t('Extreme'), color: 'bg-red-600', hoverColor: 'hover:bg-red-500', borderColor: 'border-red-400', activeRing: 'ring-red-400', desc: t('Top-level techniques, very few can finish') },
+    ]);
     const communityDifficultyLevel = computed(() => {
         if (!difficultyData.value.average) return null;
         return Math.round(difficultyData.value.average);
@@ -1080,19 +1081,19 @@
 
     const getWeaponName = (abbr) => {
         const weapons = {
-            'gauntlet': 'Gauntlet',
-            'gt': 'Gauntlet',
-            'mg': 'Machine Gun',
-            'sg': 'Shotgun',
-            'gl': 'Grenade Launcher',
-            'rl': 'Rocket Launcher',
-            'lg': 'Lightning Gun',
-            'rg': 'Rail Gun',
-            'pg': 'Plasma Gun',
-            'bfg': 'BFG',
-            'grapple': 'Grappling Hook',
-            'hook': 'Grappling Hook',
-            'gh': 'Grappling Hook'
+            'gauntlet': t('Gauntlet'),
+            'gt': t('Gauntlet'),
+            'mg': t('Machine Gun'),
+            'sg': t('Shotgun'),
+            'gl': t('Grenade Launcher'),
+            'rl': t('Rocket Launcher'),
+            'lg': t('Lightning Gun'),
+            'rg': t('Rail Gun'),
+            'pg': t('Plasma Gun'),
+            'bfg': t('BFG'),
+            'grapple': t('Grappling Hook'),
+            'hook': t('Grappling Hook'),
+            'gh': t('Grappling Hook')
         };
         return weapons[abbr.toLowerCase().trim()] || abbr.toUpperCase();
     };
@@ -1125,24 +1126,24 @@
     const getItemName = (abbr) => {
         const items = {
             // Powerups
-            'enviro': 'Battle Suit',
-            'haste': 'Haste',
-            'quad': 'Quad Damage',
-            'regen': 'Regeneration',
-            'invis': 'Invisibility',
-            'flight': 'Flight',
+            'enviro': t('Battle Suit'),
+            'haste': t('Haste'),
+            'quad': t('Quad Damage'),
+            'regen': t('Regeneration'),
+            'invis': t('Invisibility'),
+            'flight': t('Flight'),
             // Health
-            'health': 'Health (+25)',
-            'smallhealth': 'Small Health (+5)',
-            'bighealth': 'Large Health (+50)',
-            'mega': 'Mega Health (+100)',
-            'medkit': 'Medkit',
+            'health': t('Health (+25)'),
+            'smallhealth': t('Small Health (+5)'),
+            'bighealth': t('Large Health (+50)'),
+            'mega': t('Mega Health (+100)'),
+            'medkit': t('Medkit'),
             // Armor
-            'shard': 'Armor Shard (+5)',
-            'ya': 'Yellow Armor (+50)',
-            'ra': 'Red Armor (+100)',
+            'shard': t('Armor Shard (+5)'),
+            'ya': t('Yellow Armor (+50)'),
+            'ra': t('Red Armor (+100)'),
             // CTF
-            'flag': 'Flag'
+            'flag': t('Flag')
         };
         return items[abbr.toLowerCase().trim()] || abbr;
     };
@@ -1173,24 +1174,24 @@
 
     const getFunctionName = (abbr) => {
         const functions = {
-            'tele': 'Teleporter',
-            'teleporter': 'Teleporter',
-            'slick': 'Slick Surface',
-            'timer': 'Timer',
-            'fog': 'Fog',
-            'water': 'Water',
-            'lava': 'Lava',
-            'moving': 'Moving Platforms',
-            'door': 'Doors',
-            'button': 'Buttons',
-            'push': 'Push Trigger',
-            'jumppad': 'Jumppad',
-            'launchramp': 'Launch Ramp',
-            'break': 'Breakable',
-            'slime': 'Slime',
-            'shootergl': 'Grenade Shooter',
-            'shooterpg': 'Plasma Shooter',
-            'shooterrl': 'Rocket Shooter'
+            'tele': t('Teleporter'),
+            'teleporter': t('Teleporter'),
+            'slick': t('Slick Surface'),
+            'timer': t('Timer'),
+            'fog': t('Fog'),
+            'water': t('Water'),
+            'lava': t('Lava'),
+            'moving': t('Moving Platforms'),
+            'door': t('Doors'),
+            'button': t('Buttons'),
+            'push': t('Push Trigger'),
+            'jumppad': t('Jumppad'),
+            'launchramp': t('Launch Ramp'),
+            'break': t('Breakable'),
+            'slime': t('Slime'),
+            'shootergl': t('Grenade Shooter'),
+            'shooterpg': t('Plasma Shooter'),
+            'shooterrl': t('Rocket Shooter')
         };
         return functions[abbr.toLowerCase().trim()] || abbr;
     };
@@ -1227,17 +1228,17 @@
         <div v-if="needsNsfwGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90">
             <div class="max-w-md mx-auto p-8 bg-gray-900/90 border border-red-500/30 rounded-2xl text-center shadow-2xl">
                 <div class="text-5xl mb-4">🔞</div>
-                <h2 class="text-2xl font-black text-white mb-3">Age-Restricted Content</h2>
-                <p class="text-gray-400 mb-6">This map contains NSFW content. You must confirm that you are at least 18 years old to view it.</p>
+                <h2 class="text-2xl font-black text-white mb-3">{{ $t('Age-Restricted Content') }}</h2>
+                <p class="text-gray-400 mb-6">{{ $t('This map contains NSFW content. You must confirm that you are at least 18 years old to view it.') }}</p>
                 <div class="flex gap-3 justify-center">
                     <Link href="/maps" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl transition-colors">
-                        Go Back
+                        {{ $t('Go Back') }}
                     </Link>
                     <button v-if="$page.props.auth.user" @click="confirmNsfw" :disabled="confirmingNsfw" class="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-bold rounded-xl transition-colors">
-                        {{ confirmingNsfw ? 'Confirming...' : 'I am 18+' }}
+                        {{ confirmingNsfw ? $t('Confirming...') : $t('I am 18+') }}
                     </button>
                     <Link v-else :href="route('login')" class="px-6 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors">
-                        Login to continue
+                        {{ $t('Login to continue') }}
                     </Link>
                 </div>
             </div>
@@ -1264,7 +1265,7 @@
                         class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
                     >
                         <span class="text-2xl mb-1">🏁</span>
-                        <span class="text-sm leading-tight">Records</span>
+                        <span class="text-sm leading-tight">{{ $t('Records') }}</span>
                         <span class="text-xs opacity-70 mt-1">{{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }}</span>
                     </button>
 
@@ -1288,51 +1289,48 @@
                         <div v-if="localIsNsfw" class="group/badge relative">
                             <span class="map-badge bg-red-600/80 border-red-500/50 cursor-help">NSFW</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Not Safe For Work</div>
-                                <div class="text-gray-400">This map contains adult or explicit content</div>
+                                <div class="font-bold text-white mb-1">{{ $t('Not Safe For Work') }}</div>
+                                <div class="text-gray-400">{{ $t('This map contains adult or explicit content') }}</div>
                             </div>
                         </div>
                         <!-- Both ranked -->
                         <div v-if="map.is_ranked_vq3 && map.is_ranked_cpm" class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">Ranked</span>
+                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">{{ $t('Ranked') }}</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Ranked in VQ3 & CPM</div>
-                                <div class="text-gray-400">Records on this map count towards</div>
-                                <div class="text-gray-400">player rankings in both physics modes.</div>
-                                <div class="text-gray-500 mt-1 text-[10px]">Criteria: 5+ unique players, best time over 500ms</div>
+                                <div class="font-bold text-white mb-1">{{ $t('Ranked in VQ3 & CPM') }}</div>
+                                <div class="text-gray-400">{{ $t('Records on this map count towards player rankings in both physics modes.') }}</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">{{ $t('Criteria: 5+ unique players, best time over 500ms') }}</div>
                             </div>
                         </div>
                         <!-- Only one ranked -->
                         <div v-else-if="map.is_ranked_vq3 || map.is_ranked_cpm" class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">Ranked {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }}</span>
+                            <span class="map-badge bg-green-600/80 border-green-500/30 shadow-lg shadow-green-500/20 cursor-help">{{ $t('Ranked :physics', { physics: map.is_ranked_vq3 ? 'VQ3' : 'CPM' }) }}</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Ranked in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} only</div>
-                                <div class="text-gray-400">Records count towards player rankings</div>
-                                <div class="text-gray-400">in {{ map.is_ranked_vq3 ? 'VQ3' : 'CPM' }} mode. {{ map.is_ranked_vq3 ? 'CPM' : 'VQ3' }} is unranked on this map.</div>
-                                <div class="text-gray-500 mt-1 text-[10px]">Criteria: 5+ unique players, best time over 500ms</div>
+                                <div class="font-bold text-white mb-1">{{ $t('Ranked in :physics only', { physics: map.is_ranked_vq3 ? 'VQ3' : 'CPM' }) }}</div>
+                                <div class="text-gray-400">{{ $t('Records count towards player rankings in :ranked mode. :unranked is unranked on this map.', { ranked: map.is_ranked_vq3 ? 'VQ3' : 'CPM', unranked: map.is_ranked_vq3 ? 'CPM' : 'VQ3' }) }}</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">{{ $t('Criteria: 5+ unique players, best time over 500ms') }}</div>
                             </div>
                         </div>
                         <!-- Both unranked -->
                         <div v-else class="group/badge relative" style="order: -1">
-                            <span class="map-badge bg-gray-600/80 border-gray-500/30 shadow-lg shadow-gray-500/10 text-gray-300 cursor-help">Unranked</span>
+                            <span class="map-badge bg-gray-600/80 border-gray-500/30 shadow-lg shadow-gray-500/10 text-gray-300 cursor-help">{{ $t('Unranked') }}</span>
                             <div class="absolute left-1/2 -translate-x-1/2 top-full mt-1 hidden group-hover/badge:block bg-gray-900/95 border border-white/20 rounded-lg px-3 py-2 text-xs text-gray-200 whitespace-nowrap shadow-xl z-50">
-                                <div class="font-bold text-white mb-1">Not included in rankings</div>
-                                <div class="text-gray-400">Records on this map do not affect</div>
-                                <div class="text-gray-400">player ranking positions.</div>
-                                <div class="text-gray-500 mt-1 text-[10px]">Needs 5+ unique players and best time over 500ms to qualify</div>
+                                <div class="font-bold text-white mb-1">{{ $t('Not included in rankings') }}</div>
+                                <div class="text-gray-400">{{ $t('Records on this map do not affect player ranking positions.') }}</div>
+                                <div class="text-gray-500 mt-1 text-[10px]">{{ $t('Needs 5+ unique players and best time over 500ms to qualify') }}</div>
                             </div>
                         </div>
                     </div>
                     <!-- Author + Date row -->
                     <div class="flex items-center justify-center gap-3 mb-2">
                         <Link v-if="map.author" :href="route('maps.filters', {author: map.author})" class="text-blue-400 hover:text-blue-300 font-semibold underline decoration-blue-400/50 hover:decoration-blue-300 transition-colors text-sm">{{ map.author }}</Link>
-                        <span v-if="map.date_added" class="text-gray-200 group-hover:text-white text-sm transition-colors">{{ new Date(map.date_added).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                        <span v-if="map.date_added" class="text-gray-200 group-hover:text-white text-sm transition-colors">{{ new Date(map.date_added).toLocaleDateString($page.props.locale, { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                     </div>
 
                     <!-- Map Features: Weapons, Items, Functions -->
                     <div v-if="(map.weapons && map.weapons.length > 0) || (map.items && map.items.length > 0) || (map.functions && map.functions.length > 0)" class="flex flex-wrap items-center justify-center gap-2 mb-3">
                         <div v-if="map.weapons && map.weapons.length > 0" class="flex items-center gap-1">
-                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Weapons</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">{{ $t('Weapons') }}</span>
                             <div class="flex gap-0.5">
                                 <img v-for="weapon in map.weapons.split(',')" :key="weapon"
                                      :src="getWeaponIcon(weapon)"
@@ -1342,7 +1340,7 @@
                             </div>
                         </div>
                         <div v-if="map.items && map.items.length > 0" class="flex items-center gap-1">
-                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Items</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">{{ $t('Items') }}</span>
                             <div class="flex gap-0.5">
                                 <img v-for="item in map.items.split(',')" :key="item"
                                      :src="getItemIcon(item)"
@@ -1352,7 +1350,7 @@
                             </div>
                         </div>
                         <div v-if="map.functions && map.functions.length > 0" class="flex items-center gap-1">
-                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">Functions</span>
+                            <span class="text-gray-200 group-hover:text-white font-bold text-[10px] uppercase tracking-wide transition-colors">{{ $t('Functions') }}</span>
                             <div class="flex gap-0.5">
                                 <img v-for="func in map.functions.split(',')" :key="func"
                                      :src="getFunctionIcon(func)"
@@ -1373,7 +1371,7 @@
                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"/>
                             </svg>
-                            Download Map
+                            {{ $t('Download Map') }}
                         </a>
 
                         <!-- Add to Maplist Button (only for authenticated users) -->
@@ -1385,7 +1383,7 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
-                            Add to Maplist
+                            {{ $t('Add to Maplist') }}
                         </button>
 
                         <!-- Flag NSFW -->
@@ -1398,7 +1396,7 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
                             </svg>
-                            Flag NSFW
+                            {{ $t('Flag NSFW') }}
                         </button>
 
                         <!-- Unflag NSFW -->
@@ -1411,7 +1409,7 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
                             </svg>
-                            Remove NSFW Flag
+                            {{ $t('Remove NSFW Flag') }}
                         </button>
 
                         <!-- Active Servers -->
@@ -1422,14 +1420,14 @@
                                 v-show="server.online_players && server.online_players.length > 0"
                                 :href="`defrag://${server.ip}:${server.port}`"
                                 class="flex items-center gap-1.5 bg-orange-500/80 hover:bg-orange-500 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
-                                :title="`Connect to ${server.plain_name || server.name}`"
+                                :title="$t('Connect to :server', { server: server.plain_name || server.name })"
                             >
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="whitespace-nowrap">Join</span>
+                                <span class="whitespace-nowrap">{{ $t('Join') }}</span>
                                 <span class="truncate max-w-[100px]">{{ server.plain_name || server.name }}</span>
-                                <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ server.online_players.length }} playing</span>
+                                <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">{{ $tc(':count playing|:count playing', server.online_players.length) }}</span>
                             </a>
                         </div>
 
@@ -1438,12 +1436,12 @@
                             <button
                                 @click="toggleInstantPlay"
                                 class="flex items-center gap-1.5 bg-blue-600/80 hover:bg-blue-600 text-white font-medium px-3 py-1.5 rounded-md transition-all text-xs hover:shadow-md"
-                                title="Pick a server and load this map there"
+                                :title="$t('Pick a server and load this map there')"
                             >
                                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
                                 </svg>
-                                <span class="whitespace-nowrap">Instant Play</span>
+                                <span class="whitespace-nowrap">{{ $t('Instant Play') }}</span>
                                 <svg class="w-3 h-3 transition-transform" :class="{ 'rotate-180': instantPlayOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
@@ -1456,10 +1454,10 @@
                                 <div v-if="instantPlayOpen" :style="instantPlayStyle" class="z-[200] bg-gray-900 border border-white/15 rounded-lg overflow-hidden shadow-2xl shadow-black/60">
                                     <div class="px-4 py-2.5 border-b border-white/10 flex items-center justify-between bg-gray-800/80">
                                         <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">
-                                            {{ instantPlayShowAll ? 'All servers' : 'Empty servers' }}
+                                            {{ instantPlayShowAll ? $t('All servers') : $t('Empty servers') }}
                                         </span>
                                         <button @click.stop="instantPlayShowAll = !instantPlayShowAll" class="text-xs text-blue-400 hover:text-blue-300 font-medium">
-                                            {{ instantPlayShowAll ? 'Empty only' : 'Show all servers' }}
+                                            {{ instantPlayShowAll ? $t('Empty only') : $t('Show all servers') }}
                                         </button>
                                     </div>
                                     <div class="max-h-64 overflow-y-auto">
@@ -1477,12 +1475,12 @@
                                                         <span v-if="server.location"> - {{ server.location }}</span>
                                                     </div>
                                                 </div>
-                                                <span v-if="server.online_players && server.online_players.length > 0" class="text-yellow-400 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-yellow-500/15 rounded">{{ server.online_players.length }} playing</span>
-                                                <span v-else class="text-gray-500 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-white/5 rounded">EMPTY</span>
+                                                <span v-if="server.online_players && server.online_players.length > 0" class="text-yellow-400 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-yellow-500/15 rounded">{{ $tc(':count playing|:count playing', server.online_players.length) }}</span>
+                                                <span v-else class="text-gray-500 text-xs font-bold flex-shrink-0 px-2 py-0.5 bg-white/5 rounded">{{ $t('EMPTY') }}</span>
                                             </div>
                                         </div>
                                         <div v-if="instantPlayList.length === 0" class="px-4 py-6 text-center text-gray-500 text-sm">
-                                            No empty servers available right now
+                                            {{ $t('No empty servers available right now') }}
                                         </div>
                                     </div>
                                 </div>
@@ -1504,7 +1502,7 @@
                                     v-if="$page.props.auth.user && !$page.props.auth.user.tag_banned"
                                     @click="confirmRemoveTag(tag)"
                                     class="opacity-0 group-hover/tag:opacity-100 hover:text-red-300 transition-opacity"
-                                    title="Remove tag"
+                                    :title="$t('Remove tag')"
                                 >
                                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -1524,7 +1522,7 @@
                                 style="order: 999"
                             >
                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" /></svg>
-                                Tag Info
+                                {{ $t('Tag Info') }}
                             </span>
                             <Teleport to="body">
                                 <div
@@ -1535,12 +1533,12 @@
                                     class="fixed w-96 max-h-[70vh] overflow-y-auto rounded-lg border border-white/20 shadow-2xl p-3"
                                     style="background: #0f1219; z-index: 9999;"
                                 >
-                                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Tag Info</div>
+                                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{{ $t('Tag Info') }}</div>
                                     <div class="space-y-2.5">
                                         <div v-for="t in tags" :key="'legend-' + t.id">
                                             <div class="flex items-center gap-2">
                                                 <span class="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white whitespace-nowrap flex-shrink-0 leading-none">{{ t.display_name }}</span>
-                                                <span class="text-[11px] text-gray-400 leading-none">{{ t.note || 'No description yet' }}</span>
+                                                <span class="text-[11px] text-gray-400 leading-none">{{ t.note || $t('No description yet') }}</span>
                                             </div>
                                             <div v-if="t.youtube_url" class="mt-1.5 rounded-lg overflow-hidden aspect-video">
                                                 <iframe
@@ -1564,21 +1562,21 @@
                                 @click="adoptTag(suggestedTag.id, suggestedTag.display_name)"
                                 :disabled="adoptingTag"
                                 class="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-600/20 text-green-300 border border-green-500/30 hover:bg-green-600/30 transition-all"
-                                :title="'Suggested from: ' + suggestedTag.maplist_names.join(', ')"
+                                :title="$t('Suggested from: :lists', { lists: suggestedTag.maplist_names.join(', ') })"
                             >
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                                 {{ suggestedTag.display_name }}
                             </button>
-                            <span v-if="tags.length === 0 && !$page.props.auth.user" class="text-gray-500 text-xs italic">No tags yet</span>
-                            <span v-if="tags.length === 0 && $page.props.auth.user && !$page.props.auth.user.tag_banned" class="text-gray-500 text-xs italic">No tags yet - add below</span>
-                            <span v-if="tags.length === 0 && $page.props.auth.user?.tag_banned" class="text-gray-500 text-xs italic">No tags yet</span>
+                            <span v-if="tags.length === 0 && !$page.props.auth.user" class="text-gray-500 text-xs italic">{{ $t('No tags yet') }}</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user && !$page.props.auth.user.tag_banned" class="text-gray-500 text-xs italic">{{ $t('No tags yet - add below') }}</span>
+                            <span v-if="tags.length === 0 && $page.props.auth.user?.tag_banned" class="text-gray-500 text-xs italic">{{ $t('No tags yet') }}</span>
                         </div>
 
                         <div v-if="$page.props.auth.user?.tag_banned" class="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-900/20 border border-red-500/20 text-red-400 text-xs">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
                             </svg>
-                            You have been banned from adding or removing tags.
+                            {{ $t('You have been banned from adding or removing tags.') }}
                         </div>
 
                         <!-- Add tag bar (Maps page style with hover expand) -->
@@ -1592,7 +1590,7 @@
                                     <div class="flex-1 min-w-0 relative" @click="focusTagInput">
                                         <!-- Ghost tags as background (hidden when typing) -->
                                         <div v-show="!newTagInput" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-70 pl-[10px]" aria-hidden="true">
-                                            <span class="text-sm text-gray-200 flex-shrink-0 mr-1">Click to browse & search tags...</span>
+                                            <span class="text-sm text-gray-200 flex-shrink-0 mr-1">{{ $t('Click to browse & search tags...') }}</span>
                                             <span
                                                 v-for="tag in availableTags.filter(t => !tags.some(tt => tt.id === t.id)).slice(0, 15)"
                                                 :key="'ghost-' + tag.id"
@@ -1618,7 +1616,7 @@
                                         :disabled="!newTagInput.trim() || addingTag"
                                         class="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-3 py-1 rounded-md text-xs font-medium transition-colors flex-shrink-0"
                                     >
-                                        {{ addingTag ? '...' : 'Add' }}
+                                        {{ addingTag ? '...' : $t('Add') }}
                                     </button>
                                 </div>
                             </div>
@@ -1649,14 +1647,14 @@
 
                         <!-- Not logged in hint -->
                         <div v-if="!$page.props.auth.user && tags.length === 0" class="mt-2 text-center">
-                            <div class="text-xs text-gray-500"><a href="/login" class="underline hover:text-white transition-colors">Login</a> or <a href="/register" class="underline hover:text-white transition-colors">register</a> to add tags</div>
+                            <div class="text-xs text-gray-500"><a href="/login" class="underline hover:text-white transition-colors">{{ $t('Login') }}</a> {{ $t('or') }} <a href="/register" class="underline hover:text-white transition-colors">{{ $t('register') }}</a> {{ $t('to add tags') }}</div>
                         </div>
                     </div>
 
                     <!-- Public Maplists featuring this map -->
                     <div v-if="publicMaplists && publicMaplists.length > 0" class="mb-3 pt-2 border-t border-white/10">
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors">Maplists</span>
+                            <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors">{{ $t('Maplists') }}</span>
                             <Link
                                 v-for="maplist in publicMaplists"
                                 :key="maplist.id"
@@ -1664,7 +1662,7 @@
                                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600/20 text-blue-200 border border-blue-500/30 hover:bg-blue-600/40 hover:text-white hover:border-blue-400/50 transition-all"
                             >
                                 {{ maplist.name }}
-                                <span class="text-[10px] text-blue-400">({{ maplist.maps_count || 0 }} maps)</span>
+                                <span class="text-[10px] text-blue-400">({{ $tc(':count map|:count maps', maplist.maps_count || 0) }})</span>
                             </Link>
                         </div>
                     </div>
@@ -1674,10 +1672,10 @@
                         <!-- Difficulty Rating -->
                         <div class="flex items-center gap-1.5">
                             <div class="relative group/diff">
-                                <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors cursor-help border-b border-dotted border-gray-600">Difficulty</span>
+                                <span class="text-xs text-gray-200 group-hover:text-white font-semibold mr-1 transition-colors cursor-help border-b border-dotted border-gray-600">{{ $t('Difficulty') }}</span>
                                 <div class="absolute bottom-full left-0 mb-1.5 w-64 p-2.5 bg-gray-900 border border-gray-700 rounded-lg text-[11px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/diff:opacity-100 group-hover/diff:pointer-events-auto transition-opacity z-50">
-                                    <p class="text-yellow-400 font-bold mb-1">How to rate difficulty</p>
-                                    <p>Rate based on the <strong class="text-white">lowest skill needed to complete</strong> the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.</p>
+                                    <p class="text-yellow-400 font-bold mb-1">{{ $t('How to rate difficulty') }}</p>
+                                    <p>{{ $t('Rate based on the') }} <strong class="text-white">{{ $t('lowest skill needed to complete') }}</strong> {{ $t('the map, not the WR time. A beginner map is still beginner even if the WR is insanely optimized.') }}</p>
                                 </div>
                             </div>
                             <div v-for="d in difficultyLabels" :key="d.level" class="relative group/btn">
@@ -1701,14 +1699,14 @@
                                 </button>
                                 <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 bg-gray-900 border border-gray-700 rounded-lg text-[10px] text-gray-300 shadow-xl opacity-0 pointer-events-none group-hover/btn:opacity-100 transition-opacity z-50 whitespace-nowrap">
                                     <div class="font-medium text-white">{{ d.desc }}</div>
-                                    <div v-if="difficultyData.distribution[d.level]" class="text-gray-500 mt-0.5">{{ difficultyData.distribution[d.level] }} vote{{ difficultyData.distribution[d.level] > 1 ? 's' : '' }}</div>
+                                    <div v-if="difficultyData.distribution[d.level]" class="text-gray-500 mt-0.5">{{ $tc(':count vote|:count votes', difficultyData.distribution[d.level]) }}</div>
                                 </div>
                             </div>
                             <span v-if="difficultyData.total > 0" class="text-[10px] text-gray-500 group-hover:text-gray-300 ml-1 transition-colors">
-                                {{ difficultyData.average }} avg
+                                {{ $t(':average avg', { average: difficultyData.average }) }}
                                 <span class="text-gray-600 group-hover:text-gray-400 transition-colors">({{ difficultyData.total }})</span>
                             </span>
-                            <span v-else class="text-[10px] text-gray-600 group-hover:text-gray-400 ml-1 transition-colors">No votes yet</span>
+                            <span v-else class="text-[10px] text-gray-600 group-hover:text-gray-400 ml-1 transition-colors">{{ $t('No votes yet') }}</span>
                         </div>
 
                         <div class="flex-1"></div>
@@ -1720,28 +1718,28 @@
                                 :class="column !== 'time' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
                                 class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
                             >
-                                {{ column === 'time' ? 'Fastest' : 'Newest' }}
+                                {{ column === 'time' ? $t('Fastest') : $t('Newest') }}
                             </button>
                             <button
                                 @click="onChangeOldtop(!showOldtopLocal)"
                                 :class="showOldtopLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
                                 class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
                             >
-                                Old Top
+                                {{ $t('Old Top') }}
                             </button>
                             <button
                                 @click="onChangeOffline(!showOfflineLocal)"
                                 :class="showOfflineLocal ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30' : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700 hover:text-white'"
                                 class="px-3.5 py-1.5 rounded-lg border text-xs font-bold transition-all"
                             >
-                                Demos Top
+                                {{ $t('Demos Top') }}
                             </button>
                             <div class="text-xs text-gray-500">
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=customize" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">
-                                    Set your defaults
+                                    {{ $t('Set your defaults') }}
                                 </Link>
-                                <span v-else class="cursor-not-allowed" title="You must login or register to customize defaults">
-                                    <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">Log in</Link> to save defaults
+                                <span v-else class="cursor-not-allowed" :title="$t('You must login or register to customize defaults')">
+                                    <Link href="/login" class="hover:text-teal-400 transition-colors underline decoration-dotted underline-offset-2">{{ $t('Log in') }}</Link> {{ $t('to save defaults') }}
                                 </span>
                             </div>
                         </div>
@@ -1776,10 +1774,10 @@
                             ? 'bg-teal-600/90 border-teal-400 text-white shadow-lg shadow-teal-500/30'
                             : 'bg-gray-800/70 border-gray-600 text-gray-300 hover:bg-gray-700/80 hover:text-white'"
                         class="hidden lg:flex flex-col items-center justify-center rounded-2xl border px-5 py-6 font-bold transition-all w-40 flex-shrink-0"
-                        title="Freestyle runs, tricks and tutorials - everything on this map that has no time"
+                        :title="$t('Freestyle runs, tricks and tutorials - everything on this map that has no time')"
                     >
                         <span class="text-2xl mb-1">🎬</span>
-                        <span class="text-sm leading-tight text-center">Freestyle<br />&amp; Tricks</span>
+                        <span class="text-sm leading-tight text-center">{{ $t('Freestyle') }}<br />{{ $t('& Tricks') }}</span>
                         <span class="text-xs opacity-70 mt-1">{{ untimedTotal }}</span>
                     </button>
                 </div>
@@ -1791,12 +1789,12 @@
                         @click="showFreestyle = false"
                         :class="!showFreestyle ? 'bg-blue-600/90 border-blue-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
                         class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
-                    >Records ({{ (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }})</button>
+                    >{{ $t('Records (:count)', { count: (getVq3Records?.total || 0) + (getCpmRecords?.total || 0) }) }}</button>
                     <button
                         @click="showFreestyle = true"
                         :class="showFreestyle ? 'bg-teal-600/90 border-teal-400 text-white' : 'bg-gray-800/70 border-gray-600 text-gray-300'"
                         class="px-4 py-2 rounded-lg border text-sm font-bold transition-all"
-                    >Freestyle &amp; Tricks ({{ untimedTotal }})</button>
+                    >{{ $t('Freestyle & Tricks (:count)', { count: untimedTotal }) }}</button>
                 </div>
             </div>
 
@@ -1853,13 +1851,13 @@
                         >
                             <div class="flex items-center justify-between flex-wrap gap-2">
                                 <h2 class="text-lg font-bold" :class="side.accent === 'blue' ? 'text-blue-400' : 'text-purple-400'">
-                                    {{ side.label }} Demos
+                                    {{ $t(':physics Demos', { physics: side.label }) }}
                                     <span class="text-sm font-semibold" :class="side.accent === 'blue' ? 'text-blue-400/60' : 'text-purple-400/60'">({{ side.list.total }})</span>
                                 </h2>
                                 <div class="text-xs text-gray-400">
-                                    <template v-if="hasAnyRecords">No time on these - freestyle, tricks, tutorials.</template>
-                                    <template v-else-if="map.gametype === 'freestyle'">No timer on this map, so nothing here is ranked.</template>
-                                    <template v-else>No records on this map yet.</template>
+                                    <template v-if="hasAnyRecords">{{ $t('No time on these - freestyle, tricks, tutorials.') }}</template>
+                                    <template v-else-if="map.gametype === 'freestyle'">{{ $t('No timer on this map, so nothing here is ranked.') }}</template>
+                                    <template v-else>{{ $t('No records on this map yet.') }}</template>
                                 </div>
                             </div>
                         </div>
@@ -1887,7 +1885,7 @@
                                         @error="(e) => e.target.style.display = 'none'"
                                     />
                                     <span class="text-sm font-semibold truncate" v-html="q3tohtml(group.name)"></span>
-                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ group.count }} demo{{ group.count === 1 ? '' : 's' }}</span>
+                                    <span class="text-[10px] text-gray-500 flex-shrink-0">{{ $tc(':count demo|:count demos', group.count) }}</span>
                                     <span class="flex-1"></span>
                                     <span class="text-[10px] text-gray-500 flex-shrink-0">{{ (group.latest || '').slice(0, 10) }}</span>
                                 </button>
@@ -1926,13 +1924,13 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/vq3-icon.svg" class="w-5 h-5" alt="VQ3" /> -->
-                                <h2 class="text-lg font-bold text-blue-400">VQ3 Records <span v-if="getVq3Records.total" class="text-sm font-semibold text-blue-400/60">({{ getVq3Records.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-blue-400">{{ $t('VQ3 Records') }} <span v-if="getVq3Records.total" class="text-sm font-semibold text-blue-400/60">({{ getVq3Records.total }})</span></h2>
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2">
-                                    Swap VQ3/CPM sides
+                                    {{ $t('Swap VQ3/CPM sides') }}
                                 </Link>
                             </div>
                             <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
-                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div class="text-[11px] text-gray-300 font-bold">{{ $t('Your Best') }}</div>
                                 <div v-if="my_vq3_record" class="text-sm font-bold text-blue-300 tabular-nums">
                                     {{ formatTime(my_vq3_record.time) }}
                                     <span class="text-xs text-blue-400">#{{ my_vq3_record.rank }}</span>
@@ -1947,10 +1945,10 @@
                         <div v-if="getVq3Records.total > 0">
                             <!-- Column Headers -->
                             <div class="flex items-center gap-1.5 -ml-3 -mt-1 mb-0 pb-1 border-b border-white/15">
-                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
-                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
-                                <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">Time</div>
-                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" :title="$t('Hover a row to see its score here')">#</div>
+                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{{ $t('Player') }}</div>
+                                <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">{{ $t('Time') }}</div>
+                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">{{ $t('Date') }}</div>
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getVq3Records.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
@@ -1993,7 +1991,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                 </div>
-                                <div>There are no VQ3 Records</div>
+                                <div>{{ $t('There are no VQ3 Records') }}</div>
                             </div>
                         </div>
                     </div>
@@ -2011,13 +2009,13 @@
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <!-- <img src="/images/modes/cpm-icon.svg" class="w-5 h-5" alt="CPM" /> -->
-                                <h2 class="text-lg font-bold text-purple-400">CPM Records <span v-if="getCpmRecords.total" class="text-sm font-semibold text-purple-400/60">({{ getCpmRecords.total }})</span></h2>
+                                <h2 class="text-lg font-bold text-purple-400">{{ $t('CPM Records') }} <span v-if="getCpmRecords.total" class="text-sm font-semibold text-purple-400/60">({{ getCpmRecords.total }})</span></h2>
                                 <Link v-if="page.props.auth?.user" href="/user/settings?tab=global-customize" class="text-xs text-gray-500 hover:text-purple-400 transition-colors underline decoration-dotted underline-offset-2">
-                                    Swap VQ3/CPM sides
+                                    {{ $t('Swap VQ3/CPM sides') }}
                                 </Link>
                             </div>
                             <div v-if="page.props.auth?.user" class="text-right min-w-[80px]">
-                                <div class="text-[11px] text-gray-300 font-bold">Your Best</div>
+                                <div class="text-[11px] text-gray-300 font-bold">{{ $t('Your Best') }}</div>
                                 <div v-if="my_cpm_record" class="text-sm font-bold text-purple-300 tabular-nums">
                                     {{ formatTime(my_cpm_record.time) }}
                                     <span class="text-xs text-purple-400">#{{ my_cpm_record.rank }}</span>
@@ -2032,10 +2030,10 @@
                         <div v-if="getCpmRecords.total > 0">
                             <!-- Column Headers -->
                             <div class="flex items-center gap-1.5 -ml-3 -mt-1 mb-0 pb-1 border-b border-white/15">
-                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" title="Hover a row to see its score here">#</div>
-                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Player</div>
-                                <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">Time</div>
-                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">Date</div>
+                                <div class="w-10 flex-shrink-0 text-left pl-1.5 text-[10px] text-gray-400 uppercase tracking-wider font-semibold" :title="$t('Hover a row to see its score here')">#</div>
+                                <div class="flex-1 text-[10px] text-gray-400 uppercase tracking-wider font-semibold">{{ $t('Player') }}</div>
+                                <div class="w-[68px] flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right ml-0.5">{{ $t('Time') }}</div>
+                                <div :class="[dateColWidth, 'flex-shrink-0 text-[10px] text-gray-400 uppercase tracking-wider font-semibold text-right']">{{ $t('Date') }}</div>
                             </div>
                             <div class="flex-grow">
                                 <template v-for="record in getCpmRecords.data" :key="record.is_online ? `online-${record.id}` : `offline-${record.id}`">
@@ -2077,7 +2075,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z" />
                                     </svg>
                                 </div>
-                                <div>There are no CPM Records</div>
+                                <div>{{ $t('There are no CPM Records') }}</div>
                             </div>
                         </div>
                     </div>
@@ -2104,7 +2102,7 @@
             <div class="bg-gray-900/95 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-white/10 shadow-2xl" @click.stop>
                 <!-- Header (fixed) -->
                 <div class="flex justify-between items-center p-6 pb-4 border-b border-white/5">
-                    <h3 class="text-xl font-bold text-gray-100">Assign Demo to Online Record</h3>
+                    <h3 class="text-xl font-bold text-gray-100">{{ $t('Assign Demo to Online Record') }}</h3>
                     <button @click="closeAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -2117,22 +2115,22 @@
                     <!-- Demo info -->
                     <div v-if="assigningRecord" class="p-3 bg-gray-800/60 rounded-lg border border-white/5">
                         <div class="grid grid-cols-2 gap-2">
-                            <div class="text-sm"><span class="text-gray-500">Map:</span> <span class="text-gray-200 font-medium">{{ map.name }}</span></div>
-                            <div class="text-sm"><span class="text-gray-500">Physics:</span> <span class="font-medium" :class="assignPhysics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assignPhysics }}</span></div>
-                            <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(assigningRecord.player_name || assigningRecord.name)"></span></div>
-                            <div v-if="assigningRecord.time" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningRecord.time) }}</span></div>
+                            <div class="text-sm"><span class="text-gray-500">{{ $t('Map:') }}</span> <span class="text-gray-200 font-medium">{{ map.name }}</span></div>
+                            <div class="text-sm"><span class="text-gray-500">{{ $t('Physics:') }}</span> <span class="font-medium" :class="assignPhysics === 'CPM' ? 'text-purple-400' : 'text-blue-400'">{{ assignPhysics }}</span></div>
+                            <div class="text-sm"><span class="text-gray-500">{{ $t('Player:') }}</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(assigningRecord.player_name || assigningRecord.name)"></span></div>
+                            <div v-if="assigningRecord.time" class="text-sm"><span class="text-gray-500">{{ $t('Time:') }}</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(assigningRecord.time) }}</span></div>
                         </div>
                     </div>
 
                     <!-- Loading -->
                     <div v-if="loadingRecords" class="text-center py-8">
-                        <div class="text-gray-400 text-lg">Loading records...</div>
+                        <div class="text-gray-400 text-lg">{{ $t('Loading records...') }}</div>
                     </div>
 
                     <!-- Suggested matches -->
                     <div v-if="!loadingRecords && suggestedRecords.length > 0">
                         <label class="block text-sm font-medium text-green-400 mb-2">
-                            Closest time matches
+                            {{ $t('Closest time matches') }}
                         </label>
                         <div class="border border-green-700/30 rounded-lg bg-green-900/10 overflow-hidden">
                             <button
@@ -2151,7 +2149,7 @@
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <span class="text-xs text-gray-500" :class="record.timeDiff === 0 ? 'text-green-400 font-bold' : ''">
-                                            {{ record.timeDiff === 0 ? 'EXACT' : (record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff)) + ' diff' }}
+                                            {{ record.timeDiff === 0 ? $t('EXACT') : $t(':diff diff', { diff: record.timeDiff < 1000 ? record.timeDiff + 'ms' : formatTime(record.timeDiff) }) }}
                                         </span>
                                         <span class="text-sm font-mono" :class="selectedRecordId === record.id ? 'text-green-300' : 'text-gray-400'">{{ record.formatted_time }}</span>
                                     </div>
@@ -2163,7 +2161,7 @@
                     <!-- Records list -->
                     <div v-if="!loadingRecords && availableRecords.length > 0">
                         <label class="block text-sm font-medium text-gray-400 mb-2">
-                            All records ({{ availableRecords.length }})
+                            {{ $t('All records (:count)', { count: availableRecords.length }) }}
                         </label>
                         <div class="max-h-[220px] overflow-y-auto border border-gray-700/50 rounded-lg">
                             <button
@@ -2188,14 +2186,14 @@
 
                     <!-- No records -->
                     <div v-if="!loadingRecords && availableRecords.length === 0" class="text-center text-gray-400 py-8">
-                        No online records found for {{ map.name }} ({{ assignPhysics }})
+                        {{ $t('No online records found for :map (:physics)', { map: map.name, physics: assignPhysics }) }}
                     </div>
                 </div>
 
                 <!-- Action buttons (sticky footer) -->
                 <div class="flex justify-end space-x-3 p-6 pt-4 border-t border-white/5">
                     <button @click="closeAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button
                         @click="assignDemoToRecord"
@@ -2205,7 +2203,7 @@
                             selectedRecordId ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 cursor-not-allowed'
                         ]"
                     >
-                        Assign Demo
+                        {{ $t('Assign Demo') }}
                     </button>
                 </div>
             </div>
@@ -2215,7 +2213,7 @@
         <div v-if="showReverseAssignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeReverseAssignModal">
             <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto border border-purple-500/20 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-purple-300">Assign Demo to Record</h3>
+                    <h3 class="text-xl font-bold text-purple-300">{{ $t('Assign Demo to Record') }}</h3>
                     <button @click="closeReverseAssignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -2226,15 +2224,15 @@
                 <!-- Record info -->
                 <div v-if="reverseAssignRecord" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-purple-500/10">
                     <div class="grid grid-cols-2 gap-3">
-                        <div class="text-sm"><span class="text-gray-500">Record:</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(reverseAssignRecord.user?.name || reverseAssignRecord.name)"></span></div>
-                        <div class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(reverseAssignRecord.time) }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">{{ $t('Record:') }}</span> <span class="text-gray-200 font-medium" v-html="q3tohtml(reverseAssignRecord.user?.name || reverseAssignRecord.name)"></span></div>
+                        <div class="text-sm"><span class="text-gray-500">{{ $t('Time:') }}</span> <span class="text-gray-200 font-mono font-medium">{{ formatTime(reverseAssignRecord.time) }}</span></div>
                     </div>
                 </div>
 
                 <!-- Matching demos -->
                 <div v-if="reverseAssignDemos.length > 0" class="mb-6">
                     <label class="block text-sm font-medium text-purple-400 mb-2">
-                        Matching demos ({{ reverseAssignDemos.length }})
+                        {{ $t('Matching demos (:count)', { count: reverseAssignDemos.length }) }}
                     </label>
                     <div class="border border-purple-700/30 rounded-lg bg-purple-900/10 overflow-hidden">
                         <button
@@ -2269,18 +2267,18 @@
                                 'border-orange-500': demo.confidence < 50
                             }">
                                 <span v-if="demo.confidence === 100">
-                                    Exact name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is identical to record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>".
+                                    {{ $t('Exact name match - demo player') }} "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" {{ $t('is identical to record holder') }} "<span class="text-white font-medium">{{ demo.record_player_name }}</span>".
                                 </span>
                                 <span v-else-if="demo.confidence >= 80">
-                                    Very similar name — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" closely matches record holder "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                    {{ $t('Very similar name - demo player') }} "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" {{ $t('closely matches record holder') }} "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ $t(':confidence% similarity', { confidence: demo.confidence }) }}).
                                 </span>
                                 <span v-else-if="demo.confidence >= 50">
-                                    Partial name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" is somewhat similar to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                    {{ $t('Partial name match - demo player') }} "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" {{ $t('is somewhat similar to') }} "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ $t(':confidence% similarity', { confidence: demo.confidence }) }}).
                                 </span>
                                 <span v-else>
-                                    Weak name match — demo player "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" has low similarity to "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ demo.confidence }}% similarity).
+                                    {{ $t('Weak name match - demo player') }} "<span class="text-white font-medium" v-html="q3tohtml(demo.player_name)"></span>" {{ $t('has low similarity to') }} "<span class="text-white font-medium">{{ demo.record_player_name }}</span>" ({{ $t(':confidence% similarity', { confidence: demo.confidence }) }}).
                                 </span>
-                                <span class="text-green-400 font-medium"> Time matches exactly.</span>
+                                <span class="text-green-400 font-medium"> {{ $t('Time matches exactly.') }}</span>
                             </div>
                         </button>
                     </div>
@@ -2289,7 +2287,7 @@
                 <!-- Action buttons -->
                 <div class="flex justify-end space-x-3 pt-2">
                     <button @click="closeReverseAssignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button
                         @click="assignDemoFromRecord"
@@ -2299,7 +2297,7 @@
                             selectedDemoId ? 'bg-purple-600 hover:bg-purple-500' : 'bg-gray-600 cursor-not-allowed'
                         ]"
                     >
-                        Assign Demo
+                        {{ $t('Assign Demo') }}
                     </button>
                 </div>
             </div>
@@ -2308,7 +2306,7 @@
         <div v-if="showReassignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" @click="closeReassignModal">
             <div class="bg-gray-900/95 rounded-xl p-8 w-full max-w-3xl border border-yellow-500/20 shadow-2xl" @click.stop>
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-yellow-300">Reassign Demo</h3>
+                    <h3 class="text-xl font-bold text-yellow-300">{{ $t('Reassign Demo') }}</h3>
                     <button @click="closeReassignModal" class="text-gray-400 hover:text-gray-200 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -2318,28 +2316,28 @@
 
                 <!-- Current assignment info -->
                 <div v-if="reassignCurrentDemo" class="mb-6 p-4 bg-gray-800/60 rounded-lg border border-yellow-500/10">
-                    <div class="text-sm text-gray-400 mb-2">Currently assigned demo:</div>
+                    <div class="text-sm text-gray-400 mb-2">{{ $t('Currently assigned demo:') }}</div>
                     <div class="grid grid-cols-1 gap-2">
-                        <div class="text-sm"><span class="text-gray-500">File:</span> <span class="text-gray-200 break-all">{{ reassignCurrentDemo.original_filename }}</span></div>
-                        <div class="text-sm"><span class="text-gray-500">Player:</span> <span class="text-gray-200" v-html="q3tohtml(reassignCurrentDemo.player_name || 'Unknown')"></span></div>
-                        <div v-if="reassignCurrentDemo.time_ms" class="text-sm"><span class="text-gray-500">Time:</span> <span class="text-gray-200 font-mono">{{ formatTime(reassignCurrentDemo.time_ms) }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">{{ $t('File:') }}</span> <span class="text-gray-200 break-all">{{ reassignCurrentDemo.original_filename }}</span></div>
+                        <div class="text-sm"><span class="text-gray-500">{{ $t('Player:') }}</span> <span class="text-gray-200" v-html="q3tohtml(reassignCurrentDemo.player_name || $t('Unknown'))"></span></div>
+                        <div v-if="reassignCurrentDemo.time_ms" class="text-sm"><span class="text-gray-500">{{ $t('Time:') }}</span> <span class="text-gray-200 font-mono">{{ formatTime(reassignCurrentDemo.time_ms) }}</span></div>
                     </div>
                 </div>
 
                 <p class="text-sm text-gray-400 mb-6">
-                    Unassigning the demo will remove it from this record. It will become available for reassignment to a different record.
+                    {{ $t('Unassigning the demo will remove it from this record. It will become available for reassignment to a different record.') }}
                 </p>
 
                 <!-- Action buttons -->
                 <div class="flex justify-end space-x-3 pt-2">
                     <button @click="closeReassignModal" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
-                        Cancel
+                        {{ $t('Cancel') }}
                     </button>
                     <button
                         @click="unassignDemo"
                         class="px-5 py-2.5 rounded-lg text-white font-medium transition-colors bg-yellow-600 hover:bg-yellow-500"
                     >
-                        Unassign Demo
+                        {{ $t('Unassign Demo') }}
                     </button>
                 </div>
             </div>
@@ -2355,12 +2353,12 @@
                 <div v-if="showTagRemoveConfirm" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click.self="showTagRemoveConfirm = false">
                     <div class="fixed inset-0 bg-black/60"></div>
                     <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
-                        <h3 class="text-lg font-bold text-white mb-3">Remove Tag</h3>
+                        <h3 class="text-lg font-bold text-white mb-3">{{ $t('Remove Tag') }}</h3>
                         <p class="text-gray-300 mb-2">
-                            Remove <span class="font-semibold text-purple-400">{{ tagToRemove?.display_name }}</span> from this map?
+                            {{ $t('Remove') }} <span class="font-semibold text-purple-400">{{ tagToRemove?.display_name }}</span> {{ $t('from this map?') }}
                         </p>
                         <div v-if="tagRemoveChildren.length > 0" class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
-                            <p class="text-yellow-400 text-sm font-semibold mb-1">This is a parent tag. The following child tags will also be removed:</p>
+                            <p class="text-yellow-400 text-sm font-semibold mb-1">{{ $t('This is a parent tag. The following child tags will also be removed:') }}</p>
                             <div class="flex flex-wrap gap-1.5">
                                 <span v-for="child in tagRemoveChildren" :key="child.id" class="bg-purple-600/20 border border-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full text-xs">
                                     {{ child.display_name }}
@@ -2372,13 +2370,13 @@
                                 @click="executeRemoveTag"
                                 class="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors"
                             >
-                                Remove{{ tagRemoveChildren.length > 0 ? ' All' : '' }}
+                                {{ tagRemoveChildren.length > 0 ? $t('Remove All') : $t('Remove') }}
                             </button>
                             <button
                                 @click="showTagRemoveConfirm = false"
                                 class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                             >
-                                Cancel
+                                {{ $t('Cancel') }}
                             </button>
                         </div>
                     </div>
@@ -2391,9 +2389,9 @@
             <div v-if="showBlockedTagModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4" @click.self="showBlockedTagModal = false">
                 <div class="fixed inset-0 bg-black/60"></div>
                 <div class="relative bg-gray-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full p-6">
-                    <h3 class="text-lg font-bold text-white mb-3">Tag Suggestion</h3>
+                    <h3 class="text-lg font-bold text-white mb-3">{{ $t('Tag Suggestion') }}</h3>
                     <p class="text-gray-300 mb-4">
-                        This keyword is not a valid tag. Did you mean:
+                        {{ $t('This keyword is not a valid tag. Did you mean:') }}
                     </p>
                     <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4 flex items-center gap-3">
                         <span class="px-2.5 py-1 rounded-full text-sm font-semibold bg-blue-600 text-white">{{ blockedSuggestedTag?.display_name }}</span>
@@ -2404,13 +2402,13 @@
                             @click="acceptSuggestedTag"
                             class="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
                         >
-                            Add "{{ blockedSuggestedTag?.display_name }}"
+                            {{ $t('Add ":tag"', { tag: blockedSuggestedTag?.display_name }) }}
                         </button>
                         <button
                             @click="showBlockedTagModal = false"
                             class="flex-1 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 font-semibold rounded-xl border border-white/10 transition-colors"
                         >
-                            Cancel
+                            {{ $t('Cancel') }}
                         </button>
                     </div>
                 </div>
@@ -2421,11 +2419,11 @@
         <Teleport to="body">
             <div v-if="scoreTooltip" :style="scoreTooltipStyle"
                 class="px-3 py-2 rounded-lg bg-gray-900 border border-white/15 text-[10px] text-gray-300 whitespace-nowrap shadow-2xl pointer-events-none">
-                <div>Reltime: <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
-                <div v-if="scoreTooltip.base_score != null">Base score: <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
-                <div v-if="scoreTooltip.rank_multiplier != null">Rank mult: <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
-                <div v-if="scoreTooltip.multiplier != null">Map mult: <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
-                <div class="border-t border-white/10 mt-1 pt-1">Score: <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
+                <div>{{ $t('Reltime:') }} <span class="text-blue-400">{{ scoreTooltip.reltime }}</span></div>
+                <div v-if="scoreTooltip.base_score != null">{{ $t('Base score:') }} <span class="text-gray-100">{{ scoreTooltip.base_score }}</span></div>
+                <div v-if="scoreTooltip.rank_multiplier != null">{{ $t('Rank mult:') }} <span class="text-purple-400">× {{ scoreTooltip.rank_multiplier }}</span></div>
+                <div v-if="scoreTooltip.multiplier != null">{{ $t('Map mult:') }} <span class="text-green-400">× {{ scoreTooltip.multiplier }}</span></div>
+                <div class="border-t border-white/10 mt-1 pt-1">{{ $t('Score:') }} <span class="text-yellow-400 font-bold">{{ scoreTooltip.score }}</span></div>
             </div>
         </Teleport>
 
