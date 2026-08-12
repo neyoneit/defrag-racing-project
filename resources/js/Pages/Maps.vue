@@ -5,6 +5,7 @@
     import MapCard from '@/Components/MapCard.vue';
     import MapFiltersSidebar from '@/Components/MapFiltersSidebar.vue';
     import axios from 'axios';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         maps: Object,
@@ -43,6 +44,9 @@
     };
 
     const fuzzyMatch = (text, query) => {
+        // This `t` shadows the imported translator for the rest of the function.
+        // Nothing here translates, so it is harmless - but do not add a t() call
+        // below without renaming it first.
         const t = text.toLowerCase();
         const q = query.toLowerCase();
         // Exact substring match = best score
@@ -218,7 +222,7 @@
                 }
             }, 12000);
         } catch (e) {
-            randomMap.value.error = e.response?.data?.error || 'Failed to pick random map';
+            randomMap.value.error = e.response?.data?.error || t('Failed to pick random map');
             setTimeout(() => { randomMap.value.error = null; }, 3000);
         } finally {
             randomMap.value.loading = false;
@@ -258,7 +262,7 @@
 
 <template>
     <div class="">
-        <Head title="Maps" />
+        <Head :title="$t('Maps')" />
 
         <!-- Header Section -->
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
@@ -267,17 +271,17 @@
                     <!-- Spacer matching sidebar width -->
                     <div class="hidden md:block flex-shrink-0 w-[300px]">
                         <div class="flex items-center gap-3 flex-wrap">
-                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Maps</h1>
-                            <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Maps') }}</h1>
+                            <span v-if="maps" class="text-sm text-gray-400">{{ $t(':count total', { count: maps.total }) }}</span>
                             <button
                                 @click="pickRandomMap"
                                 :disabled="randomMap.loading"
-                                :title="'Pick a random map from the current filters and copy its name to clipboard'"
+                                :title="$t('Pick a random map from the current filters and copy its name to clipboard')"
                                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:bg-blue-600/40 hover:text-white disabled:opacity-50 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                 </svg>
-                                {{ randomMap.loading ? '...' : 'Random' }}
+                                {{ randomMap.loading ? '...' : $t('Random') }}
                             </button>
                         </div>
                         <div v-if="randomMap.name || randomMap.error" class="mt-1.5 text-xs">
@@ -286,22 +290,22 @@
                                 <Link
                                     :href="`/maps/${encodeURIComponent(randomMap.name)}`"
                                     class="font-mono font-bold text-green-400 hover:text-green-300 underline decoration-dotted underline-offset-2"
-                                    :title="`Open ${randomMap.name}`"
+                                    :title="$t('Open :name', { name: randomMap.name })"
                                 >{{ randomMap.name }}</Link>
                                 <button
                                     @click="copyRandomVariant('name')"
-                                    title="Copy map name"
+                                    :title="$t('Copy map name')"
                                     class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
-                                    name
+                                    {{ $t('name') }}
                                 </button>
                                 <button
                                     @click="copyRandomVariant('callvote')"
-                                    title="Copy /callvote map command"
+                                    :title="$t('Copy /callvote map command')"
                                     class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
                                     /callvote
                                 </button>
                                 <span v-if="randomMap.copied" class="text-gray-400">
-                                    (copied {{ randomMap.copied === 'callvote' ? '/callvote' : 'name' }})
+                                    {{ randomMap.copied === 'callvote' ? $t('(copied /callvote)') : $t('(copied name)') }}
                                 </span>
                             </span>
                         </div>
@@ -310,38 +314,38 @@
                     <div class="flex-1 min-w-0">
                         <!-- Mobile title -->
                         <div class="md:hidden flex items-center gap-3 mb-2 flex-wrap">
-                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">Maps</h1>
-                            <span v-if="maps" class="text-sm text-gray-400">{{ maps.total }} total</span>
+                            <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ $t('Maps') }}</h1>
+                            <span v-if="maps" class="text-sm text-gray-400">{{ $t(':count total', { count: maps.total }) }}</span>
                             <button
                                 @click="pickRandomMap"
                                 :disabled="randomMap.loading"
-                                :title="'Pick a random map from the current filters and copy its name to clipboard'"
+                                :title="$t('Pick a random map from the current filters and copy its name to clipboard')"
                                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600/20 border border-blue-500/30 text-blue-300 hover:bg-blue-600/40 hover:text-white disabled:opacity-50 transition-colors">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                                 </svg>
-                                {{ randomMap.loading ? '...' : 'Random' }}
+                                {{ randomMap.loading ? '...' : $t('Random') }}
                             </button>
                             <div v-if="randomMap.name" class="text-xs w-full inline-flex items-center gap-1.5 flex-wrap">
                                 <Link
                                     :href="`/maps/${encodeURIComponent(randomMap.name)}`"
                                     class="font-mono font-bold text-green-400 hover:text-green-300 underline decoration-dotted underline-offset-2"
-                                    :title="`Open ${randomMap.name}`"
+                                    :title="$t('Open :name', { name: randomMap.name })"
                                 >{{ randomMap.name }}</Link>
                                 <button
                                     @click="copyRandomVariant('name')"
-                                    title="Copy map name"
+                                    :title="$t('Copy map name')"
                                     class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
-                                    name
+                                    {{ $t('name') }}
                                 </button>
                                 <button
                                     @click="copyRandomVariant('callvote')"
-                                    title="Copy /callvote map command"
+                                    :title="$t('Copy /callvote map command')"
                                     class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-colors">
                                     /callvote
                                 </button>
                                 <span v-if="randomMap.copied" class="text-gray-400">
-                                    (copied {{ randomMap.copied === 'callvote' ? '/callvote' : 'name' }})
+                                    {{ randomMap.copied === 'callvote' ? $t('(copied /callvote)') : $t('(copied name)') }}
                                 </span>
                             </div>
                             <span v-else-if="randomMap.error" class="text-xs text-red-400 w-full">{{ randomMap.error }}</span>
@@ -365,7 +369,7 @@
                                     <div class="flex-1 min-w-0 relative">
                                         <!-- Ghost tags as background (hidden when typing) -->
                                         <div v-show="!tagSearch" class="absolute inset-0 flex items-center gap-1.5 overflow-hidden pointer-events-none select-none flex-nowrap opacity-40 pl-[10px]" aria-hidden="true">
-                                            <span class="text-xs text-gray-400 flex-shrink-0 mr-1">{{ selectedTags.length > 0 ? `+${tagsWithUsage.length - selectedTags.length} more tags...` : `Filter ${tagsWithUsage.length} tags...` }}</span>
+                                            <span class="text-xs text-gray-400 flex-shrink-0 mr-1">{{ selectedTags.length > 0 ? $t('+:count more tags...', { count: tagsWithUsage.length - selectedTags.length }) : $t('Filter :count tags...', { count: tagsWithUsage.length }) }}</span>
                                             <span
                                                 v-for="tag in tagsWithUsage.filter(t => !selectedTags.includes(t.name)).slice(0, 20)"
                                                 :key="'ghost-' + tag.id"
@@ -409,7 +413,7 @@
                                         {{ tag.display_name }}
                                         <span class="opacity-50 ml-0.5">({{ tag.usage_count }})</span>
                                     </button>
-                                    <span v-if="filteredTagsForOverlay.length === 0" class="text-xs text-gray-500">No tags match</span>
+                                    <span v-if="filteredTagsForOverlay.length === 0" class="text-xs text-gray-500">{{ $t('No tags match') }}</span>
                                     <button
                                         v-if="selectedTags.length > 0"
                                         @click="clearAllTags"
@@ -417,7 +421,7 @@
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                         </svg>
-                                        Clear
+                                        {{ $t('Clear') }}
                                     </button>
                                 </div>
                             </div>
@@ -462,8 +466,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 mb-3 opacity-40">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" />
                         </svg>
-                        <p class="font-semibold">No maps found</p>
-                        <p class="text-sm">Adjust your filters</p>
+                        <p class="font-semibold">{{ $t('No maps found') }}</p>
+                        <p class="text-sm">{{ $t('Adjust your filters') }}</p>
                     </div>
 
                     <!-- Pagination -->

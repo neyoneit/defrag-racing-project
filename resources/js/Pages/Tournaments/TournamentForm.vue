@@ -9,6 +9,7 @@
     import TextInput from '@/Components/Laravel/TextInput.vue';
     import RichTextEditor from '@/Components/RichTextEditor.vue';
     import rulesData from '@/rules';
+    import { t } from '@/utils/i18n';
 
     const props = defineProps({
         tournament: Object,
@@ -68,7 +69,7 @@
 
     const detailsTabFinished = () => {
         if (form.rules.length === 0) {
-            form.errors.rules = 'The rules field is required.';
+            form.errors.rules = t('The rules field is required.');
             return false;
         }
 
@@ -79,14 +80,14 @@
 
     const basicTabFinished = () => {
         if (form.name.length === 0) {
-            form.errors.name = 'The name field is required.';
+            form.errors.name = t('The name field is required.');
             return false;
         }
 
         form.errors.name = '';
 
         if (form.description.length === 0) {
-            form.errors.description = 'The description field is required.';
+            form.errors.description = t('The description field is required.');
             return false;
         }
         
@@ -95,7 +96,7 @@
         const photo = photoInput?.value?.files[0];
 
         if ( ! photo && ! props.tournament?.image) {
-            form.errors.photo = 'The image field is required.';
+            form.errors.photo = t('The image field is required.');
             return false;
         }
         
@@ -114,12 +115,12 @@
         const photo = photoInput.value.files[0];
 
         if (! photo) {
-            form.errors.photo = 'The image field is required.';
+            form.errors.photo = t('The image field is required.');
             return;
         };
 
         if (! photo.type.startsWith('image/')) {
-            form.errors.photo = 'The file must be an Image.';
+            form.errors.photo = t('The file must be an Image.');
             photoInput.value = '';
             return;
         }
@@ -145,21 +146,21 @@
     <div class="mb-10">
         <FormSection @submitted="finishBasicInformation">
             <template #title>
-                <div v-if="tabs[currentTab] == 'basic'">Basic Information</div>
-                <div v-if="tabs[currentTab] == 'details'">Tournament details</div>
-                <div v-if="tabs[currentTab] == 'options'">Tournament Options</div>
+                <div v-if="tabs[currentTab] == 'basic'">{{ $t('Basic Information') }}</div>
+                <div v-if="tabs[currentTab] == 'details'">{{ $t('Tournament details') }}</div>
+                <div v-if="tabs[currentTab] == 'options'">{{ $t('Tournament Options') }}</div>
             </template>
     
             <template #description>
-                <div v-if="tabs[currentTab] == 'basic'">Basic information about your tournament.</div>
-                <div v-if="tabs[currentTab] == 'details'">Tournament in-depth details and dates.</div>
-                <div v-if="tabs[currentTab] == 'options'">Edit various options for the tournament.</div>
+                <div v-if="tabs[currentTab] == 'basic'">{{ $t('Basic information about your tournament.') }}</div>
+                <div v-if="tabs[currentTab] == 'details'">{{ $t('Tournament in-depth details and dates.') }}</div>
+                <div v-if="tabs[currentTab] == 'options'">{{ $t('Edit various options for the tournament.') }}</div>
             </template>
     
             <template #form>
                 <div class="col-span-6" v-show="tabs[currentTab] == 'basic'">
                     <div class="mb-3">
-                        <InputLabel for="name" value="Name" />
+                        <InputLabel for="name" :value="$t('Name')" />
                         <TextInput
                             id="name"
                             v-model="form.name"
@@ -170,7 +171,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="description" value="Description" />
+                        <InputLabel for="description" :value="$t('Description')" />
                         <textarea
                             id="description"
                             v-model="form.description"
@@ -190,7 +191,7 @@
                             @change="updatePhotoPreview"
                         >
         
-                        <InputLabel for="photo" value="Tournament Image  [600 x 400] px" />
+                        <InputLabel for="photo" :value="$t('Tournament Image  [600 x 400] px')" />
 
                         <div v-if="photoPreview" class="mt-2">
                             <span
@@ -207,13 +208,13 @@
                         </div>
         
                         <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                            Select A New Photo
+                            {{ $t('Select A New Photo') }}
                         </SecondaryButton>
                         <InputError :message="form.errors.photo" class="mt-2" />
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="trailer" value="Trailer (optional)" />
+                        <InputLabel for="trailer" :value="$t('Trailer (optional)')" />
                         <TextInput
                             id="trailer"
                             v-model="form.trailer"
@@ -226,11 +227,11 @@
 
                 <div class="col-span-6" v-show="tabs[currentTab] == 'details'">
                     <div class="mb-3">
-                        <InputLabel for="rules" value="Rules" />
+                        <InputLabel for="rules" :value="$t('Rules')" />
                         <RichTextEditor
                             id="rules"
                             v-model="form.rules"
-                            placeholder="Tournament rules..."
+                            :placeholder="$t('Tournament rules...')"
                             class="mt-1"
                         />
                         <InputError :message="form.errors.rules" class="mt-2" />
@@ -247,10 +248,10 @@
                                 class="mt-1 rounded-md mr-2"
                             />
 
-                            <p class="text-white">Teams support</p>
+                            <p class="text-white">{{ $t('Teams support') }}</p>
                         </div>
                         <p class="text-sm text-gray-500">
-                            Players can create a team of two players (1 vq3, 1 cpm) and the teams results are independent of normal tournament result. (Similar to DFWC teams).
+                            {{ $t('Players can create a team of two players (1 vq3, 1 cpm) and the teams results are independent of normal tournament result. (Similar to DFWC teams).') }}
                         </p>
                         <InputError :message="form.errors.has_teams" class="mt-2" />
                     </div>
@@ -264,16 +265,16 @@
                                 class="mt-1 rounded-md mr-2"
                             />
 
-                            <p class="text-white">Donations support</p>
+                            <p class="text-white">{{ $t('Donations support') }}</p>
                         </div>
                         <p class="text-sm text-gray-500">
-                            Does this tournament support player donation ?
+                            {{ $t('Does this tournament support player donation ?') }}
                         </p>
                         <InputError :message="form.errors.has_donations" class="mt-2" />
                     </div>
 
                     <div class="mb-3" v-if="form.has_donations">
-                        <InputLabel for="donation_link" value="Donation Link" />
+                        <InputLabel for="donation_link" :value="$t('Donation Link')" />
                         <TextInput
                             id="donation_link"
                             v-model="form.donation_link"
@@ -284,7 +285,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <InputLabel for="prize_pool" value="Prize Pool" />
+                        <InputLabel for="prize_pool" :value="$t('Prize Pool')" />
                         <TextInput
                             id="prize_pool"
                             v-model="form.prize_pool"
@@ -292,7 +293,7 @@
                             class="mt-1 block w-full"
                         />
                         <p class="text-sm text-gray-500">
-                            Leave at 0 if there is no prize for this tournament.
+                            {{ $t('Leave at 0 if there is no prize for this tournament.') }}
                         </p>
                         <InputError :message="form.errors.prize_pool" class="mt-2" />
                     </div>
@@ -302,12 +303,12 @@
             <template #actions>
                 <div class="flex justify-between w-full">
                     <SecondaryButton v-if="currentTab > 0" @click="previousTab">
-                        Back
+                        {{ $t('Back') }}
                     </SecondaryButton>
 
                     <PrimaryButton>
-                        <span v-if="tabs[currentTab] === 'options'">Submit</span>
-                        <span v-else>Next</span>
+                        <span v-if="tabs[currentTab] === 'options'">{{ $t('Submit') }}</span>
+                        <span v-else>{{ $t('Next') }}</span>
                     </PrimaryButton>
                 </div>
             </template>

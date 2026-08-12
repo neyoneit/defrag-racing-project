@@ -89,33 +89,37 @@ const timeSince = (date) => {
 
     if (duration.asDays() < 1) {
         if (duration.hours() == 0) {
-            return `${duration.minutes()} minutes`;
+            return tChoice(':count minute|:count minutes', duration.minutes());
         }
-        
-        return `${duration.hours()} hours, ${duration.minutes()} minutes`;
+
+        return [
+            tChoice(':count hour|:count hours', duration.hours()),
+            tChoice(':count minute|:count minutes', duration.minutes()),
+        ].join(', ');
     } else if (duration.asDays() < 365) {
         const months = duration.months();
         const weeks = duration.weeks();
         const days = duration.days() % 7;
 
-        let result = '';
+        // Joined rather than appended: the old version left a trailing ", "
+        // behind whenever the smaller unit came out at zero.
+        const parts = [];
 
         if (months > 0) {
-            result += `${months} ${months === 1 ? 'month' : 'months'}, `;
+            parts.push(tChoice(':count month|:count months', months));
         }
 
         if (weeks > 0) {
-            result += `${weeks} ${weeks === 1 ? 'week' : 'weeks'}, `;
+            parts.push(tChoice(':count week|:count weeks', weeks));
         }
 
         if (days > 0) {
-            result += `${days} ${days === 1 ? 'day' : 'days'}`;
+            parts.push(tChoice(':count day|:count days', days));
         }
 
-        return result;
+        return parts.join(', ');
     } else {
-        const years = duration.years();
-        return `${years} ${years === 1 ? 'year' : 'years'}`;
+        return tChoice(':count year|:count years', duration.years());
     }
 }
 

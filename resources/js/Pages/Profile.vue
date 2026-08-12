@@ -3071,7 +3071,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
                                 <img src="/images/modes/vq3-icon.svg" class="w-6 h-6" alt="VQ3" />
-                                🎯 Top {{ vq3Comparison.length }} Easiest VQ3 Maps to Beat Your Competitor!
+                                🎯 {{ $t('Top :count Easiest VQ3 Maps to Beat Your Competitor!', { count: vq3Comparison.length }) }}
                             </h3>
                             <div v-if="loadingComparison" class="text-center py-10">
                                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
@@ -3112,7 +3112,7 @@
                                     <button @click="vq3Page = Math.max(1, vq3Page - 1)" :disabled="vq3Page === 1" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
                                         {{ $t('Previous') }}
                                     </button>
-                                    <span class="text-sm text-gray-400">Page {{ vq3Page }} of {{ vq3TotalPages }}</span>
+                                    <span class="text-sm text-gray-400">{{ $t('Page :page of :total', { page: vq3Page, total: vq3TotalPages }) }}</span>
                                     <button @click="vq3Page = Math.min(vq3TotalPages, vq3Page + 1)" :disabled="vq3Page === vq3TotalPages" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
                                         {{ $t('Next') }}
                                     </button>
@@ -3127,7 +3127,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2">
                                 <img src="/images/modes/cpm-icon.svg" class="w-6 h-6" alt="CPM" />
-                                🎯 Top {{ cpmComparison.length }} Easiest CPM Maps to Beat Your Competitor!
+                                🎯 {{ $t('Top :count Easiest CPM Maps to Beat Your Competitor!', { count: cpmComparison.length }) }}
                             </h3>
                         <div v-if="loadingComparison" class="text-center py-10">
                             <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
@@ -3168,7 +3168,7 @@
                                 <button @click="cpmPage = Math.max(1, cpmPage - 1)" :disabled="cpmPage === 1" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
                                     {{ $t('Previous') }}
                                 </button>
-                                <span class="text-sm text-gray-400">Page {{ cpmPage }} of {{ cpmTotalPages }}</span>
+                                <span class="text-sm text-gray-400">{{ $t('Page :page of :total', { page: cpmPage, total: cpmTotalPages }) }}</span>
                                 <button @click="cpmPage = Math.min(cpmTotalPages, cpmPage + 1)" :disabled="cpmPage === cpmTotalPages" class="px-3 py-1 bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white">
                                     {{ $t('Next') }}
                                 </button>

@@ -42,7 +42,7 @@
                                 <span>{{  record.mapname }}</span>
                             </Link>
                         </div>
-                        <div class="text-gray-400 text-xs" :title="record.date_set"> {{ timeSince(record.date_set) }} ago</div>
+                        <div class="text-gray-400 text-xs" :title="record.date_set"> {{ $t(':time ago', { time: timeSince(record.date_set) }) }}</div>
                 
                 
                         <template #content>
