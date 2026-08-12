@@ -12,7 +12,7 @@
     <Tournament :tournament="tournament" tab="ManageTournament">
         <div class="flex justify-center items-center">
             <Link :href="route('tournaments.news.create', tournament.id)" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                Add News
+                {{ $t('Add News') }}
             </Link>
         </div>
 
@@ -34,17 +34,17 @@
 
                 <div class="flex justify-end">
                     <Link :href="route('tournaments.news.edit', [tournament.id, item.id])" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                        Edit
+                        {{ $t('Edit') }}
                     </Link>
                     <Link :href="route('tournaments.news.destroy', [tournament.id, item.id])" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                        Delete
+                        {{ $t('Delete') }}
                     </Link>
                 </div>
             </div>
         </div>
 
         <div class="flex justify-center mt-5 text-md text-gray-500" v-if="news.length === 0">
-            There are no news yet.
+            {{ $t('There are no news yet.') }}
         </div>
     </Tournament>
 </template>

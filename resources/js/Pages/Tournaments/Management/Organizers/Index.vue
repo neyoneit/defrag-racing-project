@@ -12,7 +12,7 @@
     <Tournament :tournament="tournament" tab="ManageTournament">
         <div class="flex justify-center items-center">
             <Link :href="route('tournaments.organizers.create', tournament.id)" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                Add New Organizer
+                {{ $t('Add New Organizer') }}
             </Link>
         </div>
 
@@ -26,11 +26,11 @@
         
                     <div class="flex">
                         <Link :href="route('tournaments.organizers.edit', {tournament: organizer.tournament_id, organizer: organizer.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                            Edit
+                            {{ $t('Edit') }}
                         </Link>
         
                         <Link :href="route('tournaments.organizers.destroy', {tournament: organizer.tournament_id, organizer: organizer.id})" class="text-gray-300 font-bold bg-grayop-700 cursor-pointer hover:bg-grayop-600 text-center rounded-lg p-3 mr-4 mb-3">
-                            Delete
+                            {{ $t('Delete') }}
                         </Link>
                     </div>
                 </div>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="flex justify-center mt-5 text-md text-gray-500" v-if="organizers.length === 0">
-            There are no organizers yet.
+            {{ $t('There are no organizers yet.') }}
         </div>
     </Tournament>
 </template>
