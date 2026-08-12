@@ -4,6 +4,7 @@ import { ref, computed, getCurrentInstance } from 'vue';
 import HtmlDiffImport from 'htmldiff-js';
 const HtmlDiff = HtmlDiffImport.default ?? HtmlDiffImport;
 import { diffLines } from 'diff';
+import { currentLocale } from '@/utils/i18n';
 
 const { proxy } = getCurrentInstance();
 const q3tohtml = proxy.q3tohtml;
@@ -70,7 +71,7 @@ const textDiffResult = computed(() => {
 });
 
 const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString(currentLocale(), {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 };
@@ -78,18 +79,18 @@ const formatDate = (date) => {
 
 <template>
     <div class="pb-4">
-        <Head :title="'Revision #' + revision.id + ' - ' + page.title + ' - Wiki'" />
+        <Head :title="$t('Revision #:id - :title - Wiki', { id: revision.id, title: page.title })" />
 
         <div class="relative bg-gradient-to-b from-black/25 via-black/10 to-transparent pt-6 pb-96 pointer-events-none">
             <div class="max-w-8xl mx-auto px-4 md:px-6 lg:px-8 pointer-events-auto">
                 <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">Wiki</Link>
+                    <Link :href="route('wiki.index')" class="hover:text-gray-300 transition">{{ $t('Wiki') }}</Link>
                     <span>/</span>
                     <Link :href="route('wiki.show', page.slug)" class="hover:text-gray-300 transition">{{ page.title }}</Link>
                     <span>/</span>
-                    <Link :href="route('wiki.history', page.slug)" class="hover:text-gray-300 transition">History</Link>
+                    <Link :href="route('wiki.history', page.slug)" class="hover:text-gray-300 transition">{{ $t('History') }}</Link>
                     <span>/</span>
-                    <span class="text-gray-400">Revision #{{ revision.id }}</span>
+                    <span class="text-gray-400">{{ $t('Revision #:id', { id: revision.id }) }}</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <h1 class="text-2xl md:text-3xl font-black text-gray-300/90">{{ revision.title }}</h1>
@@ -104,7 +105,7 @@ const formatDate = (date) => {
                                 : 'bg-gray-700/60 hover:bg-gray-700 text-gray-300'"
                         >
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                            {{ showDiff ? 'View Content' : 'Show Changes' }}
+                            {{ showDiff ? $t('View Content') : $t('Show Changes') }}
                         </button>
                         <Link
                             v-if="isStaff"
@@ -113,7 +114,7 @@ const formatDate = (date) => {
                             as="button"
                             class="px-4 py-2 bg-yellow-600/80 hover:bg-yellow-600 text-white text-sm font-medium rounded-lg transition"
                         >
-                            Revert to this version
+                            {{ $t('Revert to this version') }}
                         </Link>
                     </div>
                 </div>
@@ -125,25 +126,25 @@ const formatDate = (date) => {
             <div class="bg-yellow-900/20 border border-yellow-700/30 rounded-xl px-6 py-3 mb-4 flex items-center gap-4 text-sm text-yellow-400">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span>
-                    You are viewing an older revision by <Link v-if="revision.user" :href="'/profile/' + revision.user.id" class="font-bold hover:text-yellow-200 transition" v-html="q3tohtml(revision.user.name || revision.user.username)"></Link><strong v-else>System</strong>
-                    from {{ formatDate(revision.created_at) }}.
+                    {{ $t('You are viewing an older revision by') }} <Link v-if="revision.user" :href="'/profile/' + revision.user.id" class="font-bold hover:text-yellow-200 transition" v-html="q3tohtml(revision.user.name || revision.user.username)"></Link><strong v-else>{{ $t('System') }}</strong>
+                    {{ $t('from :date.', { date: formatDate(revision.created_at) }) }}
                     <span v-if="revision.summary" class="text-yellow-500">- {{ revision.summary }}</span>
                 </span>
-                <Link :href="route('wiki.show', page.slug)" class="ml-auto text-yellow-300 hover:text-yellow-200 underline flex-shrink-0">View current</Link>
+                <Link :href="route('wiki.show', page.slug)" class="ml-auto text-yellow-300 hover:text-yellow-200 underline flex-shrink-0">{{ $t('View current') }}</Link>
             </div>
 
             <!-- Diff info bar -->
             <div v-if="showDiff && afterContent" class="bg-purple-900/20 border border-purple-700/30 rounded-xl px-6 py-3 mb-4 flex items-center gap-4 text-sm text-purple-300">
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                <span v-if="bothNormalized">Showing what this edit changed. <span class="inline-flex items-center gap-2 ml-2"><span class="inline-block w-3 h-3 bg-green-500/20 border border-green-500/40 rounded-sm"></span> added <span class="inline-block w-3 h-3 bg-red-500/20 border border-red-500/40 rounded-sm"></span> removed</span></span>
-                <span v-else class="text-orange-300">Text-only diff (page uses legacy formatting - use "Normalize HTML" on the Wiki page to enable rich diff)</span>
+                <span v-if="bothNormalized">{{ $t('Showing what this edit changed.') }} <span class="inline-flex items-center gap-2 ml-2"><span class="inline-block w-3 h-3 bg-green-500/20 border border-green-500/40 rounded-sm"></span> {{ $t('added') }} <span class="inline-block w-3 h-3 bg-red-500/20 border border-red-500/40 rounded-sm"></span> {{ $t('removed') }}</span></span>
+                <span v-else class="text-orange-300">{{ $t('Text-only diff (page uses legacy formatting - use "Normalize HTML" on the Wiki page to enable rich diff)') }}</span>
             </div>
 
             <div class="flex gap-6">
                 <!-- Sidebar -->
                 <div class="hidden lg:block w-64 flex-shrink-0">
                     <div class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-4 sticky top-24">
-                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Pages</h3>
+                        <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">{{ $t('Pages') }}</h3>
                         <nav class="space-y-1">
                             <template v-for="navPage in navigation" :key="navPage.id">
                                 <Link
@@ -178,7 +179,7 @@ const formatDate = (date) => {
                     <!-- Diff view -->
                     <div v-else>
                         <div v-if="!afterContent" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-8 text-center text-gray-500">
-                            This is the first revision - no previous version to compare against.
+                            {{ $t('This is the first revision - no previous version to compare against.') }}
                         </div>
 
                         <!-- Rich HTML diff (when both versions are normalized) -->
@@ -189,7 +190,7 @@ const formatDate = (date) => {
                         <!-- Text diff fallback (mixed formats) -->
                         <div v-else-if="textDiffResult" class="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl overflow-hidden">
                             <div v-if="textDiffResult.length === 0" class="p-8 text-center text-gray-500">
-                                No text changes detected - this edit only changed formatting.
+                                {{ $t('No text changes detected - this edit only changed formatting.') }}
                             </div>
                             <div v-else class="diff-view text-sm leading-relaxed">
                                 <template v-for="(part, idx) in textDiffResult" :key="idx">

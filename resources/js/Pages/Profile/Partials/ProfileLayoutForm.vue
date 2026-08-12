@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import draggable from 'vuedraggable';
 import axios from 'axios';
+import { t } from '@/utils/i18n';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -10,31 +11,31 @@ const user = computed(() => page.props.auth.user);
 const saving = ref(false);
 const recentlySuccessful = ref(false);
 
-const allStatBoxes = [
-    { id: 'performance', label: 'Performance', color: 'blue' },
-    { id: 'activity', label: 'Activity', color: 'purple' },
-    { id: 'record_types', label: 'Record Types', color: 'green' },
-    { id: 'map_features', label: 'Map Features', color: 'yellow' },
-    { id: 'demos_statistics', label: 'Demos Stats', color: 'pink' },
-    { id: 'top_downloaded_demos', label: 'Top Demos', color: 'cyan' },
-    { id: 'renders', label: 'YouTube Renders', color: 'red' },
-];
+const allStatBoxes = computed(() => [
+    { id: 'performance', label: t('Performance'), color: 'blue' },
+    { id: 'activity', label: t('Activity'), color: 'purple' },
+    { id: 'record_types', label: t('Record Types'), color: 'green' },
+    { id: 'map_features', label: t('Map Features'), color: 'yellow' },
+    { id: 'demos_statistics', label: t('Demos Stats'), color: 'pink' },
+    { id: 'top_downloaded_demos', label: t('Top Demos'), color: 'cyan' },
+    { id: 'renders', label: t('YouTube Renders'), color: 'red' },
+]);
 
 const availableBadges = computed(() => page.props.availableBadges || []);
 
-const allHeaderItems = [
-    { id: 'badge_admin', label: 'Admin Badge' },
-    { id: 'badge_moderator', label: 'Moderator Badge' },
-    { id: 'badge_donor', label: 'Supporter Badge' },
-    { id: 'badge_community', label: 'Defragger Badge' },
-    { id: 'badge_tagger', label: 'Tagger Badge' },
-    { id: 'badge_assigner', label: 'Assigner Badge' },
-    { id: 'player_rank', label: 'Player Rank (VQ3 / CPM)' },
-    { id: 'community_rank', label: 'Community Rank' },
-    { id: 'clan', label: 'Clan Tag' },
-    { id: 'wr_counters', label: 'WR Counters (CPM / VQ3)' },
-    { id: 'socials', label: 'Social Links (Twitch, Discord, Twitter)' },
-];
+const allHeaderItems = computed(() => [
+    { id: 'badge_admin', label: t('Admin Badge') },
+    { id: 'badge_moderator', label: t('Moderator Badge') },
+    { id: 'badge_donor', label: t('Supporter Badge') },
+    { id: 'badge_community', label: t('Defragger Badge') },
+    { id: 'badge_tagger', label: t('Tagger Badge') },
+    { id: 'badge_assigner', label: t('Assigner Badge') },
+    { id: 'player_rank', label: t('Player Rank (VQ3 / CPM)') },
+    { id: 'community_rank', label: t('Community Rank') },
+    { id: 'clan', label: t('Clan Tag') },
+    { id: 'wr_counters', label: t('WR Counters (CPM / VQ3)') },
+    { id: 'socials', label: t('Social Links (Twitch, Discord, Twitter)') },
+]);
 
 const defaultHeaderItems = [
     { id: 'badge_admin', visible: true, row: 1 },
@@ -50,19 +51,19 @@ const defaultHeaderItems = [
     { id: 'socials', visible: true, row: 2 },
 ];
 
-const allSections = [
-    { id: 'activity_history', label: 'Activity History' },
-    { id: 'records', label: 'VQ3 / CPM Records' },
-    { id: 'rendered_videos', label: 'Rendered Videos' },
-    { id: 'similar_skill_rivals', label: 'Skill Level & Rivals' },
-    { id: 'competitor_comparison', label: 'Competitor Comparison' },
-    { id: 'known_aliases', label: 'Known Aliases' },
-    { id: 'featured_maplists', label: 'Featured Maplists' },
-    { id: 'map_completionist', label: 'Map Completionist' },
-];
+const allSections = computed(() => [
+    { id: 'activity_history', label: t('Activity History') },
+    { id: 'records', label: t('VQ3 / CPM Records') },
+    { id: 'rendered_videos', label: t('Rendered Videos') },
+    { id: 'similar_skill_rivals', label: t('Skill Level & Rivals') },
+    { id: 'competitor_comparison', label: t('Competitor Comparison') },
+    { id: 'known_aliases', label: t('Known Aliases') },
+    { id: 'featured_maplists', label: t('Featured Maplists') },
+    { id: 'map_completionist', label: t('Map Completionist') },
+]);
 
 const defaultStatBoxes = ['performance', 'activity', 'record_types', 'map_features'];
-const defaultSections = allSections.map(s => ({ id: s.id, visible: true }));
+const defaultSections = allSections.value.map(s => ({ id: s.id, visible: true }));
 
 const savedLayout = user.value.profile_layout;
 
@@ -71,20 +72,20 @@ const statBoxItems = ref(
     (() => {
         const saved = savedLayout?.stat_boxes || defaultStatBoxes;
         // Selected first (in saved order), then unselected
-        const selected = saved.map(id => allStatBoxes.find(b => b.id === id)).filter(Boolean);
-        const unselected = allStatBoxes.filter(b => !saved.includes(b.id));
+        const selected = saved.map(id => allStatBoxes.value.find(b => b.id === id)).filter(Boolean);
+        const unselected = allStatBoxes.value.filter(b => !saved.includes(b.id));
         return [...selected, ...unselected].map(b => ({ ...b, selected: saved.includes(b.id) }));
     })()
 );
 
-const validSectionIds = allSections.map(s => s.id);
+const validSectionIds = allSections.value.map(s => s.id);
 const sections = ref(
     (savedLayout?.sections || defaultSections.map(s => ({ ...s })))
         .filter(s => validSectionIds.includes(s.id))
 );
 
 // Ensure all sections exist
-for (const section of allSections) {
+for (const section of allSections.value) {
     if (!sections.value.find(s => s.id === section.id)) {
         sections.value.push({ id: section.id, visible: true });
     }
@@ -105,7 +106,7 @@ const headerItems = ref(
         }
 
         if (!saved) return defaultHeaderItems.map(h => ({ ...h }));
-        const items = saved.filter(h => allHeaderItems.find(a => a.id === h.id));
+        const items = saved.filter(h => allHeaderItems.value.find(a => a.id === h.id));
         for (const def of defaultHeaderItems) {
             if (!items.find(h => h.id === def.id)) {
                 items.push({ ...def });
@@ -154,7 +155,9 @@ const toggleHeaderItem = (id) => {
     if (item) item.visible = !item.visible;
 };
 
-const getHeaderLabel = (id) => allHeaderItems.find(h => h.id === id)?.label || id;
+const getHeaderLabel = (id) => allHeaderItems.value.find(h => h.id === id)?.label || id;
+
+const getStatBoxLabel = (id) => allStatBoxes.value.find(b => b.id === id)?.label || id;
 
 const selectedCount = computed(() => statBoxItems.value.filter(b => b.selected).length);
 
@@ -171,7 +174,7 @@ const toggleSection = (sectionId) => {
     if (section) section.visible = !section.visible;
 };
 
-const getSectionLabel = (id) => allSections.find(s => s.id === id)?.label || id;
+const getSectionLabel = (id) => allSections.value.find(s => s.id === id)?.label || id;
 
 const save = async () => {
     saving.value = true;
@@ -195,8 +198,8 @@ const save = async () => {
 
 const resetToDefaults = () => {
     const saved = defaultStatBoxes;
-    const selected = saved.map(id => allStatBoxes.find(b => b.id === id)).filter(Boolean);
-    const unselected = allStatBoxes.filter(b => !saved.includes(b.id));
+    const selected = saved.map(id => allStatBoxes.value.find(b => b.id === id)).filter(Boolean);
+    const unselected = allStatBoxes.value.filter(b => !saved.includes(b.id));
     statBoxItems.value = [...selected, ...unselected].map(b => ({ ...b, selected: saved.includes(b.id) }));
     sections.value = defaultSections.map(s => ({ ...s }));
     headerItems.value = defaultHeaderItems.map(h => ({ ...h }));
@@ -224,33 +227,32 @@ const colorMap = {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
                         </svg>
                     </div>
-                    <h2 class="text-sm font-bold text-white">Profile Layout</h2>
+                    <h2 class="text-sm font-bold text-white">{{ $t('Profile Layout') }}</h2>
                 </div>
                 <div class="flex items-center gap-2">
                     <div v-if="recentlySuccessful" class="flex items-center gap-1.5 px-2 py-1 rounded bg-green-500/10 border border-green-500/20">
                         <svg class="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span class="text-xs font-medium text-green-400">Saved</span>
+                        <span class="text-xs font-medium text-green-400">{{ $t('Saved') }}</span>
                     </div>
                     <button @click="resetToDefaults" class="px-2 py-1 text-xs font-medium text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded transition-all">
-                        Reset
+                        {{ $t('Reset') }}
                     </button>
                     <button @click="save" :disabled="saving" class="px-3 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded transition-all disabled:opacity-50">
-                        {{ saving ? 'Saving...' : 'Save' }}
+                        {{ saving ? $t('Saving...') : $t('Save') }}
                     </button>
                 </div>
             </div>
 
             <!-- Header Items - Two Row Layout -->
             <div class="mb-3">
-                <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                    Header Items <span class="text-gray-600">(drag between rows to rearrange)</span>
-                </p>
+                <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 [&_span]:text-gray-600"
+                   v-html="$t('Header Items <span>(drag between rows to rearrange)</span>')"></p>
 
                 <!-- Row 1 -->
                 <div class="mb-1.5">
-                    <p class="text-[9px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Row 1</p>
+                    <p class="text-[9px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">{{ $t('Row 1') }}</p>
                     <draggable
                         v-model="row1Items"
                         item-key="id"
@@ -290,7 +292,7 @@ const colorMap = {
 
                 <!-- Row 2 -->
                 <div class="mb-1.5">
-                    <p class="text-[9px] font-bold text-purple-400/70 uppercase tracking-widest mb-1">Row 2</p>
+                    <p class="text-[9px] font-bold text-purple-400/70 uppercase tracking-widest mb-1">{{ $t('Row 2') }}</p>
                     <draggable
                         v-model="row2Items"
                         item-key="id"
@@ -330,7 +332,7 @@ const colorMap = {
 
                 <!-- Row 3 -->
                 <div>
-                    <p class="text-[9px] font-bold text-teal-400/70 uppercase tracking-widest mb-1">Row 3</p>
+                    <p class="text-[9px] font-bold text-teal-400/70 uppercase tracking-widest mb-1">{{ $t('Row 3') }}</p>
                     <draggable
                         v-model="row3Items"
                         item-key="id"
@@ -374,10 +376,10 @@ const colorMap = {
                 <!-- Stat Boxes (draggable) -->
                 <div>
                     <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                        Stat Boxes
+                        {{ $t('Stat Boxes') }}
                         <span :class="selectedCount >= 4 ? 'text-yellow-500' : selectedCount <= 1 ? 'text-red-500' : 'text-gray-600'">({{ selectedCount }}/4)</span>
-                        <span v-if="selectedCount >= 4" class="text-yellow-500 ml-1">- max reached</span>
-                        <span v-else-if="selectedCount <= 1" class="text-red-500 ml-1">- min 1 required</span>
+                        <span v-if="selectedCount >= 4" class="text-yellow-500 ml-1">{{ $t('- max reached') }}</span>
+                        <span v-else-if="selectedCount <= 1" class="text-red-500 ml-1">{{ $t('- min 1 required') }}</span>
                     </p>
                     <draggable
                         v-model="statBoxItems"
@@ -408,7 +410,7 @@ const colorMap = {
                                 </div>
                                 <div :class="['w-2 h-2 rounded-full', colorMap[element.color].dot]"></div>
                                 <span class="flex-1 text-xs font-medium" :class="element.selected ? 'text-white' : 'text-gray-500'">
-                                    {{ element.label }}
+                                    {{ getStatBoxLabel(element.id) }}
                                 </span>
                                 <button
                                     @click.stop="toggleBox(element.id)"
@@ -438,9 +440,8 @@ const colorMap = {
 
                 <!-- Profile Sections (draggable) -->
                 <div>
-                    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                        Sections <span class="text-gray-600">(drag to reorder)</span>
-                    </p>
+                    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 [&_span]:text-gray-600"
+                       v-html="$t('Sections <span>(drag to reorder)</span>')"></p>
                     <draggable
                         v-model="sections"
                         item-key="id"
